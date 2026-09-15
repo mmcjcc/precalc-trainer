@@ -117,6 +117,7 @@ language has no `±`/`or`. All of these have clean fixes, listed below, and the 
   | Browser QA | every flow walked end to end at desktop width, the phone layout checked at 375 px, no console errors on a fresh load |
   | Two-agent review | 23 findings, all fixed, each with a regression test that failed before the fix |
   | Production build | succeeds; the graphing library loads only on a problem page |
+  | Container image | builds in GitHub Actions and passes `deploy/smoke.sh` |
 
 - **Biggest fixes from QA and review.** A sign-flip mistake taught with the wrong lesson; progress that
   looked solved after one step; the answer visible up front in the graph and calculator panels; hints
@@ -125,6 +126,4 @@ language has no `±`/`or`. All of these have clean fixes, listed below, and the 
   as a chip answer; wrong final answers not counting against mastery.
 - **Still needs a person.** Try the store-and-test keystrokes on the real calculators (TI-84 `2nd ENTER`
   twice to recall a test; Nspire `ctrl var` for the store arrow). Check that Enter submits an answer on
-  a real keyboard (automated key presses did not submit in the preview pane). The first container
-  build and Azure deploy have not run: Docker is not installed on this machine, so CI will be the first
-  place `deploy/smoke.sh` runs.
+  a real keyboard (automated key presses did not submit in the preview pane). The container image now builds and passes `deploy/smoke.sh` in GitHub Actions, and the deploy workflow pushes it to GitHub Container Registry; no Azure deployment exists yet.
