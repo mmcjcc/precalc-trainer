@@ -1,0 +1,140 @@
+# Deploy: on every push to main (or a manual run) — typecheck + test, build the image,
+# smoke-test it, push it to GHCR as :<commit sha> and :latest, then roll the :<sha> tag out to
+# Azure Container Apps. Step-by-step setup: deploy/azure.md.
+#
+# Repository secrets (Settings -> Secrets and variables -> Actions -> Secrets):
+#   AZURE_CLIENT_ID, AZURE_TENANT_ID, AZURE_SUBSCRIPTION_ID   OIDC identity, deploy/azure.md §4
+#   AZURE_CREDENTIALS                                          only for the client-secret alternative
+#   GITHUB_TOKEN                                               automatic; pushes to ghcr.io
+# Optional repository variables (same page -> Variables), defaults in brackets:
+#   ACA_APP_NAME [precalc]   ACA_RESOURCE_GROUP [precalc-rg]
+#
+# Bootstrapping: until AZURE_CLIENT_ID exists the Azure steps are skipped and the run still
+# publishes the image — which `az containerapp create` needs to exist first (deploy/azure.md §3).
+# Tags: Container Apps only creates a new revision when the image reference changes, so the
+# roll-out always uses the commit-SHA tag; :latest is for humans and `docker pull`.
+name: deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write # push to ghcr.io with GITHUB_TOKEN
+  id-token: write # OIDC token for azure/login
+
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+jobs:
+  check:
+    name: typecheck / test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Install
+        run: npm ci --no-audit --no-fund
+
+      - name: Typecheck
+        run: |
+          node node_modules/typescript/bin/tsc -p tsconfig.app.json --noEmit
+          node node_modules/typescript/bin/tsc -p tsconfig.node.json --noEmit
+
+      - name: Test
+        run: node node_modules/vitest/vitest.mjs run
+
+  build-push-deploy:
+    name: image -> ghcr.io -> Azure
+    needs: check
+    runs-on: ubuntu-latest
+    env:
+      AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+      ACA_APP: ${{ vars.ACA_APP_NAME || 'precalc' }}
+      ACA_RG: ${{ vars.ACA_RESOURCE_GROUP || 'precalc-rg' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Image name (GHCR paths must be lowercase)
+        run: echo "IMAGE=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/precalc-trainer" >> "$GITHUB_ENV"
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build image (linux/amd64 — the only platform Container Apps runs)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64
+          load: true
+          push: false
+          tags: |
+            ${{ env.IMAGE }}:${{ github.sha }}
+            ${{ env.IMAGE }}:latest
+          build-args: |
+            SOURCE_URL=https://github.com/${{ github.repository }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Smoke test (before anything is pushed)
+        run: bash deploy/smoke.sh "$IMAGE:${{ github.sha }}"
+
+      - name: Push to GHCR
+        run: |
+          docker push "$IMAGE:${{ github.sha }}"
+          docker push "$IMAGE:latest"
+          echo "Pushed $IMAGE:${{ github.sha }} and :latest"
+
+      - name: Azure login (OIDC federated credential — nothing stored that can expire)
+        if: env.AZURE_CLIENT_ID != ''
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      # Client-secret alternative. Simpler to set up, but the secret expires (1 year by default)
+      # and the app then goes stale silently. Create it with
+      #   az ad sp create-for-rbac --name precalc-gh-deploy --role Contributor \
+      #     --scopes /subscriptions/<subscription-id>/resourceGroups/precalc-rg --json-auth
+      # store the JSON as the AZURE_CREDENTIALS secret, replace the OIDC step with this one,
+      # add `AZURE_CREDENTIALS: ${{ secrets.AZURE_CREDENTIALS }}` to the job env, and change
+      # the three `if:` guards to `env.AZURE_CREDENTIALS != ''` / `== ''`.
+      # - name: Azure login (client secret)
+      #   if: env.AZURE_CREDENTIALS != ''
+      #   uses: azure/login@v2
+      #   with:
+      #     creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Roll out to Container Apps
+        if: env.AZURE_CLIENT_ID != ''
+        run: |
+          az extension add --name containerapp --upgrade --yes
+          az containerapp update --name "$ACA_APP" --resource-group "$ACA_RG" \
+            --image "$IMAGE:${{ github.sha }}"
+          FQDN=$(az containerapp show --name "$ACA_APP" --resource-group "$ACA_RG" \
+            --query properties.configuration.ingress.fqdn -o tsv)
+          echo "Deployed https://$FQDN"
+          echo "### Deployed https://$FQDN (\`${{ github.sha }}\`)" >> "$GITHUB_STEP_SUMMARY"
+          for _ in $(seq 1 30); do
+            if curl -fsS "https://$FQDN/healthz" >/dev/null 2>&1; then echo "healthz ok"; exit 0; fi
+            sleep 5
+          done
+          echo "::warning::https://$FQDN/healthz did not answer within 150s — check: az containerapp logs show -n $ACA_APP -g $ACA_RG --type system"
+
+      - name: Azure roll-out skipped
+        if: env.AZURE_CLIENT_ID == ''
+        run: echo "::notice::Image pushed to $IMAGE:${{ github.sha }}. AZURE_CLIENT_ID is not set, so the Azure roll-out was skipped (bootstrapping steps in deploy/azure.md)."

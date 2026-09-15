@@ -1,0 +1,18 @@
+# Docker build context: only what `npm ci` + `vite build` need (Dockerfile build stage).
+# nginx.conf and docker/ at the repo root are used by the runtime stage and are NOT excluded.
+node_modules
+dist
+dist-ssr
+.git
+.github
+.claude
+.vite
+coverage
+deploy
+docs
+*.md
+**/*.md
+.env
+.env.*
+*.local
+.DS_Store

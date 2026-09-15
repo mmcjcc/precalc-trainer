@@ -1,0 +1,211 @@
+/**
+ * Content-layer contracts: problem instances, templates, module registry.
+ * Content imports engine + notation + shared. UI imports content.
+ */
+import type {
+  CalcPanels,
+  ChipId,
+  ErrorPatternId,
+  GraphSpec,
+  ModuleId,
+  PropertyTag,
+  RelOp,
+  SolutionSet,
+  VarName,
+} from '@/shared/types'
+
+export type ProblemKind = 'inequality' | 'numberLine' | 'evenOdd' | 'inverse' | 'drill'
+
+/** Difficulty knobs (all optional; templates document which they honor). */
+export interface DifficultyKnobs {
+  /** More steps (distribute + combine variants). 1 = shortest. */
+  steps?: 1 | 2 | 3
+  /** Fraction coefficients allowed. */
+  fractions?: boolean
+  /** Negative leading coefficient (forces the divide-by-negative flip). */
+  negativeLead?: boolean
+}
+
+export type RuleCardId = string
+
+export interface RuleCard {
+  id: RuleCardId
+  title: string
+  /** Same wording as her study decks. Plain text; may include app-syntax math. */
+  body: string
+  example?: string
+}
+
+/** One line of the canonical solution path. */
+export interface CanonicalStep {
+  /** The line in app calculator syntax, e.g. "-5x + 6 <= 3". */
+  text: string
+  tag: PropertyTag
+  /** Hint rung 1 for producing THIS line from the previous one. */
+  nudge: string
+  /** Hint rung 2: which rule card to show. */
+  ruleCard: RuleCardId
+  /**
+   * Structural stage this line reaches (progress = highest stage satisfied by the student's
+   * current line). Stage predicates live in the module (content/modules/<m>/stages.ts).
+   */
+  stage: string
+}
+
+export interface CheckValue {
+  /** Friendly integer input. */
+  k: number
+  /** f(k), an integer by construction. */
+  fk: number
+  /** For not-one-to-one quadratics: the twin input with the same output. */
+  twin?: number
+}
+
+export type OneToOneReason = 'fails_hlt' | 'even_power_pm' | 'repeated_y'
+export type Parity = 'even' | 'odd' | 'neither'
+export type ParityReason = 'domain_asymmetric' | 'values'
+
+export type AnswerSpec =
+  | {
+      type: 'set'
+      set: SolutionSet
+      /** Canonical strings for "show the answer". */
+      interval: string
+      setBuilder: string
+      requireInterval: boolean
+      requireSetBuilder: boolean
+    }
+  | {
+      type: 'parity'
+      f: string
+      verdict: Parity
+      reason: ParityReason
+      /** Canonical f(−x) lines (app syntax): first unsimplified, last simplified. */
+      fNegX: string[]
+      /** Canonical −f(x) lines (app syntax): first unsimplified, last simplified. */
+      negF: string[]
+      /** Plug-in check value. */
+      k: number
+    }
+  | {
+      type: 'inverse'
+      oneToOne: boolean
+      reason?: OneToOneReason
+      /** f⁻¹(x) in app syntax when one-to-one. */
+      inverse?: string
+      /** Restriction on the inverse's input, e.g. "x >= 0" (rare in v1). */
+      restriction?: string
+      /** Bonus restricted-domain inverse for the NOT case, e.g. "sqrt((x+7)/4)" on x ≥ h. */
+      bonusInverse?: string
+    }
+  | {
+      type: 'drill'
+      question: 'which_property' | 'legal_or_illegal'
+      verdict: 'legal' | 'illegal'
+      chip?: ChipId
+      patternId?: ErrorPatternId
+      lesson: string
+    }
+
+export interface ProblemInstance {
+  /** `${moduleId}/${templateId}@${genVersion}/${seedBase36}` */
+  id: string
+  moduleId: ModuleId
+  templateId: string
+  /** Skill key for progress = templateId. */
+  skill: string
+  genVersion: number
+  seed: number
+  knobs: DifficultyKnobs
+  kind: ProblemKind
+  /** e.g. "Solve the inequality" */
+  title: string
+  /** Plain-English instructions, e.g. "Solve for x. Give the answer in interval AND set notation." */
+  instructions: string
+  /** Problem statement in app syntax (rendered via engine toLatex). */
+  statementText: string
+  vars: VarName[]
+  /** First line placed in the worked column (null for answer-only kinds). */
+  start: string | null
+  /** Canonical path (empty for answer-only kinds). For inverses: swap-first ordering. */
+  canonical: CanonicalStep[]
+  /** Inverses only: solve-for-x-first, swap-last ordering. */
+  canonicalAlt?: CanonicalStep[]
+  answer: AnswerSpec
+  graph: GraphSpec
+  calc: CalcPanels
+  check?: CheckValue
+  /** Template parameters (for debugging/tests). */
+  params: Record<string, number | string | boolean>
+}
+
+export interface KnobDef {
+  key: keyof DifficultyKnobs
+  label: string
+  default: DifficultyKnobs[keyof DifficultyKnobs]
+}
+
+export interface TemplateDef {
+  /** e.g. "ineq.distribute-negative", "inv.cbrt-shift" */
+  id: string
+  title: string
+  description: string
+  /** Bump whenever RNG consumption order changes. */
+  version: number
+  knobs: KnobDef[]
+  generate: (seed: number, knobs: DifficultyKnobs) => ProblemInstance
+}
+
+/** Progress anchoring: where is the student's current line on the canonical path? */
+export interface ProgressInfo {
+  /** Stages satisfied so far (0..total). */
+  stage: number
+  total: number
+  /** Short label of the current stage, e.g. "x-terms collected". */
+  label: string
+  /** Index into `canonical` (or `canonicalAlt`) of the highest line equivalent to the current line, or -1. */
+  anchorIndex: number
+  /** Which path the anchor came from. */
+  path: 'canonical' | 'alt' | 'none'
+}
+
+export interface ModuleDef {
+  id: ModuleId
+  title: string
+  blurb: string
+  order: number
+  templates: TemplateDef[]
+  ruleCards: RuleCard[]
+  /**
+   * Compute progress from the student's current line (app syntax) for an instance of this module.
+   * Must be pure and fast (it runs after every accepted step).
+   */
+  progress: (instance: ProblemInstance, currentLine: string | null, swapped: boolean) => ProgressInfo
+  /**
+   * The next canonical step to reveal/hint from the student's current state, or null when the
+   * current line is already the final canonical line. Anchors on the current line, not on step count.
+   */
+  nextStep: (instance: ProblemInstance, currentLine: string | null, swapped: boolean) => CanonicalStep | null
+  /**
+   * Is the current line in finished form (e.g. x isolated for inequalities)? Flows use this — not
+   * the progress anchor — to open the final-answer card. Omitted for answer-only modules.
+   */
+  solved?: (instance: ProblemInstance, currentLine: string | null) => boolean
+}
+
+/** Properties drill item (module 5). */
+export interface DrillItem {
+  id: string
+  family: string
+  mode: 'relation' | 'expression'
+  before: string
+  after: string
+  relOp?: RelOp
+  question: 'which_property' | 'legal_or_illegal'
+  verdict: 'legal' | 'illegal'
+  chip?: ChipId
+  patternId?: ErrorPatternId
+  lesson: string
+  /** Id of the legal/illegal twin item. */
+  twinId?: string
+}

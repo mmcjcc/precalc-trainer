@@ -1,0 +1,68 @@
+# CI: typecheck, tests and a production build on every pull request and push to main, plus a
+# Docker build of the runtime image checked by deploy/smoke.sh. (Docker is not installed on
+# the dev box, so this job is where the Dockerfile / nginx.conf / entrypoint contract actually
+# runs.) Tools are called through node directly, the same forms as CLAUDE.md, not npm scripts.
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: typecheck / test / build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Install
+        run: npm ci --no-audit --no-fund
+
+      - name: Typecheck
+        run: |
+          node node_modules/typescript/bin/tsc -p tsconfig.app.json --noEmit
+          node node_modules/typescript/bin/tsc -p tsconfig.node.json --noEmit
+
+      - name: Test
+        run: node node_modules/vitest/vitest.mjs run
+
+      - name: Build
+        run: node node_modules/vite/bin/vite.js build
+
+      - name: Build size
+        run: du -sh dist dist/assets && ls -la dist
+
+  image:
+    name: docker build / smoke
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Build image (linux/amd64, loaded into the local daemon, not pushed)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64
+          load: true
+          push: false
+          tags: precalc-trainer:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Smoke test
+        run: bash deploy/smoke.sh precalc-trainer:ci

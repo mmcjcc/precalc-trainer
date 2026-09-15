@@ -1,0 +1,68 @@
+@import "tailwindcss";
+
+/*
+ * Palette tokens. Mirror of PALETTE in src/shared/types.ts — keep in sync.
+ * Rules (docs/research/ux-mobile-progress.md UX-04):
+ *  - navy on white 10.15:1 → any text.
+ *  - coral #F96167 on white is only 3.03:1 → fills, badges, highlights behind navy text ONLY.
+ *    Text on white uses coral-700 (#C62F37, 5.44:1). `bad` is the same value so error text is always legible.
+ *  - gold #F9E795 is 1.24:1 → fills only. Text on gold uses navy or gold-text (#7A5C00, 6.25:1).
+ *  - ok #0F7A3E (5.42:1) for accepted steps / success text.
+ * Color is never the only signal: pair with an icon (aria-hidden) and words.
+ */
+@theme {
+  --color-navy: #2F3C7E;
+  --color-navy-600: #26316a;
+  --color-navy-100: #e6e8f3;
+  --color-navy-50: #f3f4f9;
+  --color-coral: #F96167;
+  --color-coral-700: #C62F37;
+  --color-coral-100: #fee7e8;
+  --color-gold: #F9E795;
+  --color-gold-text: #7A5C00;
+  --color-gold-100: #fdf8dd;
+  --color-ok: #0F7A3E;
+  --color-ok-100: #e2f3ea;
+  --color-bad: #C62F37;
+  --color-bad-100: #fbe4e1;
+  --color-ink: #1a1f36;
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+}
+
+html { height: 100%; -webkit-text-size-adjust: 100%; }
+body { min-height: 100%; background: #fff; color: var(--color-ink); overflow-wrap: anywhere; }
+#root { min-height: 100dvh; display: flex; flex-direction: column; }
+
+/* iOS auto-zooms on focus when an input is under 16px. Keep every field at ≥16px. */
+input, textarea, select, button { font: inherit; }
+input[type="text"], input[type="password"], input:not([type]), textarea { font-size: max(16px, 1rem); }
+
+/* Focus is always visible (keyboard-first desktop). */
+:focus-visible { outline: 3px solid var(--color-gold); outline-offset: 2px; box-shadow: 0 0 0 1px var(--color-navy); }
+
+/* Symbol strip: one horizontally scrolling row that snaps key by key. */
+.symbol-strip { scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; scrollbar-width: thin; }
+.symbol-strip > * { scroll-snap-align: start; }
+
+/* Keycaps */
+kbd.keycap {
+  display: inline-block;
+  padding: 0.1rem 0.45rem;
+  border: 1px solid var(--color-navy-100);
+  border-bottom-width: 2px;
+  border-radius: 0.375rem;
+  background: #fff;
+  color: var(--color-navy);
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  line-height: 1.35;
+  white-space: nowrap;
+}
+
+/* KaTeX: let long lines scroll instead of overflowing the phone width. */
+.katex-display { margin: 0.25rem 0; overflow-x: auto; overflow-y: hidden; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
+}
