@@ -16,7 +16,7 @@ disagree, research wins** (the spec's random-sampling equivalence test is vacuou
 | Calculator panels | `src/content/calc` | TI-84 Plus CE and TI-Nspire CX II for 11 problem families, expression / k / f(k) / twin substituted. |
 | Store | `src/store` | Append-only event log with weekly compaction, attempt resume, selectors (mastery, first-try, hint rate, property accuracy, pattern counts, habits, streak, weak spots), export/import. |
 | UI | `src/App.tsx`, `src/pages`, `src/pages/flows`, `src/problem`, `src/components` | Complete. `pages/Problem.tsx` dispatches to the inequality, number-line, even/odd and inverse flows; Home, Module, Progress, Settings, Drill, Sandbox and the PIN gate. Graph and calculator panels stay behind a reveal button until the problem is complete (they show the answer). On phones the panel toolbar sits in the composer, or at the top when a screen has no composer. The first-spike demo UI is removed. |
-| Deploy | `Dockerfile`, `nginx.conf`, `docker/`, `.github/workflows`, `deploy/azure.md` | Written. The image builds and passes `deploy/smoke.sh` in GitHub Actions (Docker is not installed on the dev box); no Azure deployment yet. |
+| Deploy | `Dockerfile`, `nginx.conf`, `docker/`, `.github/workflows`, `deploy/azure.md` | Written. The image builds and passes `deploy/smoke.sh` in GitHub Actions (Docker is not installed on the dev box). On Azure it runs behind Container Apps sign-in with Google plus an email allowlist in nginx (`docker/25-allowlist.sh`, `deploy/azure-setup.sh`). |
 
 **Verification** (2026-09-15): `npm test` 28 files / 297 tests; `npm run test:sweep` pushes every canonical step and its mutations through the engine; browser QA and a two-agent review are recorded in `docs/progress/qa.md` and `docs/progress/review-findings.md` (all 23 findings fixed).
 
@@ -200,7 +200,7 @@ and check value substituted.
 Screens/routes, keymap, mobile composer, localStorage schema, mastery definition:
 `research/ux-mobile-progress.md` (Reference section). HashRouter routes:
 `/`, `/m/:moduleId`, `/p/:moduleId/:templateId/:seed?d=…`, `/drill`, `/progress`, `/settings`,
-`/sandbox`. PIN gate reads `window.__PRECALC_CONFIG__.pinHash` (SHA-256 hex; empty = no gate).
+`/sandbox`. PIN gate reads `window.__PRECALC_CONFIG__.pinHash` (SHA-256 hex; empty = no gate). Settings shows a Sign out link when `signOutUrl` is set (the container sets it unless `AUTH_ALLOWLIST=off`).
 
 Problem-page flows by kind:
 - **inequality**: worked column starts at `instance.start`; steps until progress says solved; then

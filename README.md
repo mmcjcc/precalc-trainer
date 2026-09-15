@@ -55,6 +55,7 @@ is the architecture and API reference.
 
 ## Deploy
 
-`docker build --platform linux/amd64 -t precalc-trainer . && docker run -p 8080:80 -e APP_PIN=1234 precalc-trainer`
+`docker build --platform linux/amd64 -t precalc-trainer . && docker run -p 8080:80 -e AUTH_ALLOWLIST=off precalc-trainer`
 
-Azure Container Apps (scale to zero, ~$0 at family usage) with GitHub Actions: `deploy/azure.md`.
+Azure Container Apps (scale to zero, ~$0 at family usage) behind Sign in with Google plus an email
+allowlist, no Microsoft Entra app registration: `deploy/azure.md`, scripted by `deploy/azure-setup.sh`.

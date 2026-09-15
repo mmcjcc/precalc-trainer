@@ -274,7 +274,7 @@ Basic-auth fallback (even smaller; native browser prompt, poor in iOS home-scree
 ```sh
 #!/bin/sh
 set -eu
-printf 'amelia:%s\n' "$(openssl passwd -apr1 "$APP_PIN")" > /etc/nginx/.htpasswd   # openssl CLI is in alpine-slim
+printf 'family:%s\n' "$(openssl passwd -apr1 "$APP_PIN")" > /etc/nginx/.htpasswd   # openssl CLI is in alpine-slim
 ```
 with secret `app-pin` -> env `APP_PIN=secretref:app-pin`.
 

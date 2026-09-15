@@ -4,7 +4,10 @@
 #
 # Writes the runtime config the SPA loads from /config.js (index.html: <script src="/config.js">):
 #
-#     window.__PRECALC_CONFIG__ = { pinHash: "<sha256 hex>" };
+#     window.__PRECALC_CONFIG__ = { pinHash: "<sha256 hex>", signOutUrl: "<path or empty>" };
+#
+# signOutUrl is /.auth/logout (answered by Container Apps sign-in, not nginx) unless
+# AUTH_ALLOWLIST=off, which means there is no sign-in layer; Settings shows a Sign out link when set.
 #
 # Inputs (environment):
 #   APP_PIN_HASH  64-char SHA-256 hex of the PIN; used verbatim (lower-cased) when set — lets
@@ -42,10 +45,15 @@ if [ -n "$hash" ] && ! printf '%s' "$hash" | grep -Eq '^[0-9a-f]{64}$'; then
   exit 1
 fi
 
+signout=""
+if [ "${AUTH_ALLOWLIST:-on}" != "off" ]; then
+  signout="/.auth/logout?post_logout_redirect_uri=/"
+fi
+
 tmp="$OUT.tmp"
 {
   echo "// Generated at container start by /docker-entrypoint.d/20-config.sh — do not edit."
-  echo "window.__PRECALC_CONFIG__ = { pinHash: \"$hash\" };"
+  echo "window.__PRECALC_CONFIG__ = { pinHash: \"$hash\", signOutUrl: \"$signout\" };"
 } > "$tmp"
 mv "$tmp" "$OUT"
 

@@ -53,7 +53,14 @@ function Switch({
   )
 }
 
+/** Set by the container (docker/20-config.sh) when the site runs behind Container Apps sign-in. Same-site paths only. */
+function configuredSignOutUrl(): string {
+  const url = typeof window === 'undefined' ? '' : (window.__PRECALC_CONFIG__?.signOutUrl ?? '')
+  return /^\/(?!\/)/.test(url) ? url : ''
+}
+
 export function SettingsPage() {
+  const signOutUrl = configuredSignOutUrl()
   const settings = useSettings()
   const setSettings = useStore((s) => s.setSettings)
   const resetProgress = useStore((s) => s.resetProgress)
@@ -151,6 +158,24 @@ export function SettingsPage() {
         )}
         {showA2HS && <A2HSCard force />}
       </section>
+
+      {signOutUrl && (
+        <section aria-labelledby="settings-account" className="rounded-2xl border border-navy-100 bg-white p-4">
+          <h2 id="settings-account" className="font-semibold text-navy">
+            Signed in
+          </h2>
+          <p className="mt-0.5 text-sm text-navy/80">
+            Signing out keeps your progress on this device. On a shared computer, sign out of Google too, or the next
+            person to open the site gets in as you.
+          </p>
+          <a
+            href={signOutUrl}
+            className="mt-3 inline-flex min-h-11 items-center rounded-xl border-2 border-navy-100 bg-white px-4 text-sm font-semibold text-navy hover:bg-navy-50"
+          >
+            Sign out
+          </a>
+        </section>
+      )}
 
       <section aria-labelledby="settings-reset" className="rounded-2xl border border-navy-100 bg-white p-4">
         <h2 id="settings-reset" className="font-semibold text-navy">

@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Not on the list · Precalc Trainer</title>
+<!-- Served by nginx with status 403 to a signed-in account that is not in ALLOWED_USERS
+     (docker/25-allowlist.sh). No scripts, no external files: the site CSP allows inline styles. -->
+<style>
+  body { margin: 0; min-height: 100vh; box-sizing: border-box; display: grid; place-items: center; padding: 1.5rem;
+         font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; color: #1b2a4a; background: #f6f7fb; }
+  main { max-width: 32rem; background: #fff; border: 1px solid #dde2ee; border-radius: 1rem; padding: 1.5rem; }
+  h1 { font-size: 1.5rem; line-height: 1.25; margin: 0 0 .75rem; }
+  p { margin: .5rem 0; }
+  a.button { display: inline-flex; align-items: center; min-height: 44px; margin: .75rem 0; padding: 0 1rem;
+             border-radius: .75rem; background: #1b2a4a; color: #fff; font-weight: 600; text-decoration: none; }
+  a.button:focus-visible { outline: 3px solid #e3a008; outline-offset: 2px; }
+  .small { font-size: .875rem; color: #4a5670; }
+</style>
+</head>
+<body>
+<main>
+  <h1>This account isn't on the list</h1>
+  <p>Precalc Trainer is a private practice site. You signed in, but with an account that hasn't been added.</p>
+  <p>Sign out, then sign in with the account that was added for you.</p>
+  <a class="button" href="/.auth/logout?post_logout_redirect_uri=/">Sign out and try another account</a>
+  <p class="small">If it signs you straight back in with the same account, switch accounts at accounts.google.com
+    first. Still stuck? Ask whoever set up the site to add this account.</p>
+</main>
+</body>
+</html>

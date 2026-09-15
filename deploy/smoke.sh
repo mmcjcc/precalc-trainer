@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
 # deploy/smoke.sh — boot a built image and check the container-level contract:
-#   * /config.js carries sha256(APP_PIN); APP_PIN_HASH is honored verbatim; no PIN -> ""
+#   * sign-in allowlist: without X-MS-CLIENT-PRINCIPAL-NAME every path but /healthz answers 403
+#     with the not-allowed page; listed accounts get in (any letter case); near misses don't;
+#     no ALLOWED_USERS lets nobody in; an unsafe entry aborts start-up
+#   * /config.js carries sha256(APP_PIN); APP_PIN_HASH is honored verbatim; no PIN -> "";
+#     signOutUrl is set unless AUTH_ALLOWLIST=off
 #   * a malformed APP_PIN_HASH aborts start-up instead of locking everyone out
 #   * / and deep links serve index.html (SPA fallback); a missing /assets/* is a real 404
 #   * /assets/* immutable for a year; index.html and /config.js no-cache
@@ -15,6 +19,8 @@ IMAGE="${1:?usage: smoke.sh <image>}"
 PORT="${SMOKE_PORT:-18080}"
 BASE="http://127.0.0.1:$PORT"
 CID=""
+OPEN=(-e AUTH_ALLOWLIST=off)          # no sign-in layer in these checks: let every request through
+U='X-MS-CLIENT-PRINCIPAL-NAME'        # set by Container Apps authentication in front of nginx
 
 cleanup() { if [ -n "$CID" ]; then docker rm -f "$CID" >/dev/null 2>&1 || true; CID=""; fi; }
 trap cleanup EXIT
@@ -37,6 +43,20 @@ start() {
   fail "container did not answer /healthz within 30s"
 }
 
+# expect_abort <what> [docker run options...] — the container must refuse to start
+expect_abort() {
+  local what="$1" rc
+  shift
+  cleanup
+  set +e
+  timeout 20 docker run --rm --name precalc-smoke-bad "$@" "$IMAGE" >/dev/null 2>&1
+  rc=$?
+  set -e
+  docker rm -f precalc-smoke-bad >/dev/null 2>&1 || true
+  { [ "$rc" -ne 0 ] && [ "$rc" -ne 124 ]; } || fail "$what must abort start-up (rc=$rc)"
+  pass "$what aborts start-up"
+}
+
 code()    { curl -s -o /dev/null -w '%{http_code}' "$@"; }
 headers() { curl -s -o /dev/null -D - "$@"; }
 
@@ -49,10 +69,12 @@ pass "image size $((SIZE / 1024 / 1024)) MB (< 60 MB)"
 # ---- PIN via APP_PIN --------------------------------------------------------------------
 PIN=1234
 WANT=$(printf '%s' "$PIN" | sha256sum | cut -d' ' -f1)
-start -e APP_PIN="$PIN"
+start "${OPEN[@]}" -e APP_PIN="$PIN"
 CFG=$(curl -fsS "$BASE/config.js")
 [[ "$CFG" == *"pinHash: \"$WANT\""* ]] || fail "/config.js should contain pinHash \"$WANT\"; got: $CFG"
 pass "/config.js pinHash = sha256(APP_PIN)"
+[[ "$CFG" == *'signOutUrl: ""'* ]] || fail "AUTH_ALLOWLIST=off should give an empty signOutUrl; got: $CFG"
+pass "/config.js signOutUrl empty with AUTH_ALLOWLIST=off"
 headers "$BASE/config.js" | grep -qi '^cache-control: no-cache' || fail "/config.js must be no-cache"
 pass "/config.js no-cache"
 
@@ -81,26 +103,51 @@ grep -qi  '^content-security-policy:'        <<<"$H" || fail "missing Content-Se
 grep -qiE '^server: nginx[[:space:]]*$'      <<<"$H" || fail "Server header should be bare 'nginx' (server_tokens off); headers: $H"
 pass "security headers + server_tokens off"
 
+# ---- sign-in allowlist ------------------------------------------------------------------
+start -e ALLOWED_USERS="kid@example.com, Parent+precalc@Example.org"
+for p in / /m/inequalities/deep/link /config.js "$ASSET" /api/explain /favicon.svg; do
+  [ "$(code "$BASE$p")" = 403 ] || fail "$p without a signed-in account must be 403"
+done
+PAGE=$(curl -s "$BASE/")
+grep -q 'on the list' <<<"$PAGE" || fail "the 403 should serve the not-allowed page; got: $PAGE"
+grep -q '/.auth/logout' <<<"$PAGE" || fail "the not-allowed page should link to sign-out"
+grep -qi '^content-security-policy:' <<<"$(headers "$BASE/")" || fail "the 403 page should keep the security headers"
+pass "not signed in -> 403 not-allowed page on every path"
+[ "$(code "$BASE/healthz")" = 200 ] || fail "/healthz must stay open"
+pass "/healthz open without an account"
+
+[ "$(code -H "$U: kid@example.com" "$BASE/")" = 200 ] || fail "a listed account should get /"
+[ "$(code -H "$U: KID@Example.COM" "$BASE/m/inequalities/deep/link")" = 200 ] || fail "the match should ignore letter case"
+[ "$(code -H "$U: parent+precalc@example.org" "$BASE$ASSET")" = 200 ] || fail "the second account (with +) should get assets"
+pass "listed accounts get in (any case; + in an address)"
+for who in kid@exampleXcom notkid@example.com kid@example.com.evil.net parentprecalc@example.org kid; do
+  [ "$(code -H "$U: $who" "$BASE/")" = 403 ] || fail "\"$who\" must not get in"
+done
+pass "near misses -> 403 (dots and + are literal, whole value must match)"
+CFG=$(curl -fsS -H "$U: kid@example.com" "$BASE/config.js")
+[[ "$CFG" == *'signOutUrl: "/.auth/logout?post_logout_redirect_uri=/"'* ]] || fail "behind sign-in /config.js should carry the sign-out URL; got: $CFG"
+pass "/config.js signOutUrl set behind sign-in"
+
+start
+[ "$(code -H "$U: kid@example.com" "$BASE/")" = 403 ] || fail "with no ALLOWED_USERS nobody may get in"
+pass "no ALLOWED_USERS -> nobody gets in (fail closed)"
+
+expect_abort "an ALLOWED_USERS entry with ';'" -e 'ALLOWED_USERS=kid@example.com;default 1'
+expect_abort "an ALLOWED_USERS entry with '*'" -e 'ALLOWED_USERS=*'
+
 # ---- PIN via APP_PIN_HASH (verbatim, wins over APP_PIN) ---------------------------------
-start -e APP_PIN_HASH="$WANT" -e APP_PIN=ignored
+start "${OPEN[@]}" -e APP_PIN_HASH="$WANT" -e APP_PIN=ignored
 CFG=$(curl -fsS "$BASE/config.js")
 [[ "$CFG" == *"pinHash: \"$WANT\""* ]] || fail "APP_PIN_HASH should be used verbatim; got: $CFG"
 pass "APP_PIN_HASH honored"
 
 # ---- no PIN -> empty hash -> no gate -----------------------------------------------------
-start
+start "${OPEN[@]}"
 CFG=$(curl -fsS "$BASE/config.js")
 [[ "$CFG" == *'pinHash: ""'* ]] || fail "no APP_PIN should give an empty pinHash; got: $CFG"
 pass "no PIN -> empty hash"
 
 # ---- malformed hash refuses to start ----------------------------------------------------
-cleanup
-set +e
-timeout 20 docker run --rm --name precalc-smoke-bad -e APP_PIN_HASH=nope "$IMAGE" >/dev/null 2>&1
-rc=$?
-set -e
-docker rm -f precalc-smoke-bad >/dev/null 2>&1 || true
-{ [ "$rc" -ne 0 ] && [ "$rc" -ne 124 ]; } || fail "a malformed APP_PIN_HASH must abort start-up (rc=$rc)"
-pass "malformed APP_PIN_HASH aborts start-up"
+expect_abort "a malformed APP_PIN_HASH" -e APP_PIN_HASH=nope
 
 echo "SMOKE OK"

@@ -123,6 +123,15 @@ jobs:
         if: env.AZURE_CLIENT_ID != ''
         run: |
           az extension add --name containerapp --upgrade --yes
+          # The image's allowlist trusts X-MS-CLIENT-PRINCIPAL-NAME, which only Container Apps
+          # sign-in can set. Refuse to roll out onto an app where sign-in has been switched off.
+          AUTH=$(az containerapp auth show --name "$ACA_APP" --resource-group "$ACA_RG" \
+            --query "[properties.platform.enabled || platform.enabled, properties.globalValidation.unauthenticatedClientAction || globalValidation.unauthenticatedClientAction] | join(' ', @)" \
+            -o tsv 2>/dev/null || true)
+          if [ "$AUTH" != "true RedirectToLoginPage" ]; then
+            echo "::error::Sign-in is not enforced on $ACA_APP (got '$AUTH'), so the allowlist can't be trusted. Not rolling out. Fix: bash deploy/azure-setup.sh google"
+            exit 1
+          fi
           az containerapp update --name "$ACA_APP" --resource-group "$ACA_RG" \
             --image "$IMAGE:${{ github.sha }}"
           FQDN=$(az containerapp show --name "$ACA_APP" --resource-group "$ACA_RG" \

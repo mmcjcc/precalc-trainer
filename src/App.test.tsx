@@ -154,3 +154,25 @@ describe('PIN gate', () => {
     expect(screen.getByRole('button', { name: 'Practice weak spots' })).toBeTruthy()
   })
 })
+
+describe('Sign out (Container Apps sign-in)', () => {
+  it('offers no sign-out link when the server configures none', () => {
+    window.__PRECALC_CONFIG__ = { pinHash: '' }
+    renderAt('/settings')
+    expect(screen.getByRole('heading', { level: 1, name: 'Settings' })).toBeTruthy()
+    expect(screen.queryByRole('link', { name: 'Sign out' })).toBeNull()
+  })
+
+  it("links to the sign-in layer's logout when configured", () => {
+    window.__PRECALC_CONFIG__ = { pinHash: '', signOutUrl: '/.auth/logout?post_logout_redirect_uri=/' }
+    renderAt('/settings')
+    const link = screen.getByRole('link', { name: 'Sign out' })
+    expect(link.getAttribute('href')).toBe('/.auth/logout?post_logout_redirect_uri=/')
+  })
+
+  it('ignores a sign-out URL that leaves the site', () => {
+    window.__PRECALC_CONFIG__ = { pinHash: '', signOutUrl: '//example.com/logout' }
+    renderAt('/settings')
+    expect(screen.queryByRole('link', { name: 'Sign out' })).toBeNull()
+  })
+})
