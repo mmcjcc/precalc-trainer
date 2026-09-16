@@ -170,9 +170,12 @@ describe('Sign out (Container Apps sign-in)', () => {
     expect(link.getAttribute('href')).toBe('/.auth/logout?post_logout_redirect_uri=/')
   })
 
-  it('ignores a sign-out URL that leaves the site', () => {
-    window.__PRECALC_CONFIG__ = { pinHash: '', signOutUrl: '//example.com/logout' }
-    renderAt('/settings')
-    expect(screen.queryByRole('link', { name: 'Sign out' })).toBeNull()
-  })
+  it.each(['//example.com/logout', '/\\example.com/logout', 'https://example.com/logout', 'javascript:alert(1)'])(
+    'ignores the sign-out URL %s, which leaves the site',
+    (signOutUrl) => {
+      window.__PRECALC_CONFIG__ = { pinHash: '', signOutUrl }
+      renderAt('/settings')
+      expect(screen.queryByRole('link', { name: 'Sign out' })).toBeNull()
+    },
+  )
 })

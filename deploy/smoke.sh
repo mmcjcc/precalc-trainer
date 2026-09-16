@@ -43,18 +43,20 @@ start() {
   fail "container did not answer /healthz within 30s"
 }
 
-# expect_abort <what> [docker run options...] — the container must refuse to start
+# expect_abort <what> <message> [docker run options...] — the container must refuse to start,
+# and say why: a non-zero exit alone would also pass if the image were broken some other way.
 expect_abort() {
-  local what="$1" rc
-  shift
+  local what="$1" want="$2" rc out
+  shift 2
   cleanup
   set +e
-  timeout 20 docker run --rm --name precalc-smoke-bad "$@" "$IMAGE" >/dev/null 2>&1
+  out=$(timeout 20 docker run --rm --name precalc-smoke-bad "$@" "$IMAGE" 2>&1)
   rc=$?
   set -e
   docker rm -f precalc-smoke-bad >/dev/null 2>&1 || true
-  { [ "$rc" -ne 0 ] && [ "$rc" -ne 124 ]; } || fail "$what must abort start-up (rc=$rc)"
-  pass "$what aborts start-up"
+  { [ "$rc" -ne 0 ] && [ "$rc" -ne 124 ]; } || fail "$what must abort start-up (rc=$rc); output: $out"
+  grep -q "$want" <<<"$out" || fail "$what should abort saying \"$want\"; got: $out"
+  pass "$what aborts start-up, naming the reason"
 }
 
 code()    { curl -s -o /dev/null -w '%{http_code}' "$@"; }
@@ -132,8 +134,8 @@ start
 [ "$(code -H "$U: kid@example.com" "$BASE/")" = 403 ] || fail "with no ALLOWED_USERS nobody may get in"
 pass "no ALLOWED_USERS -> nobody gets in (fail closed)"
 
-expect_abort "an ALLOWED_USERS entry with ';'" -e 'ALLOWED_USERS=kid@example.com;default 1'
-expect_abort "an ALLOWED_USERS entry with '*'" -e 'ALLOWED_USERS=*'
+expect_abort "an ALLOWED_USERS entry with ';'" "ALLOWED_USERS entry" -e 'ALLOWED_USERS=kid@example.com;default 1'
+expect_abort "an ALLOWED_USERS entry with '*'" "ALLOWED_USERS entry" -e 'ALLOWED_USERS=*'
 
 # ---- PIN via APP_PIN_HASH (verbatim, wins over APP_PIN) ---------------------------------
 start "${OPEN[@]}" -e APP_PIN_HASH="$WANT" -e APP_PIN=ignored
@@ -148,6 +150,8 @@ CFG=$(curl -fsS "$BASE/config.js")
 pass "no PIN -> empty hash"
 
 # ---- malformed hash refuses to start ----------------------------------------------------
-expect_abort "a malformed APP_PIN_HASH" -e APP_PIN_HASH=nope
+expect_abort "a malformed APP_PIN_HASH" "64-character SHA-256" -e APP_PIN_HASH=nope
+expect_abort "a two-line APP_PIN_HASH" "64-character SHA-256" -e "APP_PIN_HASH=$WANT
+$WANT"
 
 echo "SMOKE OK"

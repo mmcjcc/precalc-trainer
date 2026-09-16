@@ -69,7 +69,9 @@ bash deploy/azure-setup.sh app
 This registers `Microsoft.App`, then creates the resource group `precalc-rg`, the environment
 `precalc-env` (without a Log Analytics workspace, the only part that would cost money) and the
 container app `precalc`. The app runs at 0.25 vCPU / 0.5 GiB and scales to zero. It pulls the
-public GHCR image, so no registry password is needed. Every page answers 403 at this point. The
+GHCR image anonymously, so no registry password is needed. That needs the package to be public:
+GitHub → your profile → Packages → `precalc-trainer` → Package settings → Change visibility. The
+script checks the pull before it creates anything and stops with a clear message if it fails. Every page answers 403 at this point. The
 script prints the app URL and the two Google values for step 2. Override names with `LOC`, `RG`,
 `ACA_ENV` or `APP`.
 
@@ -107,8 +109,10 @@ It stores the secret as a container app secret, then requires sign-in on every p
 bash deploy/azure-setup.sh check
 ```
 
-It prints the URL, the sign-in settings and the list, then fetches `/` and `/healthz`. It fails
-unless someone who isn't signed in is redirected to `/.auth/login/`.
+It prints the URL, the sign-in settings, whether the nginx email gate is on, and the list, then
+fetches `/` and `/healthz`. It fails unless someone who isn't signed in is redirected to
+`/.auth/login/`, and it fails if `AUTH_ALLOWLIST=off` has been set on the app, which would switch
+the email gate off and let any Google account in.
 
 ## 3. Change who can get in
 

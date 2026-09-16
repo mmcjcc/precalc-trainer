@@ -126,7 +126,7 @@ jobs:
           # The image's allowlist trusts X-MS-CLIENT-PRINCIPAL-NAME, which only Container Apps
           # sign-in can set. Refuse to roll out onto an app where sign-in has been switched off.
           AUTH=$(az containerapp auth show --name "$ACA_APP" --resource-group "$ACA_RG" \
-            --query "[properties.platform.enabled || platform.enabled, properties.globalValidation.unauthenticatedClientAction || globalValidation.unauthenticatedClientAction] | join(' ', @)" \
+            --query "[to_string(properties.platform.enabled || platform.enabled), to_string(properties.globalValidation.unauthenticatedClientAction || globalValidation.unauthenticatedClientAction)] | join(' ', @)" \
             -o tsv 2>/dev/null || true)
           if [ "$AUTH" != "true RedirectToLoginPage" ]; then
             echo "::error::Sign-in is not enforced on $ACA_APP (got '$AUTH'), so the allowlist can't be trusted. Not rolling out. Fix: bash deploy/azure-setup.sh google"
@@ -138,11 +138,23 @@ jobs:
             --query properties.configuration.ingress.fqdn -o tsv)
           echo "Deployed https://$FQDN"
           echo "### Deployed https://$FQDN (\`${{ github.sha }}\`)" >> "$GITHUB_STEP_SUMMARY"
+          ok=0
           for _ in $(seq 1 30); do
-            if curl -fsS "https://$FQDN/healthz" >/dev/null 2>&1; then echo "healthz ok"; exit 0; fi
+            if curl -fsS "https://$FQDN/healthz" >/dev/null 2>&1; then ok=1; break; fi
             sleep 5
           done
-          echo "::warning::https://$FQDN/healthz did not answer within 150s — check: az containerapp logs show -n $ACA_APP -g $ACA_RG --type system"
+          if [ "$ok" != 1 ]; then
+            echo "::warning::https://$FQDN/healthz did not answer within 150s — check: az containerapp logs show -n $ACA_APP -g $ACA_RG --type system"
+            exit 0
+          fi
+          echo "healthz ok"
+          # /healthz is the one path the gate ignores, so also check that a visitor who is not
+          # signed in still gets the sign-in redirect from the revision we just rolled out.
+          VISIT=$(curl -s -o /dev/null -w '%{http_code} %{redirect_url}' "https://$FQDN/")
+          case "$VISIT" in
+            30[12]\ *"/.auth/login/"*|401\ *) echo "anonymous visitors are sent to sign-in ($VISIT)" ;;
+            *) echo "::error::After the roll-out, an anonymous request to https://$FQDN/ answered '$VISIT' instead of a sign-in redirect."; exit 1 ;;
+          esac
 
       - name: Azure roll-out skipped
         if: env.AZURE_CLIENT_ID == ''

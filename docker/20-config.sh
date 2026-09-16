@@ -40,7 +40,16 @@ elif [ -n "${APP_PIN:-}" ]; then
   source="APP_PIN"
 fi
 
-if [ -n "$hash" ] && ! printf '%s' "$hash" | grep -Eq '^[0-9a-f]{64}$'; then
+# case, not grep: grep -E tests one line at a time, so a value with a newline in it would pass
+# the pattern and write a broken /config.js.
+bad=0
+if [ -n "$hash" ]; then
+  case "$hash" in
+    *[!0-9a-f]*) bad=1 ;;
+    *) [ "${#hash}" -eq 64 ] || bad=1 ;;
+  esac
+fi
+if [ "$bad" -eq 1 ]; then
   log "ERROR: $source is not a 64-character SHA-256 hex string (got ${#hash} chars). Refusing to start."
   exit 1
 fi

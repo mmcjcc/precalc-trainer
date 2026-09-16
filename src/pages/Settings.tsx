@@ -53,10 +53,11 @@ function Switch({
   )
 }
 
-/** Set by the container (docker/20-config.sh) when the site runs behind Container Apps sign-in. Same-site paths only. */
+/** Set by the container (docker/20-config.sh) when the site runs behind Container Apps sign-in. */
 function configuredSignOutUrl(): string {
   const url = typeof window === 'undefined' ? '' : (window.__PRECALC_CONFIG__?.signOutUrl ?? '')
-  return /^\/(?!\/)/.test(url) ? url : ''
+  // Same-site paths only: a browser reads both //host and /\host as another origin.
+  return /^\/(?![/\\])[^\\]*$/.test(url) ? url : ''
 }
 
 export function SettingsPage() {
