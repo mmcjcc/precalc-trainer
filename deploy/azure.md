@@ -95,13 +95,16 @@ admin, so allow a personal Gmail account.
 **Step 3: turn on sign-in and set the list.**
 
 ```bash
-bash deploy/azure-setup.sh google
+bash deploy/azure-setup.sh google ~/Downloads/client_secret_*.apps.googleusercontent.com.json
 ```
 
-The script asks for the client ID, the client secret (typing is hidden) and the allowed emails.
-It stores the secret as a container app secret, then requires sign-in on every path except
-`/healthz`. Only after that does it set `ALLOWED_USERS` and run `check`. `GOOGLE_CLIENT_ID` and
-`ALLOWED_USERS` in the environment skip their prompts; the secret is always typed.
+Hand it the JSON Google offers when the client is created and it reads the client ID and secret
+from the file, so the secret never appears on screen or in your shell history. With no argument it
+asks for both, the secret with typing hidden. Either way it stores the secret as a container app
+secret, then requires sign-in on every path except `/healthz`. Only after that does it set
+`ALLOWED_USERS` and run `check`, so there is no moment where the app is reachable by anyone.
+`GOOGLE_CLIENT_JSON`, `GOOGLE_CLIENT_ID` and `ALLOWED_USERS` in the environment skip the prompts.
+Delete the JSON once you are done: it holds the client secret.
 
 **Check it any time:**
 

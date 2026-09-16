@@ -5,8 +5,11 @@
 #   bash deploy/azure-setup.sh app [sha]   1. resource group, environment and container app. Every page
 #                                             answers 403 until step 3, so nothing is open meanwhile.
 #   (Google Cloud console)                 2. create the OAuth client; `app` prints the redirect URI.
-#   bash deploy/azure-setup.sh google      3. asks for the client ID, the secret (typing hidden) and the
-#                                             emails allowed in; turns sign-in on, then sets the list.
+#   bash deploy/azure-setup.sh google [client.json]
+#                                          3. takes the client ID and secret from the JSON Google offers
+#                                             at the end of step 2 (or prompts for them, the secret with
+#                                             typing hidden), asks which emails are allowed in, turns
+#                                             sign-in on, then sets the list. The secret is never echoed.
 #   bash deploy/azure-setup.sh check          URL, sign-in settings, allowlist, and a live request.
 #   bash deploy/azure-setup.sh users "a@gmail.com,b@gmail.com"      replace who may use it.
 #   bash deploy/azure-setup.sh update [sha]   roll out the image of a commit (default: this checkout's HEAD).
@@ -142,14 +145,25 @@ EOF
 
 cmd_google() {
   need_login
-  local host id secret users
+  local host id secret users json
   host=$(fqdn 2>/dev/null) && [ -n "$host" ] || die "no container app $APP in $RG yet: run app first"
   echo "The Google client must list this redirect URI: https://$host/.auth/login/google/callback"
   id="${GOOGLE_CLIENT_ID:-}"
+  secret=""
+  # Google offers the new client as a JSON download; reading it here keeps the secret out of the
+  # terminal, the shell history and anyone's screen. Keys and values sit on one line in that file.
+  json="${1:-${GOOGLE_CLIENT_JSON:-}}"
+  if [ -n "$json" ]; then
+    [ -f "$json" ] || die "no such file: $json"
+    id=$(grep -o '"client_id":[[:space:]]*"[^"]*"' "$json" | head -1 | cut -d'"' -f4)
+    secret=$(grep -o '"client_secret":[[:space:]]*"[^"]*"' "$json" | head -1 | cut -d'"' -f4)
+    { [ -n "$id" ] && [ -n "$secret" ]; } || die "could not read client_id and client_secret from $json"
+    echo "Client read from $json (the secret is not shown)"
+  fi
   [ -n "$id" ] || read -rp "Google OAuth client ID: " id
   [[ "$id" =~ ^[0-9]+-[A-Za-z0-9_]+\.apps\.googleusercontent\.com$ ]] \
     || die "that doesn't look like a Google client ID (digits-letters.apps.googleusercontent.com)"
-  read -rsp "Google OAuth client secret (typing is hidden): " secret; echo
+  if [ -z "$secret" ]; then read -rsp "Google OAuth client secret (typing is hidden): " secret; echo; fi
   [ -n "$secret" ] || die "the client secret is empty"
   users="${ALLOWED_USERS:-}"
   [ -n "$users" ] || read -rp "Emails allowed in, comma-separated: " users
@@ -247,7 +261,7 @@ cmd="${1:-}"
 [ $# -gt 0 ] && shift
 case "$cmd" in
   app)    cmd_app "$@" ;;
-  google) cmd_google ;;
+  google) cmd_google "$@" ;;
   users)  cmd_users "$@" ;;
   update) cmd_update "$@" ;;
   check)  cmd_check ;;
