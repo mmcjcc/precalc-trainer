@@ -107,8 +107,10 @@ export function ProblemFrame({ instance, attempt, flags, templateTitle, progress
 
   // Graph and calculator steps show the answer: student-invoked, open by themselves once finished.
   const [revealed, setRevealed] = useState<{ graph: boolean; calc: boolean }>({ graph: false, calc: false })
-  const rail: RailPanel[] = [
-    { id: 'hints', title: 'Hints', content: hints },
+  // A problem with nothing to graph and no calculator steps (significant figures) gets neither panel:
+  // no rail section, no toolbar button, no reveal gate, no shortcut, no cheat-sheet row.
+  const bare = instance.graph.kind === 'none' && instance.calc.ti84.length === 0 && instance.calc.nspire.length === 0
+  const answerPanels: RailPanel[] = [
     {
       id: 'graph',
       title: 'Graph it',
@@ -139,6 +141,10 @@ export function ProblemFrame({ instance, attempt, flags, templateTitle, progress
         </RevealGate>
       ),
     },
+  ]
+  const rail: RailPanel[] = [
+    { id: 'hints', title: 'Hints', content: hints },
+    ...(bare ? [] : answerPanels),
     { id: 'rules', title: 'Rule cards', short: 'Rules', content: <RuleCardsPanel cards={mod.ruleCards} /> },
   ]
 
@@ -155,8 +161,8 @@ export function ProblemFrame({ instance, attempt, flags, templateTitle, progress
         keymap?.onHint?.()
         if (bp !== 'desktop') setOpenPanel('hints')
       },
-      onGraph: () => toggle('graph'),
-      onCalc: () => toggle('calc'),
+      onGraph: bare ? undefined : () => toggle('graph'),
+      onCalc: bare ? undefined : () => toggle('calc'),
       onUndo: keymap?.onUndo,
       onDigit: keymap?.onDigit,
       onHelp: () => setHelp((h) => !h),
@@ -286,7 +292,7 @@ export function ProblemFrame({ instance, attempt, flags, templateTitle, progress
           </div>
         )}
       </div>
-      <KeymapHelp open={help} onClose={() => setHelp(false)} />
+      <KeymapHelp open={help} onClose={() => setHelp(false)} omit={bare ? ['graph', 'calc'] : undefined} />
     </PageLayout>
   )
 }

@@ -138,7 +138,7 @@ function ModuleView({ module }: { module: ModuleDef }) {
         <span aria-hidden>←</span> All modules
       </Link>
       <header className="space-y-2">
-        <p className="text-sm font-semibold uppercase tracking-wide text-coral-700">Module</p>
+        <p className="text-sm font-semibold uppercase tracking-wide text-coral-700">{module.subject ? `${module.subject} module` : 'Module'}</p>
         <h1 className="text-3xl font-semibold text-navy">{module.title}</h1>
         <p className="max-w-2xl text-navy/80">{module.blurb}</p>
         {!isDrill && mm.total > 0 && (

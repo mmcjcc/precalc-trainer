@@ -147,12 +147,12 @@ export function useKeymap(handlers: KeymapHandlers, opts: KeymapOptions = {}): v
 }
 
 /** Cheat-sheet rows for the `?` overlay. */
-export const KEYMAP_HELP: { keys: string[]; does: string }[] = [
+export const KEYMAP_HELP: { keys: string[]; does: string; /** Panel the row belongs to, so pages without it can drop the row. */ panel?: 'graph' | 'calc' }[] = [
   { keys: ['Enter'], does: 'Check this step' },
   { keys: ['Esc'], does: 'Clear the input, or close the open panel' },
   { keys: ['Ctrl', 'Shift', 'H'], does: 'Next hint rung' },
-  { keys: ['Ctrl', 'Shift', 'G'], does: 'Graph panel' },
-  { keys: ['Ctrl', 'Shift', 'C'], does: 'Calculator panel' },
+  { keys: ['Ctrl', 'Shift', 'G'], does: 'Graph panel', panel: 'graph' },
+  { keys: ['Ctrl', 'Shift', 'C'], does: 'Calculator panel', panel: 'calc' },
   { keys: ['Ctrl', 'Z'], does: 'Undo the last accepted step (when the input is empty)' },
   { keys: ['1–9', '0'], does: 'Pick a property chip (focus on the chips, not the input)' },
   { keys: ['Tab'], does: 'Skip the chip question' },

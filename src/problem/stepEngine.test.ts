@@ -78,6 +78,8 @@ describe('helpers', () => {
   it('maps difficulty flags and seeds', () => {
     expect(knobsFromFlags('fn')).toEqual({ fractions: true, negativeLead: true })
     expect(flagsFromKnobs({ negativeLead: true, steps: 2 })).toBe('n2')
+    expect(knobsFromFlags('se')).toEqual({ sciNotation: true, exactNumbers: true })
+    expect(flagsFromKnobs({ sciNotation: true, exactNumbers: true })).toBe('se')
     expect(parseSeedParam('9ix')).toBe(12345)
     expect(parseSeedParam('!!')).toBeNull()
     expect(problemPath('inequalities', 'ineq.linear', 12345, 'n')).toBe('/p/inequalities/ineq.linear/9ix?d=n')

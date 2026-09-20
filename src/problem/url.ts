@@ -1,6 +1,7 @@
 /**
  * Problem URLs (UX-13): `/p/<moduleId>/<templateId>/<seed36>?d=<flags>`.
- * Flags are one letter per knob so links stay short: `f` fractions, `n` negativeLead, `2`/`3` steps.
+ * Flags are one letter per knob so links stay short: `f` fractions, `n` negativeLead, `2`/`3` steps,
+ * `s` sciNotation, `e` exactNumbers (significant figures).
  * Pure helpers — no React.
  */
 import type { DifficultyKnobs, KnobDef } from '@/content/types'
@@ -12,6 +13,8 @@ export function knobsFromFlags(flags: string | null | undefined): DifficultyKnob
   for (const ch of flags) {
     if (ch === 'f') knobs.fractions = true
     else if (ch === 'n') knobs.negativeLead = true
+    else if (ch === 's') knobs.sciNotation = true
+    else if (ch === 'e') knobs.exactNumbers = true
     else if (ch === '1' || ch === '2' || ch === '3') knobs.steps = Number(ch) as 1 | 2 | 3
   }
   return knobs
@@ -21,6 +24,8 @@ export function flagsFromKnobs(knobs: DifficultyKnobs): string {
   let s = ''
   if (knobs.fractions) s += 'f'
   if (knobs.negativeLead) s += 'n'
+  if (knobs.sciNotation) s += 's'
+  if (knobs.exactNumbers) s += 'e'
   if (knobs.steps && knobs.steps !== 1) s += String(knobs.steps)
   return s
 }

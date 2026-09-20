@@ -177,8 +177,28 @@ function ModuleCard({ module }: { module: ModuleDef }) {
   )
 }
 
+/** Modules with no subject are the precalculus set; every other subject gets its own heading. */
+function groupBySubject(modules: ModuleDef[]): { precalc: ModuleDef[]; subjects: { subject: string; modules: ModuleDef[] }[] } {
+  const precalc: ModuleDef[] = []
+  const subjects: { subject: string; modules: ModuleDef[] }[] = []
+  for (const m of modules) {
+    if (!m.subject) {
+      precalc.push(m)
+      continue
+    }
+    let g = subjects.find((x) => x.subject === m.subject)
+    if (!g) {
+      g = { subject: m.subject, modules: [] }
+      subjects.push(g)
+    }
+    g.modules.push(m)
+  }
+  return { precalc, subjects }
+}
+
 export function Home() {
   const attempt = useAttempt()
+  const { precalc, subjects } = useMemo(() => groupBySubject(MODULES), [])
   return (
     <div className="mx-auto max-w-4xl space-y-6">
       <header className="space-y-2">
@@ -196,14 +216,30 @@ export function Home() {
 
       <section aria-labelledby="home-modules" className="space-y-3">
         <h2 id="home-modules" className="text-lg font-semibold text-navy">
-          Modules
+          {subjects.length > 0 ? 'Precalculus' : 'Modules'}
         </h2>
         <div className="grid gap-4 sm:grid-cols-2">
-          {MODULES.map((m) => (
+          {precalc.map((m) => (
             <ModuleCard key={m.id} module={m} />
           ))}
         </div>
       </section>
+
+      {subjects.map((g) => {
+        const id = `home-subject-${g.subject.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`
+        return (
+          <section key={g.subject} aria-labelledby={id} className="space-y-3">
+            <h2 id={id} className="text-lg font-semibold text-navy">
+              {g.subject}
+            </h2>
+            <div className="grid gap-4 sm:grid-cols-2">
+              {g.modules.map((m) => (
+                <ModuleCard key={m.id} module={m} />
+              ))}
+            </div>
+          </section>
+        )
+      })}
 
       <Link to="/sandbox" className="block rounded-2xl border border-dashed border-navy-100 p-4 hover:border-navy">
         <span className="block text-xs font-semibold uppercase tracking-wide text-coral-700">Sandbox</span>

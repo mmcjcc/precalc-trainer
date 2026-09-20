@@ -66,6 +66,21 @@ export interface AttemptFinal {
   everWrong?: boolean
   /** Result of the first final-answer record (answer-only problems base their first-try rate on it). */
   firstCorrect?: boolean
+  /**
+   * Rung 3 showed the answer before it was given (answer-only problems). Counted like a revealed
+   * step: it blocks mastery for this attempt.
+   */
+  revealed?: boolean
+  /** Significant figures: the coefficient box exactly as typed (restored after a reload). */
+  sfText?: string
+  /** Significant figures: the power-of-ten box exactly as typed. */
+  sfPower?: string
+  /** Significant figures, count tasks: `SigFigChar.index` of every digit she marked significant. */
+  sfTaps?: number[]
+  /** Significant figures, mixed tasks: the intermediate-precision box as typed. */
+  sfIntermediate?: string
+  /** Significant figures, mixed tasks: how many intermediate questions have been answered right. */
+  sfIntermediateDone?: number
 }
 
 export interface Attempt {

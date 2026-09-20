@@ -10,6 +10,7 @@ import { EvenOddFlow } from './flows/EvenOddFlow'
 import { InequalityFlow } from './flows/InequalityFlow'
 import { InverseFlow } from './flows/InverseFlow'
 import { NumberLineFlow } from './flows/NumberLineFlow'
+import { SigFigFlow } from './flows/SigFigFlow'
 import type { FlowProps } from './flows/types'
 
 interface Resolved {
@@ -67,6 +68,8 @@ function ProblemBody({ instance, flags, templateTitle }: { instance: ProblemInst
       return <EvenOddFlow {...props} />
     case 'inverse':
       return <InverseFlow {...props} />
+    case 'sigFigs':
+      return <SigFigFlow {...props} />
     default:
       return <Navigate to="/" replace />
   }

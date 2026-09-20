@@ -10,11 +10,12 @@ import type {
   ModuleId,
   PropertyTag,
   RelOp,
+  SigFigTask,
   SolutionSet,
   VarName,
 } from '@/shared/types'
 
-export type ProblemKind = 'inequality' | 'numberLine' | 'evenOdd' | 'inverse' | 'drill'
+export type ProblemKind = 'inequality' | 'numberLine' | 'evenOdd' | 'inverse' | 'drill' | 'sigFigs'
 
 /** Difficulty knobs (all optional; templates document which they honor). */
 export interface DifficultyKnobs {
@@ -24,6 +25,10 @@ export interface DifficultyKnobs {
   fractions?: boolean
   /** Negative leading coefficient (forces the divide-by-negative flip). */
   negativeLead?: boolean
+  /** Significant figures: every problem has a number written in scientific notation. URL flag `s`. */
+  sciNotation?: boolean
+  /** Significant figures: every calculation has an exact (counted or defined) number in it. URL flag `e`. */
+  exactNumbers?: boolean
 }
 
 export type RuleCardId = string
@@ -65,7 +70,64 @@ export type OneToOneReason = 'fails_hlt' | 'even_power_pm' | 'repeated_y'
 export type Parity = 'even' | 'odd' | 'neither'
 export type ParityReason = 'domain_asymmetric' | 'values'
 
+/** How the significant-figures UI collects the answer. */
+export type SigFigEntry =
+  /** A whole number of figures (the UI may also let her tap the digits: engine `gradeSigFigTaps`). */
+  | 'count'
+  /** A numeral in any accepted spelling; offer a power-of-ten box (engine `composeSigFigText`). */
+  | 'numeral'
+
+/** One number of a significant-figures problem as it is printed: numeral, unit, and what it is. */
+export interface SigFigQuantity {
+  /** Exactly the task's term text (ASCII, engine-parseable), e.g. "12.50", "1.20 x 10^3". */
+  text: string
+  /** Pretty numeral, e.g. "1.20 × 10³". */
+  display: string
+  /** "g", "mL", "cm", "°C"; "" for a pure number. */
+  unit: string
+  /** What the number is, e.g. "mass of the sample". */
+  label: string
+  /** Rule 6: counted or defined. */
+  exact: boolean
+  /** Why it is exact: "counted", "defined: 100 cm = 1 m". */
+  note?: string
+}
+
 export type AnswerSpec =
+  | {
+      /**
+       * Significant figures (chemistry). Grade with the ENGINE: `gradeSigFigAnswer(task, typed)`;
+       * never compare against `expected` as text (many spellings are right).
+       */
+      type: 'sigFigs'
+      /** The engine task, JSON-safe. */
+      task: SigFigTask
+      entry: SigFigEntry
+      /** The question in one line, numerals pretty-printed: "12.50 g ÷ 4.1 mL", "Round 1999 m to 2 significant figures". */
+      prompt: string
+      /** One chemistry-flavoured sentence that sets the scene ("" when the bare numeral is the question). */
+      context: string
+      /** The task's numbers in reading order (same order as engine `sigFigTaskTerms(task)`). */
+      quantities: SigFigQuantity[]
+      /** Unit to print beside the answer box ("" = none), e.g. "g/mL". */
+      unit: string
+      /** Canonical answer, ASCII and engine-parseable ("3.0", "2.0 x 10^3", "2000."); a count for entry 'count'. */
+      expected: string
+      /** The same, pretty ("2.0 × 10³"). */
+      expectedDisplay: string
+      /** Equally right spellings (ASCII), e.g. the scientific twin of "12000". */
+      alternates: string[]
+      /** Hint rung 1. */
+      nudge: string
+      /** Hint rung 2: id of the rule card to show first (in the module's `ruleCards`). */
+      ruleCard: RuleCardId
+      /** Every rule card this problem leans on, most relevant first (includes `ruleCard`). */
+      ruleCards: RuleCardId[]
+      /** Hint rung 3 and the after-correct explanation: the engine's steps. Reveals the answer. */
+      reveal: string[]
+      /** Named trap this seed was built around, e.g. "quotient-significant-zero". */
+      trap: string
+    }
   | {
       type: 'set'
       set: SolutionSet
@@ -171,6 +233,8 @@ export interface ProgressInfo {
 
 export interface ModuleDef {
   id: ModuleId
+  /** School subject for grouping on the home page. Absent = precalculus. */
+  subject?: string
   title: string
   blurb: string
   order: number

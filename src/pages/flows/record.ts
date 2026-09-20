@@ -1,5 +1,6 @@
 import { useStore } from '@/store'
 import type { FieldResult, FinalAnswerGrade } from '@/problem/inequality'
+import type { SigFigGrade, SigFigTapGrade } from '@/shared/types'
 
 /**
  * Store the typed interval / set-builder answers and log one final_answer event per graded input.
@@ -26,4 +27,31 @@ export function recordSetAnswer(grade: FinalAnswerGrade, texts: { interval: stri
   // Wrong ones first: the attempt's first-check result reads the first record of a check.
   records.sort((a, b) => Number(a.correct) - Number(b.correct))
   for (const r of records) s.recordFinalAnswer({ correct: r.correct, pattern: r.pattern, via: 'text' })
+}
+
+/**
+ * Log one final_answer event for a typed significant-figures answer (final or intermediate), with
+ * the engine's pattern id when it named the mistake. A parse error is not an answer: nothing is
+ * logged, like pattern-less syntax errors elsewhere.
+ */
+export function recordSigFigGrade(grade: SigFigGrade): void {
+  if (grade.status === 'parse_error') return
+  useStore.getState().recordFinalAnswer({ correct: grade.status === 'correct', pattern: grade.pattern?.id, via: 'text' })
+}
+
+/**
+ * Log a tap-the-digits check: one correct record, or one wrong record per distinct named mistake
+ * among the taps (a plain wrong record when no rule was named), so Progress counts each slip.
+ */
+export function recordSigFigTaps(grade: SigFigTapGrade): void {
+  const s = useStore.getState()
+  if (grade.correct) {
+    s.recordFinalAnswer({ correct: true, via: 'builder' })
+    return
+  }
+  if (grade.patterns.length === 0) {
+    s.recordFinalAnswer({ correct: false, via: 'builder' })
+    return
+  }
+  for (const p of grade.patterns) s.recordFinalAnswer({ correct: false, pattern: p.id, via: 'builder' })
 }

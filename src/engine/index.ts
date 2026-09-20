@@ -17,6 +17,9 @@ export { detectMove } from './transforms'
 export { runMatchers } from './matchers'
 export { ERROR_PATTERNS, patternHit } from './matchers/catalog'
 
+// Significant figures (chemistry). Exact digit-string / BigInt arithmetic; types live in @/shared/types.
+export * from './sigfigs'
+
 // Legacy exports (first-spike UI). Prefer the context-taking `verifyStep` above.
 export { verifyStep as verifyStepLegacy, verifyStatements } from './verify'
 export { statementsEquivalent } from './equiv'

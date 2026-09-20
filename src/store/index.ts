@@ -406,7 +406,8 @@ export const useStore = create<StoreState>()(
         pendingDraft = null
         const steps = a.steps.length
         const firstTry = a.steps.filter((st) => st.firstTry).length
-        const revealed = a.steps.filter((st) => st.revealed).length
+        // A rung-3 reveal on an answer-only problem counts as one revealed item (final.revealed).
+        const revealed = a.steps.filter((st) => st.revealed).length + (a.final?.revealed ? 1 : 0)
         const hints = s.events.filter((e) => e.t === 'hint' && e.attemptId === a.id).length
         // Decided by the attempt: one wrong final answer / verdict / check anywhere makes it false.
         const finalCorrect = (input.finalCorrect ?? a.final?.correct ?? true) && !a.final?.everWrong
