@@ -6,6 +6,7 @@ import { useStore, type Attempt } from '@/store'
 import { useAttemptLifecycle, useCompletion } from '@/problem/useAttempt'
 import { useActiveClock } from '@/problem/useIdleNudge'
 import { knobsFromFlags, parseSeedParam } from '@/problem/url'
+import { AtomFlow } from './flows/AtomFlow'
 import { EvenOddFlow } from './flows/EvenOddFlow'
 import { InequalityFlow } from './flows/InequalityFlow'
 import { InverseFlow } from './flows/InverseFlow'
@@ -70,6 +71,8 @@ function ProblemBody({ instance, flags, templateTitle }: { instance: ProblemInst
       return <InverseFlow {...props} />
     case 'sigFigs':
       return <SigFigFlow {...props} />
+    case 'atoms':
+      return <AtomFlow {...props} />
     default:
       return <Navigate to="/" replace />
   }

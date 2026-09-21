@@ -1,6 +1,6 @@
 import { useStore } from '@/store'
 import type { FieldResult, FinalAnswerGrade } from '@/problem/inequality'
-import type { SigFigGrade, SigFigTapGrade } from '@/shared/types'
+import type { AtomGrade, SigFigGrade, SigFigTapGrade } from '@/shared/types'
 
 /**
  * Store the typed interval / set-builder answers and log one final_answer event per graded input.
@@ -54,4 +54,23 @@ export function recordSigFigTaps(grade: SigFigTapGrade): void {
     return
   }
   for (const p of grade.patterns) s.recordFinalAnswer({ correct: false, pattern: p.id, via: 'builder' })
+}
+
+/**
+ * Log an atomic-structure check (several boxes at once): one correct record, or one wrong record per
+ * distinct named mistake among the boxes (a single plain wrong record when none was named), so
+ * Progress counts each slip. An unreadable or empty box is not an answer: nothing is logged.
+ */
+export function recordAtomGrade(grade: AtomGrade): void {
+  if (grade.status === 'parse_error') return
+  const s = useStore.getState()
+  if (grade.status === 'correct') {
+    s.recordFinalAnswer({ correct: true, via: 'text' })
+    return
+  }
+  if (grade.patterns.length === 0) {
+    s.recordFinalAnswer({ correct: false, via: 'text' })
+    return
+  }
+  for (const p of grade.patterns) s.recordFinalAnswer({ correct: false, pattern: p.id, via: 'text' })
 }

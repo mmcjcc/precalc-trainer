@@ -81,6 +81,11 @@ export interface AttemptFinal {
   sfIntermediate?: string
   /** Significant figures, mixed tasks: how many intermediate questions have been answered right. */
   sfIntermediateDone?: number
+  /**
+   * Atomic structure: every answer box exactly as typed, keyed by box (protons, neutrons, electrons,
+   * symbol, massNumber, atomicNumber, charge, abundance1, abundance2; avgmass uses sfText / sfPower).
+   */
+  atEntries?: Record<string, string>
 }
 
 export interface Attempt {

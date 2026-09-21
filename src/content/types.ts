@@ -3,6 +3,7 @@
  * Content imports engine + notation + shared. UI imports content.
  */
 import type {
+  AtomQuestion,
   CalcPanels,
   ChipId,
   ErrorPatternId,
@@ -15,7 +16,7 @@ import type {
   VarName,
 } from '@/shared/types'
 
-export type ProblemKind = 'inequality' | 'numberLine' | 'evenOdd' | 'inverse' | 'drill' | 'sigFigs'
+export type ProblemKind = 'inequality' | 'numberLine' | 'evenOdd' | 'inverse' | 'drill' | 'sigFigs' | 'atoms'
 
 /** Difficulty knobs (all optional; templates document which they honor). */
 export interface DifficultyKnobs {
@@ -93,7 +94,46 @@ export interface SigFigQuantity {
   note?: string
 }
 
+/** One element as a periodic-table lookup shown beside an atomic-structure question. */
+export interface AtomPeriodicEntry {
+  z: number
+  symbol: string
+  name: string
+}
+
 export type AnswerSpec =
+  | {
+      /**
+       * Atomic structure (chemistry). Grade with the ENGINE by `question.kind`: `gradeParticles`,
+       * `gradeNotation`, `gradeAverageMass` (a SigFigGrade), `gradeAbundance`. Never compare text.
+       */
+      type: 'atoms'
+      question: AtomQuestion
+      /** The question in one line, plain words (not app syntax). */
+      prompt: string
+      /** One sentence that sets the scene ('' when there is nothing to add). */
+      context: string
+      /** KaTeX of the particle when it is shown as a nuclear symbol (particles, symbol form). */
+      latex?: string
+      /** Periodic-table lookups to show beside the question (the element, or a strip of neighbors). */
+      periodic: AtomPeriodicEntry[]
+      /** Unit printed beside the answer box: 'u' (average mass), '%' (abundance), '' otherwise. */
+      unit: string
+      /** Canonical answer per box, in box order (for "show the answer" only). */
+      expected: string[]
+      /** The whole answer, pretty: "17 protons, 20 neutrons, 18 electrons", "²³₁₁Na⁺", "35.45 u". */
+      expectedDisplay: string
+      /** Hint rung 1 (never contains the answer). */
+      nudge: string
+      /** Hint rung 2: id of the rule card to show first (in the module's `ruleCards`). */
+      ruleCard: RuleCardId
+      /** Every rule card this problem leans on, most relevant first (includes `ruleCard`). */
+      ruleCards: RuleCardId[]
+      /** Hint rung 3 and the after-correct explanation (reveals the answer). */
+      reveal: string[]
+      /** Scenario this seed was built around, e.g. "cation-symbol", "element-x-three". */
+      trap: string
+    }
   | {
       /**
        * Significant figures (chemistry). Grade with the ENGINE: `gradeSigFigAnswer(task, typed)`;

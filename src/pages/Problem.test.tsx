@@ -320,7 +320,9 @@ describe('review fixes: completion recording (F5)', () => {
     expect(dones).toHaveLength(5)
     for (const d of dones) expect(d).toMatchObject({ finalCorrect: false, firstTryRate: 0 })
     expect(mastery(useStore.getState().events, 'nl.read').mastered).toBe(false)
-  })
+    // Five full problems in one test: about 2 s alone, but several times that when the whole suite
+    // runs in parallel, so the default 5 s limit is too tight.
+  }, 20_000)
 })
 
 describe('review fixes: idle clock and nudge (F6, F13)', () => {

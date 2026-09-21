@@ -14,7 +14,7 @@
 
 export type RelOp = '=' | '<' | '<=' | '>' | '>='
 export type VarName = 'x' | 'y' | 'n'
-export type ModuleId = 'numberLine' | 'inequalities' | 'evenOdd' | 'inverses' | 'propertiesDrill' | 'sigFigs'
+export type ModuleId = 'numberLine' | 'inequalities' | 'evenOdd' | 'inverses' | 'propertiesDrill' | 'sigFigs' | 'atoms'
 export type CalcId = 'ti84' | 'nspire'
 
 /** Fine-grained property tags. Canonical steps carry one; the engine's move detector reports one. */
@@ -189,6 +189,23 @@ export type ErrorPatternId =
   | 'sf_sci_changed_figures'
   | 'sf_sci_exponent'
   | 'sf_sci_form'
+  // atomic structure (engine/atoms; chemistry module)
+  | 'at_neutrons_as_mass_number'
+  | 'at_swapped_a_z'
+  | 'at_electrons_ignored_charge'
+  | 'at_charge_sign_flipped'
+  | 'at_protons_changed_for_ion'
+  | 'at_element_from_electrons'
+  | 'at_mass_protons_electrons'
+  | 'at_mass_neutrons_only'
+  | 'at_symbol_case'
+  | 'at_unweighted_average'
+  | 'at_percent_not_decimal'
+  | 'at_mass_numbers_used'
+  | 'at_isotope_left_out'
+  | 'at_assumed_even_split'
+  | 'at_abundance_swapped'
+  | 'at_abundance_sum'
   // behavioral (ui)
   | 'abandoned'
 
@@ -623,5 +640,121 @@ export interface SigFigTaskIssue {
 export interface SigFigMistakeCandidate {
   id: ErrorPatternId
   text: string
+  witness: string
+}
+
+// ---------------------------------------------------------------------------
+// Atomic structure (chemistry). Engine: src/engine/atoms (exported from '@/engine').
+// Particle counts are small whole numbers; masses and abundances are TEXT and every graded
+// calculation is exact (the significant-figures engine's BigInt arithmetic). JSON-safe.
+// ---------------------------------------------------------------------------
+
+/** One atom or monatomic ion: element (by symbol and atomic number), mass number and charge. */
+export interface AtomParticle {
+  /** Element symbol exactly as printed, e.g. "Cl". */
+  symbol: string
+  /** Atomic number Z = protons. */
+  z: number
+  /** Mass number A = protons + neutrons. */
+  massNumber: number
+  /** Net charge, e.g. -1 for Cl⁻, 2 for Mg²⁺, 0 for a neutral atom. */
+  charge: number
+}
+
+export interface AtomParticleCounts {
+  protons: number
+  neutrons: number
+  electrons: number
+}
+
+/** One isotope of an element in a table: label, mass number, isotopic mass (u, TEXT). */
+export interface AtomIsotope {
+  /** "chlorine-35" for a real element, "X-63" for a made-up one. */
+  label: string
+  massNumber: number
+  /** Isotopic mass in u as TEXT, e.g. "34.969". */
+  mass: string
+}
+
+export interface AtomIsotopeRow extends AtomIsotope {
+  /** Natural abundance in PERCENT as TEXT, e.g. "75.76". */
+  abundance: string
+}
+
+/**
+ * What an atomic-structure problem asks. `particles`: count protons / neutrons / electrons of a
+ * particle shown as a nuclear symbol, in hyphen notation, or as a named ion. `notation`: the counts
+ * are given, write the particle. `avgmass`: weighted average of an isotope table, as a sig-fig
+ * `mixed` task (each mass × abundance ÷ 100 with 100 exact, joined by +). `abundance`: two isotopes
+ * and the average are given; find both percents to the stated place.
+ */
+export type AtomQuestion =
+  | { kind: 'particles'; particle: AtomParticle; shown: 'symbol' | 'hyphen' | 'ion' }
+  | { kind: 'notation'; particle: AtomParticle }
+  | {
+      kind: 'avgmass'
+      /** Element name ("chlorine") or "element X" for a made-up element. */
+      element: string
+      /** Symbol used in labels ("Cl", or "X"). */
+      symbol: string
+      fictional: boolean
+      isotopes: AtomIsotopeRow[]
+      /** The weighted average as a sig-fig task; grade with `gradeAverageMass`, never by text. */
+      task: SigFigTask
+    }
+  | {
+      kind: 'abundance'
+      element: string
+      symbol: string
+      fictional: boolean
+      isotopes: [AtomIsotope, AtomIsotope]
+      /** Average atomic mass in u, TEXT. */
+      average: string
+      /** Place (power of ten) each percent is asked to: -2 = hundredths of a percent. */
+      place: number
+    }
+
+/** Answer boxes of the atomic-structure questions. */
+export type AtomBox =
+  | 'protons'
+  | 'neutrons'
+  | 'electrons'
+  | 'symbol'
+  | 'massNumber'
+  | 'atomicNumber'
+  | 'charge'
+  | 'abundance1'
+  | 'abundance2'
+
+export interface AtomBoxGrade {
+  box: AtomBox
+  status: 'correct' | 'wrong' | 'parse_error'
+  /** Sentence for this box ('' when correct and nothing to add). Equals `pattern.witness` when a pattern is set. */
+  message: string
+  /** Named mistake for this box, with a witness about HER numbers. */
+  pattern?: PatternHit
+  /** Position indexes the text typed in THIS box. */
+  parseError?: ParseError
+}
+
+export interface AtomGrade {
+  /** `parse_error` when any box is empty or unreadable: nothing else is graded (and nothing is recorded). */
+  status: 'correct' | 'wrong' | 'parse_error'
+  /** Always set: the headline sentence to show her. */
+  message: string
+  /** One per box, in the order of the question's boxes (a parse-error grade lists only the unreadable boxes). */
+  boxes: AtomBoxGrade[]
+  /** Distinct named mistakes across the boxes, in box order (log each id to the store). */
+  patterns: PatternHit[]
+  /** Correct, but worth a gentle remark. */
+  note?: string
+}
+
+/** What a named average-atomic-mass mistake WOULD produce for a question (`text` at the answer's precision). */
+export interface AtomMistakeCandidate {
+  id: ErrorPatternId
+  text: string
+  /** Exact value of the mistaken calculation, plain decimal text (may end in "…"). */
+  exact: string
   witness: string
 }

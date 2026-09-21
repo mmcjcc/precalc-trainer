@@ -328,6 +328,103 @@ export const ERROR_PATTERNS: Record<ErrorPatternId, ErrorPatternInfo> = {
     lesson: 'Scientific notation has exactly one nonzero digit before the decimal point, so the coefficient is at least 1 and less than 10.',
     example: '45.0 × 10⁻⁴ ✗ → 4.50 × 10⁻³',
   },
+  // --- atomic structure (engine/atoms; chemistry) ---
+  at_neutrons_as_mass_number: {
+    id: 'at_neutrons_as_mass_number',
+    title: 'Neutrons = mass number − atomic number',
+    lesson: 'The mass number counts protons AND neutrons together. Take the protons away and what is left is the neutrons.',
+    example: '³⁷₁₇Cl: 37 neutrons ✗ → 37 − 17 = 20 neutrons',
+  },
+  at_swapped_a_z: {
+    id: 'at_swapped_a_z',
+    title: 'Mass number on top, atomic number below',
+    lesson: 'In a nuclear symbol the mass number sits on top and the atomic number underneath. The atomic number is the proton count; the mass number adds the neutrons, so it is the bigger one.',
+    example: '³⁷₁₇Cl: 37 protons ✗ → 17 protons',
+  },
+  at_electrons_ignored_charge: {
+    id: 'at_electrons_ignored_charge',
+    title: 'An ion’s charge changes the electrons',
+    lesson: 'A neutral atom has as many electrons as protons, but an ion has gained or lost some. Electrons = protons − charge.',
+    example: 'Cl⁻: 17 electrons ✗ → 17 − (−1) = 18 electrons',
+  },
+  at_charge_sign_flipped: {
+    id: 'at_charge_sign_flipped',
+    title: 'Extra electrons make it negative',
+    lesson: 'Electrons carry the negative charge: gaining them makes an ion negative, losing them makes it positive. Charge = protons − electrons.',
+    example: 'Na⁺: 12 electrons ✗ → 11 − 1 = 10 electrons',
+  },
+  at_protons_changed_for_ion: {
+    id: 'at_protons_changed_for_ion',
+    title: 'Only the electrons change in an ion',
+    lesson: 'An atom becomes an ion by gaining or losing electrons; the nucleus is not touched. The protons stay at the atomic number whatever the charge.',
+    example: 'Na⁺: 10 protons ✗ → 11 protons (and 10 electrons)',
+  },
+  at_element_from_electrons: {
+    id: 'at_element_from_electrons',
+    title: 'The protons pick the element',
+    lesson: 'The atomic number is the number of protons, and it alone decides which element you have. The electrons only decide the charge.',
+    example: '11 p, 10 e: Ne ✗ → Na⁺ (11 protons is sodium)',
+  },
+  at_mass_protons_electrons: {
+    id: 'at_mass_protons_electrons',
+    title: 'Electrons are left out of the mass number',
+    lesson: 'The mass number counts the particles in the nucleus: protons plus neutrons. Electrons are almost weightless and are never counted in it.',
+    example: '11 p, 12 n, 10 e: A = 21 ✗ → A = 11 + 12 = 23',
+  },
+  at_mass_neutrons_only: {
+    id: 'at_mass_neutrons_only',
+    title: 'The mass number counts the protons too',
+    lesson: 'Mass number = protons + neutrons: both kinds of particle in the nucleus. The neutrons alone are only part of it.',
+    example: '11 p, 12 n: A = 12 ✗ → A = 11 + 12 = 23',
+  },
+  at_symbol_case: {
+    id: 'at_symbol_case',
+    title: 'Capital letter first, lowercase second',
+    lesson: 'An element symbol starts with a capital letter, and a second letter is always lowercase. The case carries meaning: Co is cobalt, but CO is carbon and oxygen together.',
+    example: 'CL ✗ → Cl     cl ✗ → Cl',
+  },
+  at_unweighted_average: {
+    id: 'at_unweighted_average',
+    title: 'Weigh each isotope by how common it is',
+    lesson: 'Average atomic mass is a weighted average: a common isotope pulls the average toward its own mass. Adding the masses and dividing by how many there are treats a rare isotope like a common one.',
+    example: 'Cl: (34.969 + 36.966) ÷ 2 = 35.97 ✗ → 35.45 u',
+  },
+  at_percent_not_decimal: {
+    id: 'at_percent_not_decimal',
+    title: 'Turn the percent into a decimal first',
+    lesson: 'A percent means "out of 100", so divide by 100 before multiplying: 75.76% becomes 0.7576. Skipping that makes the answer 100 times too big.',
+    example: 'Cl: 34.969 × 75.76 + 36.966 × 24.24 = 3545 ✗ → 35.45 u',
+  },
+  at_mass_numbers_used: {
+    id: 'at_mass_numbers_used',
+    title: 'Use the isotopic masses, not the mass numbers',
+    lesson: 'A mass number is a count of protons and neutrons, always a whole number. The average needs each isotope’s actual mass in u, from the table.',
+    example: 'Cl: 35 × 0.7576 + 37 × 0.2424 = 35.48 ✗ → 35.45 u',
+  },
+  at_isotope_left_out: {
+    id: 'at_isotope_left_out',
+    title: 'Every isotope counts',
+    lesson: 'The weighted average needs one term for every isotope in the table, even a rare one. Leaving one out makes the answer too small.',
+    example: 'Mg: leaving out Mg-25 gives 21.81 ✗ → 24.31 u',
+  },
+  at_assumed_even_split: {
+    id: 'at_assumed_even_split',
+    title: 'The average tells you it is not 50/50',
+    lesson: 'Two isotopes are half and half only when the average sits exactly halfway between their masses. The closer the average is to one isotope, the more of that isotope there is.',
+    example: 'Cu, average 63.546 u: 50% and 50% ✗ → 69.15% Cu-63, 30.85% Cu-65',
+  },
+  at_abundance_swapped: {
+    id: 'at_abundance_swapped',
+    title: 'Match each percent to its isotope',
+    lesson: 'The average sits closer to the more abundant isotope, so the isotope nearer the average gets the bigger percent.',
+    example: 'Cl-35 24.24%, Cl-37 75.76% ✗ → Cl-35 75.76%, Cl-37 24.24%',
+  },
+  at_abundance_sum: {
+    id: 'at_abundance_sum',
+    title: 'The abundances add up to 100%',
+    lesson: 'Every atom of the element is one isotope or the other, so the percents must total exactly 100%. Once you have one, the other is 100% minus it.',
+    example: '69.15% and 31.85% ✗ (101%) → 69.15% and 30.85%',
+  },
   // --- behavioral (ui) ---
   abandoned: {
     id: 'abandoned',

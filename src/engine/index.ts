@@ -20,6 +20,9 @@ export { ERROR_PATTERNS, patternHit } from './matchers/catalog'
 // Significant figures (chemistry). Exact digit-string / BigInt arithmetic; types live in @/shared/types.
 export * from './sigfigs'
 
+// Atomic structure (chemistry): particle counts, nuclear notation, isotope averages. Exact arithmetic.
+export * from './atoms'
+
 // Legacy exports (first-spike UI). Prefer the context-taking `verifyStep` above.
 export { verifyStep as verifyStepLegacy, verifyStatements } from './verify'
 export { statementsEquivalent } from './equiv'
