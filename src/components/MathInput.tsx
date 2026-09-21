@@ -45,6 +45,8 @@ type Props = {
   toTex?: (text: string) => string
   /** Hide the symbol strip (e.g. interval inputs that bring their own). */
   hideStrip?: boolean
+  /** Keys for the symbol strip when a problem needs its own set (defaults to the full strip). */
+  stripKeys?: readonly StripKey[]
 }
 
 const PREVIEW_DEBOUNCE_MS = 70
@@ -79,6 +81,7 @@ export function MathInput({
   onEscape,
   toTex,
   hideStrip,
+  stripKeys,
 }: Props) {
   const autoId = useId()
   const inputId = id ?? `math-input-${autoId}`
@@ -231,7 +234,7 @@ export function MathInput({
           {shownError.message}
         </p>
       )}
-      {!hideStrip && <SymbolStrip onInsert={insert} disabled={disabled} />}
+      {!hideStrip && <SymbolStrip onInsert={insert} keys={stripKeys} disabled={disabled} />}
     </form>
   )
 }

@@ -16,7 +16,7 @@ import type {
   VarName,
 } from '@/shared/types'
 
-export type ProblemKind = 'inequality' | 'numberLine' | 'evenOdd' | 'inverse' | 'drill' | 'sigFigs' | 'atoms'
+export type ProblemKind = 'inequality' | 'numberLine' | 'evenOdd' | 'inverse' | 'drill' | 'sigFigs' | 'atoms' | 'diffQuotient'
 
 /** Difficulty knobs (all optional; templates document which they honor). */
 export interface DifficultyKnobs {
@@ -102,6 +102,24 @@ export interface AtomPeriodicEntry {
 }
 
 export type AnswerSpec =
+  | {
+      /**
+       * Difference quotient (f(x + h) − f(x))/h. Grade with the ENGINE: `checkFxhLine` for the f(x + h)
+       * line, `checkDqLine` for every line after the built start line; the problem is finished when
+       * `checkDqLine` says the line is `simplified` (equivalent AND defined at h = 0).
+       */
+      type: 'diffQuotient'
+      /** f(x) in app syntax, e.g. "3x^2 + 2x - 1". */
+      f: string
+      /** f(x + h): every x replaced by (x + h), unexpanded (the canonical stage-1 line). */
+      fxh: string
+      /** The simplified difference quotient in x and h, e.g. "6x + 3h + 2". */
+      simplified: string
+      /** Exclusions shown with the answer, "h != 0" first (then e.g. "x != 0", "x + h != 0"). */
+      restrictions: string[]
+      /** Extra sentence for the completion card ('' when none), e.g. why a line's answer is its slope. */
+      note: string
+    }
   | {
       /**
        * Atomic structure (chemistry). Grade with the ENGINE by `question.kind`: `gradeParticles`,

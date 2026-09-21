@@ -41,7 +41,9 @@ export function pickNicest<M extends Mismatch>(mismatches: M[], vars: readonly s
 }
 
 export function pointDisplay(scope: Scope, vars: readonly string[]): string {
-  const order = [...vars].sort()
+  // Alphabetical, except the difference-quotient step h reads right after x ("x = 1, h = 2").
+  const key = (v: string) => (v === 'h' ? 'x1' : v)
+  const order = [...vars].sort((a, b) => key(a).localeCompare(key(b)))
   return order
     .filter((v) => scope[v] != null)
     .map((v) => `${v} = ${prettyNumber(snapNumber(scope[v]!))}`)

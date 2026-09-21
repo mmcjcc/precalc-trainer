@@ -36,7 +36,9 @@ function rec(node: MathNode): Record<string, unknown> {
 export function stripParens(node: MathNode): MathNode {
   return node.transform((n) => {
     if (n.type === 'ParenthesisNode' && 'content' in n) {
-      return rec(n).content as MathNode
+      // transform() does not descend into a replacement node, so strip nested parentheses too:
+      // ((5(x+h) - 2 - (5x - 2)))/h would otherwise keep its inner ParenthesisNodes.
+      return stripParens(rec(n).content as MathNode)
     }
     return n
   })

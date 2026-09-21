@@ -17,6 +17,27 @@ export { detectMove } from './transforms'
 export { runMatchers } from './matchers'
 export { ERROR_PATTERNS, patternHit } from './matchers/catalog'
 
+// Difference quotient (precalculus Unit 1 Day 5): f(x + h) lines, DQ lines, the simplified test.
+export {
+  appText,
+  checkDqLine,
+  checkFxhLine,
+  definedAtHZero,
+  differenceQuotient,
+  dqMistake,
+  dqSamplePoints,
+  dqStartLine,
+  dqStatus,
+  DQ_VARS,
+  fOfXPlusH,
+  fxhMistake,
+  LEFT_TO_DO,
+  polynomialCoefficients,
+  stripFxhLabel,
+  substituteX,
+} from './diffQuotient'
+export type { DqLineResult, DqSpec } from './diffQuotient'
+
 // Significant figures (chemistry). Exact digit-string / BigInt arithmetic; types live in @/shared/types.
 export * from './sigfigs'
 

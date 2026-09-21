@@ -213,6 +213,43 @@ export const ERROR_PATTERNS: Record<ErrorPatternId, ErrorPatternInfo> = {
     lesson: 'To find an inverse, every x becomes y AND every y becomes x. Renaming only one letter gives a different equation.',
     example: 'y = (x+1)³ → x = (x+1)³ ✗ → x = (y+1)³',
   },
+  // --- difference quotient (engine/diffQuotient.ts) ---
+  dq_fx_plus_h: {
+    id: 'dq_fx_plus_h',
+    title: 'f(x + h) means “put x + h into f”',
+    lesson: 'f(x + h) is not f(x) + h. The input changes, so every x in the formula becomes (x + h); adding h to the output would just lift the graph up.',
+    example: 'f(x) = x^2 + 1: f(x + h) → x^2 + 1 + h ✗ → (x + h)^2 + 1',
+  },
+  dq_fx_plus_fh: {
+    id: 'dq_fx_plus_fh',
+    title: 'A function doesn’t split over +',
+    lesson: 'f(x + h) is not f(x) + f(h): you can’t feed the x and the h in separately. Put the whole (x + h) wherever x was.',
+    example: 'f(x) = 3x − 2: f(x + h) → (3x − 2) + (3h − 2) ✗ → 3(x + h) − 2',
+  },
+  dq_partial_sub: {
+    id: 'dq_partial_sub',
+    title: 'Replace EVERY x with (x + h)',
+    lesson: 'Every x in the formula becomes (x + h), not just the first one. Go through f term by term and swap each x.',
+    example: '3x^2 + 2x − 1 → 3(x + h)^2 + 2x − 1 ✗ → 3(x + h)^2 + 2(x + h) − 1',
+  },
+  dq_partial_cancel: {
+    id: 'dq_partial_cancel',
+    title: 'Every term gives up one h',
+    lesson: 'Dividing the numerator by h divides EVERY term, so each term loses exactly one h. Factoring h out first keeps it honest: h(2x + h + 3)/h.',
+    example: '(2xh + h^2 + 3h)/h → 2x + h^2 + 3 ✗ → 2x + h + 3',
+  },
+  dq_forgot_divide: {
+    id: 'dq_forgot_divide',
+    title: 'Don’t lose the h underneath',
+    lesson: 'The difference quotient is the change in f DIVIDED by h. You have the top, f(x + h) − f(x); keep the /h and let it cancel.',
+    example: '(5x + 5h − 2 − (5x − 2))/h → 5h ✗ → 5',
+  },
+  dq_set_h_zero: {
+    id: 'dq_set_h_zero',
+    title: 'Keep the h — for now',
+    lesson: 'Letting h shrink to 0 is the NEXT big idea (the derivative), so good instinct! But the difference quotient keeps its h: it is the slope of a secant line for any h ≠ 0.',
+    example: '(6xh + 3h^2 + 2h)/h → 6x + 2 ✗ → 6x + 3h + 2',
+  },
   // --- significant figures (engine/sigfigs; chemistry) ---
   sf_leading_zeros: {
     id: 'sf_leading_zeros',

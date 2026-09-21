@@ -7,6 +7,7 @@ import { useAttemptLifecycle, useCompletion } from '@/problem/useAttempt'
 import { useActiveClock } from '@/problem/useIdleNudge'
 import { knobsFromFlags, parseSeedParam } from '@/problem/url'
 import { AtomFlow } from './flows/AtomFlow'
+import { DiffQuotientFlow } from './flows/DiffQuotientFlow'
 import { EvenOddFlow } from './flows/EvenOddFlow'
 import { InequalityFlow } from './flows/InequalityFlow'
 import { InverseFlow } from './flows/InverseFlow'
@@ -73,6 +74,8 @@ function ProblemBody({ instance, flags, templateTitle }: { instance: ProblemInst
       return <SigFigFlow {...props} />
     case 'atoms':
       return <AtomFlow {...props} />
+    case 'diffQuotient':
+      return <DiffQuotientFlow {...props} />
     default:
       return <Navigate to="/" replace />
   }

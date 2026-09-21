@@ -35,6 +35,23 @@ export const STRIP_KEYS: readonly StripKey[] = [
   { label: 'or', insert: ' or ', caret: 0, name: 'or' },
 ]
 
+const stripKey = (label: string): StripKey => {
+  const k = STRIP_KEYS.find((key) => key.label === label)
+  if (!k) throw new Error(`no strip key labelled ${label}`)
+  return k
+}
+
+/** Difference quotient: expressions in x and h only, so no relation, interval or set keys. */
+export const DIFF_QUOTIENT_KEYS: readonly StripKey[] = [
+  stripKey('x'),
+  { label: 'h', insert: 'h', caret: 0, name: 'h' },
+  stripKey('^'),
+  stripKey('('),
+  stripKey(')'),
+  stripKey('/'),
+  stripKey('√'),
+]
+
 export interface Insertion {
   value: string
   caret: number

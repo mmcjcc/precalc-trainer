@@ -3,9 +3,11 @@ import type { GraphSpec } from '@/shared/types'
 import { Graph } from './Graph'
 import { NumberLineSet } from './NumberLineSet'
 import { RuleCardView } from './HintPanel'
+import { SecantGraph } from './SecantGraph'
 
 /** Graph panel: function plot or number line, from `instance.graph`. */
 export function GraphPanel({ spec, caption }: { spec: GraphSpec; caption?: string }) {
+  if (spec.kind === 'function' && spec.f && spec.secant) return <SecantGraph spec={spec} />
   if (spec.kind === 'function' && spec.f) return <Graph spec={spec} />
   if (spec.kind === 'numberLine' && spec.set) {
     return (

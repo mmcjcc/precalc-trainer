@@ -13,9 +13,12 @@ import { DEFAULT_SEED, exprEquiv, type Scope } from './samples'
 
 export type Evaluator = (scope: Partial<Record<VarName, number>>) => number | 'undef'
 
+/** Every letter an evaluator may be given (the scope decides which ones the expression gets). */
+const ALL_VARS: readonly VarName[] = ['x', 'y', 'n', 'h']
+
 /** Compiles an expression once; the evaluator returns 'undef' for NaN/∞/errors (or a parse error). */
 export function compileExpr(text: string): Evaluator {
-  const p = parseExpression(text)
+  const p = parseExpression(text, ALL_VARS)
   if (!p.ok) return () => 'undef'
   const node = p.node
   return (scope) => {
@@ -141,8 +144,10 @@ export function verifyRewrite(prev: string, next: string, ctx: StepContext): Ste
   // Reuse the relation matchers by wrapping both expressions as `L = expr` with a letter not in use.
   const letter = freeLetter(vars)
   if (letter) {
-    const os = parseStatement(`${letter} = ${pp.text}`)
-    const ns = parseStatement(`${letter} = ${pn.text}`)
+    // The letters both lines use (h included, for the difference quotient) plus the wrapper letter.
+    const allowed = [...vars, letter]
+    const os = parseStatement(`${letter} = ${pp.text}`, allowed)
+    const ns = parseStatement(`${letter} = ${pn.text}`, allowed)
     if (os.ok && ns.ok) {
       const pattern = runMatchers(os.statement, ns.statement, ctx)
       if (pattern) result.pattern = pattern

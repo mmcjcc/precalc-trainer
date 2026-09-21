@@ -89,7 +89,42 @@ export function makeSamples(vars: readonly string[], seed = DEFAULT_SEED, checkV
       out.push(row)
     }
   }
-  return out
+  return vars.includes('h') ? withStepH(out, vars, rand) : out
+}
+
+/** (x, h) rows inside a radical's domain: x > 0 and x + h > 0 (sqrt(x + h) − sqrt(x) needs both). */
+const STEP_H_ROWS: readonly [number, number][] = [
+  [0.7, 0.3],
+  [1.3, 2.1],
+  [2.9, -0.4],
+  [4.1, 1.7],
+  [6.3, -2.2],
+  [0.35, 5.5],
+  [3.6, 0.15],
+  [9.4, -3.1],
+  [2.2, 0.9],
+  [5.3, -1.3],
+  [7.7, 0.6],
+  [11.2, -2.7],
+  [8.4, 3.3],
+  [12.5, 1.1],
+]
+
+/**
+ * Variable sets with the difference-quotient step `h` (a variable only that module owns): h is never
+ * near 0 and x + h is never near 0 (the DQ of 1/x), and extra rows sit inside a square root's domain so
+ * sqrt(x + h) − sqrt(x) still has enough defined samples. Other variable sets are untouched.
+ */
+function withStepH(rows: Scope[], vars: readonly string[], rand: () => number): Scope[] {
+  const away = (v: number | undefined) => v == null || Math.abs(v) >= 0.05
+  const keep = rows.filter((r) => away(r.h) && (r.x == null || r.h == null || away(r.x + r.h)))
+  if (!vars.includes('x')) return keep
+  for (const [x, h] of STEP_H_ROWS) {
+    const row: Scope = {}
+    for (const v of vars) row[v] = v === 'x' ? x : v === 'h' ? h : drawAvoiding(rand, -10, 10)
+    keep.push(row)
+  }
+  return keep
 }
 
 /** Legacy helper used by the interval parser and NumberLine component. */

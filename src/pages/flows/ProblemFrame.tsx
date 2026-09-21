@@ -59,6 +59,7 @@ const GRAPH_NOTE: Record<string, string> = {
   inequality: 'The graph shades the solution set, so it shows the answer. Solve first, then use it to check.',
   inverse: 'The graph draws f and its mirror across y = x, so it shows the answer. Work it out first, then check.',
   evenOdd: 'The graph shows the symmetry, so it gives the verdict away. Write your evidence first, then check.',
+  diffQuotient: 'The graph draws a secant line and works out its slope, so it gives numbers away. Simplify first, then check.',
   default: 'The graph shows the answer. Try the problem first, then use it to check.',
 }
 
@@ -107,9 +108,11 @@ export function ProblemFrame({ instance, attempt, flags, templateTitle, progress
 
   // Graph and calculator steps show the answer: student-invoked, open by themselves once finished.
   const [revealed, setRevealed] = useState<{ graph: boolean; calc: boolean }>({ graph: false, calc: false })
-  // A problem with nothing to graph and no calculator steps (significant figures) gets neither panel:
-  // no rail section, no toolbar button, no reveal gate, no shortcut, no cheat-sheet row.
-  const bare = instance.graph.kind === 'none' && instance.calc.ti84.length === 0 && instance.calc.nspire.length === 0
+  // A panel with nothing in it is left out entirely: no rail section, no toolbar button, no reveal
+  // gate, no shortcut, no cheat-sheet row. Significant figures have neither; the difference quotient
+  // has a graph but no calculator steps.
+  const hasGraph = instance.graph.kind !== 'none'
+  const hasCalc = instance.calc.ti84.length > 0 || instance.calc.nspire.length > 0
   const answerPanels: RailPanel[] = [
     {
       id: 'graph',
@@ -144,9 +147,10 @@ export function ProblemFrame({ instance, attempt, flags, templateTitle, progress
   ]
   const rail: RailPanel[] = [
     { id: 'hints', title: 'Hints', content: hints },
-    ...(bare ? [] : answerPanels),
+    ...answerPanels.filter((p) => (p.id === 'graph' ? hasGraph : hasCalc)),
     { id: 'rules', title: 'Rule cards', short: 'Rules', content: <RuleCardsPanel cards={mod.ruleCards} /> },
   ]
+  const omitHelp = [...(hasGraph ? [] : (['graph'] as const)), ...(hasCalc ? [] : (['calc'] as const))]
 
   const toggle = useCallback((id: string) => setOpenPanel((cur) => (cur === id ? null : id)), [])
 
@@ -161,8 +165,8 @@ export function ProblemFrame({ instance, attempt, flags, templateTitle, progress
         keymap?.onHint?.()
         if (bp !== 'desktop') setOpenPanel('hints')
       },
-      onGraph: bare ? undefined : () => toggle('graph'),
-      onCalc: bare ? undefined : () => toggle('calc'),
+      onGraph: hasGraph ? () => toggle('graph') : undefined,
+      onCalc: hasCalc ? () => toggle('calc') : undefined,
       onUndo: keymap?.onUndo,
       onDigit: keymap?.onDigit,
       onHelp: () => setHelp((h) => !h),
@@ -292,7 +296,7 @@ export function ProblemFrame({ instance, attempt, flags, templateTitle, progress
           </div>
         )}
       </div>
-      <KeymapHelp open={help} onClose={() => setHelp(false)} omit={bare ? ['graph', 'calc'] : undefined} />
+      <KeymapHelp open={help} onClose={() => setHelp(false)} omit={omitHelp.length ? omitHelp : undefined} />
     </PageLayout>
   )
 }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { STRIP_KEYS, insertToken, type StripKey } from './symbolStrip'
+import { DIFF_QUOTIENT_KEYS, STRIP_KEYS, insertToken, type StripKey } from './symbolStrip'
 
 const key = (label: string): StripKey => {
   const k = STRIP_KEYS.find((s) => s.label === label)
@@ -62,5 +62,13 @@ describe('insertToken caret math (UX-02)', () => {
   it('places the caret inside { } for set notation', () => {
     const r = insertToken('x | ', 4, 4, key('{ }'))
     expect(r).toEqual({ value: 'x | {}', caret: 5 })
+  })
+})
+
+describe('DIFF_QUOTIENT_KEYS', () => {
+  it('offers h and leaves out relation, interval and set keys', () => {
+    const labels = DIFF_QUOTIENT_KEYS.map((k) => k.label)
+    expect(labels).toEqual(['x', 'h', '^', '(', ')', '/', '√'])
+    expect(insertToken('5(x+', 4, 4, DIFF_QUOTIENT_KEYS[1]!)).toEqual({ value: '5(x+h', caret: 5 })
   })
 })

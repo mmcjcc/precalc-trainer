@@ -12,7 +12,7 @@ disagree, research wins** (the spec's random-sampling equivalence test is vacuou
 |---|---|---|
 | Engine | `src/engine` (`index.ts` is the API) | Complete. Tier 1 move detectors, Tier 2 solution-set comparison (one variable: boundary method; two variables: x/y slicing), Tier 3 matchers (~30 patterns), swap-x-y gating including ± / or lines, verdict taxonomy, chip grading, counterexamples with side values, parity, one-to-one. `verify.ts` keeps a legacy 2-argument `verifyStep` for old callers only. |
 | Notation | `src/notation` | Exact rational solution sets; interval and set-builder parsers with pattern lessons; `compareAnswerSet` / `crossCheck`; LaTeX and calculator formatting. |
-| Content | `src/content/modules` | 5 modules: number line (1 template), inequalities (4), even/odd (2), inverses (6: linear, cube root, fraction coefficient, rational, Möbius, quadratic not one-to-one), properties drill (twin-pair bank). Tests push every canonical path, and the solve-first alternative for inverses, through the context engine for 25 seeds. |
+| Content | `src/content/modules` | 5 modules: number line (1 template), inequalities (4), even/odd (2), inverses (6: linear, cube root, fraction coefficient, rational, Möbius, quadratic not one-to-one), properties drill (twin-pair bank), difference quotient (4: linear, quadratic, rational, radical; see docs/progress/diff-quotient.md). Tests push every canonical path, and the solve-first alternative for inverses, through the context engine for 25 seeds. |
 | Calculator panels | `src/content/calc` | TI-84 Plus CE and TI-Nspire CX II for 11 problem families, expression / k / f(k) / twin substituted. |
 | Store | `src/store` | Append-only event log with weekly compaction, attempt resume, selectors (mastery, first-try, hint rate, property accuracy, pattern counts, habits, streak, weak spots), export/import. |
 | UI | `src/App.tsx`, `src/pages`, `src/pages/flows`, `src/problem`, `src/components` | Complete. `pages/Problem.tsx` dispatches to the inequality, number-line, even/odd and inverse flows; Home, Module, Progress, Settings, Drill, Sandbox and the PIN gate. Graph and calculator panels stay behind a reveal button until the problem is complete (they show the answer). On phones the panel toolbar sits in the composer, or at the top when a screen has no composer. The first-spike demo UI is removed. |
@@ -97,7 +97,7 @@ deploy/, Dockerfile, nginx.conf, .github/workflows/   DEPLOY agent
 - Colocated tests. Pure layers (engine/notation/content) must have zero DOM/React imports.
 - App syntax (what the student types, what content stores): ASCII, `sqrt(u)`, `cbrt(u)`, `abs(u)`,
   `^`, `/`, implicit multiplication, relations `= < <= > >=`, `or`, `and`, chained `a < E <= b`,
-  `+-E` (±). `pi` allowed. Variables: `x`, `y`, `n` only. `f^-1(x)`, `finv(x)`, `f^(-1)(x)` and
+  `+-E` (±). `pi` allowed. Variables: `x`, `y`, `n`, plus `h` only in problems that own it (difference quotient: `vars: ['x', 'h']`). `f^-1(x)`, `finv(x)`, `f^(-1)(x)` and
   `f(x)` on the LEFT of `=` are aliases for `y`.
 - Numbers shown to the student snap to integers/simple fractions when within 1e-9 (`niceNumber`).
 - Tone: coach, not grader. Every rejection names the property or shows the counterexample.
@@ -211,6 +211,9 @@ Problem-page flows by kind:
 - **inverse**: one-to-one verdict first (+ reason if "no"); if yes: steps from `y = f(x)` to
   `f^-1(x) = …` (swap allowed once), then "check it": she types f(k) and f⁻¹(f(k)); if no: show the
   twin evidence f(k) = f(twin), optional bonus path.
+- **diffQuotient**: part 1 the f(x + h) line (engine `checkFxhLine`); part 2 starts from (f(x + h) − (f(x)))/h with her
+  line dropped in, every line checked by `checkDqLine` (rewrite of the previous line + equivalent to the DQ); finished
+  when the line is simplified (defined at h = 0). Secant sketch behind the graph gate; no calculator panel.
 - **drill**: `/drill`: which-property (chips) and legal-or-illegal items from `generateDrill`.
 
 Hints: rung 1 nudge, rung 2 rule card, rung 3 reveal `nextStep(...)` (marks the step revealed).

@@ -13,8 +13,9 @@
 // ---------------------------------------------------------------------------
 
 export type RelOp = '=' | '<' | '<=' | '>' | '>='
-export type VarName = 'x' | 'y' | 'n'
-export type ModuleId = 'numberLine' | 'inequalities' | 'evenOdd' | 'inverses' | 'propertiesDrill' | 'sigFigs' | 'atoms'
+/** `h` is the difference-quotient step; the parser accepts it only when the problem owns it (ctx.vars). */
+export type VarName = 'x' | 'y' | 'n' | 'h'
+export type ModuleId = 'numberLine' | 'inequalities' | 'evenOdd' | 'inverses' | 'propertiesDrill' | 'sigFigs' | 'atoms' | 'diffQuotient'
 export type CalcId = 'ti84' | 'nspire'
 
 /** Fine-grained property tags. Canonical steps carry one; the engine's move detector reports one. */
@@ -169,6 +170,13 @@ export type ErrorPatternId =
   | 'substitution_error'
   | 'reciprocal_as_inverse'
   | 'swap_misname'
+  // difference quotient (engine/diffQuotient.ts; precalculus Unit 1 Day 5)
+  | 'dq_fx_plus_h'
+  | 'dq_fx_plus_fh'
+  | 'dq_partial_sub'
+  | 'dq_partial_cancel'
+  | 'dq_forgot_divide'
+  | 'dq_set_h_zero'
   // significant figures (engine/sigfigs; chemistry module)
   | 'sf_leading_zeros'
   | 'sf_trailing_zeros_decimal'
@@ -369,6 +377,11 @@ export interface GraphSpec {
   xDomain?: [number, number]
   /** Optional badge, e.g. "fails vertical line test". */
   badge?: string
+  /**
+   * Difference quotient: draw ONE secant line of f through (x0, f(x0)) and (x0 + h0, f(x0 + h0)),
+   * labelled like the worksheet sketch (x, x + h, f(x), f(x + h), h).
+   */
+  secant?: { x0: number; h0: number }
 }
 
 /** One calculator instruction (matches content/calc/types.ts, which is the implementation). */

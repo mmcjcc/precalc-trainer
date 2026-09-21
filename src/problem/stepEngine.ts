@@ -120,9 +120,10 @@ export function exampleSegments(example: string): ExampleSegment[] {
     .filter(Boolean)
     .map((text) => {
       const cleaned = normalizeInput(text)
-      const parsed = parseStatement(cleaned, ['x', 'y', 'n'])
+      // h: the difference-quotient examples, e.g. (2xh + h^2 + 3h)/h → 2x + h + 3.
+      const parsed = parseStatement(cleaned, ['x', 'y', 'n', 'h'])
       if (parsed.ok) return { text, latex: safeLatex(cleaned) }
-      const expr = parseExpression(cleaned, ['x', 'y', 'n'])
+      const expr = parseExpression(cleaned, ['x', 'y', 'n', 'h'])
       if (expr.ok) return { text, latex: safeLatex(cleaned) }
       return { text }
     })
