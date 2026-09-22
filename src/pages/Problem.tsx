@@ -7,7 +7,9 @@ import { useAttemptLifecycle, useCompletion } from '@/problem/useAttempt'
 import { useActiveClock } from '@/problem/useIdleNudge'
 import { knobsFromFlags, parseSeedParam } from '@/problem/url'
 import { AtomFlow } from './flows/AtomFlow'
+import { CompositionFlow } from './flows/CompositionFlow'
 import { DiffQuotientFlow } from './flows/DiffQuotientFlow'
+import { DomainRangeFlow } from './flows/DomainRangeFlow'
 import { GraphFeaturesFlow } from './flows/GraphFeaturesFlow'
 import { EvenOddFlow } from './flows/EvenOddFlow'
 import { InequalityFlow } from './flows/InequalityFlow'
@@ -79,6 +81,10 @@ function ProblemBody({ instance, flags, templateTitle }: { instance: ProblemInst
       return <DiffQuotientFlow {...props} />
     case 'graphFeatures':
       return <GraphFeaturesFlow {...props} />
+    case 'domainRange':
+      return <DomainRangeFlow {...props} />
+    case 'composition':
+      return <CompositionFlow {...props} />
     default:
       return <Navigate to="/" replace />
   }

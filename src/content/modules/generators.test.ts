@@ -37,10 +37,12 @@ function sameExpr(a: string, b: string): boolean {
 }
 
 describe('module registry', () => {
-  it('registers all nine modules in display order', () => {
+  it('registers all eleven modules in display order', () => {
     expect(MODULES.map((m) => m.id)).toEqual([
       'numberLine',
       'graphFeatures',
+      'domainRange',
+      'composition',
       'inequalities',
       'evenOdd',
       'inverses',

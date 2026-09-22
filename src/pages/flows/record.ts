@@ -1,5 +1,7 @@
+import { FN_PATTERN } from '@/content/modules/domainRange/patterns'
 import { useStore } from '@/store'
 import type { FieldResult, FinalAnswerGrade } from '@/problem/inequality'
+import type { FunctionGrade } from '@/engine'
 import type { AtomGrade, SigFigGrade, SigFigTapGrade } from '@/shared/types'
 
 /**
@@ -57,11 +59,6 @@ export function recordSigFigTaps(grade: SigFigTapGrade): void {
 }
 
 /**
- * Log an atomic-structure check (several boxes at once): one correct record, or one wrong record per
- * distinct named mistake among the boxes (a single plain wrong record when none was named), so
- * Progress counts each slip. An unreadable or empty box is not an answer: nothing is logged.
- */
-/**
  * Log a graph-features check: one correct record, or one wrong record per distinct named mistake
  * (a single plain wrong record when none was named). A blank box is not an answer: nothing is logged.
  */
@@ -84,6 +81,37 @@ export function recordGraphFeatures(grade: { correct: boolean; incomplete: boole
   }
 }
 
+/**
+ * Log one final_answer for a domain, range, composition formula, value, or composite-domain check.
+ * A named mistake is stored under its fn_ id so Progress counts it. Unreadable input is not an attempt.
+ */
+export function recordFunctionGrade(grade: FunctionGrade): void {
+  if (grade.verdict === 'invalid' || grade.verdict === 'unsupported') return
+  const s = useStore.getState()
+  if (grade.verdict === 'correct') {
+    s.recordFinalAnswer({ correct: true, via: 'text' })
+    return
+  }
+  if (grade.verdict === 'mistake') {
+    s.recordFinalAnswer({ correct: false, pattern: FN_PATTERN[grade.mistake], via: 'text' })
+    return
+  }
+  s.recordFinalAnswer({ correct: false, via: 'text' })
+}
+
+/**
+ * Log a decomposition check. An unreadable f or g is not an attempt; a trivial or unequal pair is.
+ */
+export function recordDecomposition(result: { ok: boolean; reason?: string }): void {
+  if (!result.ok && (result.reason === 'parse_f' || result.reason === 'parse_g' || result.reason === 'unsupported')) return
+  useStore.getState().recordFinalAnswer({ correct: result.ok, via: 'text' })
+}
+
+/**
+ * Log an atomic-structure check (several boxes at once): one correct record, or one wrong record per
+ * distinct named mistake among the boxes (a single plain wrong record when none was named), so
+ * Progress counts each slip. An unreadable or empty box is not an answer: nothing is logged.
+ */
 export function recordAtomGrade(grade: AtomGrade): void {
   if (grade.status === 'parse_error') return
   const s = useStore.getState()

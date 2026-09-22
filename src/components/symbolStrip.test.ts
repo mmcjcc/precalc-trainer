@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { DIFF_QUOTIENT_KEYS, STRIP_KEYS, insertToken, type StripKey } from './symbolStrip'
+import { DIFF_QUOTIENT_KEYS, FUNCTION_KEYS, SET_ANSWER_KEYS, STRIP_KEYS, insertToken, type StripKey } from './symbolStrip'
 
 const key = (label: string): StripKey => {
   const k = STRIP_KEYS.find((s) => s.label === label)
@@ -70,5 +70,21 @@ describe('DIFF_QUOTIENT_KEYS', () => {
     const labels = DIFF_QUOTIENT_KEYS.map((k) => k.label)
     expect(labels).toEqual(['x', 'h', '^', '(', ')', '/', '√'])
     expect(insertToken('5(x+', 4, 4, DIFF_QUOTIENT_KEYS[1]!)).toEqual({ value: '5(x+h', caret: 5 })
+  })
+})
+
+describe('set and function strips', () => {
+  it('SET_ANSWER_KEYS inserts brackets, a bar, and ≠ as !=', () => {
+    expect(SET_ANSWER_KEYS.map((k) => k.label)).toEqual(['x', '(', ')', '[', ']', '∞', '∪', '{ }', '|', '<', '≤', '>', '≥', '≠', 'or'])
+    const neq = SET_ANSWER_KEYS.find((k) => k.label === '≠')!
+    expect(neq.insert).toBe(' != ')
+    expect(insertToken('x', 1, 1, neq)).toEqual({ value: 'x != ', caret: 'x != '.length })
+    expect(insertToken('', 0, 0, SET_ANSWER_KEYS.find((k) => k.label === '[')!)).toEqual({ value: '[', caret: 1 })
+    expect(insertToken('[', 1, 1, SET_ANSWER_KEYS.find((k) => k.label === ']')!)).toEqual({ value: '[]', caret: 2 })
+  })
+
+  it('FUNCTION_KEYS is the expression strip, absolute value included', () => {
+    expect(FUNCTION_KEYS.map((k) => k.label)).toEqual(['x', '^', '(', ')', '/', '√', '³√', '| |'])
+    expect(FUNCTION_KEYS.find((k) => k.label === '√')!.insert).toBe('sqrt()')
   })
 })

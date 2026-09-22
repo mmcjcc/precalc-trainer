@@ -16,7 +16,7 @@ import type {
   VarName,
 } from '@/shared/types'
 
-export type ProblemKind = 'inequality' | 'numberLine' | 'evenOdd' | 'inverse' | 'drill' | 'sigFigs' | 'atoms' | 'diffQuotient' | 'graphFeatures'
+export type ProblemKind = 'inequality' | 'numberLine' | 'evenOdd' | 'inverse' | 'drill' | 'sigFigs' | 'atoms' | 'diffQuotient' | 'graphFeatures' | 'domainRange' | 'composition'
 
 /** Difficulty knobs (all optional; templates document which they honor). */
 export interface DifficultyKnobs {
@@ -262,6 +262,61 @@ export type AnswerSpec =
       ruleCards: RuleCardId[]
       /** Hint rung 3 and the after-correct explanation (reveals the answer). */
       reveal: string[]
+    }
+  | {
+      /**
+       * Domain or range from a formula (precalculus). Grade with the ENGINE: `gradeDomain` / `gradeRange`.
+       * Her text is a set (`parseSetAnswer`), never compared as a string.
+       */
+      type: 'domainRange'
+      question: 'domain' | 'range'
+      /** f(x) in app syntax. */
+      f: string
+      interval: string
+      builder: string
+      set: SolutionSet
+      /** Range family when `question` is `range`. */
+      family?: string
+      nudge: string
+      ruleCard: RuleCardId
+      ruleCards: RuleCardId[]
+      /** Hint rung 3 and the after-correct explanation: the engine's lines. */
+      reveal: string[]
+      /** Shape this seed was built around, e.g. "negative-under-root", "reciprocal". */
+      trap: string
+    }
+  | {
+      /**
+       * Composition (precalculus). Grade with the ENGINE: `gradeComposition`, `gradeCompositeValue`,
+       * `gradeCompositeDomain`, or `checkDecomposition`. Any equivalent formula, and any valid
+       * non-trivial decomposition, is right.
+       */
+      type: 'composition'
+      question: 'expr' | 'value' | 'domain' | 'decompose'
+      /** Outer function. For a decomposition, one valid f — not the only one. */
+      f: string
+      /** Inner function. For a decomposition, the g that matches `f`. */
+      g: string
+      /** h(x) when the question is to decompose. */
+      h?: string
+      /** Friendly integer for a value question. */
+      a?: number
+      /** Whether (f ∘ g)(a) is defined. */
+      defined?: boolean
+      /** Exact value text, or "undefined". */
+      valueText?: string
+      simplified?: string
+      unsimplified?: string
+      interval?: string
+      builder?: string
+      set?: SolutionSet
+      /** The simplified formula's domain is wider than the composite's. */
+      hidesRestriction?: boolean
+      nudge: string
+      ruleCard: RuleCardId
+      ruleCards: RuleCardId[]
+      reveal: string[]
+      trap: string
     }
   | {
       type: 'drill'

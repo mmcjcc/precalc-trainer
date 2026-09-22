@@ -1,5 +1,7 @@
 import './numberLine'
 import './graphFeatures'
+import './domainRange'
+import './composition'
 import './inequalities'
 import './evenOdd'
 import './inverses'

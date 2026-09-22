@@ -60,6 +60,8 @@ const GRAPH_NOTE: Record<string, string> = {
   inverse: 'The graph draws f and its mirror across y = x, so it shows the answer. Work it out first, then check.',
   evenOdd: 'The graph shows the symmetry, so it gives the verdict away. Write your evidence first, then check.',
   diffQuotient: 'The graph draws a secant line and works out its slope, so it gives numbers away. Simplify first, then check.',
+  domainRange: 'The graph of f shows where it exists and which heights it reaches, so it gives the answer away. Work it out first, then check.',
+  composition: 'The graph draws the function, so it can give the answer away. Work it out first, then check.',
   default: 'The graph shows the answer. Try the problem first, then use it to check.',
 }
 

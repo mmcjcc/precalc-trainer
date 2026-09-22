@@ -33,6 +33,10 @@ export const STRIP_KEYS: readonly StripKey[] = [
   { label: 'π', insert: 'pi', caret: 0, name: 'pi' },
   { label: '±', insert: '+-', caret: 0, name: 'plus or minus' },
   { label: 'or', insert: ' or ', caret: 0, name: 'or' },
+  { label: '[', insert: '[', caret: 0, name: 'open bracket' },
+  { label: ']', insert: ']', caret: 0, name: 'close bracket' },
+  { label: '≠', insert: ' != ', caret: 0, name: 'not equal' },
+  { label: '|', insert: ' | ', caret: 0, name: 'such that' },
 ]
 
 const stripKey = (label: string): StripKey => {
@@ -50,6 +54,37 @@ export const DIFF_QUOTIENT_KEYS: readonly StripKey[] = [
   stripKey(')'),
   stripKey('/'),
   stripKey('√'),
+]
+
+/** Domain and range: interval notation, set-builder, and "all real numbers except …". */
+export const SET_ANSWER_KEYS: readonly StripKey[] = [
+  stripKey('x'),
+  stripKey('('),
+  stripKey(')'),
+  stripKey('['),
+  stripKey(']'),
+  stripKey('∞'),
+  stripKey('∪'),
+  stripKey('{ }'),
+  stripKey('|'),
+  stripKey('<'),
+  stripKey('≤'),
+  stripKey('>'),
+  stripKey('≥'),
+  stripKey('≠'),
+  stripKey('or'),
+]
+
+/** Formulas for f, g, and (f ∘ g)(x): the keys a function actually uses. */
+export const FUNCTION_KEYS: readonly StripKey[] = [
+  stripKey('x'),
+  stripKey('^'),
+  stripKey('('),
+  stripKey(')'),
+  stripKey('/'),
+  stripKey('√'),
+  stripKey('³√'),
+  stripKey('| |'),
 ]
 
 export interface Insertion {

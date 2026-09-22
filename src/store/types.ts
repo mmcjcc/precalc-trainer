@@ -91,6 +91,11 @@ export interface AttemptFinal {
    * localMax, localMin). Restored after a reload.
    */
   gfEntries?: Record<string, string>
+  /**
+   * Domain, range, and composition: the answer box(es) exactly as typed. `answer` is the set, formula,
+   * or value; a decomposition uses `f` and `g`. Restored after a reload.
+   */
+  fnEntries?: Record<string, string>
 }
 
 export interface Attempt {

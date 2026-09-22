@@ -17,8 +17,10 @@ Data files (element tables, ion lists, unit-circle values) go to Grok with an in
 Claude writes from known values. Every homework or quiz photo becomes regression cases in
 `src/problem/*.regression.test.ts` before any new feature.
 
-Rule of thumb: one Claude engine core per week (about 150-250k tokens) plus verification, instead of
-one 500k+ all-Claude build. Running two builds at once is fine only when they touch different
+Rule of thumb: one Claude engine core per week plus verification. Measured so far: a full
+one-agent module costs 440-520k Claude tokens; an engine core alone (domain, range and composition,
+exact arithmetic, 164 tests) cost about 460k. The saving comes from Grok building the screens and
+templates, not from the core being small; keep cores narrow. Running two builds at once is fine only when they touch different
 folders; shared registration files (`src/shared/types.ts`, `catalog.ts`, `Problem.tsx`,
 `modules/index.ts`) have one owner at a time.
 

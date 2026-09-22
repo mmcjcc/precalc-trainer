@@ -15,7 +15,7 @@
 export type RelOp = '=' | '<' | '<=' | '>' | '>='
 /** `h` is the difference-quotient step; the parser accepts it only when the problem owns it (ctx.vars). */
 export type VarName = 'x' | 'y' | 'n' | 'h'
-export type ModuleId = 'numberLine' | 'inequalities' | 'evenOdd' | 'inverses' | 'propertiesDrill' | 'sigFigs' | 'atoms' | 'diffQuotient' | 'graphFeatures'
+export type ModuleId = 'numberLine' | 'inequalities' | 'evenOdd' | 'inverses' | 'propertiesDrill' | 'sigFigs' | 'atoms' | 'diffQuotient' | 'graphFeatures' | 'domainRange' | 'composition'
 export type CalcId = 'ti84' | 'nspire'
 
 /** Fine-grained property tags. Canonical steps carry one; the engine's move detector reports one. */
@@ -223,6 +223,26 @@ export type ErrorPatternId =
   | 'gf_global_not_local'
   | 'gf_not_turning_point'
   | 'gf_swapped_coordinates'
+  // domain, range, composition (engine/functions; content registers the ids). One per FunctionMistakeKind.
+  | 'fn_domain_forgot_denominator'
+  | 'fn_domain_root_strict'
+  | 'fn_domain_root_denominator_zero'
+  | 'fn_domain_odd_root_restricted'
+  | 'fn_domain_no_flip'
+  | 'fn_domain_gave_range'
+  | 'fn_domain_denominator_nonneg'
+  | 'fn_range_gave_domain'
+  | 'fn_range_reflection_ignored'
+  | 'fn_range_included_asymptote'
+  | 'fn_compose_product'
+  | 'fn_compose_reversed'
+  | 'fn_compose_sum'
+  | 'fn_compose_no_parens'
+  | 'fn_compose_partial_sub'
+  | 'fn_value_product'
+  | 'fn_value_reversed'
+  | 'fn_composite_domain_simplified'
+  | 'fn_composite_domain_inner_only'
   // behavioral (ui)
   | 'abandoned'
 
