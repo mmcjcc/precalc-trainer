@@ -38,6 +38,54 @@ export {
 } from './diffQuotient'
 export type { DqLineResult, DqSpec } from './diffQuotient'
 
+// Functions (precalculus Unit 1): domain and range, composition. Exact sets; API in docs/progress/functions-core.md.
+export {
+  checkDecomposition,
+  compositeAtText,
+  compositeDomain,
+  compositeDomainMistakes,
+  compositeValue,
+  compositeValueMistakes,
+  compositionMistakes,
+  composeText,
+  describeSetText,
+  domainMistakes,
+  domainOf,
+  FUNCTION_MISTAKE_KINDS,
+  gradeComposition,
+  gradeCompositeDomain,
+  gradeCompositeValue,
+  gradeDomain,
+  gradeRange,
+  parseSetAnswer,
+  parseValueAnswer,
+  rangeMistakes,
+  rangeOf,
+  setToBuilderText,
+  substituteFunctionText,
+  surdToText,
+} from './functions'
+export type {
+  CompositeDomainResult,
+  CompositeValue,
+  CompositionText,
+  DecompositionResult,
+  DomainRestriction,
+  DomainResult,
+  ExactNumber,
+  ExpressionMistakeCandidate,
+  FunctionGrade,
+  FunctionMistakeKind,
+  RangeFamily,
+  RangeResult,
+  RestrictionKind,
+  SetAnswerParse,
+  SetMistakeCandidate,
+  Surd,
+  ValueAnswerParse,
+  ValueMistakeCandidate,
+} from './functions'
+
 // Significant figures (chemistry). Exact digit-string / BigInt arithmetic; types live in @/shared/types.
 export * from './sigfigs'
 
