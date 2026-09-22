@@ -3,10 +3,12 @@ import type { GraphSpec } from '@/shared/types'
 import { Graph } from './Graph'
 import { NumberLineSet } from './NumberLineSet'
 import { RuleCardView } from './HintPanel'
+import { SampledGraph } from './SampledGraph'
 import { SecantGraph } from './SecantGraph'
 
-/** Graph panel: function plot or number line, from `instance.graph`. */
+/** Graph panel: function plot, sampled curve, or number line, from `instance.graph`. */
 export function GraphPanel({ spec, caption }: { spec: GraphSpec; caption?: string }) {
+  if (spec.kind === 'function' && spec.samples && spec.samples.length > 0) return <SampledGraph spec={spec} />
   if (spec.kind === 'function' && spec.f && spec.secant) return <SecantGraph spec={spec} />
   if (spec.kind === 'function' && spec.f) return <Graph spec={spec} />
   if (spec.kind === 'numberLine' && spec.set) {

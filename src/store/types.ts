@@ -86,6 +86,11 @@ export interface AttemptFinal {
    * symbol, massNumber, atomicNumber, charge, abundance1, abundance2; avgmass uses sfText / sfPower).
    */
   atEntries?: Record<string, string>
+  /**
+   * Reading a graph: the six boxes exactly as typed (increasing, decreasing, globalMax, globalMin,
+   * localMax, localMin). Restored after a reload.
+   */
+  gfEntries?: Record<string, string>
 }
 
 export interface Attempt {

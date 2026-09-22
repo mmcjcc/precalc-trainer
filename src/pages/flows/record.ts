@@ -61,6 +61,29 @@ export function recordSigFigTaps(grade: SigFigTapGrade): void {
  * distinct named mistake among the boxes (a single plain wrong record when none was named), so
  * Progress counts each slip. An unreadable or empty box is not an answer: nothing is logged.
  */
+/**
+ * Log a graph-features check: one correct record, or one wrong record per distinct named mistake
+ * (a single plain wrong record when none was named). A blank box is not an answer: nothing is logged.
+ */
+export function recordGraphFeatures(grade: { correct: boolean; incomplete: boolean; patterns: { id: string }[] }): void {
+  if (grade.incomplete) return
+  const s = useStore.getState()
+  if (grade.correct) {
+    s.recordFinalAnswer({ correct: true, via: 'text' })
+    return
+  }
+  if (grade.patterns.length === 0) {
+    s.recordFinalAnswer({ correct: false, via: 'text' })
+    return
+  }
+  const seen = new Set<string>()
+  for (const p of grade.patterns) {
+    if (seen.has(p.id)) continue
+    seen.add(p.id)
+    s.recordFinalAnswer({ correct: false, pattern: p.id, via: 'text' })
+  }
+}
+
 export function recordAtomGrade(grade: AtomGrade): void {
   if (grade.status === 'parse_error') return
   const s = useStore.getState()

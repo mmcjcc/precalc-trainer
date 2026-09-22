@@ -120,7 +120,7 @@ export function ProblemFrame({ instance, attempt, flags, templateTitle, progress
       short: 'Graph',
       content: (
         <RevealGate
-          open={Boolean(completion) || instance.kind === 'numberLine' || revealed.graph}
+          open={Boolean(completion) || instance.kind === 'numberLine' || instance.kind === 'graphFeatures' || revealed.graph}
           note={GRAPH_NOTE[instance.kind] ?? GRAPH_NOTE.default!}
           label="Show the graph"
           onReveal={() => setRevealed((r) => ({ ...r, graph: true }))}

@@ -1,4 +1,5 @@
 import './numberLine'
+import './graphFeatures'
 import './inequalities'
 import './evenOdd'
 import './inverses'

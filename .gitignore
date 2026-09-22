@@ -8,3 +8,9 @@ dist-ssr
 .DS_Store
 coverage
 .vite
+
+# Secrets: never commit keys (the repo is public). Keep them outside the repo; Azure holds the live copies.
+apikey*
+*.apikey
+client_secret*.json
+secrets/

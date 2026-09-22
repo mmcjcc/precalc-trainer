@@ -15,7 +15,7 @@
 export type RelOp = '=' | '<' | '<=' | '>' | '>='
 /** `h` is the difference-quotient step; the parser accepts it only when the problem owns it (ctx.vars). */
 export type VarName = 'x' | 'y' | 'n' | 'h'
-export type ModuleId = 'numberLine' | 'inequalities' | 'evenOdd' | 'inverses' | 'propertiesDrill' | 'sigFigs' | 'atoms' | 'diffQuotient'
+export type ModuleId = 'numberLine' | 'inequalities' | 'evenOdd' | 'inverses' | 'propertiesDrill' | 'sigFigs' | 'atoms' | 'diffQuotient' | 'graphFeatures'
 export type CalcId = 'ti84' | 'nspire'
 
 /** Fine-grained property tags. Canonical steps carry one; the engine's move detector reports one. */
@@ -214,6 +214,15 @@ export type ErrorPatternId =
   | 'at_assumed_even_split'
   | 'at_abundance_swapped'
   | 'at_abundance_sum'
+  // reading a graph (content/modules/graphFeatures; precalculus)
+  | 'gf_union_between_points'
+  | 'gf_y_for_intervals'
+  | 'gf_brackets_at_turns'
+  | 'gf_swapped_inc_dec'
+  | 'gf_global_on_ray'
+  | 'gf_global_not_local'
+  | 'gf_not_turning_point'
+  | 'gf_swapped_coordinates'
   // behavioral (ui)
   | 'abandoned'
 
@@ -359,6 +368,21 @@ export interface PlotCurve {
   color: PlotColor
 }
 
+/** One vertex of a sampled polyline (graph features). Existing graphs leave `samples` unset. */
+export interface GraphSample {
+  x: number
+  y: number
+}
+
+/** A labelled point drawn on a sampled graph, e.g. a turning point "(-2.5, -5.5)". */
+export interface GraphMarker {
+  x: number
+  y: number
+  label: string
+  /** Preferred side of the point. The plot may nudge the label so neighbours stay readable. */
+  labelSide?: 'above' | 'below'
+}
+
 export interface GraphSpec {
   kind: 'function' | 'numberLine' | 'none'
   /** Main function f(x) in app syntax (kind = function). */
@@ -382,6 +406,15 @@ export interface GraphSpec {
    * labelled like the worksheet sketch (x, x + h, f(x), f(x + h), h).
    */
   secant?: { x0: number; h0: number }
+  /**
+   * Sampled polyline, for a curve that is not one expression (reading a graph). Plotted instead of
+   * `f` when present. Existing graphs leave this unset.
+   */
+  samples?: GraphSample[]
+  /** Labelled points on that polyline (the turning points). */
+  markers?: GraphMarker[]
+  /** Y window for a sampled graph. Expression graphs omit this and stay square (x domain for both). */
+  yDomain?: [number, number]
 }
 
 /** One calculator instruction (matches content/calc/types.ts, which is the implementation). */

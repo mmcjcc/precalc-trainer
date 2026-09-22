@@ -462,6 +462,62 @@ export const ERROR_PATTERNS: Record<ErrorPatternId, ErrorPatternInfo> = {
     lesson: 'Every atom of the element is one isotope or the other, so the percents must total exactly 100%. Once you have one, the other is 100% minus it.',
     example: '69.15% and 31.85% ✗ (101%) → 69.15% and 30.85%',
   },
+  // --- reading a graph (content/modules/graphFeatures; precalculus) ---
+  gf_union_between_points: {
+    id: 'gf_union_between_points',
+    title: 'U joins intervals, not points',
+    lesson:
+      'U joins intervals — sets of numbers. Between points that line reads as two intervals, and a point written that way can run backwards. A list of points uses "and" or a comma.',
+    example: '(-2.5, -5.5) U (7.25, -9.25) ✗ → (-2.5, -5.5) and (7.25, -9.25)',
+  },
+  gf_y_for_intervals: {
+    id: 'gf_y_for_intervals',
+    title: 'Increasing uses x-values',
+    lesson:
+      'Increasing and decreasing are about the x-axis: the inputs where the graph climbs or falls. The heights (y-values) name the points, not the intervals.',
+    example: '(-5.5, 3.25) U (-9.25, inf) ✗ → (-2.5, 2) U (7.25, inf)',
+  },
+  gf_brackets_at_turns: {
+    id: 'gf_brackets_at_turns',
+    title: 'Parentheses at a turning point',
+    lesson:
+      'At a turning point the graph is flat for an instant, so it is not strictly increasing or decreasing there. Those x-values get parentheses, not brackets.',
+    example: '[-2.5, 2] U [7.25, inf) ✗ → (-2.5, 2) U (7.25, inf)',
+  },
+  gf_swapped_inc_dec: {
+    id: 'gf_swapped_inc_dec',
+    title: 'Increasing and decreasing are swapped',
+    lesson:
+      'Increasing is where the graph climbs as you read left to right. Decreasing is where it falls. The two intervals trade places if those words are swapped.',
+    example: 'increasing (-inf, -2.5) U (2, 7.25) ✗ → (-2.5, 2) U (7.25, inf)',
+  },
+  gf_global_on_ray: {
+    id: 'gf_global_on_ray',
+    title: 'No highest point if it keeps rising',
+    lesson:
+      'A global max is the highest point the graph ever reaches. If an end climbs forever toward +∞, there is no highest point — write none. If an end falls forever toward −∞, there is no global min.',
+    example: 'global max (2, 3.25) ✗ → none',
+  },
+  gf_global_not_local: {
+    id: 'gf_global_not_local',
+    title: 'A global max or min is also local',
+    lesson:
+      'A turning point that is the global min is still a local min, and the same for a max. It belongs in the local list too.',
+    example: 'local min only (-2.5, -5.5) ✗ → (-2.5, -5.5) and (7.25, -9.25)',
+  },
+  gf_not_turning_point: {
+    id: 'gf_not_turning_point',
+    title: 'Only the turning points',
+    lesson:
+      'A local max or min is a labelled turning point, where the graph changes from climbing to falling or back. A point that is not a turn does not count.',
+    example: 'local max (0, 0) ✗ → (2, 3.25)',
+  },
+  gf_swapped_coordinates: {
+    id: 'gf_swapped_coordinates',
+    title: 'x first, then y',
+    lesson: 'A point is (x, y): how far across, then how high. Reading the label backwards swaps the coordinates.',
+    example: '(-5.5, -2.5) ✗ → (-2.5, -5.5)',
+  },
   // --- behavioral (ui) ---
   abandoned: {
     id: 'abandoned',

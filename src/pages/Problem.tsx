@@ -8,6 +8,7 @@ import { useActiveClock } from '@/problem/useIdleNudge'
 import { knobsFromFlags, parseSeedParam } from '@/problem/url'
 import { AtomFlow } from './flows/AtomFlow'
 import { DiffQuotientFlow } from './flows/DiffQuotientFlow'
+import { GraphFeaturesFlow } from './flows/GraphFeaturesFlow'
 import { EvenOddFlow } from './flows/EvenOddFlow'
 import { InequalityFlow } from './flows/InequalityFlow'
 import { InverseFlow } from './flows/InverseFlow'
@@ -76,6 +77,8 @@ function ProblemBody({ instance, flags, templateTitle }: { instance: ProblemInst
       return <AtomFlow {...props} />
     case 'diffQuotient':
       return <DiffQuotientFlow {...props} />
+    case 'graphFeatures':
+      return <GraphFeaturesFlow {...props} />
     default:
       return <Navigate to="/" replace />
   }

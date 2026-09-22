@@ -16,7 +16,7 @@ import type {
   VarName,
 } from '@/shared/types'
 
-export type ProblemKind = 'inequality' | 'numberLine' | 'evenOdd' | 'inverse' | 'drill' | 'sigFigs' | 'atoms' | 'diffQuotient'
+export type ProblemKind = 'inequality' | 'numberLine' | 'evenOdd' | 'inverse' | 'drill' | 'sigFigs' | 'atoms' | 'diffQuotient' | 'graphFeatures'
 
 /** Difficulty knobs (all optional; templates document which they honor). */
 export interface DifficultyKnobs {
@@ -99,6 +99,13 @@ export interface AtomPeriodicEntry {
   z: number
   symbol: string
   name: string
+}
+
+/** One labelled turning point of a "reading a graph" problem. */
+export interface GraphFeaturesTurn {
+  x: number
+  y: number
+  kind: 'min' | 'max'
 }
 
 export type AnswerSpec =
@@ -217,6 +224,44 @@ export type AnswerSpec =
       restriction?: string
       /** Bonus restricted-domain inverse for the NOT case, e.g. "sqrt((x+7)/4)" on x ≥ h. */
       bonusInverse?: string
+    }
+  | {
+      /**
+       * Reading a graph (precalculus). Grade with `gradeGraphFeatures` (content): intervals through the
+       * notation parser, points as "(x, y)" / "and" / "none". The graph on `instance.graph` is the question.
+       */
+      type: 'graphFeatures'
+      /** W: two local mins, both ends up. M: the mirror. S: one max and one min, ends opposite. */
+      shape: 'W' | 'M' | 'S'
+      /** Turning points left to right. The curve passes through each with zero slope. */
+      turns: GraphFeaturesTurn[]
+      /** y → +∞ ('up') or −∞ ('down') as x → −∞. */
+      leftEnd: 'up' | 'down'
+      /** y → +∞ ('up') or −∞ ('down') as x → +∞. */
+      rightEnd: 'up' | 'down'
+      /** Canonical interval strings (decimal quarters, open at each turn). */
+      increasing: string
+      decreasing: string
+      increasingSet: SolutionSet
+      decreasingSet: SolutionSet
+      /** 'none' or one point "(x, y)". */
+      globalMax: string
+      globalMin: string
+      /** 'none' or points joined with "and", left to right. Includes the global extremum when there is one. */
+      localMax: string
+      localMin: string
+      globalMaxPoint: { x: number; y: number } | null
+      globalMinPoint: { x: number; y: number } | null
+      localMaxPoints: { x: number; y: number }[]
+      localMinPoints: { x: number; y: number }[]
+      /** Hint rung 1 (never contains the answer). */
+      nudge: string
+      /** Hint rung 2 before any named mistake: id of the rule card to show first. */
+      ruleCard: RuleCardId
+      /** Every rule card this problem leans on, most relevant first (includes `ruleCard`). */
+      ruleCards: RuleCardId[]
+      /** Hint rung 3 and the after-correct explanation (reveals the answer). */
+      reveal: string[]
     }
   | {
       type: 'drill'
