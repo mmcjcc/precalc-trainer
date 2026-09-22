@@ -1,4 +1,5 @@
 import { useMemo, useRef, useState } from 'react'
+import type { TutorVerdict } from '@/shared/tutor'
 import { getModule } from '@/content/registry'
 import type { AnswerSpec, RuleCard } from '@/content/types'
 import {
@@ -14,6 +15,7 @@ import { Katex } from '@/components/Katex'
 import { MathInput } from '@/components/MathInput'
 import { SigFigCorrect, SigFigExplanation, SigFigRejection } from '@/components/SigFigFeedback'
 import { safeLatex, type ProgressLine } from '@/problem/stepEngine'
+import { verdictFromDecomposition, verdictFromFunction } from '@/problem/tutorContext'
 import type { ErrorPatternId } from '@/shared/types'
 import { COMP_RULE_IDS } from '@/content/modules/composition/rules'
 import { ProblemFrame } from './ProblemFrame'
@@ -62,6 +64,7 @@ function CompositionBody({ instance, attempt, flags, templateTitle, completion, 
   const [inner, setInner] = useState(saved?.g ?? '')
   const [grade, setGrade] = useState<FunctionGrade | null>(null)
   const [decomposeMsg, setDecomposeMsg] = useState<{ ok: boolean; message: string; recorded: boolean } | null>(null)
+  const [decomposeVerdict, setDecomposeVerdict] = useState<TutorVerdict | null>(null)
   const lastChecked = useRef<string | null>(null)
   const hint = useFnHint(attempt, done)
 
@@ -112,6 +115,7 @@ function CompositionBody({ instance, attempt, flags, templateTitle, completion, 
     if (done || !answer.h) return
     const result = checkDecomposition(answer.h, outer, inner)
     const key = `${outer.trim()}\n${inner.trim()}`
+    setDecomposeVerdict(verdictFromDecomposition(result))
     if (!result.ok && (result.reason === 'parse_f' || result.reason === 'parse_g' || result.reason === 'unsupported')) {
       setDecomposeMsg({ ok: false, message: result.message, recorded: false })
       return
@@ -125,6 +129,7 @@ function CompositionBody({ instance, attempt, flags, templateTitle, completion, 
   }
 
   const pattern = grade?.verdict === 'mistake' ? functionPattern(grade.mistake, grade.witness) : null
+  const tutorVerdict = (grade ? verdictFromFunction(grade) : null) ?? decomposeVerdict
   const cardId = (pattern && CARD_FOR[pattern.id]) || answer.ruleCard
   const card: RuleCard | null = cardsById.get(cardId) ?? null
 
@@ -152,6 +157,7 @@ function CompositionBody({ instance, attempt, flags, templateTitle, completion, 
       templateTitle={templateTitle}
       progress={progress}
       completion={completion}
+      tutorVerdict={tutorVerdict}
       graphCaption={`graph of ${instance.graph.f ?? answer.f}`}
       statement={statement}
       hints={<FnHintLadder rung={hint.rung} nudge={answer.nudge} card={card} explanation={answer.reveal} onAdvance={hint.advance} disabled={done} />}

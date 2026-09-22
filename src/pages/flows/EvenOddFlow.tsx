@@ -15,6 +15,8 @@ import {
   type SlotOutcome,
 } from '@/problem/evenOdd'
 import { liveParseError, safeLatex, type HintView, type ProgressLine, type SubmitOutcome } from '@/problem/stepEngine'
+import { verdictFromStep, verdictFromYesNo } from '@/problem/tutorContext'
+import type { TutorVerdict } from '@/shared/tutor'
 import { useStepEngine, type StepEngine } from '@/problem/useStepEngine'
 import { HintPanel } from '@/components/HintPanel'
 import { Katex } from '@/components/Katex'
@@ -95,11 +97,14 @@ function EvenOddBody(props: FlowProps & { answer: ParityAnswer }) {
   const a = useSlotEngine('A', lines.A, props, ctx, cards)
   const b = useSlotEngine('B', lines.B, props, ctx, cards)
   const [active, setActive] = useState<Slot>('A')
+  const [parityVerdict, setParityVerdict] = useState<TutorVerdict | null>(null)
   const activeSlot = active === 'A' ? a : b
   const chipEngine = a.engine.chipPrompt ? a.engine : b.engine.chipPrompt ? b.engine : null
   const undoEngine = a.engine.canUndo ? a.engine : b.engine.canUndo ? b.engine : null
   const validate = useCallback((t: string) => liveParseError(t, instance.vars, 'expression'), [instance.vars])
   const bothWritten = lines.A.length > 0 && lines.B.length > 0
+  const rejected = activeSlot.engine.rejection ? activeSlot.engine : a.engine.rejection ? a.engine : b.engine.rejection ? b.engine : null
+  const tutorVerdict = rejected?.rejection ? verdictFromStep(rejected.rejection, rejected.draft) : parityVerdict
 
   const progress: ProgressLine = {
     stage: (lines.A.length > 0 ? 1 : 0) + (lines.B.length > 0 ? 1 : 0) + (done ? 1 : 0),
@@ -139,6 +144,7 @@ function EvenOddBody(props: FlowProps & { answer: ParityAnswer }) {
           />
         </div>
       }
+      tutorVerdict={tutorVerdict}
       keymap={{
         onHint: activeSlot.engine.advanceHint,
         onUndo: undoEngine?.undo,
@@ -171,6 +177,7 @@ function EvenOddBody(props: FlowProps & { answer: ParityAnswer }) {
         enabled={bothWritten}
         done={done}
         onResult={(grade, verdict, reason) => {
+          setParityVerdict(verdictFromYesNo(grade.correct, grade.message, reason ? `${verdict}: ${reason}` : verdict))
           const st = useStore.getState()
           st.setFinal({ parity: verdict, reason: reason ?? undefined })
           // "Neither" without a reason is a prompt, not a wrong answer.

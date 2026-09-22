@@ -1,4 +1,6 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
+import { verdictFromSetAnswer } from '@/problem/tutorContext'
+import type { TutorVerdict } from '@/shared/tutor'
 import { getModule } from '@/content/registry'
 import type { HintView, ProgressLine } from '@/problem/stepEngine'
 import { useKeyedHint } from '@/problem/useKeyedHint'
@@ -25,6 +27,7 @@ export function NumberLineFlow({ instance, attempt, flags, templateTitle, comple
     () => ({ next: null, nudge: NUDGE, card: mod.ruleCards.find((c) => c.id === 'brackets') ?? mod.ruleCards[0] ?? null, reveal: null }),
     [mod],
   )
+  const [tutorVerdict, setTutorVerdict] = useState<TutorVerdict | null>(null)
   const progress: ProgressLine = {
     stage: done ? 1 : 0,
     total: 1,
@@ -54,12 +57,14 @@ export function NumberLineFlow({ instance, attempt, flags, templateTitle, comple
         </div>
       }
       hints={<HintPanel rung={hint.rung} view={view} onAdvance={hint.advance} onUseLine={() => undefined} disabled={done} />}
+      tutorVerdict={tutorVerdict}
       keymap={{ onHint: hint.advance }}
     >
       <FinalAnswerCard
         target={{ set: answer.set, requireInterval: answer.requireInterval, requireSetBuilder: answer.requireSetBuilder }}
         initial={{ interval: attempt?.final?.interval, set: attempt?.final?.set }}
         onGrade={(grade, texts) => {
+          setTutorVerdict(verdictFromSetAnswer(grade, texts))
           recordSetAnswer(grade, texts)
           if (grade.done) finish()
         }}

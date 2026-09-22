@@ -6,6 +6,7 @@ import { ModulePage } from '@/pages/Module'
 import { PinPage } from '@/pages/Pin'
 import { ProgressPage } from '@/pages/Progress'
 import { SettingsPage } from '@/pages/Settings'
+import { TutorLogPage } from '@/pages/TutorLog'
 import { useStore } from '@/store'
 
 // Heavy routes (KaTeX, the workspace flows, the engine playground) load on demand.
@@ -115,6 +116,7 @@ export function AppShell() {
             <Route path="/drill" element={<DrillPage />} />
             <Route path="/progress" element={<ProgressPage />} />
             <Route path="/settings" element={<SettingsPage />} />
+            <Route path="/tutor-log" element={<TutorLogPage />} />
             <Route path="/sandbox" element={<SandboxPage />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>

@@ -5,6 +5,7 @@ import { BottomSheet } from '@/components/BottomSheet'
 import { isIosSafari, isStandalone } from '@/components/useBreakpoint'
 import { CALC_LABEL, type CalcId } from '@/shared/types'
 import { useSettings, useStore } from '@/store'
+import { useTutorStatus } from '@/tutor/useTutorStatus'
 
 const CALC_IDS = Object.keys(CALC_LABEL) as CalcId[]
 
@@ -71,6 +72,7 @@ export function SettingsPage() {
   const closeConfirm = useCallback(() => setConfirmOpen(false), [])
   const calcName = useId()
   const showA2HS = isIosSafari() && !isStandalone()
+  const tutor = useTutorStatus()
 
   function confirmReset() {
     resetProgress()
@@ -175,6 +177,18 @@ export function SettingsPage() {
           >
             Sign out
           </a>
+        </section>
+      )}
+
+      {tutor.status?.isParent && (
+        <section aria-labelledby="settings-tutor" className="rounded-2xl border border-navy-100 bg-white p-4">
+          <h2 id="settings-tutor" className="font-semibold text-navy">
+            Tutor
+          </h2>
+          <p className="mt-0.5 text-sm text-navy/80">Questions she asked, and any answers she flagged for you to look over.</p>
+          <Link to="/tutor-log" className="mt-3 inline-flex min-h-11 items-center font-semibold text-navy underline">
+            Tutor log
+          </Link>
         </section>
       )}
 

@@ -6,6 +6,7 @@ import { GF_RULE_IDS } from '@/content/modules/graphFeatures/rules'
 import type { ErrorPatternId, PatternHit } from '@/shared/types'
 import { useStore, type Attempt } from '@/store'
 import type { ProgressLine } from '@/problem/stepEngine'
+import { verdictFromGraph } from '@/problem/tutorContext'
 import { GraphPanel } from '@/components/GraphPanel'
 import { RuleCardView } from '@/components/HintPanel'
 import { SigFigCorrect, SigFigExplanation, SigFigRejection } from '@/components/SigFigFeedback'
@@ -195,6 +196,7 @@ function GraphFeaturesBody({ instance, attempt, flags, templateTitle, completion
     offPath: false,
   }
   const byId = new Map(grade?.fields.map((f) => [f.id, f]))
+  const tutorVerdict = grade ? verdictFromGraph(grade) : undefined
 
   return (
     <ProblemFrame
@@ -204,6 +206,7 @@ function GraphFeaturesBody({ instance, attempt, flags, templateTitle, completion
       templateTitle={templateTitle}
       progress={progress}
       completion={completion}
+      tutorVerdict={tutorVerdict}
       nudgeText="Still here? Read the labelled turns, then fill in the six boxes — the hint button is right there."
       graphCaption="the function, with its turning points labelled"
       statement={

@@ -6,6 +6,7 @@ import { DR_RULE_IDS } from '@/content/modules/domainRange/rules'
 import type { AnswerSpec, RuleCard } from '@/content/types'
 import { gradeDomain, gradeRange, type FunctionGrade } from '@/engine'
 import { safeLatex, type ProgressLine } from '@/problem/stepEngine'
+import { verdictFromFunction } from '@/problem/tutorContext'
 import type { ErrorPatternId } from '@/shared/types'
 import { ProblemFrame } from './ProblemFrame'
 import { FnGradeView, FnHintLadder, functionPattern, saveFnEntries, SetAnswerField, useFnHint } from './fnUi'
@@ -62,6 +63,7 @@ function DomainRangeBody({ instance, attempt, flags, templateTitle, completion, 
   }
 
   const pattern = grade?.verdict === 'mistake' ? functionPattern(grade.mistake, grade.witness) : null
+  const tutorVerdict = grade ? verdictFromFunction(grade) : undefined
   const cardId = (pattern && CARD_FOR[pattern.id]) || answer.ruleCard
   const card: RuleCard | null = cardsById.get(cardId) ?? null
 
@@ -81,6 +83,7 @@ function DomainRangeBody({ instance, attempt, flags, templateTitle, completion, 
       templateTitle={templateTitle}
       progress={progress}
       completion={completion}
+      tutorVerdict={tutorVerdict}
       graphCaption={`graph of f(x) = ${answer.f}`}
       statement={
         <Katex tex={`f(x) = ${safeLatex(answer.f)}`} display />

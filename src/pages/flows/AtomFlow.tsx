@@ -5,6 +5,7 @@ import { chargeText, composeSigFigText, gradeAbundance, gradeAverageMass, gradeN
 import type { AtomBox, AtomGrade, PatternHit, SigFigGrade } from '@/shared/types'
 import { useStore, type Attempt, type AttemptFinal } from '@/store'
 import type { ProgressLine } from '@/problem/stepEngine'
+import { verdictFromAtom, verdictFromSigFig } from '@/problem/tutorContext'
 import { AtomRejection, BoxMark } from '@/components/AtomFeedback'
 import { RuleCardView } from '@/components/HintPanel'
 import { IsotopeTable, PeriodicTiles } from '@/components/IsotopeTable'
@@ -301,6 +302,7 @@ function AtomBody({ instance, attempt, flags, templateTitle, completion, finish,
   const preview = q.kind === 'notation' ? notationPreview(entries) : null
 
   // --- frame ------------------------------------------------------------------
+  const tutorVerdict = sfGrade ? verdictFromSigFig(sfGrade) : grade ? verdictFromAtom(grade) : undefined
   const progress: ProgressLine = {
     stage: done ? 1 : 0,
     total: 1,
@@ -319,6 +321,7 @@ function AtomBody({ instance, attempt, flags, templateTitle, completion, finish,
       templateTitle={templateTitle}
       progress={progress}
       completion={completion}
+      tutorVerdict={tutorVerdict}
       nudgeText="Still here? Fill in the boxes below — the hint button is right there."
       statement={
         <div className="space-y-3">

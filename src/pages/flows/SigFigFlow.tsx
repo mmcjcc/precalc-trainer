@@ -5,6 +5,7 @@ import { composeSigFigText, evaluateSigFigTask, gradeSigFigAnswer, gradeSigFigIn
 import type { PatternHit, SigFigGrade, SigFigIntermediate, SigFigTapGrade } from '@/shared/types'
 import { useStore, type Attempt, type AttemptFinal } from '@/store'
 import type { ProgressLine } from '@/problem/stepEngine'
+import { verdictFromSigFig, verdictFromTaps } from '@/problem/tutorContext'
 import { RuleCardView } from '@/components/HintPanel'
 import { SigFigDigits } from '@/components/SigFigDigits'
 import { SigFigCorrect, SigFigExplanation, SigFigRejection } from '@/components/SigFigFeedback'
@@ -288,6 +289,7 @@ function SigFigBody({ instance, attempt, flags, templateTitle, completion, finis
       ? 'Still here? Note how precise the part in parentheses is, then the final answer — the hint button is right there.'
       : 'Still here? Type your answer in the box below — the hint button is right there.'
   const showQuantities = answer.quantities.length > 1 || answer.quantities.some((q) => q.exact)
+  const tutorVerdict = tapMode && tapGrade ? verdictFromTaps(tapGrade) : inter && interGrade ? verdictFromSigFig(interGrade) : grade ? verdictFromSigFig(grade) : undefined
 
   return (
     <ProblemFrame
@@ -297,6 +299,7 @@ function SigFigBody({ instance, attempt, flags, templateTitle, completion, finis
       templateTitle={templateTitle}
       progress={progress}
       completion={completion}
+      tutorVerdict={tutorVerdict}
       nudgeText={nudgeText}
       statement={
         <div className="space-y-2">

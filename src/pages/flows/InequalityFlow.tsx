@@ -1,5 +1,7 @@
-import { useCallback, useMemo } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { buildStepContext, classifyStep, hintView, liveParseError, progressLine } from '@/problem/stepEngine'
+import { verdictFromSetAnswer, verdictFromStep } from '@/problem/tutorContext'
+import type { TutorVerdict } from '@/shared/tutor'
 import { currentLineOf, useStepEngine } from '@/problem/useStepEngine'
 import { FinalAnswerCard } from '@/components/FinalAnswerCard'
 import { HintPanel } from '@/components/HintPanel'
@@ -34,6 +36,8 @@ export function InequalityFlow({ instance, attempt, flags, templateTitle, comple
   const engine = useStepEngine({ instance, attempt, currentLine, classify, hint: baseHint, disabled: done })
   const displayHint = engine.lastPattern ? hintView(instance, currentLine, swapped, engine.lastPattern, solved) : baseHint
   const validate = useCallback((t: string) => liveParseError(t, instance.vars), [instance.vars])
+  const [answerVerdict, setAnswerVerdict] = useState<TutorVerdict | null>(null)
+  const tutorVerdict = engine.rejection ? verdictFromStep(engine.rejection, engine.draft) : answerVerdict
 
   const chipUi = engine.chipPrompt ? (
     <PropertyChips onPick={engine.pickChip} onSkip={engine.skipChip} />
@@ -61,6 +65,7 @@ export function InequalityFlow({ instance, attempt, flags, templateTitle, comple
           disabled={solved || done}
         />
       }
+      tutorVerdict={tutorVerdict}
       keymap={{
         onHint: solved ? undefined : engine.advanceHint,
         onUndo: engine.undo,
@@ -98,6 +103,7 @@ export function InequalityFlow({ instance, attempt, flags, templateTitle, comple
           target={{ set: answer.set, requireInterval: answer.requireInterval, requireSetBuilder: answer.requireSetBuilder }}
           initial={{ interval: attempt?.final?.interval, set: attempt?.final?.set }}
           onGrade={(grade, texts) => {
+            setAnswerVerdict(verdictFromSetAnswer(grade, texts))
             recordSetAnswer(grade, texts)
             if (grade.done) finish()
           }}

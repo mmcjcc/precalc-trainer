@@ -3,6 +3,7 @@ import { LEFT_TO_DO, stripFxhLabel, type DqLineResult } from '@/engine'
 import { dqStart, gradeDqStep, gradeFxh, type DqAnswer } from '@/content/modules/diffQuotient/grade'
 import type { AttemptStep } from '@/store'
 import { hintView, liveParseError, progressLine, safeLatex, type SubmitOutcome } from '@/problem/stepEngine'
+import { verdictFromStep } from '@/problem/tutorContext'
 import { useStepEngine } from '@/problem/useStepEngine'
 import { HintPanel } from '@/components/HintPanel'
 import { Katex } from '@/components/Katex'
@@ -129,6 +130,7 @@ function DqBody({ instance, attempt, flags, templateTitle, completion, finish, a
           disabled={solved || done}
         />
       }
+      tutorVerdict={engine.rejection ? verdictFromStep(engine.rejection, engine.draft) : undefined}
       keymap={{
         onHint: solved ? undefined : engine.advanceHint,
         onUndo: engine.undo,

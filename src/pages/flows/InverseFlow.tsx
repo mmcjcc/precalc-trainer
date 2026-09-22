@@ -1,4 +1,6 @@
-import { useCallback, useMemo } from 'react'
+import { useCallback, useMemo, useState } from 'react'
+import { verdictFromChecked, verdictFromStep, verdictFromYesNo } from '@/problem/tutorContext'
+import type { TutorVerdict } from '@/shared/tutor'
 import type { OneToOneReason } from '@/content/types'
 import { useStore } from '@/store'
 import { detectInverseCompletion, gradeOneToOne, ONE_TO_ONE_REASONS, type InverseAnswer } from '@/problem/inverse'
@@ -70,6 +72,8 @@ function InverseBody({ instance, attempt, flags, templateTitle, completion, fini
       ? { ...baseHint, nudge: 'y is by itself in x — that is f⁻¹(x). Now check it with the stored number below.' }
       : baseHint
   const validate = useCallback((t: string) => liveParseError(t, instance.vars), [instance.vars])
+  const [cardVerdict, setCardVerdict] = useState<TutorVerdict | null>(null)
+  const tutorVerdict = engine.rejection ? verdictFromStep(engine.rejection, engine.draft) : cardVerdict
 
   // --- non-column hints -------------------------------------------------------
   const verdictHint = useKeyedHint(attempt, VERDICT_HINT, done)
@@ -100,7 +104,8 @@ function InverseBody({ instance, attempt, flags, templateTitle, completion, fini
         reveal: null,
       }
 
-  function onVerdict(correct: boolean, verdict: 'yes' | 'no', reason: OneToOneReason | null) {
+  function onVerdict(correct: boolean, verdict: 'yes' | 'no', reason: OneToOneReason | null, message: string) {
+    setCardVerdict(verdictFromYesNo(correct, message, reason ? `${verdict}: ${reason}` : verdict))
     const s = useStore.getState()
     s.setFinal({ oneToOne: verdict, reason: reason ?? undefined })
     // "No" without a reason is a prompt for the reason, not a wrong answer.
@@ -154,6 +159,7 @@ function InverseBody({ instance, attempt, flags, templateTitle, completion, fini
       graphCaption={`f(x) = ${f}`}
       nudgeText={nudgeText}
       hints={hints}
+      tutorVerdict={tutorVerdict}
       keymap={{
         onHint: phase === 'verdict' ? verdictHint.advance : phase === 'steps' ? engine.advanceHint : checkHint.advance,
         onUndo: stepsOpen ? engine.undo : undefined,
@@ -176,7 +182,7 @@ function InverseBody({ instance, attempt, flags, templateTitle, completion, fini
         )
       }
     >
-      <OneToOneCard answer={answer} f={f} seed={instance.seed} done={verdictOk || done} onResult={(g, verdict, reason) => onVerdict(g.correct, verdict, reason)} />
+      <OneToOneCard answer={answer} f={f} seed={instance.seed} done={verdictOk || done} onResult={(g, verdict, reason) => onVerdict(g.correct, verdict, reason, g.message)} />
 
       {stepsOpen && (
         <>
@@ -191,6 +197,7 @@ function InverseBody({ instance, attempt, flags, templateTitle, completion, fini
               inverse={found}
               done={done}
               onResult={(g) => {
+                setCardVerdict(verdictFromChecked([g.fk, g.back], g.done))
                 if (g.fk.status !== 'empty' && g.back.status !== 'empty') useStore.getState().recordFinalAnswer({ correct: g.done, via: 'text' })
                 if (g.done) finish()
               }}
@@ -209,6 +216,7 @@ function InverseBody({ instance, attempt, flags, templateTitle, completion, fini
           check={check}
           done={done}
           onResult={(g) => {
+            setCardVerdict(verdictFromChecked([g.fk, g.twin], g.done))
             if (g.fk.status !== 'empty' && g.twin.status !== 'empty') useStore.getState().recordFinalAnswer({ correct: g.done, via: 'text' })
             if (g.done) finish()
           }}

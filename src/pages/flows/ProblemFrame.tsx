@@ -6,6 +6,7 @@ import { randomSeed } from '@/content/rng'
 import type { ProblemInstance } from '@/content/types'
 import { toLatex } from '@/notation'
 import { useStore, type Attempt } from '@/store'
+import type { TutorVerdict } from '@/shared/tutor'
 import { problemPath } from '@/problem/url'
 import { useIdleNudge } from '@/problem/useIdleNudge'
 import type { Completion } from '@/problem/useAttempt'
@@ -18,6 +19,9 @@ import { KeymapHelp } from '@/components/KeymapHelp'
 import { PageLayout, RailToolbar, type RailPanel } from '@/components/PageLayout'
 import { useBreakpoint } from '@/components/useBreakpoint'
 import { useKeymap } from '@/components/useKeymap'
+import { TutorAskPanel } from '@/tutor/TutorPanel'
+import { dropFinishedThreads, markThreadFinished } from '@/tutor/threadStorage'
+import { useTutorStatus } from '@/tutor/useTutorStatus'
 
 export interface FrameKeymap {
   onHint?: () => void
@@ -49,6 +53,8 @@ type Props = {
    * button, or — once `progress.solved` — the final-answer card (hints are closed then).
    */
   nudgeText?: string
+  /** The checker's latest verdict, when the flow is showing one. */
+  tutorVerdict?: TutorVerdict | null
   children: ReactNode
 }
 
@@ -98,15 +104,22 @@ function useElapsed(startedAt: string | undefined, running: boolean): string {
  * Shared problem-page chrome: header, progress line, rail [Hints, Graph it, Calculator, Rule
  * cards], mobile composer, keymap, idle nudge, completion card.
  */
-export function ProblemFrame({ instance, attempt, flags, templateTitle, progress, hints, composer, completion, keymap, statement, graphCaption, nudgeText, children }: Props) {
+export function ProblemFrame({ instance, attempt, flags, templateTitle, progress, hints, composer, completion, keymap, statement, graphCaption, nudgeText, tutorVerdict, children }: Props) {
   const navigate = useNavigate()
   const bp = useBreakpoint()
   const mod = getModule(instance.moduleId)
+  const tutor = useTutorStatus()
   const [openPanel, setOpenPanel] = useState<string | null>(null)
   const [help, setHelp] = useState(false)
   const [nudge, setNudge] = useState<string | null>(null)
   const [copied, setCopied] = useState<'idle' | 'ok' | 'fail'>('idle')
   const setNudged = useStore((s) => s.setNudged)
+
+  useEffect(() => {
+    if (!attempt?.id) return
+    if (completion) markThreadFinished(attempt.id)
+    else dropFinishedThreads(attempt.id)
+  }, [attempt?.id, completion])
 
   // Graph and calculator steps show the answer: student-invoked, open by themselves once finished.
   const [revealed, setRevealed] = useState<{ graph: boolean; calc: boolean }>({ graph: false, calc: false })
@@ -147,10 +160,28 @@ export function ProblemFrame({ instance, attempt, flags, templateTitle, progress
       ),
     },
   ]
+  const tutorStatus = tutor.status?.configured ? tutor.status : null
   const rail: RailPanel[] = [
     { id: 'hints', title: 'Hints', content: hints },
     ...answerPanels.filter((p) => (p.id === 'graph' ? hasGraph : hasCalc)),
     { id: 'rules', title: 'Rule cards', short: 'Rules', content: <RuleCardsPanel cards={mod.ruleCards} /> },
+    ...(tutorStatus
+      ? [
+          {
+            id: 'ask',
+            title: 'Ask',
+            content: (
+              <TutorAskPanel
+                instance={instance}
+                attempt={attempt}
+                verdict={tutorVerdict}
+                finished={Boolean(completion)}
+                status={tutorStatus}
+              />
+            ),
+          },
+        ]
+      : []),
   ]
   const omitHelp = [...(hasGraph ? [] : (['graph'] as const)), ...(hasCalc ? [] : (['calc'] as const))]
 
