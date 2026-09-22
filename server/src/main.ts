@@ -9,8 +9,22 @@ import { DailyLimiter } from './limits.ts'
 import { TutorLog } from './log.ts'
 import { makeProvider } from './providers/index.ts'
 import { ProviderError } from './providers/types.ts'
+import { withTimeout } from './timeout.ts'
+
+/** How long the log directory may take to answer at start-up (an Azure Files mount can stall). */
+const LOG_INIT_TIMEOUT_MS = 15_000
 
 async function main(): Promise<void> {
+  // Until the server is up, a stop signal ends the process at once: there is nothing to flush yet,
+  // and a stalled start-up step must never leave the container unkillable (as PID 1 without a
+  // handler, node would ignore SIGTERM). Replaced by the graceful shutdown once listening.
+  let onSignal: (signal: string) => void = (signal) => {
+    console.log(`tutor: ${signal} during start-up, exiting`)
+    process.exit(1)
+  }
+  process.on('SIGTERM', () => onSignal('SIGTERM'))
+  process.on('SIGINT', () => onSignal('SIGINT'))
+
   let config: TutorConfig
   try {
     config = loadConfig()
@@ -33,7 +47,7 @@ async function main(): Promise<void> {
     onWriteError: (code) => console.error(`tutor: log write failed (${code})`),
   })
   try {
-    await log.init()
+    await withTimeout(log.init(), LOG_INIT_TIMEOUT_MS)
   } catch (err) {
     const code = err && typeof err === 'object' && 'code' in err ? String((err as { code: unknown }).code) : 'unknown'
     console.error(`tutor: cannot write the log directory TUTOR_LOG_DIR (${code}); refusing to run without the parent's log`)
@@ -76,8 +90,7 @@ async function main(): Promise<void> {
     void log.flush().then(() => process.exit(0))
     setTimeout(() => process.exit(0), 5000).unref()
   }
-  process.on('SIGTERM', () => shutdown('SIGTERM'))
-  process.on('SIGINT', () => shutdown('SIGINT'))
+  onSignal = shutdown
 }
 
 void main()

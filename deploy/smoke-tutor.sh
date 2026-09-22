@@ -72,8 +72,11 @@ expect_abort() {
   shift 2
   cleanup
   set +e
-  out=$(timeout 20 docker run --rm -e ALLOWED_USERS="$KID" "$@" "$IMAGE" 2>&1)
+  # --sig-proxy=false and -k: if the tutor ever ignores the stop signal, the CLI is killed 5 s later
+  # and the container removed by name, so this check can fail but never hang the job.
+  out=$(timeout -k 5 30 docker run --rm --sig-proxy=false --name precalc-tutor-abort -e ALLOWED_USERS="$KID" "$@" "$IMAGE" 2>&1)
   rc=$?
+  docker rm -f precalc-tutor-abort >/dev/null 2>&1 || true
   set -e
   { [ "$rc" -ne 0 ] && [ "$rc" -ne 124 ]; } || fail "$what must stop start-up (rc=$rc); output: $out"
   grep -q "$want" <<<"$out" || fail "$what should stop start-up saying \"$want\"; got: $out"
@@ -141,7 +144,9 @@ docker exec "${CIDS[0]}" sh -c 'cat /data/tutor-log/tutor-*.jsonl' | grep -q '"q
 pass "file log survives a restart and keeps the daily count"
 
 expect_abort "TUTOR_PROVIDER=openai" "TUTOR_PROVIDER must be" -e TUTOR_PROVIDER=openai
-expect_abort "an unwritable TUTOR_LOG_DIR" "cannot write the log directory" -e TUTOR_PROVIDER=mock -e TUTOR_LOG_DIR=/proc/tutor-log
+expect_abort "a read-only TUTOR_LOG_DIR" "cannot write the log directory" -e TUTOR_PROVIDER=mock -e TUTOR_LOG_DIR=/usr/tutor-log
+# Recursive mkdir under /proc can spin forever instead of failing: the start-up timeout must end it.
+expect_abort "a TUTOR_LOG_DIR that never answers" "cannot write the log directory" -e TUTOR_PROVIDER=mock -e TUTOR_LOG_DIR=/proc/tutor-log
 
 # ---- behind nginx, sharing one network namespace like a Container App replica ---------------
 if [ -n "$WEB" ]; then
