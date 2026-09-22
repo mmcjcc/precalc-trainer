@@ -456,9 +456,12 @@ cmd_tutor() {
   if az containerapp env storage show -n "$ACA_ENV" -g "$RG" --storage-name "$TUTOR_STORAGE_NAME" -o none 2>/dev/null; then
     echo "already attached"
   else
-    az storage account keys list -g "$RG" -n "$sa" --query "[0].value" -o tsv \
+    # tr: az on Windows ends tsv output with CRLF, which would become part of the key.
+    # No --storage-type: the core CLI's env storage set is Azure Files only and rejects the flag
+    # (only the containerapp extension accepts it).
+    az storage account keys list -g "$RG" -n "$sa" --query "[0].value" -o tsv | tr -d '\r\n' \
       | az containerapp env storage set -n "$ACA_ENV" -g "$RG" --storage-name "$TUTOR_STORAGE_NAME" \
-          --storage-type AzureFile --azure-file-account-name "$sa" --azure-file-share-name "$TUTOR_SHARE" \
+          --azure-file-account-name "$sa" --azure-file-share-name "$TUTOR_SHARE" \
           --azure-file-account-key @- --access-mode ReadWrite -o none
   fi
 
