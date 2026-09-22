@@ -34,7 +34,8 @@ LABEL org.opencontainers.image.source=$SOURCE_URL \
       org.opencontainers.image.title="Precalc Trainer" \
       org.opencontainers.image.description="Step-by-step precalculus trainer (static SPA behind nginx)"
 
-# Site config: sign-in allowlist, SPA fallback, cache policy, headers, /api stub. Replaces the
+# Site config: sign-in allowlist, SPA fallback, cache policy, headers, /api/ proxy to the tutor
+# sidecar (503 JSON "tutor offline" when there is none, as in this image alone). Replaces the
 # stock default.conf, which the image's /etc/nginx/nginx.conf includes inside http {}.
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 

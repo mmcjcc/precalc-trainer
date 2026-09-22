@@ -10,12 +10,17 @@
     "dev": "node node_modules/vite/bin/vite.js",
     "build": "npm run typecheck && node node_modules/vite/bin/vite.js build",
     "preview": "node node_modules/vite/bin/vite.js preview",
-    "typecheck": "node node_modules/typescript/bin/tsc -p tsconfig.app.json --noEmit && node node_modules/typescript/bin/tsc -p tsconfig.node.json --noEmit",
+    "typecheck": "node node_modules/typescript/bin/tsc -p tsconfig.app.json --noEmit && node node_modules/typescript/bin/tsc -p tsconfig.node.json --noEmit && node node_modules/typescript/bin/tsc -p server/tsconfig.json --noEmit",
     "test": "node node_modules/vitest/vitest.mjs run",
     "test:watch": "node node_modules/vitest/vitest.mjs",
-    "test:sweep": "node node_modules/vitest/vitest.mjs run --config vitest.sweep.config.mjs"
+    "test:sweep": "node node_modules/vitest/vitest.mjs run --config vitest.sweep.config.mjs",
+    "test:server": "node node_modules/vitest/vitest.mjs run server",
+    "build:server": "node server/build.mjs",
+    "tutor:mock": "node server/build.mjs && node server/dev-mock.mjs"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.127.0",
+    "@google/genai": "^2.23.0",
     "function-plot": "^1.25.4",
     "katex": "^0.18.7",
     "mathjs": "^15.2.0",

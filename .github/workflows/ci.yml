@@ -1,7 +1,9 @@
-# CI: typecheck, tests and a production build on every pull request and push to main, plus a
-# Docker build of the runtime image checked by deploy/smoke.sh. (Docker is not installed on
-# the dev box, so this job is where the Dockerfile / nginx.conf / entrypoint contract actually
-# runs.) Tools are called through node directly, the same forms as CLAUDE.md, not npm scripts.
+# CI: typecheck, tests and a production build on every pull request and push to main, plus Docker
+# builds of the web image (checked by deploy/smoke.sh) and of the tutor sidecar image (checked by
+# deploy/smoke-tutor.sh, alone and behind the web image's nginx). Docker is not installed on the dev
+# box, so this job is where the Dockerfiles / nginx.conf / entrypoint contract actually run. Tools
+# are called through node directly, the same forms as CLAUDE.md, not npm scripts. The tutor runs
+# with its mock provider here: no API key is ever needed or used in CI.
 name: ci
 
 on:
@@ -35,12 +37,16 @@ jobs:
         run: |
           node node_modules/typescript/bin/tsc -p tsconfig.app.json --noEmit
           node node_modules/typescript/bin/tsc -p tsconfig.node.json --noEmit
+          node node_modules/typescript/bin/tsc -p server/tsconfig.json --noEmit
 
-      - name: Test
+      - name: Test (app and tutor server; the server tests use the mock provider and fake SDK clients)
         run: node node_modules/vitest/vitest.mjs run
 
       - name: Build
         run: node node_modules/vite/bin/vite.js build
+
+      - name: Build the tutor bundle
+        run: node server/build.mjs
 
       - name: Build size
         run: du -sh dist dist/assets && ls -la dist
@@ -66,3 +72,18 @@ jobs:
 
       - name: Smoke test
         run: bash deploy/smoke.sh precalc-trainer:ci
+
+      - name: Build tutor image (linux/amd64, loaded, not pushed)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: server/Dockerfile
+          platforms: linux/amd64
+          load: true
+          push: false
+          tags: precalc-tutor:ci
+          cache-from: type=gha,scope=tutor
+          cache-to: type=gha,mode=max,scope=tutor
+
+      - name: Smoke test the tutor (alone, then behind nginx)
+        run: bash deploy/smoke-tutor.sh precalc-tutor:ci precalc-trainer:ci

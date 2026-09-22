@@ -46,6 +46,7 @@ src/notation   exact interval/set-builder parsing, LaTeX and calculator formatti
 src/content    problem generators, canonical solution paths, hints, calculator panels
 src/store      progress (event log in localStorage), settings, attempt state
 src/components src/pages src/App.tsx   the React UI
+server/        the optional AI tutor sidecar (Node, bundled into one file; its own image)
 deploy/ Dockerfile nginx.conf docker/   container and Azure deployment
 docs/          BUILD_GUIDE.md (architecture), research/ (design notes)
 ```
@@ -59,3 +60,14 @@ is the architecture and API reference.
 
 Azure Container Apps (scale to zero, ~$0 at family usage) behind Sign in with Google plus an email
 allowlist, no Microsoft Entra app registration: `deploy/azure.md`, scripted by `deploy/azure-setup.sh`.
+
+## AI tutor and privacy
+
+An optional sidecar (`server/`) lets her ask a question about the problem in front of her and get a
+short coaching answer from an AI model (Google Gemini by default, or Anthropic's Claude by one
+setting). It is parent-supervised: only the two family accounts can reach it (Google sign-in, the
+email allowlist, and the tutor's own re-check), and every question and answer is logged for the
+parent, who can read the log in the app. No personal data is sent to the model provider: only the
+problem, her work on it, the app's verdict and her question, never her name, email or account. The
+tutor says it is an AI, stays on the problem, and never gives the final answer while the problem is
+unfinished. Set-up, safeguards and cost: `deploy/azure.md` §9. API: `docs/progress/tutor-core.md`.

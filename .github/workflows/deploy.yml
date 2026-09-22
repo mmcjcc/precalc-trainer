@@ -1,6 +1,8 @@
-# Deploy: on every push to main (or a manual run) — typecheck + test, build the image,
-# smoke-test it, push it to GHCR as :<commit sha> and :latest, then roll the :<sha> tag out to
-# Azure Container Apps. Step-by-step setup: deploy/azure.md.
+# Deploy: on every push to main (or a manual run) — typecheck + test, build the web image and the
+# tutor sidecar image, smoke-test both, push them to GHCR as precalc-trainer and precalc-tutor with
+# the tags :<commit sha> and :latest, then roll the :<sha> tags out to Azure Container Apps. The
+# tutor container is updated only when the app already has one (`bash deploy/azure-setup.sh tutor`
+# adds it); until then only the web container rolls out. Step-by-step setup: deploy/azure.md.
 #
 # Repository secrets (Settings -> Secrets and variables -> Actions -> Secrets):
 #   AZURE_CLIENT_ID, AZURE_TENANT_ID, AZURE_SUBSCRIPTION_ID   OIDC identity, deploy/azure.md §4
@@ -48,6 +50,7 @@ jobs:
         run: |
           node node_modules/typescript/bin/tsc -p tsconfig.app.json --noEmit
           node node_modules/typescript/bin/tsc -p tsconfig.node.json --noEmit
+          node node_modules/typescript/bin/tsc -p server/tsconfig.json --noEmit
 
       - name: Test
         run: node node_modules/vitest/vitest.mjs run
@@ -63,8 +66,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Image name (GHCR paths must be lowercase)
-        run: echo "IMAGE=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/precalc-trainer" >> "$GITHUB_ENV"
+      - name: Image names (GHCR paths must be lowercase)
+        run: |
+          echo "IMAGE=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/precalc-trainer" >> "$GITHUB_ENV"
+          echo "TUTOR_IMAGE=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/precalc-tutor" >> "$GITHUB_ENV"
 
       - uses: docker/setup-buildx-action@v3
 
@@ -89,14 +94,34 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+      - name: Build tutor image (linux/amd64)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: server/Dockerfile
+          platforms: linux/amd64
+          load: true
+          push: false
+          tags: |
+            ${{ env.TUTOR_IMAGE }}:${{ github.sha }}
+            ${{ env.TUTOR_IMAGE }}:latest
+          build-args: |
+            SOURCE_URL=https://github.com/${{ github.repository }}
+          cache-from: type=gha,scope=tutor
+          cache-to: type=gha,mode=max,scope=tutor
+
       - name: Smoke test (before anything is pushed)
-        run: bash deploy/smoke.sh "$IMAGE:${{ github.sha }}"
+        run: |
+          bash deploy/smoke.sh "$IMAGE:${{ github.sha }}"
+          bash deploy/smoke-tutor.sh "$TUTOR_IMAGE:${{ github.sha }}" "$IMAGE:${{ github.sha }}"
 
       - name: Push to GHCR
         run: |
           docker push "$IMAGE:${{ github.sha }}"
           docker push "$IMAGE:latest"
-          echo "Pushed $IMAGE:${{ github.sha }} and :latest"
+          docker push "$TUTOR_IMAGE:${{ github.sha }}"
+          docker push "$TUTOR_IMAGE:latest"
+          echo "Pushed $IMAGE and $TUTOR_IMAGE as :${{ github.sha }} and :latest"
 
       - name: Azure login (OIDC federated credential — nothing stored that can expire)
         if: env.AZURE_CLIENT_ID != ''
@@ -132,8 +157,21 @@ jobs:
             echo "::error::Sign-in is not enforced on $ACA_APP (got '$AUTH'), so the allowlist can't be trusted. Not rolling out. Fix: bash deploy/azure-setup.sh google"
             exit 1
           fi
+          # With the tutor sidecar the app has two containers, and az then needs --container-name.
+          # The tutor goes first: its API only grows, so the old web image works with a new tutor.
+          HAS_TUTOR=$(az containerapp show --name "$ACA_APP" --resource-group "$ACA_RG" \
+            --query "length(properties.template.containers[?name=='tutor'])" -o tsv)
+          WEB=$(az containerapp show --name "$ACA_APP" --resource-group "$ACA_RG" \
+            --query "properties.template.containers[?name!='tutor'].name | [0]" -o tsv)
+          if [ "$HAS_TUTOR" = 1 ]; then
+            az containerapp update --name "$ACA_APP" --resource-group "$ACA_RG" \
+              --container-name tutor --image "$TUTOR_IMAGE:${{ github.sha }}" -o none
+            echo "Tutor sidecar updated to $TUTOR_IMAGE:${{ github.sha }}"
+          else
+            echo "No tutor container on $ACA_APP (bash deploy/azure-setup.sh tutor adds it): web only."
+          fi
           az containerapp update --name "$ACA_APP" --resource-group "$ACA_RG" \
-            --image "$IMAGE:${{ github.sha }}"
+            --container-name "$WEB" --image "$IMAGE:${{ github.sha }}" -o none
           FQDN=$(az containerapp show --name "$ACA_APP" --resource-group "$ACA_RG" \
             --query properties.configuration.ingress.fqdn -o tsv)
           echo "Deployed https://$FQDN"

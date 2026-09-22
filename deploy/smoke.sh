@@ -9,7 +9,8 @@
 #   * / and deep links serve index.html (SPA fallback); a missing /assets/* is a real 404
 #   * /assets/* immutable for a year; index.html and /config.js no-cache
 #   * gzip on the JS bundle, security headers present, server_tokens off
-#   * /api/ answers 503, /healthz answers 200, image under 60 MB
+#   * /api/ without the tutor sidecar answers 503 {"error":"tutor offline"} (JSON), /healthz answers
+#     200, image under 60 MB. The sidecar itself, and nginx in front of it: deploy/smoke-tutor.sh
 #
 # Usage: bash deploy/smoke.sh <image>      (needs docker + curl; run by .github/workflows/*)
 #   docker build --platform linux/amd64 -t precalc-trainer . && bash deploy/smoke.sh precalc-trainer
@@ -97,8 +98,12 @@ pass "/assets immutable + gzip ($ASSET)"
 pass "missing asset -> 404"
 
 # ---- misc -------------------------------------------------------------------------------
-[ "$(code "$BASE/api/explain")" = 503 ] || fail "/api/ stub should answer 503"
-pass "/api/ -> 503"
+[ "$(code "$BASE/api/explain")" = 503 ] || fail "/api/ without the tutor sidecar should answer 503"
+[ "$(code -X POST -H 'Content-Type: application/json' -d '{}' "$BASE/api/tutor/ask")" = 503 ] || fail "POST /api/tutor/ask without the sidecar should answer 503"
+BODY=$(curl -s "$BASE/api/tutor/status")
+[ "$BODY" = '{"error":"tutor offline"}' ] || fail "/api/ without the sidecar should answer {\"error\":\"tutor offline\"}; got: $BODY"
+headers "$BASE/api/tutor/status" | grep -qi '^content-type: application/json' || fail "the tutor-offline answer should be application/json"
+pass "/api/ without the sidecar -> 503 {\"error\":\"tutor offline\"}"
 H=$(headers "$BASE/")
 grep -qi  '^x-content-type-options: nosniff' <<<"$H" || fail "missing X-Content-Type-Options; headers: $H"
 grep -qi  '^content-security-policy:'        <<<"$H" || fail "missing Content-Security-Policy; headers: $H"
@@ -114,6 +119,7 @@ PAGE=$(curl -s "$BASE/")
 grep -q 'on the list' <<<"$PAGE" || fail "the 403 should serve the not-allowed page; got: $PAGE"
 grep -q '/.auth/logout' <<<"$PAGE" || fail "the not-allowed page should link to sign-out"
 grep -qi '^content-security-policy:' <<<"$(headers "$BASE/")" || fail "the 403 page should keep the security headers"
+grep -q 'on the list' <<<"$(curl -s "$BASE/api/tutor/status")" || fail "a 403 on /api/ should serve the not-allowed page too"
 pass "not signed in -> 403 not-allowed page on every path"
 [ "$(code "$BASE/healthz")" = 200 ] || fail "/healthz must stay open"
 pass "/healthz open without an account"

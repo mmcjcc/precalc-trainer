@@ -16,3 +16,4 @@ docs
 .env.*
 *.local
 .DS_Store
+server/dist
