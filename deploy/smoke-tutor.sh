@@ -109,7 +109,9 @@ CT=$(curl -s -o /dev/null -w '%{content_type}' -H "$U: $KID" -H 'Content-Type: a
 OUT=$(ask "second question")
 grep -q '^event: delta$' <<<"$OUT" || fail "ask should stream delta events; got: $OUT"
 grep -q '^data: {"type":"done","id":"[^"]*","remaining":0,"limit":2}$' <<<"$OUT" || fail "the done event should report remaining 0; got: $OUT"
-grep -q 'Mock tutor' <<<"$OUT" || fail "the mock reply should arrive; got: $OUT"
+# The reply streams in several delta events ("(Mock " then the rest): join their texts first.
+TEXT=$(sed -n 's/^data: {"type":"delta","text":"\(.*\)"}$/\1/p' <<<"$OUT" | tr -d '\n')
+grep -q 'Mock tutor' <<<"$TEXT" || fail "the mock reply should arrive; joined text: $TEXT; raw: $OUT"
 pass "ask -> SSE deltas + done with the remaining count"
 OUT=$(ask "third question")
 grep -q '^data: {"type":"error","code":"limit"' <<<"$OUT" || fail "the third question should hit the limit; got: $OUT"
