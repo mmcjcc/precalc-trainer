@@ -16,7 +16,7 @@ import type {
   VarName,
 } from '@/shared/types'
 
-export type ProblemKind = 'inequality' | 'numberLine' | 'evenOdd' | 'inverse' | 'drill' | 'sigFigs' | 'atoms' | 'diffQuotient' | 'graphFeatures' | 'domainRange' | 'composition'
+export type ProblemKind = 'inequality' | 'numberLine' | 'evenOdd' | 'inverse' | 'drill' | 'sigFigs' | 'atoms' | 'diffQuotient' | 'graphFeatures' | 'domainRange' | 'composition' | 'electrons'
 
 /** Difficulty knobs (all optional; templates document which they honor). */
 export interface DifficultyKnobs {
@@ -93,6 +93,72 @@ export interface SigFigQuantity {
   /** Why it is exact: "counted", "defined: 100 cm = 1 m". */
   note?: string
 }
+
+/**
+ * One constant on a light-calculation card. c and h are measured; 1 nm = 10⁻⁹ m is exact.
+ * Electron-configuration problems (a later engine) will not use this card.
+ */
+export interface LightConstantInfo {
+  /** "c", "h", or "1 nm". */
+  symbol: string
+  /** Pretty value, e.g. "3.00 × 10⁸" or "10⁻⁹". */
+  display: string
+  unit: string
+  exact: boolean
+  /** "3 significant figures" or "exact". */
+  figures: string
+}
+
+/** Which light formula the sig-fig task encodes. Configuration questions will not use these. */
+export type LightFormula = 'freq' | 'wavelength' | 'energy-freq' | 'energy-wave'
+
+/**
+ * A light calculation (CK-12 ch. 5.1–5.3). `task` is a sig-fig muldiv chain; grade it with
+ * `gradeLightAnswer` in the electrons module, never by comparing text.
+ */
+export interface ElectronsLightQuestion {
+  kind: 'light'
+  formula: LightFormula
+  task: SigFigTask
+  /** The measurement she was given, printed large. */
+  given: SigFigQuantity
+  /** c and h on every calculation; the nm line when this problem uses it. */
+  constants: LightConstantInfo[]
+  /** Wavelength numeral as printed, not pre-converted. Absent when she is given a frequency. */
+  wavelengthText?: string
+  wavelengthInNm: boolean
+  /** Frequency numeral as printed. Absent when she is given a wavelength. */
+  frequencyText?: string
+  /** The answer was asked for in nm (the task then divides by the exact 10⁻⁹). */
+  answerInNm: boolean
+  /** Printed beside the answer box: "Hz", "m", "nm", or "J". */
+  unit: string
+  expected: string
+  expectedDisplay: string
+  alternates: string[]
+}
+
+export interface SpectrumItem {
+  id: string
+  label: string
+}
+
+/**
+ * Tap-to-order the spectrum or the visible colors. No calculation. Grade with `gradeSpectrumOrder`.
+ */
+export interface ElectronsOrderQuestion {
+  kind: 'order'
+  family: 'spectrum' | 'colours'
+  quantity: 'wavelength' | 'frequency' | 'energy'
+  direction: 'increasing' | 'decreasing'
+  /** Button order (shuffled). Not the answer. */
+  items: SpectrumItem[]
+  /** Correct tap order, first = the end she should choose first. */
+  order: string[]
+}
+
+/** Light now; an electron-configuration engine should add another kind here, same module. */
+export type ElectronsQuestion = ElectronsLightQuestion | ElectronsOrderQuestion
 
 /** One element as a periodic-table lookup shown beside an atomic-structure question. */
 export interface AtomPeriodicEntry {
@@ -191,6 +257,30 @@ export type AnswerSpec =
       /** Hint rung 3 and the after-correct explanation: the engine's steps. Reveals the answer. */
       reveal: string[]
       /** Named trap this seed was built around, e.g. "quotient-significant-zero". */
+      trap: string
+    }
+  | {
+      /**
+       * Electrons and light (chemistry, CK-12 ch. 5). Calculations are sig-fig muldiv tasks graded
+       * by the module (`gradeLightAnswer`): correct sig-fig answer first, then the lt_ mistakes,
+       * then the sig-fig grader's own result. Spectrum order is `gradeSpectrumOrder`. A later
+       * electron-configuration engine should add a `question.kind`, not a new module.
+       */
+      type: 'electrons'
+      question: ElectronsQuestion
+      /** The question in one line, plain words (not app syntax). */
+      prompt: string
+      /** One sentence that sets the scene. */
+      context: string
+      /** Pretty canonical answer for the tutor: "4.8 × 10¹⁴" or "gamma → X-ray → ultraviolet". */
+      expectedDisplay: string
+      /** Hint rung 1 (never contains the answer). */
+      nudge: string
+      ruleCard: RuleCardId
+      ruleCards: RuleCardId[]
+      /** Hint rung 3 and the after-correct explanation. Reveals the answer. */
+      reveal: string[]
+      /** Scenario this seed was built around, e.g. "red-laser", "answer-in-nm". */
       trap: string
     }
   | {

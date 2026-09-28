@@ -197,8 +197,44 @@ export function roundOutcome(outcome: ChainOutcome): RoundedRat {
   return roundRatToPlace(outcome.value, outcome.place as number)
 }
 
+/**
+ * A number after an operation sign gets parentheses when it is negative or written with a power of
+ * ten: "3.00 × 10⁸ ÷ 620 ÷ 1 × 10⁻⁹" read left to right MULTIPLIES by 10⁻⁹, and typed that way into
+ * a calculator it gives a wrong answer. "÷ (1 × 10⁻⁹)" is what is meant.
+ */
 function termLabel(t: TermInfo, first: boolean): string {
-  return !first && t.numeral.negative ? `(${t.numeral.display})` : t.numeral.display
+  return !first && (t.numeral.negative || t.numeral.scientific) ? `(${t.numeral.display})` : t.numeral.display
+}
+
+const SUPERSCRIPT: Record<string, string> = {
+  '0': '⁰', '1': '¹', '2': '²', '3': '³', '4': '⁴', '5': '⁵', '6': '⁶', '7': '⁷', '8': '⁸', '9': '⁹', '-': '⁻',
+}
+
+/**
+ * How a calculator shows a long plain decimal: "483870967741935.4…" → "4.838709677… × 10¹⁴",
+ * "0.000000000000000000380995" → "3.80995 × 10⁻¹⁹". At most ten digits, cut (never rounded) with
+ * "…" when more follow, so the rounding step still decides. Numbers between 10⁻⁵ and 10⁷ come back
+ * unchanged. Display only: the evaluation's `unrounded` field stays plain for the graders.
+ */
+export function calculatorForm(text: string): string {
+  const m = /^([−-]?)(\d*)(?:\.(\d*))?(…?)$/.exec(text)
+  if (!m) return text
+  const [, sign, intPart, fracPart = '', ellipsis] = m
+  const digits = intPart + fracPart
+  const first = digits.search(/[1-9]/)
+  if (first < 0) return text
+  const exp = intPart.length - 1 - first
+  if (exp < 7 && exp > -5) return text
+  let sig = digits.slice(first)
+  let more = ellipsis === '…'
+  if (!more) sig = sig.replace(/0+$/, '')
+  if (sig.length > 10) {
+    sig = sig.slice(0, 10)
+    more = true
+  }
+  const mantissa = sig.length > 1 ? `${sig[0]}.${sig.slice(1)}` : sig
+  const power = String(exp).split('').map((c) => SUPERSCRIPT[c] ?? c).join('')
+  return `${sign}${mantissa}${more ? '…' : ''} × 10${power}`
 }
 
 function chainExpression(labels: string[], ops: SigFigOp[]): string {
@@ -612,7 +648,7 @@ function analyseCalculation(task: Extract<SigFigTask, { kind: 'muldiv' | 'addsub
 
   // Explanation.
   const steps: string[] = []
-  const unroundedPretty = shown.text.replace(/^-/, '−')
+  const unroundedPretty = calculatorForm(shown.text.replace(/^-/, '−'))
   if (task.kind === 'mixed') {
     for (const g of groups) {
       const im = intermediates.find((x) => x.operandIndex === g.operandIndex)
@@ -623,8 +659,8 @@ function analyseCalculation(task: Extract<SigFigTask, { kind: 'muldiv' | 'addsub
       steps.push(...termFactSentences(g.terms, g.family))
       steps.push(
         g.family === 'addsub'
-          ? `Work out ${im.expression} first: ${im.unrounded.replace(/^-/, '−')}. Adding and subtracting go by place, so it is good to the ${im.placeName} place, which makes it ${figuresPhrase(im.sigFigs)} (${im.roundedDisplay}). Do not round yet: keep every digit in the calculator.`
-          : `Work out ${im.expression} first: ${im.unrounded.replace(/^-/, '−')}. Multiplying and dividing go by significant figures, so it is good to ${figuresPhrase(im.sigFigs)} (${im.roundedDisplay}): its last reliable digit is in the ${im.placeName} place. Do not round yet: keep every digit in the calculator.`,
+          ? `Work out ${im.expression} first: ${calculatorForm(im.unrounded.replace(/^-/, '−'))}. Adding and subtracting go by place, so it is good to the ${im.placeName} place, which makes it ${figuresPhrase(im.sigFigs)} (${im.roundedDisplay}). Do not round yet: keep every digit in the calculator.`
+          : `Work out ${im.expression} first: ${calculatorForm(im.unrounded.replace(/^-/, '−'))}. Multiplying and dividing go by significant figures, so it is good to ${figuresPhrase(im.sigFigs)} (${im.roundedDisplay}): its last reliable digit is in the ${im.placeName} place. Do not round yet: keep every digit in the calculator.`,
       )
     }
     const loose = terms.filter((t) => !groups.some((g) => g.terms.includes(t)))

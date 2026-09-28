@@ -96,6 +96,11 @@ export interface AttemptFinal {
    * or value; a decomposition uses `f` and `g`. Restored after a reload.
    */
   fnEntries?: Record<string, string>
+  /**
+   * Electrons and light, spectrum ordering: the ids she has tapped, in tap order. Restored after a
+   * reload. Light calculations reuse sfText / sfPower.
+   */
+  ltOrder?: string[]
 }
 
 export interface Attempt {

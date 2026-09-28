@@ -15,6 +15,7 @@ import { EvenOddFlow } from './flows/EvenOddFlow'
 import { InequalityFlow } from './flows/InequalityFlow'
 import { InverseFlow } from './flows/InverseFlow'
 import { NumberLineFlow } from './flows/NumberLineFlow'
+import { ElectronFlow } from './flows/ElectronFlow'
 import { SigFigFlow } from './flows/SigFigFlow'
 import type { FlowProps } from './flows/types'
 
@@ -77,6 +78,8 @@ function ProblemBody({ instance, flags, templateTitle }: { instance: ProblemInst
       return <SigFigFlow {...props} />
     case 'atoms':
       return <AtomFlow {...props} />
+    case 'electrons':
+      return <ElectronFlow {...props} />
     case 'diffQuotient':
       return <DiffQuotientFlow {...props} />
     case 'graphFeatures':

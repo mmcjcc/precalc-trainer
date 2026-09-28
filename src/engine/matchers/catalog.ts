@@ -633,6 +633,55 @@ export const ERROR_PATTERNS: Record<ErrorPatternId, ErrorPatternInfo> = {
     lesson: 'Being in the domain of g is only half of it. The output g(x) also has to be an allowed input for f.',
     example: 'f(x) = 1/(x − 2), g(x) = sqrt(x) → [0, ∞) ✗ → [0, 4) ∪ (4, ∞)',
   },
+  // --- electrons and light (content/modules/electrons; chemistry ch. 5) ---
+  lt_no_conversion: {
+    id: 'lt_no_conversion',
+    title: 'Convert nanometers to meters first',
+    lesson: 'The speed of light is in meters per second, so a wavelength in nanometers has to become meters before you divide. Multiply by 10⁻⁹: the decimal point jumps nine places left.',
+    example: '620 nm → 620 m ✗ → 6.20 × 10⁻⁷ m',
+  },
+  lt_conversion_backwards: {
+    id: 'lt_conversion_backwards',
+    title: '10⁻⁹ goes with nanometers, not 10⁹',
+    lesson: 'A nanometer is a billionth of a meter, so nm becomes m by multiplying by 10⁻⁹. Multiplying by 10⁹, or dividing by 10⁻⁹ when you meant the other way, sends the decimal point the wrong direction.',
+    example: '620 nm → 6.20 × 10¹¹ m ✗ → 6.20 × 10⁻⁷ m',
+  },
+  lt_multiplied: {
+    id: 'lt_multiplied',
+    title: 'c and λ are divided, not multiplied',
+    lesson: 'The wave equation is c = λν, so frequency is c ÷ λ and wavelength is c ÷ ν. Multiplying those two makes a huge number with the wrong units.',
+    example: 'ν = c × λ ✗ → ν = c ÷ λ',
+  },
+  lt_inverted: {
+    id: 'lt_inverted',
+    title: 'The speed of light goes on top',
+    lesson: 'c is the big number, so it is the numerator: ν = c ÷ λ and λ = c ÷ ν. Putting c on the bottom flips the answer into a tiny fraction.',
+    example: 'ν = λ ÷ c ✗ → ν = c ÷ λ',
+  },
+  lt_energy_divided: {
+    id: 'lt_energy_divided',
+    title: 'A photon’s energy is h times ν',
+    lesson: 'E = hν is a product. Dividing h by the frequency, or the frequency by h, does not give the energy of one photon.',
+    example: 'E = h ÷ ν ✗ → E = h × ν',
+  },
+  lt_energy_no_c: {
+    id: 'lt_energy_no_c',
+    title: 'From a wavelength, multiply by c too',
+    lesson: 'E = hν and ν = c ÷ λ, so together E = hc ÷ λ. Using E = h ÷ λ leaves out the speed of light.',
+    example: 'E = h ÷ λ ✗ → E = hc ÷ λ',
+  },
+  lt_wrong_unit: {
+    id: 'lt_wrong_unit',
+    title: 'That number is in the other unit',
+    lesson: 'Meters and nanometers name the same length at different sizes. A result in m is a billion times smaller than the same length in nm, so the unit the question asked for is part of the answer.',
+    example: '6.67 × 10⁻⁷ nm ✗ → 667 nm',
+  },
+  lt_order_reversed: {
+    id: 'lt_order_reversed',
+    title: 'That ranking runs the other way',
+    lesson: 'Frequency and energy rise as wavelength falls. The longest wavelength (radio, or red) is the lowest frequency and energy; the shortest (gamma, or violet) is the highest. Reversing the list, or ranking by wavelength when frequency or energy was asked, gives the opposite order.',
+    example: 'increasing frequency: radio → gamma ✗ → gamma → radio',
+  },
   // --- behavioral (ui) ---
   abandoned: {
     id: 'abandoned',

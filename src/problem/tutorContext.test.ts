@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import { generateProblem } from '@/content'
+import { gradeLightAnswer } from '@/content/modules/electrons/grade'
 import { gradeFinalAnswer } from '@/problem/inequality'
 import { encodeSlotStep } from '@/problem/evenOdd'
 import {
   buildTutorContext,
+  verdictFromSigFig,
   verdictFromFunction,
   verdictFromSetAnswer,
   verdictFromStep,
@@ -210,6 +212,44 @@ describe('buildTutorContext', () => {
       expect(wrong.mistake.title).toBeTruthy()
       expect(wrong.mistake.lesson).toBeTruthy()
     }
+  })
+
+  it('describes a light calculation, including a named lt_ mistake', () => {
+    let instance = generateProblem('electrons', 'light.freq', 1)
+    for (let seed = 1; seed <= 40 && !(instance.answer.type === 'electrons' && instance.answer.question.kind === 'light' && instance.answer.question.wavelengthText === '620'); seed++) {
+      instance = generateProblem('electrons', 'light.freq', seed)
+    }
+    if (instance.answer.type !== 'electrons' || instance.answer.question.kind !== 'light') throw new Error('expected a light problem')
+    const grade = gradeLightAnswer(instance.answer.question, '4.8e5')
+    expect(grade.pattern?.id).toBe('lt_no_conversion')
+    const ctx = buildTutorContext(
+      instance,
+      attempt('el-1', { final: { sfText: '4.8', sfPower: '5' } }),
+      verdictFromSigFig(grade),
+      false,
+    )
+    expect(ctx.subject).toBe('chemistry')
+    expect(ctx.kind).toBe('electrons')
+    expect(ctx.moduleId).toBe('electrons')
+    expect(ctx.statement).toContain(instance.answer.prompt)
+    expect(ctx.statement).toContain('620 nm')
+    expect(ctx.work).toEqual(['coefficient: 4.8', 'power: 5'])
+    expect(ctx.canonical).toEqual(instance.answer.reveal)
+    expect(ctx.answer).toBe(instance.answer.expectedDisplay)
+    expect(ctx.verdict?.status).toBe('wrong')
+    expect(ctx.verdict?.mistake?.id).toBe('lt_no_conversion')
+    expect(ctx.verdict?.mistake?.title).toBeTruthy()
+    expect(ctx.verdict?.mistake?.lesson).toBeTruthy()
+    expect(ctx.verdict?.mistake?.witness).toContain('620')
+
+    const order = generateProblem('electrons', 'light.spectrum', 1)
+    if (order.answer.type !== 'electrons' || order.answer.question.kind !== 'order') throw new Error('expected an ordering problem')
+    const ordered = buildTutorContext(order, attempt('el-2', { final: { ltOrder: order.answer.question.order } }), null, false)
+    expect(ordered.kind).toBe('electrons')
+    expect(ordered.statement).toContain(order.answer.prompt)
+    expect(ordered.answer).toBe(order.answer.expectedDisplay)
+    expect(ordered.work[0]).toContain('order:')
+    expect(ordered.canonical).toEqual(order.answer.reveal)
   })
 
   it('never adds a name, email, or account field', () => {

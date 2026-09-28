@@ -25,5 +25,8 @@ export default defineConfig({
     environment: 'node',
     include: ['src/**/*.test.{ts,tsx}', 'server/src/**/*.test.ts'],
     setupFiles: ['./src/test-setup.ts'],
+    // The suite runs many 300-seed sweeps in parallel; on the OneDrive dev box a few of them pass
+    // 5 s under full load although each takes 1-3 s alone. 20 s still catches a real hang.
+    testTimeout: 20_000,
   },
 })

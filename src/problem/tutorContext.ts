@@ -85,6 +85,12 @@ export function verdictFromFunction(grade: FunctionGrade): TutorVerdict | null {
   })
 }
 
+/** Spectrum order, or any light grade already shaped like a sig-fig grade. Incomplete taps are not a verdict. */
+export function verdictFromOrder(grade: { status: 'correct' | 'wrong' | 'incomplete'; message: string; pattern?: PatternHit }): TutorVerdict | null {
+  if (grade.status === 'incomplete') return null
+  return withMessage(grade.status, grade.message, undefined, grade.pattern ? mistakeOf(grade.pattern) : undefined)
+}
+
 export function verdictFromSigFig(grade: SigFigGrade): TutorVerdict {
   return withMessage(grade.status, grade.message, undefined, grade.pattern ? mistakeOf(grade.pattern) : undefined)
 }
@@ -172,6 +178,10 @@ function workOf(instance: ProblemInstance, attempt: Attempt | null): string[] {
   pushLine(lines, 'power', final.sfPower)
   pushLine(lines, 'intermediate', final.sfIntermediate)
   pushRecord(lines, final.atEntries, [])
+  if (instance.answer.type === 'electrons' && instance.answer.question.kind === 'order' && final.ltOrder && final.ltOrder.length > 0) {
+    const labels = new Map(instance.answer.question.items.map((item) => [item.id, item.label]))
+    pushLine(lines, 'order', final.ltOrder.map((id) => labels.get(id) ?? id).join(' → '))
+  }
   pushRecord(lines, final.gfEntries, GF_WORK)
   pushRecord(lines, final.fnEntries, FN_WORK)
   return lines.slice(0, TUTOR_LIMITS.lines)
@@ -180,7 +190,7 @@ function workOf(instance: ProblemInstance, attempt: Attempt | null): string[] {
 function statementOf(instance: ProblemInstance): string {
   const answer = instance.answer
   let text = instance.statementText
-  if (answer.type === 'sigFigs' || answer.type === 'atoms') {
+  if (answer.type === 'sigFigs' || answer.type === 'atoms' || answer.type === 'electrons') {
     const context = answer.context.trim()
     text = context ? `${answer.prompt} ${context}` : answer.prompt
   } else if (answer.type === 'graphFeatures') {
@@ -203,6 +213,7 @@ function canonicalOf(instance: ProblemInstance): string[] {
   else if (
     answer.type === 'sigFigs' ||
     answer.type === 'atoms' ||
+    answer.type === 'electrons' ||
     answer.type === 'graphFeatures' ||
     answer.type === 'domainRange' ||
     answer.type === 'composition'
@@ -230,6 +241,7 @@ function answerOf(instance: ProblemInstance): string | undefined {
       break
     case 'sigFigs':
     case 'atoms':
+    case 'electrons':
       text = answer.expectedDisplay
       break
     case 'graphFeatures':

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { SigFigTask } from '@/shared/types'
-import { gradeSigFigAnswer } from './index'
+import { calculatorForm } from './evaluate'
+import { evaluateSigFigTask, gradeSigFigAnswer } from './index'
 
 /**
  * Light calculations from her textbook (CK-12 Introductory Chemistry, chapter 5), run through the
@@ -47,6 +48,29 @@ describe('energy from wavelength, E = hc / lambda', () => {
   const task: SigFigTask = { kind: 'muldiv', terms: [H, C, { text: '700.' }, NM], ops: ['*', '/', '/'] }
 
   it('gives 2.84 x 10^-19 J', () => correct(task, '2.84e-19'))
+})
+
+describe('the worked explanation reads the way a calculator does', () => {
+  it('parenthesizes a power-of-ten divisor so the order of operations is right', () => {
+    const task: SigFigTask = { kind: 'muldiv', terms: [C, { text: '620' }, NM], ops: ['/', '/'] }
+    // Without the parentheses, "÷ 1 × 10⁻⁹" read left to right multiplies by 10⁻⁹.
+    expect(evaluateSigFigTask(task).expression).toBe('3.00 × 10⁸ ÷ 620 ÷ (1 × 10⁻⁹)')
+  })
+
+  it('shows huge and tiny calculator values in scientific notation', () => {
+    const freq = evaluateSigFigTask({ kind: 'muldiv', terms: [C, { text: '620' }, NM], ops: ['/', '/'] })
+    expect(freq.steps.join(' ')).toContain('= 4.838709677… × 10¹⁴')
+    const energy = evaluateSigFigTask({ kind: 'muldiv', terms: [H, { text: '5.75e14' }], ops: ['*'] })
+    expect(energy.steps.join(' ')).toContain('= 3.80995 × 10⁻¹⁹')
+  })
+
+  it('leaves everyday numbers alone', () => {
+    expect(calculatorForm('4.8')).toBe('4.8')
+    expect(calculatorForm('12345.678')).toBe('12345.678')
+    expect(calculatorForm('0.00045')).toBe('0.00045')
+    expect(calculatorForm('300000000')).toBe('3 × 10⁸')
+    expect(calculatorForm('−0.0000012')).toBe('−1.2 × 10⁻⁶')
+  })
 })
 
 describe('wavelength from frequency, lambda = c / nu', () => {

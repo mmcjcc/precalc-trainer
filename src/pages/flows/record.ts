@@ -112,6 +112,12 @@ export function recordDecomposition(result: { ok: boolean; reason?: string }): v
  * distinct named mistake among the boxes (a single plain wrong record when none was named), so
  * Progress counts each slip. An unreadable or empty box is not an answer: nothing is logged.
  */
+/** Log a spectrum-order check. A sequence she has not finished is not an answer. */
+export function recordOrderGrade(grade: { status: 'correct' | 'wrong' | 'incomplete'; pattern?: { id: string } }): void {
+  if (grade.status === 'incomplete') return
+  useStore.getState().recordFinalAnswer({ correct: grade.status === 'correct', pattern: grade.pattern?.id, via: 'text' })
+}
+
 export function recordAtomGrade(grade: AtomGrade): void {
   if (grade.status === 'parse_error') return
   const s = useStore.getState()

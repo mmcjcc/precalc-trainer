@@ -15,7 +15,7 @@
 export type RelOp = '=' | '<' | '<=' | '>' | '>='
 /** `h` is the difference-quotient step; the parser accepts it only when the problem owns it (ctx.vars). */
 export type VarName = 'x' | 'y' | 'n' | 'h'
-export type ModuleId = 'numberLine' | 'inequalities' | 'evenOdd' | 'inverses' | 'propertiesDrill' | 'sigFigs' | 'atoms' | 'diffQuotient' | 'graphFeatures' | 'domainRange' | 'composition'
+export type ModuleId = 'numberLine' | 'inequalities' | 'evenOdd' | 'inverses' | 'propertiesDrill' | 'sigFigs' | 'atoms' | 'diffQuotient' | 'graphFeatures' | 'domainRange' | 'composition' | 'electrons'
 export type CalcId = 'ti84' | 'nspire'
 
 /** Fine-grained property tags. Canonical steps carry one; the engine's move detector reports one. */
@@ -214,6 +214,16 @@ export type ErrorPatternId =
   | 'at_assumed_even_split'
   | 'at_abundance_swapped'
   | 'at_abundance_sum'
+  // electrons and light (content/modules/electrons; chemistry ch. 5). Graded in the module, not the engine.
+  // Electron-configuration mistakes from a later engine should use a different prefix.
+  | 'lt_no_conversion'
+  | 'lt_conversion_backwards'
+  | 'lt_multiplied'
+  | 'lt_inverted'
+  | 'lt_energy_divided'
+  | 'lt_energy_no_c'
+  | 'lt_wrong_unit'
+  | 'lt_order_reversed'
   // reading a graph (content/modules/graphFeatures; precalculus)
   | 'gf_union_between_points'
   | 'gf_y_for_intervals'
