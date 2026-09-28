@@ -1,7 +1,8 @@
 import { FN_PATTERN } from '@/content/modules/domainRange/patterns'
+import { TR_PATTERN } from '@/content/modules/transformations/patterns'
 import { useStore } from '@/store'
 import type { FieldResult, FinalAnswerGrade } from '@/problem/inequality'
-import type { FunctionGrade } from '@/engine'
+import type { DescriptionGrade, FunctionGrade, TransformGrade } from '@/engine'
 import type { AtomGrade, SigFigGrade, SigFigTapGrade } from '@/shared/types'
 
 /**
@@ -102,6 +103,36 @@ export function recordFunctionGrade(grade: FunctionGrade): void {
 /**
  * Log a decomposition check. An unreadable f or g is not an attempt; a trivial or unequal pair is.
  */
+/**
+ * Log a transformation, piecewise, or rate check. A named mistake is stored under its tr_, pw_, or
+ * rate_ id. A description can name several steps at once, so each distinct one is its own record.
+ * Unreadable input is not an attempt.
+ */
+export function recordTransformGrade(grade: TransformGrade | DescriptionGrade): void {
+  if (grade.verdict === 'invalid' || grade.verdict === 'unsupported') return
+  const s = useStore.getState()
+  if (grade.verdict === 'correct') {
+    s.recordFinalAnswer({ correct: true, via: 'text' })
+    return
+  }
+  if ('checks' in grade) {
+    const seen = new Set<string>()
+    for (const check of grade.checks) {
+      if (!check.mistake) continue
+      const id = TR_PATTERN[check.mistake]
+      if (seen.has(id)) continue
+      seen.add(id)
+      s.recordFinalAnswer({ correct: false, pattern: id, via: 'text' })
+    }
+    if (seen.size > 0) return
+  }
+  if (grade.verdict === 'mistake') {
+    s.recordFinalAnswer({ correct: false, pattern: TR_PATTERN[grade.mistake], via: 'text' })
+    return
+  }
+  s.recordFinalAnswer({ correct: false, via: 'text' })
+}
+
 export function recordDecomposition(result: { ok: boolean; reason?: string }): void {
   if (!result.ok && (result.reason === 'parse_f' || result.reason === 'parse_g' || result.reason === 'unsupported')) return
   useStore.getState().recordFinalAnswer({ correct: result.ok, via: 'text' })

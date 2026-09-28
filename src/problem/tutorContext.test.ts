@@ -9,6 +9,7 @@ import {
   verdictFromFunction,
   verdictFromSetAnswer,
   verdictFromStep,
+  verdictFromTransform,
 } from '@/problem/tutorContext'
 import type { Attempt, AttemptStep } from '@/store'
 import type { StepResult } from '@/shared/types'
@@ -250,6 +251,48 @@ describe('buildTutorContext', () => {
     expect(ordered.answer).toBe(order.answer.expectedDisplay)
     expect(ordered.work[0]).toContain('order:')
     expect(ordered.canonical).toEqual(order.answer.reveal)
+  })
+
+  it('builds a transformation context and a piecewise context with the named mistake', () => {
+    const described = generateProblem('transformations', 'tr.describe', 1)
+    if (described.answer.type !== 'transformations') throw new Error('expected a transformation')
+    const describedCtx = buildTutorContext(
+      described,
+      attempt('tr-1', { final: { fnEntries: { answer: 'shift left 3', steps: '[]' } } }),
+      verdictFromTransform({ verdict: 'mistake', mistake: 'h_shift_reversed', witness: 'The inside moves the graph right, not left.' }),
+      false,
+    )
+    expect(describedCtx.subject).toBe('precalculus')
+    expect(describedCtx.kind).toBe('transformations')
+    expect(describedCtx.moduleId).toBe('transformations')
+    expect(describedCtx.statement).toContain('g(x)')
+    expect(describedCtx.work).toContain('answer: shift left 3')
+    expect(describedCtx.canonical).toEqual(described.answer.reveal)
+    expect(describedCtx.answer).toBe(described.answer.sentences.join('; '))
+    expect(describedCtx.verdict?.status).toBe('wrong')
+    expect(describedCtx.verdict?.mistake).toMatchObject({
+      id: 'tr_h_shift_reversed',
+      witness: 'The inside moves the graph right, not left.',
+    })
+    expect(describedCtx.verdict?.mistake?.title).toBeTruthy()
+    expect(describedCtx.verdict?.mistake?.lesson).toBeTruthy()
+
+    const rate = generateProblem('piecewiseRate', 'arc.rate', 1)
+    if (rate.answer.type !== 'piecewiseRate') throw new Error('expected a rate')
+    const rateCtx = buildTutorContext(
+      rate,
+      attempt('pw-1', { final: { fnEntries: { answer: '15' } } }),
+      verdictFromTransform({ verdict: 'mistake', mistake: 'rate_no_division', witness: '15 is the change in f. Divide by the change in x.' }),
+      false,
+    )
+    expect(rateCtx.subject).toBe('precalculus')
+    expect(rateCtx.kind).toBe('piecewiseRate')
+    expect(rateCtx.statement).toContain('Average rate of change')
+    expect(rateCtx.work).toEqual(['answer: 15'])
+    expect(rateCtx.canonical).toEqual(rate.answer.reveal)
+    expect(rateCtx.answer).toBe(rate.answer.rateText)
+    expect(rateCtx.verdict?.mistake?.id).toBe('rate_no_division')
+    expect(rateCtx.verdict?.mistake?.lesson).toBeTruthy()
   })
 
   it('never adds a name, email, or account field', () => {

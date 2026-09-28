@@ -3,9 +3,10 @@
  * Field sources: docs/progress/tutor-core.md §6. Never her name, email, or account.
  */
 import { FN_PATTERN } from '@/content/modules/domainRange/patterns'
+import { TR_PATTERN } from '@/content/modules/transformations/patterns'
 import type { ProblemInstance } from '@/content/types'
 import { ERROR_PATTERNS } from '@/engine'
-import type { FunctionGrade } from '@/engine'
+import type { DescriptionGrade, FunctionGrade, TransformGrade } from '@/engine'
 import { getModule } from '@/content/registry'
 import type { FinalAnswerGrade } from '@/problem/inequality'
 import { decodeSlotStep } from '@/problem/evenOdd'
@@ -131,6 +132,22 @@ export function verdictFromChecked(fields: { status: string; message: string }[]
   return null
 }
 
+/** Transformation, piecewise, or average-rate grade. The catalog lesson rides along with her witness. */
+export function verdictFromTransform(grade: TransformGrade | DescriptionGrade): TutorVerdict | null {
+  if (grade.verdict === 'unsupported') return null
+  if (grade.verdict === 'correct') return withMessage('correct', grade.message)
+  if (grade.verdict === 'wrong') return withMessage('wrong', grade.message)
+  if (grade.verdict === 'invalid') return withMessage('parse_error', grade.message)
+  const id = TR_PATTERN[grade.mistake]
+  const info = ERROR_PATTERNS[id]
+  return withMessage('wrong', grade.witness, undefined, {
+    id,
+    title: clip(info.title, 200),
+    lesson: clip(info.lesson, TUTOR_LIMITS.field),
+    witness: clip(grade.witness, TUTOR_LIMITS.field),
+  })
+}
+
 /** Decomposition check (composition). A parse or an unsupported problem is a parse_error. */
 export function verdictFromDecomposition(result: { ok: boolean; message: string; reason?: string }): TutorVerdict {
   const parse = !result.ok && (result.reason === 'parse_f' || result.reason === 'parse_g' || result.reason === 'unsupported')
@@ -216,7 +233,9 @@ function canonicalOf(instance: ProblemInstance): string[] {
     answer.type === 'electrons' ||
     answer.type === 'graphFeatures' ||
     answer.type === 'domainRange' ||
-    answer.type === 'composition'
+    answer.type === 'composition' ||
+    answer.type === 'transformations' ||
+    answer.type === 'piecewiseRate'
   ) {
     lines = answer.reveal
   }
@@ -255,6 +274,14 @@ function answerOf(instance: ProblemInstance): string | undefined {
       else if (answer.question === 'value') text = answer.valueText ?? ''
       else if (answer.question === 'domain') text = answer.interval ?? ''
       else text = `f(x) = ${answer.f}; g(x) = ${answer.g}`
+      break
+    case 'transformations':
+      if (answer.question === 'describe') text = answer.sentences.join('; ')
+      else if (answer.question === 'point') text = answer.imagePoint ?? ''
+      else text = answer.formula
+      break
+    case 'piecewiseRate':
+      text = answer.question === 'evaluate' ? (answer.valueText ?? '') : (answer.rateText ?? '')
       break
     default:
       text = ''

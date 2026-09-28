@@ -32,6 +32,8 @@ describe('Home: modules grouped by subject', () => {
     expect(precalcTitles).toEqual(MODULES.filter((m) => !m.subject).map((m) => m.title))
     expect(precalcTitles.indexOf('Domain and range')).toBe(precalcTitles.indexOf('Reading a graph') + 1)
     expect(precalcTitles.indexOf('Composition of functions')).toBe(precalcTitles.indexOf('Domain and range') + 1)
+    expect(precalcTitles.indexOf('Transformations')).toBe(precalcTitles.indexOf('Composition of functions') + 1)
+    expect(precalcTitles.indexOf('Piecewise functions and rate of change')).toBe(precalcTitles.indexOf('Transformations') + 1)
     expect(chemistryTitles).toEqual(['Significant figures', 'Atomic structure', 'Electrons and light'])
     expect(chemistryTitles).not.toContain('Domain and range')
     expect(chemistryTitles).not.toContain('Composition of functions')

@@ -15,7 +15,7 @@
 export type RelOp = '=' | '<' | '<=' | '>' | '>='
 /** `h` is the difference-quotient step; the parser accepts it only when the problem owns it (ctx.vars). */
 export type VarName = 'x' | 'y' | 'n' | 'h'
-export type ModuleId = 'numberLine' | 'inequalities' | 'evenOdd' | 'inverses' | 'propertiesDrill' | 'sigFigs' | 'atoms' | 'diffQuotient' | 'graphFeatures' | 'domainRange' | 'composition' | 'electrons'
+export type ModuleId = 'numberLine' | 'inequalities' | 'evenOdd' | 'inverses' | 'propertiesDrill' | 'sigFigs' | 'atoms' | 'diffQuotient' | 'graphFeatures' | 'domainRange' | 'composition' | 'transformations' | 'piecewiseRate' | 'electrons'
 export type CalcId = 'ti84' | 'nspire'
 
 /** Fine-grained property tags. Canonical steps carry one; the engine's move detector reports one. */
@@ -253,6 +253,30 @@ export type ErrorPatternId =
   | 'fn_value_reversed'
   | 'fn_composite_domain_simplified'
   | 'fn_composite_domain_inner_only'
+  // transformations, piecewise, average rate (engine/transformations; content registers the ids).
+  // One per TransformMistakeKind: tr_ for the transformation kinds, pw_ for piecewise, rate_ kept as named.
+  | 'tr_h_shift_reversed'
+  | 'tr_v_shift_reversed'
+  | 'tr_h_factor_inverted'
+  | 'tr_v_factor_inverted'
+  | 'tr_reflection_wrong_axis'
+  | 'tr_unfactored_shift'
+  | 'tr_missing_reflection'
+  | 'tr_missing_step'
+  | 'tr_extra_step'
+  | 'tr_h_order'
+  | 'tr_v_order'
+  | 'tr_factors_swapped'
+  | 'tr_v_factor_inside'
+  | 'tr_v_shift_inside'
+  | 'pw_piecewise_boundary'
+  | 'pw_piecewise_wrong_piece'
+  | 'pw_piecewise_value_where_undefined'
+  | 'pw_piecewise_undefined_where_defined'
+  | 'rate_sign_flipped'
+  | 'rate_no_division'
+  | 'rate_inverted'
+  | 'rate_divided_by_b'
   // behavioral (ui)
   | 'abandoned'
 
@@ -396,6 +420,8 @@ export interface PlotCurve {
   label: string
   style: PlotStyle
   color: PlotColor
+  /** Vertical lines this polyline must not cross (asymptotes). The curve is drawn as separate spans. */
+  breaks?: number[]
 }
 
 /** One vertex of a sampled polyline (graph features). Existing graphs leave `samples` unset. */
@@ -417,6 +443,10 @@ export interface GraphSpec {
   kind: 'function' | 'numberLine' | 'none'
   /** Main function f(x) in app syntax (kind = function). */
   f?: string
+  /** Color of the main curve. Default navy. */
+  fColor?: PlotColor
+  /** Vertical lines the main curve must not cross (asymptotes). */
+  fBreaks?: number[]
   /** Inverse f⁻¹(x) when one-to-one. */
   finv?: string
   /** Draw the reflection of f across y = x parametrically (not one-to-one case). */

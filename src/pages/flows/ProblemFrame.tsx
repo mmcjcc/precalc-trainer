@@ -55,6 +55,8 @@ type Props = {
   nudgeText?: string
   /** The checker's latest verdict, when the flow is showing one. */
   tutorVerdict?: TutorVerdict | null
+  /** Text under the graph, inside the reveal gate (key points, which give a point question away). */
+  graphFooter?: ReactNode
   children: ReactNode
 }
 
@@ -68,6 +70,7 @@ const GRAPH_NOTE: Record<string, string> = {
   diffQuotient: 'The graph draws a secant line and works out its slope, so it gives numbers away. Simplify first, then check.',
   domainRange: 'The graph of f shows where it exists and which heights it reaches, so it gives the answer away. Work it out first, then check.',
   composition: 'The graph draws the function, so it can give the answer away. Work it out first, then check.',
+  transformations: 'The graph draws f and g, so it shows the transformations. Work them out first, then check.',
   default: 'The graph shows the answer. Try the problem first, then use it to check.',
 }
 
@@ -104,7 +107,7 @@ function useElapsed(startedAt: string | undefined, running: boolean): string {
  * Shared problem-page chrome: header, progress line, rail [Hints, Graph it, Calculator, Rule
  * cards], mobile composer, keymap, idle nudge, completion card.
  */
-export function ProblemFrame({ instance, attempt, flags, templateTitle, progress, hints, composer, completion, keymap, statement, graphCaption, nudgeText, tutorVerdict, children }: Props) {
+export function ProblemFrame({ instance, attempt, flags, templateTitle, progress, hints, composer, completion, keymap, statement, graphCaption, nudgeText, tutorVerdict, graphFooter, children }: Props) {
   const navigate = useNavigate()
   const bp = useBreakpoint()
   const mod = getModule(instance.moduleId)
@@ -141,6 +144,7 @@ export function ProblemFrame({ instance, attempt, flags, templateTitle, progress
           onReveal={() => setRevealed((r) => ({ ...r, graph: true }))}
         >
           <GraphPanel spec={instance.graph} caption={graphCaption ?? `solution set of ${instance.statementText}`} />
+          {graphFooter}
         </RevealGate>
       ),
     },

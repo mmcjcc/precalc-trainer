@@ -16,7 +16,12 @@ import type {
   VarName,
 } from '@/shared/types'
 
-export type ProblemKind = 'inequality' | 'numberLine' | 'evenOdd' | 'inverse' | 'drill' | 'sigFigs' | 'atoms' | 'diffQuotient' | 'graphFeatures' | 'domainRange' | 'composition' | 'electrons'
+export type ProblemKind = 'inequality' | 'numberLine' | 'evenOdd' | 'inverse' | 'drill' | 'sigFigs' | 'atoms' | 'diffQuotient' | 'graphFeatures' | 'domainRange' | 'composition' | 'transformations' | 'piecewiseRate' | 'electrons'
+
+/** Parent functions the transformations engine accepts. Matches `ParentName`. */
+export type TransformParent = 'square' | 'cube' | 'sqrt' | 'cbrt' | 'abs' | 'reciprocal'
+/** How a transformation problem wrote the inside of f. */
+export type TransformForm = 'factored' | 'unfactored'
 
 /** Difficulty knobs (all optional; templates document which they honor). */
 export interface DifficultyKnobs {
@@ -402,6 +407,74 @@ export type AnswerSpec =
       set?: SolutionSet
       /** The simplified formula's domain is wider than the composite's. */
       hidesRestriction?: boolean
+      nudge: string
+      ruleCard: RuleCardId
+      ruleCards: RuleCardId[]
+      reveal: string[]
+      trap: string
+    }
+  | {
+      /**
+       * Transformations of f (precalculus). Grade with the ENGINE: `gradeDescription`, `gradeMappedPoint`,
+       * or `gradeEquation`. Description is a set of steps; a point is "(x, y)"; an equation is an explicit
+       * formula in x. `form` is how the problem wrote the inside of f.
+       */
+      type: 'transformations'
+      question: 'describe' | 'point' | 'equation'
+      parent: TransformParent
+      /** App syntax of the parent, e.g. "x^2". */
+      parentFormula: string
+      /** Words for the parent, e.g. "square root". */
+      parentWords: string
+      /** Exact parameter text: "2", "-1/2", "0". */
+      a: string
+      b: string
+      h: string
+      k: string
+      form: TransformForm
+      /** f-notation as shown. Empty when the question gives the steps in words. */
+      notation: string
+      /** Explicit formula of g, app syntax. */
+      formula: string
+      /** describeTransform sentences, standard order. */
+      sentences: string[]
+      /** Point on f, "(4, -2)", for a point question. */
+      sourcePoint?: string
+      /** Its image on g. */
+      imagePoint?: string
+      nudge: string
+      ruleCard: RuleCardId
+      ruleCards: RuleCardId[]
+      reveal: string[]
+      trap: string
+    }
+  | {
+      /**
+       * Piecewise evaluation or average rate of change (precalculus). Grade with `gradePiecewiseValue`
+       * or `gradeAverageRate`. A value may be "undefined".
+       */
+      type: 'piecewiseRate'
+      question: 'evaluate' | 'rate'
+      pieces?: {
+        formula: string
+        /** App syntax, e.g. "x < 2" or "1 <= x < 4". */
+        condition: string
+        lo: string
+        hi: string
+        loClosed: boolean
+        hiClosed: boolean
+      }[]
+      /** Input for an evaluation, app syntax. */
+      x?: string
+      /** "5" or "undefined". */
+      valueText?: string
+      /** Polynomial or rational f, for a rate. */
+      f?: string
+      /** Endpoints of the interval, app syntax. */
+      a?: string
+      b?: string
+      /** The rate, app syntax: "5", "-1/3". */
+      rateText?: string
       nudge: string
       ruleCard: RuleCardId
       ruleCards: RuleCardId[]

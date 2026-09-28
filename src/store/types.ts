@@ -92,8 +92,9 @@ export interface AttemptFinal {
    */
   gfEntries?: Record<string, string>
   /**
-   * Domain, range, and composition: the answer box(es) exactly as typed. `answer` is the set, formula,
-   * or value; a decomposition uses `f` and `g`. Restored after a reload.
+   * Domain, range, composition, transformations, piecewise, and rate: the answer box(es) exactly as
+   * typed. `answer` is the set, formula, point, value, or a readable summary of the step cards;
+   * `steps` is the step-card builder as JSON. A decomposition uses `f` and `g`. Restored after a reload.
    */
   fnEntries?: Record<string, string>
   /**

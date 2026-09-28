@@ -10,6 +10,8 @@ import { AtomFlow } from './flows/AtomFlow'
 import { CompositionFlow } from './flows/CompositionFlow'
 import { DiffQuotientFlow } from './flows/DiffQuotientFlow'
 import { DomainRangeFlow } from './flows/DomainRangeFlow'
+import { PiecewiseRateFlow } from './flows/PiecewiseRateFlow'
+import { TransformationFlow } from './flows/TransformationFlow'
 import { GraphFeaturesFlow } from './flows/GraphFeaturesFlow'
 import { EvenOddFlow } from './flows/EvenOddFlow'
 import { InequalityFlow } from './flows/InequalityFlow'
@@ -88,6 +90,10 @@ function ProblemBody({ instance, flags, templateTitle }: { instance: ProblemInst
       return <DomainRangeFlow {...props} />
     case 'composition':
       return <CompositionFlow {...props} />
+    case 'transformations':
+      return <TransformationFlow {...props} />
+    case 'piecewiseRate':
+      return <PiecewiseRateFlow {...props} />
     default:
       return <Navigate to="/" replace />
   }

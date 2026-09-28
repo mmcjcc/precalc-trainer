@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { evalExpr } from '@/engine'
-import { PALETTE, type GraphSpec, type PlotColor } from '@/shared/types'
+import { PALETTE, type GraphSpec, type PlotColor, type PlotStyle } from '@/shared/types'
+import { splitDomain } from './graphBreaks'
 
 const COLOR: Record<PlotColor, string> = {
   navy: PALETTE.navy,
@@ -17,6 +18,26 @@ function evalAt(expr: string, x: number): number {
 
 function asFn(expr: string) {
   return (scope: { x?: number }) => evalAt(expr, Number(scope.x))
+}
+
+/** One polyline per span, so a curve with a vertical asymptote is not joined across it. */
+function pushCurve(
+  data: Record<string, unknown>[],
+  expr: string,
+  color: string,
+  style: PlotStyle,
+  domain: [number, number],
+  breaks: number[] | undefined,
+  nSamples: number,
+) {
+  const spans = splitDomain(domain[0], domain[1], breaks)
+  const attr = style === 'solid' ? undefined : { 'stroke-dasharray': style === 'dotted' ? '2 3' : '6 4' }
+  for (const [a, b] of spans) {
+    const item: Record<string, unknown> = { fn: asFn(expr), graphType: 'polyline', color, nSamples }
+    if (spans.length > 1) item.range = [a, b]
+    if (attr) item.attr = attr
+    data.push(item)
+  }
 }
 
 type Props = {
@@ -38,6 +59,8 @@ export function Graph({ spec, className }: Props) {
   const ref = useRef<HTMLDivElement>(null)
   const [status, setStatus] = useState<Status>('loading')
   const f = spec.f
+  const fColor = spec.fColor ?? 'navy'
+  const fBreaks = spec.fBreaks
   const finv = spec.finv
   const extra = spec.extra
   const lo = spec.xDomain?.[0] ?? -8
@@ -46,6 +69,7 @@ export function Graph({ spec, className }: Props) {
   const reflect = spec.reflect
   const badge = spec.badge
   const extraKey = JSON.stringify(extra ?? [])
+  const fBreakKey = JSON.stringify(fBreaks ?? [])
 
   useEffect(() => {
     const el = ref.current
@@ -59,7 +83,9 @@ export function Graph({ spec, className }: Props) {
         const functionPlot = mod.default
         el.innerHTML = ''
         const width = Math.min(320, el.clientWidth || 320)
-        const data: Record<string, unknown>[] = [{ fn: asFn(f), graphType: 'polyline', color: COLOR.navy, nSamples: 240, skipTip: false }]
+        const data: Record<string, unknown>[] = []
+        pushCurve(data, f, COLOR[fColor], 'solid', [lo, hi], fBreaks, 240)
+        if (data[0]) data[0].skipTip = false
         if (identity || reflect) {
           data.push({
             fn: (scope: { x?: number }) => Number(scope.x),
@@ -84,15 +110,7 @@ export function Graph({ spec, className }: Props) {
             attr: { 'stroke-dasharray': '6 4' },
           })
         }
-        for (const c of curves) {
-          data.push({
-            fn: asFn(c.expr),
-            graphType: 'polyline',
-            color: COLOR[c.color],
-            nSamples: 180,
-            attr: c.style === 'solid' ? undefined : { 'stroke-dasharray': c.style === 'dotted' ? '2 3' : '6 4' },
-          })
-        }
+        for (const c of curves) pushCurve(data, c.expr, COLOR[c.color], c.style, [lo, hi], c.breaks, 180)
         functionPlot({
           target: el,
           width,
@@ -112,10 +130,10 @@ export function Graph({ spec, className }: Props) {
       cancelled = true
       el.innerHTML = ''
     }
-  }, [f, finv, extraKey, lo, hi, identity, reflect, spec.kind])
+  }, [f, fColor, fBreakKey, fBreaks, finv, extraKey, lo, hi, identity, reflect, spec.kind])
 
   if (spec.kind !== 'function' || !f) return null
-  const legend: string[] = ['navy: f']
+  const legend: string[] = [`${fColor}: f`]
   if (finv) legend.push('coral dashed: f⁻¹')
   if (reflect) legend.push('coral dashed: mirror of f across y = x')
   if (identity || reflect) legend.push('gray dotted: y = x')
