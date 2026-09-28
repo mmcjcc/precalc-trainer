@@ -18,8 +18,8 @@ Claude writes from known values. Every homework or quiz photo becomes regression
 `src/problem/*.regression.test.ts` before any new feature.
 
 Rule of thumb: one Claude engine core per week plus verification. Measured so far: a full
-one-agent module costs 440-520k Claude tokens; an engine core alone (domain, range and composition,
-exact arithmetic, 164 tests) cost about 460k. The saving comes from Grok building the screens and
+one-agent module costs 440-520k Claude tokens; an engine core alone costs 460-520k (domain, range and
+composition 460k; transformations with piecewise and rate of change 520k). The saving comes from Grok building the screens and
 templates, not from the core being small; keep cores narrow. Running two builds at once is fine only when they touch different
 folders; shared registration files (`src/shared/types.ts`, `catalog.ts`, `Problem.tsx`,
 `modules/index.ts`) have one owner at a time.
@@ -32,7 +32,7 @@ folders; shared registration files (`src/shared/types.ts`, `catalog.ts`, `Proble
 | Sep 22 | Difference quotient | built by one Claude agent (h variable, dq_ mistakes) | - |
 | Sep 24 | Reading a graph (increasing, decreasing, extrema) | - | whole module; reuses interval grading |
 | Sep 28 | Domain & range, composition | domain from a formula as an exact set, composition and composite domain, mistake candidates | templates, flow, catalog |
-| Oct 5 | Transformations, piecewise, average rate of change | point and equation mapping for a·f(b(x-h))+k | templates, graphs, flow; rate of change reuses the DQ engine |
+| done (Sep 27) | Transformations, piecewise, average rate of change | done: src/engine/transformations (22 mistakes) | done: two modules; Claude cross-check of 1,500 problems |
 | Oct 12 | Unit 1 test review | - | mixed review set across Unit 1 modules |
 | Oct 19 | Completing the square, synthetic division | synthetic-division table checker (remainder and factor theorems) | templates, table UI |
 | Oct 26 | Zeros, multiplicity, end behavior | - | graph-to-equation templates (rational-root candidates need a small core) |
@@ -50,7 +50,8 @@ folders; shared registration files (`src/shared/types.ts`, `catalog.ts`, `Proble
 | Ship by | Chapter | Engine core (Claude) | Content + screen (Grok) |
 |---|---|---|---|
 | done | 3 Significant figures, 4 Atomic structure | - | periodic-table data (Grok) |
-| Oct 12 | 5 Electrons: light (c = λν, E = hν), electron configurations | configuration checker: 4s/3d order, Cr/Cu exceptions, ions lose 4s first | light templates on the sig-fig engine |
+| done (Sep 27) | 5 Electrons: light (c = λν, E = hν) | - | done: light templates on the sig-fig engine; Claude cross-check of 900 answers |
+| Oct 12 | 5 Electrons: electron configurations | configuration checker: 4s/3d order, Cr/Cu exceptions, ions lose 4s first | templates added to the existing 'electrons' module |
 | Oct 26 | 6 Periodic table and trends | - | ranking templates from the element data |
 | Nov 16 | 7 Nomenclature | charge balance, formula to name and back | polyatomic-ion and acid tables (with Claude's test), templates |
 | Dec | 8-9 Ions, bonding | low fit for step checking; drills only | Grok |
@@ -65,3 +66,12 @@ folders; shared registration files (`src/shared/types.ts`, `catalog.ts`, `Proble
 - iPhone check of the chemistry screens (nuclear symbols, number boxes, isotope table).
 - The Progress page lists chemistry and precalculus mistakes in one table; group them by subject.
 - `docs/BUILD_GUIDE.md` sections 0 and 7 predate the chemistry and difference-quotient modules.
+
+## How Grok's work is checked
+
+Every Grok build gets an independent cross-check written by Claude before or after it lands
+(`*.crosscheck.test.ts`, and textbook anchor tests such as `src/engine/sigfigs/light.anchor.test.ts`):
+the generated answers are recomputed from first principles, and the words she sees (scene labels,
+descriptions) are checked against the numbers. The Sep 27 reviews caught a wrong colour label
+(5.75 × 10¹⁴ Hz called orange; it is green), six other physics labels, and an explanation whose
+order of operations multiplied by 10⁻⁹ instead of dividing.
