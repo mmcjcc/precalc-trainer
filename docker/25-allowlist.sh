@@ -16,6 +16,12 @@
 # Inputs (environment):
 #   ALLOWED_USERS   emails (or GitHub usernames) separated by commas or spaces; each must match
 #                   the whole header, ignoring case. Example: "kid@gmail.com, parent@gmail.com"
+#   ALLOWED_USERS_FILE
+#                   the same list read from a file (a mounted secret such as
+#                   /run/secrets/ALLOWED_USERS), for hosts where the addresses must not sit in a
+#                   setting; line ends separate entries too. ALLOWED_USERS wins when both are set.
+#                   A file that cannot be read aborts start-up, and an entry from a file is never
+#                   printed, not even when it is refused.
 #   AUTH_ALLOWLIST  "off" lets every request through. For local `docker run` and CI only.
 #   neither         nobody is allowed: every page answers 403, /healthz still answers 200.
 #                   Failing closed means a forgotten setting can't open the app to everyone.
@@ -58,6 +64,21 @@ tmp="$DIR/identity.conf.tmp"
 mv "$tmp" "$DIR/identity.conf"
 [ -z "${AUTH_HEADER:-}" ] || log "the signed-in account is read from the $header header"
 
+# The list: ALLOWED_USERS, or else the file ALLOWED_USERS_FILE names. A named file that can't be
+# read stops the container here, whatever else is set: carrying on would mean an empty list.
+users="${ALLOWED_USERS:-}"
+from="ALLOWED_USERS"
+# A variable holding only blanks or commas counts as not set, as it does for the tutor.
+[ -n "$(printf '%s' "$users" | tr -d ' ,\t\r\n')" ] || users=""
+if [ -z "$users" ] && [ -n "${ALLOWED_USERS_FILE:-}" ]; then
+  if [ ! -f "$ALLOWED_USERS_FILE" ] || [ ! -r "$ALLOWED_USERS_FILE" ]; then
+    log "ERROR: ALLOWED_USERS_FILE is set but that file cannot be read. Refusing to start."
+    exit 1
+  fi
+  users=$(tr ',\r\n' '   ' < "$ALLOWED_USERS_FILE")
+  from="ALLOWED_USERS_FILE"
+fi
+
 tmp="$OUT.tmp"
 echo "# Generated at container start by /docker-entrypoint.d/25-allowlist.sh - do not edit." > "$tmp"
 
@@ -71,9 +92,13 @@ fi
 echo "default 0;" >> "$tmp"
 count=0
 set -f   # an entry like "*" must not expand to file names
-for user in $(printf '%s' "${ALLOWED_USERS:-}" | tr ',' ' '); do
+for user in $(printf '%s' "$users" | tr ',' ' '); do
   if ! printf '%s' "$user" | grep -Eq '^[A-Za-z0-9._%+@-]+$'; then
-    log "ERROR: ALLOWED_USERS entry \"$user\" has a character outside A-Z a-z 0-9 . _ % + @ -. Refusing to start."
+    if [ "$from" = "ALLOWED_USERS" ]; then
+      log "ERROR: ALLOWED_USERS entry \"$user\" has a character outside A-Z a-z 0-9 . _ % + @ -. Refusing to start."
+    else
+      log "ERROR: ALLOWED_USERS_FILE entry $((count + 1)) has a character outside A-Z a-z 0-9 . _ % + @ -. Refusing to start."
+    fi
     rm -f "$tmp"
     exit 1
   fi
@@ -85,8 +110,12 @@ done
 set +f
 mv "$tmp" "$OUT"
 
-if [ "$count" -eq 0 ]; then
+if [ "$count" -eq 0 ] && [ "$from" = "ALLOWED_USERS_FILE" ]; then
+  log "ALLOWED_USERS_FILE has no entries: every page answers 403 until the list is set"
+elif [ "$count" -eq 0 ]; then
   log "no ALLOWED_USERS set: every page answers 403 until the list is set"
+elif [ "$from" = "ALLOWED_USERS_FILE" ]; then
+  log "sign-in allowlist: $count account(s), from ALLOWED_USERS_FILE"
 else
   log "sign-in allowlist: $count account(s)"
 fi

@@ -14,9 +14,10 @@
 #   * the defaults stay Azure's: only X-MS-CLIENT-PRINCIPAL-NAME carries the account, and nginx
 #     leaves /.auth/logout alone
 #   * locked down behind another sign-in proxy (non-root, read-only root file system, no
-#     capabilities, a tmpfs on /tmp): LISTEN_PORT, AUTH_HEADER, SIGN_OUT_URL, APP_PIN_FILE and a
-#     TUTOR_UPSTREAM name that does not resolve all work, the HEALTHCHECK turns healthy, and the
-#     log has no permission or read-only complaints; a bad value for any of them aborts start-up
+#     capabilities, a tmpfs on /tmp): LISTEN_PORT, AUTH_HEADER, SIGN_OUT_URL, APP_PIN_FILE, the
+#     list from ALLOWED_USERS_FILE and a TUTOR_UPSTREAM name that does not resolve all work, the
+#     HEALTHCHECK turns healthy, and the log has no permission or read-only complaints and no
+#     address from the file; a bad value for any of them aborts start-up
 #
 # Usage: bash deploy/smoke.sh <image>      (needs docker + curl; run by .github/workflows/*)
 #   docker build --platform linux/amd64 -t precalc-trainer . && bash deploy/smoke.sh precalc-trainer
@@ -66,6 +67,7 @@ expect_abort() {
   rc=$?
   set -e
   docker rm -f "$NAME-bad" >/dev/null 2>&1 || true
+  ABORT_OUT=$out   # for a caller that also checks what the message leaves out
   { [ "$rc" -ne 0 ] && [ "$rc" -ne 124 ]; } || fail "$what must abort start-up (rc=$rc); output: $out"
   grep -q "$want" <<<"$out" || fail "$what should abort saying \"$want\"; got: $out"
   pass "$what aborts start-up, naming the reason"
@@ -185,12 +187,21 @@ OUT_URL='https://auth.example.com/oauth2/sign_out?rd=https%3A%2F%2Fapp.example.c
 SECRETS=$(mktemp -d)
 chmod 0755 "$SECRETS"
 printf '%s\n' "$PIN" > "$SECRETS/APP_PIN"   # with the line end a secret file usually has
-chmod 0644 "$SECRETS/APP_PIN"
+# The list as a mounted secret: CRLF and LF line ends, a comma and a space between entries.
+printf 'kid@example.com\r\nParent@Example.org, third@example.net fourth@example.net\n' > "$SECRETS/ALLOWED_USERS"
+printf 'kid@example.com\nnot-for-the-log@example.com;x\n' > "$SECRETS/UNSAFE_USERS"
+chmod 0644 "$SECRETS"/*
+LIST=(-e ALLOWED_USERS_FILE=/run/secrets/ALLOWED_USERS -v "$SECRETS/ALLOWED_USERS:/run/secrets/ALLOWED_USERS:ro")
 CPORT=8080
-start "${LOCKED[@]}" -e LISTEN_PORT=8080 -e AUTH_HEADER="$P" -e ALLOWED_USERS=kid@example.com -e SIGN_OUT_URL="$OUT_URL" \
+start "${LOCKED[@]}" -e LISTEN_PORT=8080 -e AUTH_HEADER="$P" "${LIST[@]}" -e SIGN_OUT_URL="$OUT_URL" \
   -e TUTOR_UPSTREAM=tutor.invalid:3000 -e APP_PIN_FILE=/run/secrets/APP_PIN -v "$SECRETS/APP_PIN:/run/secrets/APP_PIN:ro"
 CPORT=80
 [ "$(docker exec "$CID" id -u)" = 10002 ] || fail "the container should run as the user it was given"
+for who in kid@example.com parent@example.org third@example.net fourth@example.net; do
+  [ "$(code -H "$P: $who" "$BASE/")" = 200 ] || fail "$who is in ALLOWED_USERS_FILE and should get /"
+done
+[ "$(code -H "$P: kid@example.com.evil.net" "$BASE/")" = 403 ] || fail "a near miss of an ALLOWED_USERS_FILE entry must not get in"
+pass "ALLOWED_USERS_FILE: every entry gets in (CRLF, LF, comma and space separated)"
 [ "$(code -H "$P: kid@example.com" "$BASE/")" = 200 ] || fail "a listed account in $P should get /"
 [ "$(code -H "$P: KID@Example.com" "$BASE$ASSET")" = 200 ] || fail "a listed account in $P should get assets"
 [ "$(code -H "$P: kid@example.com" "$BASE/m/inequalities/deep/link")" = 200 ] || fail "deep links should work locked down"
@@ -221,7 +232,23 @@ LOGS=$(docker logs "$CID" 2>&1)
 if grep -iE 'permission denied|read-only file system|\[(emerg|alert|crit|warn)\]' <<<"$LOGS"; then
   fail "the log of a locked-down start should have no permission, read-only or nginx warning lines"
 fi
-pass "locked down: clean start-up log"
+if grep -E '[A-Za-z0-9]@[A-Za-z0-9]' <<<"$LOGS"; then
+  fail "the log must not show an address: the list came from a secret file, and requests are logged without the account"
+fi
+grep -q 'sign-in allowlist: 4 account(s), from ALLOWED_USERS_FILE' <<<"$LOGS" || fail "the log should say how many accounts the file gave; got: $LOGS"
+pass "locked down: clean start-up log, the list's size but none of its addresses"
+
+# The variable wins over the file; a file that isn't there, or holds an unsafe entry, stops the container.
+start -e ALLOWED_USERS=only@example.com "${LIST[@]}"
+[ "$(code -H "$U: only@example.com" "$BASE/")" = 200 ] || fail "ALLOWED_USERS should win over ALLOWED_USERS_FILE"
+[ "$(code -H "$U: kid@example.com" "$BASE/")" = 403 ] || fail "with ALLOWED_USERS set, ALLOWED_USERS_FILE must not be read"
+pass "ALLOWED_USERS wins over ALLOWED_USERS_FILE"
+expect_abort "an ALLOWED_USERS_FILE that is not there" "ALLOWED_USERS_FILE is set but" -e ALLOWED_USERS_FILE=/run/secrets/ALLOWED_USERS
+expect_abort "an ALLOWED_USERS_FILE that is not there, even with AUTH_ALLOWLIST=off" "ALLOWED_USERS_FILE is set but" "${OPEN[@]}" -e ALLOWED_USERS_FILE=/run/secrets/ALLOWED_USERS
+expect_abort "an unsafe entry in ALLOWED_USERS_FILE" "ALLOWED_USERS_FILE entry 2 has a character" \
+  -e ALLOWED_USERS_FILE=/run/secrets/ALLOWED_USERS -v "$SECRETS/UNSAFE_USERS:/run/secrets/ALLOWED_USERS:ro"
+[[ "$ABORT_OUT" != *not-for-the-log* ]] || fail "a refused ALLOWED_USERS_FILE entry must not be printed; got: $ABORT_OUT"
+pass "a refused ALLOWED_USERS_FILE entry is named by position, not printed"
 
 expect_abort "a read-only root without a writable /tmp" "cannot write /tmp/precalc" --read-only "${OPEN[@]}"
 expect_abort "a LISTEN_PORT that is not a number" "LISTEN_PORT must be" "${OPEN[@]}" -e LISTEN_PORT=http
