@@ -14,3 +14,6 @@ apikey*
 *.apikey
 client_secret*.json
 secrets/
+
+# Claude Code worktrees (another session works on a branch here); never commit them.
+/.claude/
