@@ -2,9 +2,10 @@
 # 25-allowlist.sh — runs at container start, before nginx (after 20-config.sh). The official
 # nginx image executes every executable *.sh in /docker-entrypoint.d; the Dockerfile installs it.
 #
-# Writes the body of the nginx map that decides who may load the app:
+# Writes the two files that decide who may load the app (both included by nginx.conf):
 #
-#     map $http_x_ms_client_principal_name $precalc_allowed { include /etc/nginx/precalc/allowlist.map; }
+#     /tmp/precalc/identity.conf    set $precalc_identity $http_<the sign-in layer's header>;
+#     /tmp/precalc/allowlist.map    the body of: map $precalc_identity $precalc_allowed { ... }
 #
 # On Azure, Container Apps authentication ("Sign in with Google") sits in front of nginx. Every
 # signed-in request reaches nginx with X-MS-CLIENT-PRINCIPAL-NAME set to the account's email
@@ -18,19 +19,45 @@
 #   AUTH_ALLOWLIST  "off" lets every request through. For local `docker run` and CI only.
 #   neither         nobody is allowed: every page answers 403, /healthz still answers 200.
 #                   Failing closed means a forgotten setting can't open the app to everyone.
+#   AUTH_HEADER     the request header that carries the signed-in account. Default
+#                   X-MS-CLIENT-PRINCIPAL-NAME (Azure). Behind another sign-in proxy name its
+#                   header, for example X-Auth-Request-Email (oauth2-proxy). Exactly one header
+#                   is trusted, never both: a sign-in layer only strips its own header from
+#                   outside requests, so a second trusted name would be one any visitor can send.
 #
 # An entry with a character outside A-Z a-z 0-9 . _ % + @ - aborts start-up: entries are written
-# into nginx config, where anything else could change what the config means.
+# into nginx config, where anything else could change what the config means. The same goes for
+# an AUTH_HEADER that is not letters, digits and dashes.
 #
-# The header is only trustworthy while sign-in is switched on for the container app. Check with
-# `bash deploy/azure-setup.sh check`; the deploy workflow refuses to roll out when it is off.
+# The header is only trustworthy while sign-in is switched on in front of the container. On Azure
+# check with `bash deploy/azure-setup.sh check`; the deploy workflow refuses to roll out when it
+# is off.
 set -eu
 
-OUT="${PRECALC_ALLOWLIST_PATH:-/etc/nginx/precalc/allowlist.map}"   # override only for local tests
+DIR="${PRECALC_RUNTIME_DIR:-/tmp/precalc}"            # override only for local tests
+OUT="${PRECALC_ALLOWLIST_PATH:-$DIR/allowlist.map}"   # override only for local tests
 me="$(basename "$0")"
 log() { echo "$me: $*"; }
 
-mkdir -p "$(dirname "$OUT")"
+header="${AUTH_HEADER:-X-MS-CLIENT-PRINCIPAL-NAME}"
+case "$header" in
+  *[!A-Za-z0-9-]*|-*|*-)
+    log "ERROR: AUTH_HEADER must be a header name made of letters, digits and dashes. Refusing to start."
+    exit 1
+    ;;
+esac
+# nginx exposes the request header Some-Name as $http_some_name.
+variable="http_$(printf '%s' "$header" | tr 'A-Z-' 'a-z_')"
+
+mkdir -p "$DIR" "$(dirname "$OUT")"
+tmp="$DIR/identity.conf.tmp"
+{
+  echo "# Generated at container start by /docker-entrypoint.d/25-allowlist.sh - do not edit."
+  echo "set \$precalc_identity \$$variable;"
+} > "$tmp"
+mv "$tmp" "$DIR/identity.conf"
+[ -z "${AUTH_HEADER:-}" ] || log "the signed-in account is read from the $header header"
+
 tmp="$OUT.tmp"
 echo "# Generated at container start by /docker-entrypoint.d/25-allowlist.sh - do not edit." > "$tmp"
 
