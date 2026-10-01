@@ -15,6 +15,7 @@ Files involved:
 | `docker/25-allowlist.sh` | writes the allowlist from `ALLOWED_USERS` at container start |
 | `docker/not-allowed.html` | the 403 page for a signed-in account that isn't on the list |
 | `docker/20-config.sh` | writes `/config.js` (optional PIN hash, sign-out link) at container start |
+| `docker/10-listen.sh`, `docker/30-tutor.sh` | write nginx's port and the tutor's address at container start; Azure uses the defaults (80, `127.0.0.1:3000`) |
 | `server/Dockerfile` | the optional AI tutor sidecar (`node:22-alpine`, one bundled file); §9 |
 | `deploy/azure-setup.sh` | creates the Azure resources, turns on Google sign-in, manages the list, adds the tutor |
 | `deploy/tutor-spec.mjs` | adds the tutor container and its log volume to the app's spec (used by `azure-setup.sh tutor`) |
@@ -55,6 +56,18 @@ docker run --rm -p 8080:80 -e ALLOWED_USERS=kid@example.com precalc-trainer
 curl -si http://localhost:8080/ | head -1                                              # 403
 curl -si -H 'X-MS-CLIENT-PRINCIPAL-NAME: kid@example.com' http://localhost:8080/ | head -1   # 200
 ```
+
+The same image also runs on a plain Docker host behind another sign-in proxy. Nothing in it is
+written to after the build (the start-up hooks write to `/tmp/precalc`), so it can run as any
+non-root user on a read-only root file system with a tmpfs on `/tmp`. Five settings cover the
+differences, and Azure leaves all of them unset: `LISTEN_PORT` (default 80), `AUTH_HEADER` (the
+header the sign-in proxy puts the account in; default `X-MS-CLIENT-PRINCIPAL-NAME`),
+`SIGN_OUT_URL` (where `/.auth/logout` should redirect when Container Apps isn't there to answer
+it), `TUTOR_UPSTREAM` (default `127.0.0.1:3000`; a name such as `tutor:3000` when the tutor is its
+own container on a shared network) and `APP_PIN_FILE` / `APP_PIN_HASH_FILE` (the PIN as a mounted
+secret). Each is documented at the top of its hook in `docker/`, and the `Dockerfile` header has
+the full `docker run` line. The tutor image takes `HOST=0.0.0.0`, `TUTOR_LOG_DIR` and
+`GEMINI_API_KEY_FILE` / `ANTHROPIC_API_KEY_FILE` the same way (`server/Dockerfile`).
 
 ## 2. Set it up on Azure
 

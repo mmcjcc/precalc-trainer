@@ -10,6 +10,14 @@
 # Azure it stays on 127.0.0.1, reachable only from nginx in the same replica):
 #   docker run --rm -p 3000:3000 -e HOST=0.0.0.0 -e TUTOR_PROVIDER=mock -e ALLOWED_USERS=kid@example.com precalc-tutor
 #   curl -s -H 'X-MS-CLIENT-PRINCIPAL-NAME: kid@example.com' http://localhost:3000/api/tutor/status
+# On a plain Docker host it is a second container on a network it shares with the web image only
+# (no published port), found by name: the web container gets TUTOR_UPSTREAM=tutor:3000. It needs
+# HOST=0.0.0.0 there, and nothing writable but the log directory, so it can run locked down:
+#   docker run --rm --network <net> --network-alias tutor --user 1000:1000 --read-only \
+#     --cap-drop ALL --security-opt no-new-privileges -e HOST=0.0.0.0 -e ALLOWED_USERS=... \
+#     -e TUTOR_LOG_DIR=/data -v <volume owned by uid 1000>:/data \
+#     -e GEMINI_API_KEY_FILE=/run/secrets/GEMINI_API_KEY -v <key file>:/run/secrets/GEMINI_API_KEY:ro \
+#     precalc-tutor
 # Configuration (environment): server/src/config.ts. Contract checks: deploy/smoke-tutor.sh.
 
 # ---- build stage --------------------------------------------------------------------------

@@ -1,3 +1,6 @@
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { ConfigError, describeConfig, loadConfig, parseUserList } from './config.ts'
 import { DailyLimiter } from './limits.ts'
@@ -43,6 +46,32 @@ describe('configuration', () => {
     expect(line).toContain('key=set')
     expect(line).not.toContain('AIza')
     expect(describeConfig(loadConfig({}))).toContain('key=MISSING')
+  })
+
+  it('reads a key from the file its _FILE variable names (a mounted secret)', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'tutor-config-'))
+    try {
+      const gemini = join(dir, 'GEMINI_API_KEY')
+      const anthropic = join(dir, 'ANTHROPIC_API_KEY')
+      writeFileSync(gemini, 'AIza-from-a-file\n')
+      writeFileSync(anthropic, '  sk-ant-from-a-file\r\n')
+      const c = loadConfig({ GEMINI_API_KEY_FILE: gemini, ANTHROPIC_API_KEY_FILE: anthropic })
+      expect(c.geminiApiKey).toBe('AIza-from-a-file')
+      expect(c.anthropicApiKey).toBe('sk-ant-from-a-file')
+      const line = describeConfig(c)
+      expect(line).toContain('key=set')
+      expect(line).not.toContain('AIza')
+      // The plain variable wins, and an empty one falls through to the file.
+      expect(loadConfig({ GEMINI_API_KEY: 'AIza-direct', GEMINI_API_KEY_FILE: gemini }).geminiApiKey).toBe('AIza-direct')
+      expect(loadConfig({ GEMINI_API_KEY: ' ', GEMINI_API_KEY_FILE: gemini }).geminiApiKey).toBe('AIza-from-a-file')
+      // A named file that can't be read stops start-up, naming the variable only.
+      const missing = join(dir, 'nope')
+      expect(() => loadConfig({ GEMINI_API_KEY_FILE: missing })).toThrow(ConfigError)
+      expect(() => loadConfig({ ANTHROPIC_API_KEY_FILE: missing })).toThrow(/^ANTHROPIC_API_KEY_FILE is set but that file cannot be read$/)
+      expect(() => loadConfig({ GEMINI_API_KEY_FILE: dir })).toThrow(/GEMINI_API_KEY_FILE/)
+    } finally {
+      rmSync(dir, { recursive: true, force: true })
+    }
   })
 })
 

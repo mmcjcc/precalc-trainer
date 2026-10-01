@@ -17,7 +17,11 @@
  *   PARENT_USERS       comma-separated emails that may read the log. Never hard-coded.
  *   HOST / PORT        listen address                                [127.0.0.1 / 3000]
  *   TUTOR_MOCK_DELAY_MS  delay between mock words, for UI work        [30]
+ *
+ * Each key can also come from a file: GEMINI_API_KEY_FILE / ANTHROPIC_API_KEY_FILE name it (a
+ * mounted secret such as /run/secrets/GEMINI_API_KEY). The plain variable wins when both are set.
  */
+import { readFileSync } from 'node:fs'
 import type { TutorProviderName } from '../../src/shared/tutor.ts'
 
 export type GeminiThinking = 'low' | 'medium' | 'high' | 'off'
@@ -59,6 +63,23 @@ export function parseUserList(name: string, raw: string | undefined): Set<string
   return out
 }
 
+/**
+ * A secret from the variable `name`, or else from the file `${name}_FILE` points at. A file that
+ * is named but can't be read stops start-up: running on without the key would only fail later,
+ * at her first question. The message names the variable, never the file's content.
+ */
+function secret(env: Record<string, string | undefined>, name: string): string {
+  const direct = (env[name] ?? '').trim()
+  if (direct) return direct
+  const file = (env[`${name}_FILE`] ?? '').trim()
+  if (!file) return ''
+  try {
+    return readFileSync(file, 'utf8').trim()
+  } catch {
+    throw new ConfigError(`${name}_FILE is set but that file cannot be read`)
+  }
+}
+
 function int(name: string, raw: string | undefined, fallback: number, min: number, max: number): number {
   if (raw === undefined || raw.trim() === '') return fallback
   const n = Number(raw)
@@ -89,10 +110,10 @@ export function loadConfig(env: Record<string, string | undefined> = process.env
   const logDir = (env.TUTOR_LOG_DIR ?? '').trim() || null
   return {
     provider,
-    geminiApiKey: (env.GEMINI_API_KEY ?? '').trim(),
+    geminiApiKey: secret(env, 'GEMINI_API_KEY'),
     geminiModel: (env.GEMINI_MODEL ?? '').trim() || DEFAULT_GEMINI_MODEL,
     geminiThinking: thinking,
-    anthropicApiKey: (env.ANTHROPIC_API_KEY ?? '').trim(),
+    anthropicApiKey: secret(env, 'ANTHROPIC_API_KEY'),
     anthropicModel: (env.ANTHROPIC_MODEL ?? '').trim() || DEFAULT_ANTHROPIC_MODEL,
     dailyLimit: int('TUTOR_DAILY_LIMIT', env.TUTOR_DAILY_LIMIT, 30, 1, 1000),
     timeoutMs: int('TUTOR_TIMEOUT_MS', env.TUTOR_TIMEOUT_MS, 60_000, 5_000, 300_000),
