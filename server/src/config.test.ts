@@ -73,6 +73,53 @@ describe('configuration', () => {
       rmSync(dir, { recursive: true, force: true })
     }
   })
+
+  it('reads the lists from the files their _FILE variables name', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'tutor-config-'))
+    try {
+      const allowed = join(dir, 'ALLOWED_USERS')
+      const parents = join(dir, 'PARENT_USERS')
+      // Line ends (LF and CRLF), commas and spaces all separate entries; a last line end is fine.
+      writeFileSync(allowed, 'Kid@Example.com\r\nparent+p@example.org, third@example.net  fourth@example.net\n')
+      writeFileSync(parents, 'Parent+P@example.org\n')
+      const c = loadConfig({ ALLOWED_USERS_FILE: allowed, PARENT_USERS_FILE: parents })
+      expect([...c.allowedUsers]).toEqual(['kid@example.com', 'parent+p@example.org', 'third@example.net', 'fourth@example.net'])
+      expect([...c.parentUsers]).toEqual(['parent+p@example.org'])
+      // The start-up line still has counts only.
+      const line = describeConfig(c)
+      expect(line).toContain('allowed=4')
+      expect(line).toContain('parents=1')
+      expect(line).not.toContain('@')
+      // The plain variable wins, and an empty one falls through to the file.
+      expect([...loadConfig({ ALLOWED_USERS: 'only@example.com', ALLOWED_USERS_FILE: allowed }).allowedUsers]).toEqual(['only@example.com'])
+      expect(loadConfig({ ALLOWED_USERS: ' ', ALLOWED_USERS_FILE: allowed }).allowedUsers.size).toBe(4)
+      expect(loadConfig({ PARENT_USERS: 'p@example.com', PARENT_USERS_FILE: join(dir, 'nope') }).parentUsers.has('p@example.com')).toBe(true)
+      // An empty file is an empty list: nobody gets in (fail closed).
+      const empty = join(dir, 'empty')
+      writeFileSync(empty, '\r\n')
+      expect(loadConfig({ ALLOWED_USERS_FILE: empty }).allowedUsers.size).toBe(0)
+      // A named file that can't be read stops start-up, naming the variable only.
+      const missing = join(dir, 'nope')
+      expect(() => loadConfig({ ALLOWED_USERS_FILE: missing })).toThrow(/^ALLOWED_USERS_FILE is set but that file cannot be read$/)
+      expect(() => loadConfig({ PARENT_USERS_FILE: missing })).toThrow(/^PARENT_USERS_FILE is set but that file cannot be read$/)
+      expect(() => loadConfig({ ALLOWED_USERS_FILE: dir })).toThrow(ConfigError)
+      // An unsafe entry in a file is refused without quoting it; one in the variable is quoted, as before.
+      const unsafe = join(dir, 'unsafe')
+      writeFileSync(unsafe, 'kid@example.com\nsecret-person@example.com;default\n')
+      let message = ''
+      try {
+        loadConfig({ ALLOWED_USERS_FILE: unsafe })
+      } catch (err) {
+        expect(err).toBeInstanceOf(ConfigError)
+        message = (err as Error).message
+      }
+      expect(message).toContain('ALLOWED_USERS_FILE')
+      expect(message).not.toContain('secret-person')
+      expect(() => loadConfig({ ALLOWED_USERS: 'bad;entry@example.com' })).toThrow(/ALLOWED_USERS entry "bad;entry@example.com"/)
+    } finally {
+      rmSync(dir, { recursive: true, force: true })
+    }
+  })
 })
 
 describe('daily limiter', () => {

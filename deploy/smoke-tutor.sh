@@ -14,7 +14,10 @@
 #     both locked down (non-root, read-only root file system, no capabilities), nginx finding the
 #     tutor by name (TUTOR_UPSTREAM) and passing it the account from another sign-in proxy's
 #     header; nginx starts before the tutor exists, and finds a re-created tutor at a new address
-#     without a restart
+#     without a restart. There the tutor runs as a uid the image doesn't know (10003), creates its
+#     log directory inside a mounted /data, and both containers read the lists from mounted files
+#     (ALLOWED_USERS_FILE, PARENT_USERS_FILE); and of everything a sign-in proxy adds to a
+#     request, the tutor receives the account under its one header and nothing else
 #
 # Usage: bash deploy/smoke-tutor.sh <tutor-image> [web-image]    (needs docker + curl; run by CI)
 #   docker build --platform linux/amd64 -f server/Dockerfile -t precalc-tutor . \
@@ -35,14 +38,15 @@ KID='kid@example.com'
 PARENT='parent@example.org'
 CIDS=()
 VOL="$NAME-$$"
+SECRETS=""
 
 cleanup() {
-  docker rm -f "$NAME-tutor" "$NAME-web" "$NAME-filler" >/dev/null 2>&1 || true
+  docker rm -f "$NAME-tutor" "$NAME-web" "$NAME-filler" "$NAME-echo" >/dev/null 2>&1 || true
   CIDS=()
   docker volume rm -f "$VOL" >/dev/null 2>&1 || true
   docker network rm "$NET" >/dev/null 2>&1 || true
 }
-trap cleanup EXIT
+trap 'cleanup; [ -z "$SECRETS" ] || rm -rf "$SECRETS"' EXIT
 
 fail() {
   echo "SMOKE FAIL: $*" >&2
@@ -205,11 +209,20 @@ if [ -n "$WEB" ]; then
   docker network create "$NET" >/dev/null
   LOCKED=(--read-only --tmpfs /tmp --cap-drop ALL --security-opt no-new-privileges)
   P='X-Auth-Request-Email'
-  # by_name [docker run options...] — starts the tutor on the network under the alias `tutor`
+  # The lists as mounted secrets, one file for both containers: CRLF and LF line ends.
+  SECRETS=$(mktemp -d)
+  printf '%s\r\nParent@Example.org\n' "$KID" > "$SECRETS/ALLOWED_USERS"
+  printf '%s\n' "$PARENT" > "$SECRETS/PARENT_USERS"
+  chmod 0755 "$SECRETS"
+  chmod 0644 "$SECRETS"/*
+  LISTS=(-e ALLOWED_USERS_FILE=/run/secrets/ALLOWED_USERS -v "$SECRETS/ALLOWED_USERS:/run/secrets/ALLOWED_USERS:ro")
+  # by_name <the /data mount> — starts the tutor on the network under the alias `tutor`, as a uid
+  # the image has no user for, with /data mounted over the image's own.
   by_name() {
-    docker run -d --name "$NAME-tutor" --network "$NET" --network-alias tutor --user 1000:1000 "${LOCKED[@]}" \
-      -e HOST=0.0.0.0 -e TUTOR_PROVIDER=mock -e TUTOR_MOCK_DELAY_MS=0 \
-      -e ALLOWED_USERS="$KID,$PARENT" -e PARENT_USERS="$PARENT" "$@" "$IMAGE"
+    docker run -d --name "$NAME-tutor" --network "$NET" --network-alias tutor --user 10003:10003 "${LOCKED[@]}" \
+      -e TUTOR_LOG_DIR=/data/tutor-log \
+      -e HOST=0.0.0.0 -e TUTOR_PROVIDER=mock -e TUTOR_MOCK_DELAY_MS=0 "${LISTS[@]}" \
+      -e PARENT_USERS_FILE=/run/secrets/PARENT_USERS -v "$SECRETS/PARENT_USERS:/run/secrets/PARENT_USERS:ro" "$@" "$IMAGE"
   }
   # wait_status <code> — until /api/tutor/status through nginx answers it (nginx re-resolves every 10 s)
   wait_status() {
@@ -222,7 +235,7 @@ if [ -n "$WEB" ]; then
   address() { docker inspect -f "{{(index .NetworkSettings.Networks \"$NET\").IPAddress}}" "$1"; }
 
   WEBCID=$(docker run -d --name "$NAME-web" --network "$NET" --user 10002:10002 "${LOCKED[@]}" -p "127.0.0.1:$PORT:8080" \
-    -e LISTEN_PORT=8080 -e AUTH_HEADER="$P" -e ALLOWED_USERS="$KID,$PARENT" -e TUTOR_UPSTREAM=tutor:3000 "$WEB")
+    -e LISTEN_PORT=8080 -e AUTH_HEADER="$P" "${LISTS[@]}" -e TUTOR_UPSTREAM=tutor:3000 "$WEB")
   CIDS=("$WEBCID")
   wait_health
   BODY=$(curl -s -H "$P: $KID" "$BASE/api/tutor/status")
@@ -230,17 +243,34 @@ if [ -n "$WEB" ]; then
   [ "$(code -H "$P: $KID" "$BASE/api/tutor/status")" = 503 ] || fail "before the tutor exists nginx should answer 503"
   pass "nginx starts before the tutor exists: 503 tutor offline"
 
-  CIDS+=("$(by_name)")
+  # A tmpfs owned by the uid stands in for a host directory that uid owns: empty, so the log
+  # directory inside it does not exist yet.
+  CIDS+=("$(by_name --tmpfs /data:uid=10003,gid=10003,mode=0750)")
   wait_status 200
   [[ "$(curl -fsS -H "$P: $KID" "$BASE/api/tutor/status")" == *'"isParent":false'* ]] || fail "the tutor should see the student's account"
   [[ "$(curl -fsS -H "$P: $PARENT" "$BASE/api/tutor/status")" == *'"isParent":true'* ]] || fail "the tutor should see the parent's account from $P"
   [[ "$(curl -fsS -H "$P: $KID" -H "$U: $PARENT" "$BASE/api/tutor/status")" == *'"isParent":false'* ]] \
     || fail "a client-sent $U must not reach the tutor: nginx sets it from $P"
   [ "$(code -H "$U: $KID" "$BASE/api/tutor/status")" = 403 ] || fail "with AUTH_HEADER=$P nginx must not trust $U"
-  [ "$(docker exec "${CIDS[1]}" id -u)" = 1000 ] || fail "the tutor should run as uid 1000"
   OUT=$(curl -s -N -H "$P: $KID" -H 'Content-Type: application/json' -d "$(ask_body 'by name?')" "$BASE/api/tutor/ask")
   grep -q '^data: {"type":"done"' <<<"$OUT" || fail "a complete answer should arrive through nginx by name; got: $OUT"
   pass "by name: status and an answer through nginx; the tutor gets the account from $P only"
+
+  [ "$(docker exec "${CIDS[1]}" id -u)" = 10003 ] || fail "the tutor should run as the uid it was given"
+  [[ "$(curl -fsS -H "$P: $KID" "$BASE/api/tutor/status")" == *'"logging":"file"'* ]] || fail "the tutor should log to TUTOR_LOG_DIR"
+  docker exec "${CIDS[1]}" sh -c 'cat /data/tutor-log/tutor-*.jsonl' | grep -q '"question":"by name?"' \
+    || fail "the tutor should have created /data/tutor-log in the mounted /data and logged the question there"
+  HEALTH=starting
+  for _ in $(seq 1 60); do
+    HEALTH=$(docker inspect -f '{{.State.Health.Status}}' "${CIDS[1]}")
+    [ "$HEALTH" = healthy ] && break
+    sleep 1
+  done
+  [ "$HEALTH" = healthy ] || fail "the tutor's HEALTHCHECK should turn healthy as uid 10003 (got $HEALTH)"
+  if docker logs "${CIDS[1]}" 2>&1 | grep -E '[A-Za-z0-9]@[A-Za-z0-9]'; then
+    fail "the tutor's log must not show an address from the list files"
+  fi
+  pass "tutor as uid 10003, read-only: healthy, lists from files, log directory created in the mounted /data"
 
   OLD=$(address "$NAME-tutor")
   docker rm -f "$NAME-tutor" >/dev/null
@@ -248,14 +278,37 @@ if [ -n "$WEB" ]; then
   wait_status 503
   [ "$(curl -s -H "$P: $KID" "$BASE/api/tutor/status")" = '{"error":"tutor offline"}' ] || fail "with the tutor gone nginx should answer tutor offline"
   [ "$(code "$BASE/healthz")" = 200 ] || fail "nginx should stay up without the tutor"
+
+  # What nginx hands the tutor. In the tutor's place: a server that answers with the request
+  # headers it received. The request carries everything a sign-in proxy (or a client) might add.
+  docker run -d --name "$NAME-echo" --network "$NET" --network-alias tutor --user 10003:10003 "${LOCKED[@]}" --entrypoint node "$IMAGE" \
+    -e "require('http').createServer((q, s) => s.end(JSON.stringify(q.headers))).listen(3000)" >/dev/null
+  wait_status 200
+  SEEN=$(curl -fsS -H "$P: $KID" -H "$U: $PARENT" -H 'Authorization: Bearer t' -H 'Cookie: _oauth2_proxy=c' \
+    -H 'X-Auth-Request-User: u' -H 'X-Auth-Request-Groups: g' -H 'X-Auth-Request-Preferred-Username: n' \
+    -H 'X-Auth-Request-Access-Token: t' -H 'X-Forwarded-Email: e@example.com' -H 'X-Forwarded-User: u' \
+    -H 'X-Forwarded-Groups: g' -H 'X-Forwarded-Access-Token: t' -H 'X-MS-CLIENT-PRINCIPAL: c' \
+    -H 'X-MS-TOKEN-GOOGLE-ID-TOKEN: t' "$BASE/api/tutor/status")
+  [[ "$SEEN" == *"\"x-ms-client-principal-name\":\"$KID\""* ]] || fail "the tutor should receive the account from $P under $U; it received: $SEEN"
+  for h in authorization cookie x-auth-request-email x-auth-request-user x-auth-request-groups x-auth-request-preferred-username \
+           x-auth-request-access-token x-forwarded-email x-forwarded-user x-forwarded-groups x-forwarded-access-token \
+           x-ms-client-principal x-ms-token-google-id-token; do
+    [[ "$SEEN" != *"\"$h\":"* ]] || fail "nginx must not pass $h on to the tutor; it received: $SEEN"
+  done
+  pass "the tutor receives the account under $U and none of the sign-in proxy's other headers"
+  docker rm -f "$NAME-echo" >/dev/null
   # A container that takes the old address, so the new tutor is certain to get another one.
   docker run -d --name "$NAME-filler" --network "$NET" --entrypoint sleep "$IMAGE" 300 >/dev/null
-  CIDS+=("$(by_name)")
+  # This time /data is a new named volume, which Docker fills from the image's /data, owner and
+  # mode included: the tutor, still uid 10003, has to be able to write its log there too.
+  CIDS+=("$(by_name -v "$VOL:/data")")
   NEW=$(address "$NAME-tutor")
   [ "$NEW" != "$OLD" ] || fail "the re-created tutor should have a new address for this check (still $OLD)"
   wait_status 200
   [ "$(docker inspect -f '{{.RestartCount}}' "$WEBCID")" = 0 ] || fail "nginx should not have restarted"
   pass "tutor re-created at a new address ($OLD -> $NEW): found again without restarting nginx"
+  [[ "$(curl -fsS -H "$P: $KID" "$BASE/api/tutor/status")" == *'"logging":"file"'* ]] || fail "the tutor should log to a new named volume at /data"
+  pass "tutor as uid 10003 on a new named volume at /data: file log"
 fi
 
 echo "SMOKE OK"

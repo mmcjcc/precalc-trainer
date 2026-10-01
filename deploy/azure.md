@@ -59,15 +59,17 @@ curl -si -H 'X-MS-CLIENT-PRINCIPAL-NAME: kid@example.com' http://localhost:8080/
 
 The same image also runs on a plain Docker host behind another sign-in proxy. Nothing in it is
 written to after the build (the start-up hooks write to `/tmp/precalc`), so it can run as any
-non-root user on a read-only root file system with a tmpfs on `/tmp`. Five settings cover the
+non-root user on a read-only root file system with a tmpfs on `/tmp`. A few settings cover the
 differences, and Azure leaves all of them unset: `LISTEN_PORT` (default 80), `AUTH_HEADER` (the
 header the sign-in proxy puts the account in; default `X-MS-CLIENT-PRINCIPAL-NAME`),
 `SIGN_OUT_URL` (where `/.auth/logout` should redirect when Container Apps isn't there to answer
 it), `TUTOR_UPSTREAM` (default `127.0.0.1:3000`; a name such as `tutor:3000` when the tutor is its
-own container on a shared network) and `APP_PIN_FILE` / `APP_PIN_HASH_FILE` (the PIN as a mounted
-secret). Each is documented at the top of its hook in `docker/`, and the `Dockerfile` header has
-the full `docker run` line. The tutor image takes `HOST=0.0.0.0`, `TUTOR_LOG_DIR` and
-`GEMINI_API_KEY_FILE` / `ANTHROPIC_API_KEY_FILE` the same way (`server/Dockerfile`).
+own container on a shared network), and `ALLOWED_USERS_FILE`, `APP_PIN_FILE` / `APP_PIN_HASH_FILE`
+(the list and the PIN as mounted secret files, for a host whose settings are public). Each is
+documented at the top of its hook in `docker/`, and the `Dockerfile` header has the full
+`docker run` line. The tutor image takes `HOST=0.0.0.0`, `TUTOR_LOG_DIR`, `ALLOWED_USERS_FILE` /
+`PARENT_USERS_FILE` and `GEMINI_API_KEY_FILE` / `ANTHROPIC_API_KEY_FILE` the same way, and runs as
+whatever uid it is given (`server/Dockerfile`).
 
 ## 2. Set it up on Azure
 
