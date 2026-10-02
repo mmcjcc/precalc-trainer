@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { generateProblem } from '@/content'
 import { gradeLightAnswer } from '@/content/modules/electrons/grade'
+import { configurationMistakes, gradeConfiguration } from '@/engine'
 import { gradeFinalAnswer } from '@/problem/inequality'
 import { encodeSlotStep } from '@/problem/evenOdd'
 import {
@@ -9,6 +10,7 @@ import {
   verdictFromFunction,
   verdictFromSetAnswer,
   verdictFromStep,
+  verdictFromEconfig,
   verdictFromTransform,
 } from '@/problem/tutorContext'
 import type { Attempt, AttemptStep } from '@/store'
@@ -293,6 +295,53 @@ describe('buildTutorContext', () => {
     expect(rateCtx.answer).toBe(rate.answer.rateText)
     expect(rateCtx.verdict?.mistake?.id).toBe('rate_no_division')
     expect(rateCtx.verdict?.mistake?.lesson).toBeTruthy()
+  })
+
+  it('describes an electron configuration, including a named ec_ mistake', () => {
+    let instance = generateProblem('electrons', 'ec.shorthand', 1)
+    let wrongText = ''
+    for (let seed = 1; seed <= 80; seed++) {
+      instance = generateProblem('electrons', 'ec.shorthand', seed)
+      if (instance.answer.type !== 'electrons' || instance.answer.question.kind !== 'econfig') continue
+      const q = instance.answer.question
+      const cand = configurationMistakes(q.species, q.form ?? 'shorthand')?.find((c) => c.kind === 'filling_order')
+      if (!cand) continue
+      wrongText = cand.text
+      break
+    }
+    if (instance.answer.type !== 'electrons' || instance.answer.question.kind !== 'econfig' || !wrongText) throw new Error('expected a shorthand problem')
+    const q = instance.answer.question
+    const grade = gradeConfiguration(q.species, wrongText, { form: q.form })
+    expect(grade.verdict).toBe('mistake')
+    if (grade.verdict !== 'mistake') return
+    const ctx = buildTutorContext(instance, attempt('ec-1', { final: { ecText: wrongText } }), verdictFromEconfig([grade]), false)
+    expect(ctx.subject).toBe('chemistry')
+    expect(ctx.kind).toBe('electrons')
+    expect(ctx.moduleId).toBe('electrons')
+    expect(ctx.title).toBe('Noble-gas shorthand')
+    expect(ctx.statement).toContain(instance.answer.prompt)
+    expect(ctx.statement).toContain(instance.answer.context)
+    expect(ctx.work).toEqual([`answer: ${wrongText}`])
+    expect(ctx.canonical).toEqual(instance.answer.reveal)
+    expect(ctx.answer).toBe(instance.answer.expectedDisplay)
+    expect(ctx.verdict?.status).toBe('wrong')
+    expect(ctx.verdict?.mistake?.id).toBe('ec_filling_order')
+    expect(ctx.verdict?.mistake?.title).toBeTruthy()
+    expect(ctx.verdict?.mistake?.lesson).toBeTruthy()
+    expect(ctx.verdict?.mistake?.witness).toBe(grade.witness)
+
+    const invalid = verdictFromEconfig([{ verdict: 'invalid', message: 'Write how many electrons are in 2s, like 2s2.' }])
+    expect(invalid?.status).toBe('parse_error')
+    expect(invalid?.mistake).toBeUndefined()
+
+    const diagram = generateProblem('electrons', 'ec.diagram', 1)
+    if (diagram.answer.type !== 'electrons' || diagram.answer.question.kind !== 'econfig') throw new Error('expected a diagram')
+    const drawn = buildTutorContext(diagram, attempt('ec-2', { final: { ecText: '2', ecDiagram: 'uu u u' } }), null, false)
+    expect(drawn.statement).toContain(diagram.answer.question.subshell)
+    expect(drawn.work).toEqual(['answer: 2', 'diagram: uu u u'])
+    expect(drawn.answer).toBe(diagram.answer.expectedDisplay)
+    expect(drawn.canonical).toEqual(diagram.answer.reveal)
+    expect(drawn.instructions).toContain('unpaired')
   })
 
   it('never adds a name, email, or account field', () => {

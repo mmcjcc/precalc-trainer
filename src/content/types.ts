@@ -162,8 +162,27 @@ export interface ElectronsOrderQuestion {
   order: string[]
 }
 
-/** Light now; an electron-configuration engine should add another kind here, same module. */
-export type ElectronsQuestion = ElectronsLightQuestion | ElectronsOrderQuestion
+/**
+ * An electron-configuration question (CK-12 ch. 5.4 onward), graded by the econfig engine.
+ * `species` is the problem; nothing here is a hand-typed configuration.
+ */
+export interface ElectronsEconfigQuestion {
+  kind: 'econfig'
+  /** `ion` asks for the configuration of an ion, in `form`. */
+  ask: 'full' | 'shorthand' | 'ion' | 'identify' | 'valence' | 'diagram'
+  species: { z: number; charge: number }
+  /** Form she must write, or the form the configuration is shown in (identify). */
+  form?: 'full' | 'shorthand'
+  /** Named subshell for a diagram, e.g. "3d". */
+  subshell?: string
+  /** KaTeX of the species, or of the configuration when she has to name it. */
+  latex: string
+  /** The same in plain display text, for the accessible name and the tutor. */
+  display: string
+}
+
+/** Light, spectrum order, and electron configurations. Same module, different question kinds. */
+export type ElectronsQuestion = ElectronsLightQuestion | ElectronsOrderQuestion | ElectronsEconfigQuestion
 
 /** One element as a periodic-table lookup shown beside an atomic-structure question. */
 export interface AtomPeriodicEntry {
@@ -268,8 +287,8 @@ export type AnswerSpec =
       /**
        * Electrons and light (chemistry, CK-12 ch. 5). Calculations are sig-fig muldiv tasks graded
        * by the module (`gradeLightAnswer`): correct sig-fig answer first, then the lt_ mistakes,
-       * then the sig-fig grader's own result. Spectrum order is `gradeSpectrumOrder`. A later
-       * electron-configuration engine should add a `question.kind`, not a new module.
+       * then the sig-fig grader's own result. Spectrum order is `gradeSpectrumOrder`.
+       * Electron configurations (`question.kind === 'econfig'`) are graded by the econfig engine.
        */
       type: 'electrons'
       question: ElectronsQuestion

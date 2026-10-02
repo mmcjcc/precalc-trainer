@@ -214,8 +214,8 @@ export type ErrorPatternId =
   | 'at_assumed_even_split'
   | 'at_abundance_swapped'
   | 'at_abundance_sum'
-  // electrons and light (content/modules/electrons; chemistry ch. 5). Graded in the module, not the engine.
-  // Electron-configuration mistakes from a later engine should use a different prefix.
+  // electrons and light (content/modules/electrons; chemistry ch. 5). Light mistakes are graded in the
+  // module. Electron-configuration mistakes are one id per EconfigMistakeKind, graded by engine/econfig.
   | 'lt_no_conversion'
   | 'lt_conversion_backwards'
   | 'lt_multiplied'
@@ -224,6 +224,23 @@ export type ErrorPatternId =
   | 'lt_energy_no_c'
   | 'lt_wrong_unit'
   | 'lt_order_reversed'
+  | 'ec_electron_count'
+  | 'ec_subshell_overfilled'
+  | 'ec_subshell_nonexistent'
+  | 'ec_filling_order'
+  | 'ec_exception_missed'
+  | 'ec_exception_misapplied'
+  | 'ec_ion_charge_ignored'
+  | 'ec_ion_wrong_direction'
+  | 'ec_ion_removed_from_3d'
+  | 'ec_ion_wrong_number'
+  | 'ec_core_wrong'
+  | 'ec_core_not_earlier'
+  | 'ec_valence_total_electrons'
+  | 'ec_valence_last_subshell'
+  | 'ec_hund_broken'
+  | 'ec_pauli_broken'
+  | 'ec_unpaired_from_wrong_diagram'
   // reading a graph (content/modules/graphFeatures; precalculus)
   | 'gf_union_between_points'
   | 'gf_y_for_intervals'

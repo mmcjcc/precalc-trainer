@@ -102,6 +102,13 @@ export interface AttemptFinal {
    * reload. Light calculations reuse sfText / sfPower.
    */
   ltOrder?: string[]
+  /**
+   * Electron configurations: the configuration, element, valence count, or unpaired count exactly as
+   * typed. Restored after a reload.
+   */
+  ecText?: string
+  /** Electron configurations: her orbital diagram in the engine's text form (`ud u u`). */
+  ecDiagram?: string
 }
 
 export interface Attempt {

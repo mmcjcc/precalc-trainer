@@ -11,6 +11,7 @@ import { RuleCardView } from '@/components/HintPanel'
 import { SigFigCorrect, SigFigExplanation, SigFigRejection } from '@/components/SigFigFeedback'
 import { SigFigNumeralInput } from '@/components/SigFigNumeralInput'
 import { useBreakpoint } from '@/components/useBreakpoint'
+import { EconfigBody } from './EconfigPanel'
 import { ProblemFrame } from './ProblemFrame'
 import { recordOrderGrade, recordSigFigGrade } from './record'
 import type { FlowProps } from './types'
@@ -121,11 +122,13 @@ function GivenValue({ given }: { given: SigFigQuantity }) {
 
 /**
  * Electrons and light. Calculations reuse the sig-fig numeral input; ordering is a tap sequence
- * with an undo. Electron configurations will be another question kind on this same flow later.
+ * with an undo. Electron configurations (aufbau, diagrams, shorthand, valence, ions) are another
+ * question kind on this same flow.
  */
 export function ElectronFlow(props: FlowProps) {
   const answer = props.instance.answer
   if (answer.type !== 'electrons') return <p className="text-navy">This problem has nothing to work with — pick another from the module page.</p>
+  if (answer.question.kind === 'econfig') return <EconfigBody {...props} answer={answer} />
   return <ElectronBody {...props} answer={answer} />
 }
 

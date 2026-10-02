@@ -1,8 +1,9 @@
 import { FN_PATTERN } from '@/content/modules/domainRange/patterns'
+import { EC_PATTERN } from '@/content/modules/electrons/patterns'
 import { TR_PATTERN } from '@/content/modules/transformations/patterns'
 import { useStore } from '@/store'
 import type { FieldResult, FinalAnswerGrade } from '@/problem/inequality'
-import type { DescriptionGrade, FunctionGrade, TransformGrade } from '@/engine'
+import type { DescriptionGrade, EconfigGrade, FunctionGrade, TransformGrade } from '@/engine'
 import type { AtomGrade, SigFigGrade, SigFigTapGrade } from '@/shared/types'
 
 /**
@@ -147,6 +148,29 @@ export function recordDecomposition(result: { ok: boolean; reason?: string }): v
 export function recordOrderGrade(grade: { status: 'correct' | 'wrong' | 'incomplete'; pattern?: { id: string } }): void {
   if (grade.status === 'incomplete') return
   useStore.getState().recordFinalAnswer({ correct: grade.status === 'correct', pattern: grade.pattern?.id, via: 'text' })
+}
+
+/**
+ * Log an electron-configuration check. A named mistake is stored under its ec_ id. Unreadable input,
+ * or an answer in the wrong form, is not an attempt: nothing is logged. Two-part diagram questions
+ * pass both grades; one invalid part drops the whole check, and a fully correct check is one record.
+ */
+export function recordEconfigGrades(grades: readonly EconfigGrade[]): void {
+  if (grades.length === 0) return
+  if (grades.some((g) => g.verdict === 'invalid' || g.verdict === 'unsupported')) return
+  const s = useStore.getState()
+  const bad = grades.filter((g) => g.verdict !== 'correct')
+  if (bad.length === 0) {
+    s.recordFinalAnswer({ correct: true, via: 'text' })
+    return
+  }
+  for (const g of bad) {
+    s.recordFinalAnswer({
+      correct: false,
+      pattern: g.verdict === 'mistake' ? EC_PATTERN[g.mistake] : undefined,
+      via: 'text',
+    })
+  }
 }
 
 export function recordAtomGrade(grade: AtomGrade): void {

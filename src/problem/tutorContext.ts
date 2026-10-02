@@ -3,10 +3,11 @@
  * Field sources: docs/progress/tutor-core.md §6. Never her name, email, or account.
  */
 import { FN_PATTERN } from '@/content/modules/domainRange/patterns'
+import { EC_PATTERN } from '@/content/modules/electrons/patterns'
 import { TR_PATTERN } from '@/content/modules/transformations/patterns'
 import type { ProblemInstance } from '@/content/types'
 import { ERROR_PATTERNS } from '@/engine'
-import type { DescriptionGrade, FunctionGrade, TransformGrade } from '@/engine'
+import type { DescriptionGrade, EconfigGrade, FunctionGrade, TransformGrade } from '@/engine'
 import { getModule } from '@/content/registry'
 import type { FinalAnswerGrade } from '@/problem/inequality'
 import { decodeSlotStep } from '@/problem/evenOdd'
@@ -84,6 +85,35 @@ export function verdictFromFunction(grade: FunctionGrade): TutorVerdict | null {
     lesson: clip(info.lesson, TUTOR_LIMITS.field),
     witness: clip(grade.witness, TUTOR_LIMITS.field),
   })
+}
+
+/**
+ * Electron-configuration grades (one, or the diagram and the unpaired count together).
+ * Unreadable input and the wrong written form are a parse error, not a wrong answer.
+ * A named mistake carries the catalog lesson plus the engine's sentence about her answer.
+ */
+export function verdictFromEconfig(grades: readonly EconfigGrade[]): TutorVerdict | null {
+  if (grades.length === 0) return null
+  const invalid = grades.find((g) => g.verdict === 'invalid' || g.verdict === 'unsupported')
+  if (invalid && (invalid.verdict === 'invalid' || invalid.verdict === 'unsupported')) return withMessage('parse_error', invalid.message)
+  const mistake = grades.find((g) => g.verdict === 'mistake')
+  if (mistake && mistake.verdict === 'mistake') {
+    const id = EC_PATTERN[mistake.mistake]
+    const info = ERROR_PATTERNS[id]
+    return withMessage('wrong', mistake.witness, undefined, {
+      id,
+      title: clip(info.title, 200),
+      lesson: clip(info.lesson, TUTOR_LIMITS.field),
+      witness: clip(mistake.witness, TUTOR_LIMITS.field),
+    })
+  }
+  const wrong = grades.find((g) => g.verdict === 'wrong')
+  if (wrong && wrong.verdict === 'wrong') return withMessage('wrong', wrong.message)
+  if (grades.every((g) => g.verdict === 'correct')) {
+    const message = grades.map((g) => (g.verdict === 'correct' ? g.message : '')).filter(Boolean).join(' ')
+    return withMessage('correct', message)
+  }
+  return null
 }
 
 /** Spectrum order, or any light grade already shaped like a sig-fig grade. Incomplete taps are not a verdict. */
@@ -198,6 +228,10 @@ function workOf(instance: ProblemInstance, attempt: Attempt | null): string[] {
   if (instance.answer.type === 'electrons' && instance.answer.question.kind === 'order' && final.ltOrder && final.ltOrder.length > 0) {
     const labels = new Map(instance.answer.question.items.map((item) => [item.id, item.label]))
     pushLine(lines, 'order', final.ltOrder.map((id) => labels.get(id) ?? id).join(' → '))
+  }
+  if (instance.answer.type === 'electrons' && instance.answer.question.kind === 'econfig') {
+    pushLine(lines, 'answer', final.ecText)
+    pushLine(lines, 'diagram', final.ecDiagram)
   }
   pushRecord(lines, final.gfEntries, GF_WORK)
   pushRecord(lines, final.fnEntries, FN_WORK)

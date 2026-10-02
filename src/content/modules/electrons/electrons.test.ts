@@ -3,7 +3,9 @@ import { generateProblem, getModule, MODULES } from '@/content'
 import type { AnswerSpec, ElectronsLightQuestion, ElectronsOrderQuestion, ProblemInstance } from '@/content/types'
 import { ERROR_PATTERNS, evaluateSigFigTask, gradeSigFigAnswer, parseSigFigNumeral, validateSigFigTask } from '@/engine'
 import type { ErrorPatternId, SigFigTask } from '@/shared/types'
+import { ECONFIG_TEMPLATE_IDS } from './econfig'
 import { gradeLightAnswer, gradeSpectrumOrder, lightMistakeAnswers, LT_MISTAKE_IDS, roundEvaluation } from './grade'
+import { EC_RULES } from './rules'
 
 const TEMPLATES = ['light.freq', 'light.wavelength', 'light.energy', 'light.spectrum'] as const
 const CALC = ['light.freq', 'light.wavelength', 'light.energy'] as const
@@ -44,9 +46,10 @@ describe('electrons module registration', () => {
     const m = getModule('electrons')
     expect(m.subject).toBe('Chemistry')
     expect(m.title).toBe('Electrons and light')
+    expect(m.blurb.toLowerCase()).toContain('configuration')
     const ids = MODULES.map((x) => x.id)
     expect(ids.indexOf('electrons')).toBe(ids.indexOf('atoms') + 1)
-    expect(m.templates.map((t) => t.id)).toEqual(TEMPLATES)
+    expect(m.templates.map((t) => t.id)).toEqual([...TEMPLATES, ...ECONFIG_TEMPLATE_IDS])
     expect(m.progress(generateProblem('electrons', 'light.freq', 1), null, false)).toMatchObject({ stage: 0, total: 1 })
     expect(m.nextStep(generateProblem('electrons', 'light.freq', 1), null, false)).toBeNull()
   })
@@ -65,6 +68,7 @@ describe('electrons module registration', () => {
     ]) {
       expect(titles).toContain(title)
     }
+    for (const card of EC_RULES) expect(titles).toContain(card.title)
     const hz = cards.filter((c) => c.body.includes('Hz, which is s⁻¹') || (c.example ?? '').includes('Hz, which is s⁻¹'))
     expect(hz).toHaveLength(1)
   })
@@ -106,7 +110,7 @@ describe.each(TEMPLATES)('%s over 300 seeds', (templateId) => {
         continue
       }
 
-      const q = a.question
+      const q = lightOf(a)
       expect(validateSigFigTask(q.task)).toEqual([])
       const ev = evaluateSigFigTask(q.task)
       expect(ev.tie).toBe(false)
