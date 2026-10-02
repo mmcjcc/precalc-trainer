@@ -19,8 +19,22 @@ env:
   LISTEN_PORT: "8080"
   AUTH_HEADER: "X-Auth-Request-Email"
   SIGN_OUT_URL: "https://auth.apps.mmcjcc.com/oauth2/sign_out?rd=https%3A%2F%2Fmath.apps.mmcjcc.com%2F"
-  TUTOR_UPSTREAM: "tutor:3000"         # no tutor container yet: /api/ answers 503 "tutor offline" until there is one
+  TUTOR_UPSTREAM: "tutor:3000"         # the sidecar below; /api/ answers 503 "tutor offline" while it is down
 
 # Names only. Jason sets the value on docker01; the image reads the file named by ALLOWED_USERS_FILE.
 # Without it every page answers 403 (docker/25-allowlist.sh).
 secrets: [ALLOWED_USERS]
+
+# The AI tutor (server/): a second container only this app can reach, with its own /data for the
+# parent-only question log and its own secret files. It re-checks the allowlist itself, so it lists
+# ALLOWED_USERS too. It cannot answer a question until GEMINI_API_KEY is set on docker01.
+sidecars:
+  - name: tutor
+    image: ghcr.io/mmcjcc/precalc-tutor  # pushed by the same workflow as :<commit sha>
+    uid: 10003
+    env:
+      HOST: "0.0.0.0"                    # the two containers do not share a network namespace
+      TUTOR_LOG_DIR: "/data/tutor-log"
+    resources: {cpu: 0.5, memory: 256m}
+    volumes: [data]
+    secrets: [ALLOWED_USERS, PARENT_USERS, GEMINI_API_KEY]
