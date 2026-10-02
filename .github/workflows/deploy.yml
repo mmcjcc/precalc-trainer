@@ -91,6 +91,9 @@ jobs:
             ${{ env.IMAGE }}:latest
           build-args: |
             SOURCE_URL=https://github.com/${{ github.repository }}
+          # The home platform (app-broker) deploys by commit and checks that the image says which commit it is.
+          labels: |
+            org.opencontainers.image.revision=${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -107,6 +110,9 @@ jobs:
             ${{ env.TUTOR_IMAGE }}:latest
           build-args: |
             SOURCE_URL=https://github.com/${{ github.repository }}
+          # The home platform (app-broker) deploys by commit and checks that the image says which commit it is.
+          labels: |
+            org.opencontainers.image.revision=${{ github.sha }}
           cache-from: type=gha,scope=tutor
           cache-to: type=gha,mode=max,scope=tutor
 

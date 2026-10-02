@@ -10,6 +10,16 @@
 # Azure it stays on 127.0.0.1, reachable only from nginx in the same replica):
 #   docker run --rm -p 3000:3000 -e HOST=0.0.0.0 -e TUTOR_PROVIDER=mock -e ALLOWED_USERS=kid@example.com precalc-tutor
 #   curl -s -H 'X-MS-CLIENT-PRINCIPAL-NAME: kid@example.com' http://localhost:3000/api/tutor/status
+# On a plain Docker host it is a second container on a network it shares with the web image only
+# (no published port), found by name: the web container gets TUTOR_UPSTREAM=tutor:3000. It needs
+# HOST=0.0.0.0 there, and nothing writable but the log directory, so it can run locked down and
+# as any uid (it creates TUTOR_LOG_DIR itself when the mounted /data doesn't have it yet):
+#   docker run --rm --network <net> --network-alias tutor --user 10003:10003 --read-only \
+#     --cap-drop ALL --security-opt no-new-privileges -e HOST=0.0.0.0 \
+#     -e TUTOR_LOG_DIR=/data/tutor-log -v <a directory or volume that uid can write>:/data \
+#     -e ALLOWED_USERS_FILE=/run/secrets/ALLOWED_USERS -v <list file>:/run/secrets/ALLOWED_USERS:ro \
+#     -e GEMINI_API_KEY_FILE=/run/secrets/GEMINI_API_KEY -v <key file>:/run/secrets/GEMINI_API_KEY:ro \
+#     precalc-tutor
 # Configuration (environment): server/src/config.ts. Contract checks: deploy/smoke-tutor.sh.
 
 # ---- build stage --------------------------------------------------------------------------
@@ -37,7 +47,12 @@ ENV NODE_ENV=production \
 WORKDIR /app
 COPY --from=build /app/server/dist/tutor.mjs /app/tutor.mjs
 # The monthly JSONL logs go to TUTOR_LOG_DIR; on Azure that is an Azure Files mount owned by uid 1000.
-RUN mkdir -p /data/tutor-log && chown node:node /data/tutor-log
+# Both directories are open like /tmp (1777) for one case: Docker fills a new, empty named volume
+# from the image directory it is mounted over, owner and mode included, replacing whatever the
+# volume was given. A volume at /data would come up root-owned and a tutor started as any other
+# uid could not write its log; this way it can. A mounted host directory or share keeps its own
+# owner, and nothing but the tutor runs in the container.
+RUN mkdir -p /data/tutor-log && chown node:node /data/tutor-log && chmod 1777 /data /data/tutor-log
 USER node
 
 EXPOSE 3000

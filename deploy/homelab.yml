@@ -1,0 +1,26 @@
+# deploy/homelab.yml: what this app asks of Jason's home platform (app-broker contract 2).
+# Rules: run "ssh homelab contract" and read section 3. Check with: ssh homelab plan math < deploy/homelab.yml
+# The schema is closed: an unknown key is rejected. LF line ends only. One document, no anchors, aliases or tags.
+# Never put here: a tag or digest, secret values, emails or groups, Traefik labels, host ports, compose snippets.
+contract: 2
+app: math                              # https://math.apps.mmcjcc.com
+kind: container
+image: ghcr.io/mmcjcc/precalc-trainer  # pushed by .github/workflows/deploy.yml as :<commit sha>
+uid: 10002                             # the image runs as any uid; the platform starts it as this one
+port: 8080
+health: /healthz
+exposure: public                       # reachable from the internet, only after the platform's sign-in
+auth: {profile: family}                # who may sign in is Jason's list on the platform, not this repo's
+resources: {cpu: 0.5, memory: 128m}
+
+# The image's defaults are Azure's (port 80, Azure's identity header). These are the home platform's values;
+# each is explained at the top of its start-up hook in docker/.
+env:
+  LISTEN_PORT: "8080"
+  AUTH_HEADER: "X-Auth-Request-Email"
+  SIGN_OUT_URL: "https://auth.apps.mmcjcc.com/oauth2/sign_out?rd=https%3A%2F%2Fmath.apps.mmcjcc.com%2F"
+  TUTOR_UPSTREAM: "tutor:3000"         # no tutor container yet: /api/ answers 503 "tutor offline" until there is one
+
+# Names only. Jason sets the value on docker01; the image reads the file named by ALLOWED_USERS_FILE.
+# Without it every page answers 403 (docker/25-allowlist.sh).
+secrets: [ALLOWED_USERS]

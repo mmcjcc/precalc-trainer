@@ -3,6 +3,10 @@
  * to the signed-in account's email and strips it from outside requests; nginx has already checked it
  * against ALLOWED_USERS. The sidecar checks again (defence in depth): a request that reaches it
  * without a listed account is refused, even if nginx were misconfigured or AUTH_ALLOWLIST=off.
+ *
+ * Behind another sign-in proxy the account arrives at nginx under that proxy's header (AUTH_HEADER,
+ * docker/25-allowlist.sh). nginx.conf always passes it on under this one name, replacing whatever
+ * the client sent, so the sidecar reads the same header on every host.
  */
 import type { IncomingMessage } from 'node:http'
 
