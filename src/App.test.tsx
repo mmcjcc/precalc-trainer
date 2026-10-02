@@ -3,7 +3,7 @@ import { fireEvent, render, screen, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest'
 import '@/content'
-import { MODULES } from '@/content'
+import { getCourse, MODULES, modulesInUnit } from '@/content'
 import { ERROR_PATTERNS } from '@/engine'
 import { CALC_LABEL, CHIP_LABEL } from '@/shared/types'
 import { resetStoreForTests, useStore, type Ev } from '@/store'
@@ -38,12 +38,23 @@ afterEach(() => {
 describe('App routes', () => {
   it('renders Home with module cards, weak-spot practice and the current nav item marked', () => {
     renderAt('/')
-    expect(screen.getByRole('heading', { level: 1, name: 'Precalc Trainer' })).toBeTruthy()
+    expect(screen.getByRole('heading', { level: 1, name: 'Math & Science Trainer' })).toBeTruthy()
+    expect(screen.getByRole('link', { name: 'Math & Science Trainer' })).toBeTruthy()
     expect(screen.getByRole('button', { name: 'Practice weak spots' })).toBeTruthy()
-    expect(screen.getAllByRole('button', { name: 'Random problem' })).toHaveLength(MODULES.length)
+    const unit1 = getCourse('precalc')!.units[0]!
+    expect(screen.getAllByRole('button', { name: 'Random problem' })).toHaveLength(modulesInUnit(unit1).length)
     const nav = screen.getByRole('navigation', { name: 'Main' })
     expect(within(nav).getByRole('link', { name: 'Home' }).getAttribute('aria-current')).toBe('page')
     expect(within(nav).getByRole('link', { name: 'Progress' }).getAttribute('aria-current')).toBeNull()
+  })
+
+  it('marks Home current on a class deep link', () => {
+    renderAt('/c/chemistry/ch5')
+    const nav = screen.getByRole('navigation', { name: 'Main' })
+    expect(within(nav).getByRole('link', { name: 'Home' }).getAttribute('aria-current')).toBe('page')
+    expect(within(nav).getByRole('link', { name: 'Progress' }).getAttribute('aria-current')).toBeNull()
+    expect(screen.getByRole('tab', { name: 'Chemistry', selected: true })).toBeTruthy()
+    expect(screen.getByRole('button', { name: /Chapter 5/, pressed: true })).toBeTruthy()
   })
 
   it('shows a Continue card that links back to the unfinished problem', () => {

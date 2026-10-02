@@ -61,7 +61,7 @@ export function PinPage({ expected }: Props) {
   return (
     <main id="main" className="flex flex-1 items-center justify-center px-4 py-10">
       <div className="w-full max-w-sm rounded-2xl border border-navy-100 bg-white p-6 shadow-sm">
-        <h1 className="text-2xl font-semibold text-navy">Precalc Trainer</h1>
+        <h1 className="text-2xl font-semibold text-navy">Math & Science Trainer</h1>
         <p className="mt-1 text-sm text-navy/80">
           Enter the family PIN. This device remembers it, so you only need to do this once.
         </p>

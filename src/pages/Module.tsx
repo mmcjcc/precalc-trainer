@@ -2,6 +2,7 @@ import { useId, useMemo, useState } from 'react'
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
 import { MasteryBar } from '@/components/MasteryBar'
 import {
+  courseOfModule,
   getModule,
   hasModule,
   randomSeed,
@@ -131,14 +132,17 @@ function ModuleView({ module }: { module: ModuleDef }) {
   const skills = useMemo(() => module.templates.map((t) => t.id), [module])
   const mm = useModuleMastery(skills)
   const isDrill = module.id === 'propertiesDrill'
+  const placed = courseOfModule(module.id)
+  const backTo = placed ? `/c/${placed.course.id}/${placed.unit.id}` : '/'
+  const eyebrow = placed ? `${placed.course.short} · ${placed.unit.label}` : module.subject ? `${module.subject} module` : 'Module'
 
   return (
     <div className="mx-auto max-w-4xl space-y-6">
-      <Link to="/" className="inline-flex min-h-11 items-center gap-1 text-sm font-semibold text-navy hover:underline">
-        <span aria-hidden>←</span> All modules
+      <Link to={backTo} className="inline-flex min-h-11 items-center gap-1 text-sm font-semibold text-navy hover:underline">
+        <span aria-hidden>←</span> Back
       </Link>
       <header className="space-y-2">
-        <p className="text-sm font-semibold uppercase tracking-wide text-coral-700">{module.subject ? `${module.subject} module` : 'Module'}</p>
+        <p className="text-sm font-semibold tracking-wide text-coral-700">{eyebrow}</p>
         <h1 className="text-3xl font-semibold text-navy">{module.title}</h1>
         <p className="max-w-2xl text-navy/80">{module.blurb}</p>
         {!isDrill && mm.total > 0 && (

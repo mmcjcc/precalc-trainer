@@ -1,23 +1,26 @@
 import { Fragment, useId, useMemo, useRef, useState, type ChangeEvent } from 'react'
-import { allTemplates } from '@/content'
+import { allTemplates, COURSES, courseOfModule, courseOfSkill } from '@/content'
 import { ERROR_PATTERNS } from '@/engine'
 import type { ErrorPatternId } from '@/shared/types'
 import {
   dayKey,
   firstTryRate,
   hintRate,
+  knownSkills,
   mastery,
   propertyAccuracy,
   relativeDays,
+  startOfIsoWeek,
   useDrillAccuracy,
   useEvents,
   useHabits,
-  usePatternCounts,
   useStore,
   useStreak,
   useWeekly,
+  type Ev,
   type ImportMode,
   type RatioInfo,
+  type Weekly,
 } from '@/store'
 
 function patternTitle(id: string): string {
@@ -67,122 +70,253 @@ function Stat({ label, value, note }: { label: string; value: string; note: stri
   )
 }
 
-function SkillTable() {
-  const events = useEvents()
-  const weekly = useWeekly()
-  const groups = useMemo(() => {
-    const out: { id: string; title: string; rows: ReturnType<typeof rowFor>[] }[] = []
-    function rowFor(templateId: string, title: string) {
-      return {
-        id: templateId,
-        title,
-        m: mastery(events, templateId),
-        first: firstTryRate(events, weekly, templateId),
-        hints: hintRate(events, weekly, templateId),
-        prop: propertyAccuracy(events, weekly, templateId),
-      }
-    }
-    for (const { module, template } of allTemplates()) {
-      let g = out.find((x) => x.id === module.id)
-      if (!g) {
-        g = { id: module.id, title: module.title, rows: [] }
-        out.push(g)
-      }
-      g.rows.push(rowFor(template.id, template.title))
-    }
-    return out
-  }, [events, weekly])
+interface SkillRowInfo {
+  id: string
+  title: string
+  m: ReturnType<typeof mastery>
+  first: RatioInfo
+  hints: RatioInfo
+  prop: RatioInfo
+}
 
+function SkillRow({ r }: { r: SkillRowInfo }) {
   return (
-    <div className="overflow-x-auto rounded-2xl border border-navy-100 bg-white">
-      <table className="w-full min-w-[46rem] text-left text-sm">
-        <caption className="sr-only">Mastery, first-try rate, hints and property picks for each problem type</caption>
-        <thead className="bg-navy-50 text-navy">
-          <tr>
-            <th scope="col" className="px-3 py-2 font-semibold">
-              Problem type
-            </th>
-            <th scope="col" className="px-3 py-2 font-semibold">
-              Mastery
-            </th>
-            <th scope="col" className="px-3 py-2 font-semibold">
-              Mastered
-            </th>
-            <th scope="col" className="px-3 py-2 font-semibold">
-              First-try
-            </th>
-            <th scope="col" className="px-3 py-2 font-semibold">
-              Hints
-            </th>
-            <th scope="col" className="px-3 py-2 font-semibold">
-              Property picks
-            </th>
-            <th scope="col" className="px-3 py-2 font-semibold">
-              Last practiced
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {groups.map((g) => (
-            <Fragment key={g.id}>
-              <tr className="border-t border-navy-100">
-                <th
-                  scope="colgroup"
-                  colSpan={7}
-                  className="px-3 pb-1 pt-3 text-xs font-semibold uppercase tracking-wide text-coral-700"
-                >
-                  {g.title}
-                </th>
-              </tr>
-              {g.rows.map((r) => (
-                <tr key={r.id} className="border-t border-navy-100 align-top">
-                  <th scope="row" className="px-3 py-2 font-medium text-navy">
-                    {r.title}
-                  </th>
-                  <td className="px-3 py-2 text-navy">
-                    {r.m.rate === null ? (
-                      <NoData />
-                    ) : (
-                      <span>
-                        {Math.round(r.m.rate * 100)}%{' '}
-                        <span className="text-xs text-navy/70">
-                          ({r.m.count} of {r.m.window})
-                        </span>
-                      </span>
-                    )}
-                  </td>
-                  <td className="px-3 py-2">
-                    {r.m.mastered ? (
-                      <span className="font-semibold text-ok">
-                        <span aria-hidden>✓ </span>mastered
-                      </span>
-                    ) : (
-                      <span className="text-navy/70">not yet</span>
-                    )}
-                  </td>
-                  <td className="px-3 py-2 text-navy">
-                    <Percent r={r.first} />
-                  </td>
-                  <td className="px-3 py-2 text-navy">
-                    <PerStep r={r.hints} />
-                  </td>
-                  <td className="px-3 py-2 text-navy">
-                    <Percent r={r.prop} />
-                  </td>
-                  <td className="px-3 py-2 text-navy">{r.m.lastAt === null ? 'never' : relativeDays(r.m.lastAt)}</td>
-                </tr>
-              ))}
-            </Fragment>
-          ))}
-        </tbody>
-      </table>
-    </div>
+    <tr className="border-t border-navy-100 align-top">
+      <th scope="row" className="px-3 py-2 font-medium text-navy">
+        {r.title}
+      </th>
+      <td className="px-3 py-2 text-navy">
+        {r.m.rate === null ? (
+          <NoData />
+        ) : (
+          <span>
+            {Math.round(r.m.rate * 100)}%{' '}
+            <span className="text-xs text-navy/70">
+              ({r.m.count} of {r.m.window})
+            </span>
+          </span>
+        )}
+      </td>
+      <td className="px-3 py-2">
+        {r.m.mastered ? (
+          <span className="font-semibold text-ok">
+            <span aria-hidden>✓ </span>mastered
+          </span>
+        ) : (
+          <span className="text-navy/70">not yet</span>
+        )}
+      </td>
+      <td className="px-3 py-2 text-navy">
+        <Percent r={r.first} />
+      </td>
+      <td className="px-3 py-2 text-navy">
+        <PerStep r={r.hints} />
+      </td>
+      <td className="px-3 py-2 text-navy">
+        <Percent r={r.prop} />
+      </td>
+      <td className="px-3 py-2 text-navy">{r.m.lastAt === null ? 'never' : relativeDays(r.m.lastAt)}</td>
+    </tr>
   )
 }
 
-function PatternTable() {
-  const counts = usePatternCounts()
-  if (counts.length === 0) {
+interface ClassSkillGroup {
+  id: string
+  title: string
+  modules: { id: string; title: string; rows: SkillRowInfo[] }[]
+  /** Skills that belong to no registered module (a drill family, a retired id). */
+  extra: SkillRowInfo[]
+}
+
+function SkillTables() {
+  const events = useEvents()
+  const weekly = useWeekly()
+  const classes = useMemo(() => {
+    function rowFor(skill: string, title: string): SkillRowInfo {
+      return {
+        id: skill,
+        title,
+        m: mastery(events, skill),
+        first: firstTryRate(events, weekly, skill),
+        hints: hintRate(events, weekly, skill),
+        prop: propertyAccuracy(events, weekly, skill),
+      }
+    }
+    const byId = new Map<string, ClassSkillGroup>()
+    function ensure(id: string, title: string): ClassSkillGroup {
+      let g = byId.get(id)
+      if (!g) {
+        g = { id, title, modules: [], extra: [] }
+        byId.set(id, g)
+      }
+      return g
+    }
+    const moduleGroup = new Map<string, ClassSkillGroup['modules'][number]>()
+    const templateIds = new Set<string>()
+    for (const { module, template } of allTemplates()) {
+      templateIds.add(template.id)
+      const placed = courseOfModule(module.id)
+      const cls = placed ? ensure(placed.course.id, placed.course.title) : ensure('other', 'Other')
+      let mod = moduleGroup.get(module.id)
+      if (!mod) {
+        mod = { id: module.id, title: module.title, rows: [] }
+        moduleGroup.set(module.id, mod)
+        cls.modules.push(mod)
+      }
+      mod.rows.push(rowFor(template.id, template.title))
+    }
+    for (const skill of knownSkills(events, weekly)) {
+      if (templateIds.has(skill)) continue
+      ensure('other', 'Other').extra.push(rowFor(skill, skill))
+    }
+    const ordered: ClassSkillGroup[] = []
+    for (const course of COURSES) {
+      const g = byId.get(course.id)
+      if (g && (g.modules.length > 0 || g.extra.length > 0)) ordered.push(g)
+    }
+    const other = byId.get('other')
+    if (other && (other.modules.length > 0 || other.extra.length > 0)) ordered.push(other)
+    return ordered
+  }, [events, weekly])
+
+  return (
+    <>
+      {classes.map((g) => (
+        <section key={g.id} aria-labelledby={`progress-class-${g.id}`} className="space-y-2">
+          <h3 id={`progress-class-${g.id}`} className="text-lg font-semibold text-navy">
+            {g.title}
+          </h3>
+          <div className="overflow-x-auto rounded-2xl border border-navy-100 bg-white">
+            <table className="w-full min-w-[46rem] text-left text-sm">
+              <caption className="sr-only">Mastery, first-try rate, hints and property picks for {g.title}</caption>
+              <thead className="bg-navy-50 text-navy">
+                <tr>
+                  <th scope="col" className="px-3 py-2 font-semibold">
+                    Problem type
+                  </th>
+                  <th scope="col" className="px-3 py-2 font-semibold">
+                    Mastery
+                  </th>
+                  <th scope="col" className="px-3 py-2 font-semibold">
+                    Mastered
+                  </th>
+                  <th scope="col" className="px-3 py-2 font-semibold">
+                    First-try
+                  </th>
+                  <th scope="col" className="px-3 py-2 font-semibold">
+                    Hints
+                  </th>
+                  <th scope="col" className="px-3 py-2 font-semibold">
+                    Property picks
+                  </th>
+                  <th scope="col" className="px-3 py-2 font-semibold">
+                    Last practiced
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {g.modules.map((mod) => (
+                  <Fragment key={mod.id}>
+                    <tr className="border-t border-navy-100">
+                      <th
+                        scope="colgroup"
+                        colSpan={7}
+                        className="px-3 pb-1 pt-3 text-xs font-semibold uppercase tracking-wide text-coral-700"
+                      >
+                        {mod.title}
+                      </th>
+                    </tr>
+                    {mod.rows.map((r) => (
+                      <SkillRow key={r.id} r={r} />
+                    ))}
+                  </Fragment>
+                ))}
+                {g.extra.map((r) => (
+                  <SkillRow key={r.id} r={r} />
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      ))}
+    </>
+  )
+}
+
+interface PatternRow {
+  pattern: string
+  thisWeek: number
+  before: number
+}
+
+interface PatternGroup {
+  id: string
+  title: string
+  rows: PatternRow[]
+}
+
+/**
+ * Same split as `patternCounts` (this ISO week vs everything before, and every weekly bucket counts
+ * as before), but each skill's mistakes stay with that skill's class. A skill on no registered
+ * module goes under Other. A pattern that shows up in two classes is two rows.
+ */
+function patternGroups(events: Ev[], weekly: Weekly, now: number): PatternGroup[] {
+  const weekStart = startOfIsoWeek(now)
+  const groups = new Map<string, { title: string; rows: Map<string, PatternRow> }>()
+
+  function groupFor(skill: string): { title: string; rows: Map<string, PatternRow> } {
+    const placed = courseOfSkill(skill)
+    const id = placed?.course.id ?? 'other'
+    const title = placed?.course.title ?? 'Other'
+    let group = groups.get(id)
+    if (!group) {
+      group = { title, rows: new Map() }
+      groups.set(id, group)
+    }
+    return group
+  }
+
+  function add(skill: string, pattern: string, field: 'thisWeek' | 'before', n: number) {
+    const group = groupFor(skill)
+    let row = group.rows.get(pattern)
+    if (!row) {
+      row = { pattern, thisWeek: 0, before: 0 }
+      group.rows.set(pattern, row)
+    }
+    row[field] += n
+  }
+
+  for (const event of events) {
+    if ((event.t !== 'step_rejected' && event.t !== 'final_answer') || !event.pattern) continue
+    add(event.skill, event.pattern, event.at >= weekStart ? 'thisWeek' : 'before', 1)
+  }
+  for (const skills of Object.values(weekly)) {
+    for (const [skill, bucket] of Object.entries(skills)) {
+      for (const [pattern, n] of Object.entries(bucket.patterns)) add(skill, pattern, 'before', n)
+    }
+  }
+
+  function sortRows(rows: Map<string, PatternRow>): PatternRow[] {
+    return [...rows.values()].sort(
+      (a, b) => b.thisWeek - a.thisWeek || b.before - a.before || a.pattern.localeCompare(b.pattern),
+    )
+  }
+
+  const ordered: PatternGroup[] = []
+  for (const course of COURSES) {
+    const group = groups.get(course.id)
+    if (group && group.rows.size > 0) ordered.push({ id: course.id, title: group.title, rows: sortRows(group.rows) })
+  }
+  const other = groups.get('other')
+  if (other && other.rows.size > 0) ordered.push({ id: 'other', title: other.title, rows: sortRows(other.rows) })
+  return ordered
+}
+
+function PatternTables() {
+  const events = useEvents()
+  const weekly = useWeekly()
+  const groups = useMemo(() => patternGroups(events, weekly, Date.now()), [events, weekly])
+  if (groups.length === 0) {
     return (
       <p className="rounded-2xl border border-navy-100 bg-white p-4 text-navy/80">
         No mistakes logged yet. When the checker stops a step, the mistake gets a name and shows up here, so you can watch
@@ -191,35 +325,46 @@ function PatternTable() {
     )
   }
   return (
-    <div className="overflow-x-auto rounded-2xl border border-navy-100 bg-white">
-      <table className="w-full min-w-[26rem] text-left text-sm">
-        <caption className="sr-only">Error patterns, this week compared with everything before this week</caption>
-        <thead className="bg-navy-50 text-navy">
-          <tr>
-            <th scope="col" className="px-3 py-2 font-semibold">
-              Pattern
-            </th>
-            <th scope="col" className="px-3 py-2 font-semibold">
-              This week
-            </th>
-            <th scope="col" className="px-3 py-2 font-semibold">
-              Before this week
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {counts.map((c) => (
-            <tr key={c.pattern} className="border-t border-navy-100">
-              <th scope="row" className="px-3 py-2 font-medium text-navy">
-                {patternTitle(c.pattern)}
-              </th>
-              <td className="px-3 py-2 text-navy">{c.thisWeek}</td>
-              <td className="px-3 py-2 text-navy">{c.before}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
+    <>
+      {groups.map((group) => (
+        <section key={group.id} aria-labelledby={`progress-patterns-${group.id}`} className="space-y-2">
+          <h3 id={`progress-patterns-${group.id}`} className="text-lg font-semibold text-navy">
+            {group.title}
+          </h3>
+          <div className="overflow-x-auto rounded-2xl border border-navy-100 bg-white">
+            <table className="w-full min-w-[26rem] text-left text-sm">
+              <caption className="sr-only">
+                Error patterns for {group.title}, this week compared with everything before this week
+              </caption>
+              <thead className="bg-navy-50 text-navy">
+                <tr>
+                  <th scope="col" className="px-3 py-2 font-semibold">
+                    Pattern
+                  </th>
+                  <th scope="col" className="px-3 py-2 font-semibold">
+                    This week
+                  </th>
+                  <th scope="col" className="px-3 py-2 font-semibold">
+                    Before this week
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {group.rows.map((row) => (
+                  <tr key={row.pattern} className="border-t border-navy-100">
+                    <th scope="row" className="px-3 py-2 font-medium text-navy">
+                      {patternTitle(row.pattern)}
+                    </th>
+                    <td className="px-3 py-2 text-navy">{row.thisWeek}</td>
+                    <td className="px-3 py-2 text-navy">{row.before}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      ))}
+    </>
   )
 }
 
@@ -510,14 +655,14 @@ export function ProgressPage() {
         <h2 id="progress-skills" className="text-lg font-semibold text-navy">
           By problem type
         </h2>
-        <SkillTable />
+        <SkillTables />
       </section>
 
       <section aria-labelledby="progress-patterns" className="space-y-2">
         <h2 id="progress-patterns" className="text-lg font-semibold text-navy">
           Error patterns
         </h2>
-        <PatternTable />
+        <PatternTables />
       </section>
 
       <div className="grid gap-4 md:grid-cols-2">

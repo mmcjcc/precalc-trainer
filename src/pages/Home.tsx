@@ -1,8 +1,22 @@
-import { useId, useMemo } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useCallback, useEffect, useId, useMemo, useRef, type KeyboardEvent } from 'react'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import { A2HSCard } from '@/components/A2HSCard'
 import { MasteryBar } from '@/components/MasteryBar'
-import { allTemplates, getReview, getTemplate, hasModule, MODULES, randomSeed, type ModuleDef, type TemplateDef } from '@/content'
+import {
+  COURSES,
+  courseOfModule,
+  courseOfSkill,
+  getReview,
+  getTemplate,
+  hasModule,
+  modulesInUnit,
+  randomSeed,
+  unitsWithModules,
+  type CourseDef,
+  type ModuleDef,
+  type TemplateDef,
+  type UnitDef,
+} from '@/content'
 import { loadReview } from '@/pages/review/session'
 import { defaultKnobs, flagsFromKnobs, problemPath } from '@/problem/url'
 import {
@@ -13,8 +27,11 @@ import {
   useDrillAccuracy,
   useEvents,
   useModuleMastery,
+  useSettings,
+  useStore,
   weakSpotWeights,
   type Attempt,
+  type Ev,
 } from '@/store'
 
 function percent(rate: number): string {
@@ -33,6 +50,74 @@ function templateTitle(moduleId: string, templateId: string): string {
   } catch {
     return templateId
   }
+}
+
+/** Courses that have something to practise. An empty course (geometry, later) stays hidden. */
+function visibleCourses(): CourseDef[] {
+  return COURSES.filter((course) => unitsWithModules(course).length > 0)
+}
+
+/** Last unit that already has modules — where a first visit to this class lands. */
+function defaultUnit(course: CourseDef): UnitDef {
+  const ready = unitsWithModules(course)
+  return ready[ready.length - 1] ?? course.units[0]!
+}
+
+function eventCourseId(event: Ev): string | null {
+  if (event.t === 'problem_done') {
+    const byModule = courseOfModule(event.moduleId)
+    if (byModule) return byModule.course.id
+  }
+  return courseOfSkill(event.skill)?.course.id ?? null
+}
+
+/** Class of the latest event that belongs to a registered module, if there is one. */
+function courseFromEvents(events: Ev[], courses: CourseDef[]): CourseDef | null {
+  let bestAt = Number.NEGATIVE_INFINITY
+  let bestIndex = -1
+  let bestId: string | null = null
+  for (let index = 0; index < events.length; index++) {
+    const event = events[index]!
+    const id = eventCourseId(event)
+    if (!id) continue
+    if (bestId === null || event.at > bestAt || (event.at === bestAt && index > bestIndex)) {
+      bestAt = event.at
+      bestIndex = index
+      bestId = id
+    }
+  }
+  if (!bestId) return null
+  return courses.find((course) => course.id === bestId) ?? null
+}
+
+function resolveSelection(input: {
+  routeCourseId?: string
+  routeUnitId?: string
+  courseId?: string
+  unitByCourse?: Record<string, string>
+  events: Ev[]
+}): { course: CourseDef; unit: UnitDef } | null {
+  const courses = visibleCourses()
+  if (courses.length === 0) return null
+  const routeCourse = input.routeCourseId ? courses.find((c) => c.id === input.routeCourseId) : undefined
+  const savedCourse = input.courseId ? courses.find((c) => c.id === input.courseId) : undefined
+  const course = routeCourse ?? savedCourse ?? courseFromEvents(input.events, courses) ?? courses[0]!
+  const routeUnit = routeCourse && input.routeUnitId ? course.units.find((u) => u.id === input.routeUnitId) : undefined
+  const savedUnitId = input.unitByCourse?.[course.id]
+  const savedUnit = savedUnitId ? course.units.find((u) => u.id === savedUnitId) : undefined
+  // A deep link's unit wins. An unknown unit id is ignored and the saved (or default) unit is used.
+  const unit = routeUnit ?? savedUnit ?? defaultUnit(course)
+  return { course, unit }
+}
+
+function courseTemplates(course: CourseDef): { module: ModuleDef; template: TemplateDef }[] {
+  const out: { module: ModuleDef; template: TemplateDef }[] = []
+  for (const unit of course.units) {
+    for (const module of modulesInUnit(unit)) {
+      for (const template of module.templates) out.push({ module, template })
+    }
+  }
+  return out
 }
 
 function ContinueCard({ attempt }: { attempt: Attempt }) {
@@ -60,10 +145,10 @@ function ContinueCard({ attempt }: { attempt: Attempt }) {
   )
 }
 
-function WeakSpots() {
+function WeakSpots({ course }: { course: CourseDef }) {
   const events = useEvents()
   const navigate = useNavigate()
-  const entries = useMemo(() => allTemplates(), [])
+  const entries = useMemo(() => courseTemplates(course), [course])
   const titleId = useId()
   const weakest = useMemo(() => {
     let best: { title: string; rate: number } | null = null
@@ -94,8 +179,8 @@ function WeakSpots() {
       </h2>
       <p className="mt-1 text-sm text-navy/80">
         {weakest
-          ? `Picks a problem type at random, leaning toward the ones that trip you up. Right now that's ${weakest.title} (${percent(weakest.rate)} first-try lately).`
-          : "Picks a problem type at random, leaning toward the ones that trip you up. Types you haven't tried yet get a fair share too."}
+          ? `Picks a problem type at random from ${course.title}, leaning toward the ones that trip you up. Right now that's ${weakest.title} (${percent(weakest.rate)} first-try lately).`
+          : `Picks a problem type at random from ${course.title}, leaning toward the ones that trip you up. Types you haven't tried yet get a fair share too.`}
       </p>
       <button
         type="button"
@@ -124,8 +209,8 @@ function DrillSummary() {
   )
 }
 
-function ReviewCard() {
-  const review = getReview('unit1')
+function ReviewCard({ reviewId, unitLabel }: { reviewId: string; unitLabel: string }) {
+  const review = getReview(reviewId)
   const session = useMemo(() => (review ? loadReview(review.id) : null), [review])
   const titleId = useId()
   if (!review) return null
@@ -138,7 +223,7 @@ function ReviewCard() {
       : 'Start the review'
   return (
     <section aria-labelledby={titleId} className="rounded-2xl border border-coral bg-white p-4">
-      <p className="text-xs font-semibold uppercase tracking-wide text-coral-700">For the Unit 1 test</p>
+      <p className="text-xs font-semibold uppercase tracking-wide text-coral-700">For the {unitLabel} test</p>
       <h2 id={titleId} className="mt-1 text-lg font-semibold text-navy">
         {review.title}
       </h2>
@@ -210,70 +295,175 @@ function ModuleCard({ module }: { module: ModuleDef }) {
   )
 }
 
-/** Modules with no subject are the precalculus set; every other subject gets its own heading. */
-function groupBySubject(modules: ModuleDef[]): { precalc: ModuleDef[]; subjects: { subject: string; modules: ModuleDef[] }[] } {
-  const precalc: ModuleDef[] = []
-  const subjects: { subject: string; modules: ModuleDef[] }[] = []
-  for (const m of modules) {
-    if (!m.subject) {
-      precalc.push(m)
-      continue
-    }
-    let g = subjects.find((x) => x.subject === m.subject)
-    if (!g) {
-      g = { subject: m.subject, modules: [] }
-      subjects.push(g)
-    }
-    g.modules.push(m)
-  }
-  return { precalc, subjects }
-}
-
 export function Home() {
   const attempt = useAttempt()
-  const { precalc, subjects } = useMemo(() => groupBySubject(MODULES), [])
+  const events = useEvents()
+  const settings = useSettings()
+  const setSettings = useStore((s) => s.setSettings)
+  const navigate = useNavigate()
+  const { courseId: routeCourseId, unitId: routeUnitId } = useParams()
+  const tabRefs = useRef<Record<string, HTMLButtonElement | null>>({})
+
+  const remember = useCallback(
+    (courseId: string, unitId: string) => {
+      const current = useStore.getState().settings
+      if (current.courseId === courseId && current.unitByCourse?.[courseId] === unitId) return
+      setSettings({
+        courseId,
+        unitByCourse: { ...current.unitByCourse, [courseId]: unitId },
+      })
+    },
+    [setSettings],
+  )
+
+  // A real /c/:courseId link is remembered. An unknown id is ignored (Home falls back, no error page).
+  useEffect(() => {
+    if (!routeCourseId || !visibleCourses().some((c) => c.id === routeCourseId)) return
+    const current = useStore.getState().settings
+    const sel = resolveSelection({
+      routeCourseId,
+      routeUnitId,
+      courseId: current.courseId,
+      unitByCourse: current.unitByCourse,
+      events: useStore.getState().events,
+    })
+    if (!sel || sel.course.id !== routeCourseId) return
+    remember(sel.course.id, sel.unit.id)
+  }, [routeCourseId, routeUnitId, remember])
+
+  const selection = resolveSelection({
+    routeCourseId,
+    routeUnitId,
+    courseId: settings.courseId,
+    unitByCourse: settings.unitByCourse,
+    events,
+  })
+
+  if (!selection) {
+    return <p className="text-navy">No classes are ready yet.</p>
+  }
+  const { course, unit } = selection
+  const courses = visibleCourses()
+  const modules = modulesInUnit(unit)
+  const reviewId = unit.reviewId && getReview(unit.reviewId) ? unit.reviewId : undefined
+
+  function selectCourse(id: string) {
+    const next = courses.find((c) => c.id === id)
+    if (!next) return
+    const saved = useStore.getState().settings.unitByCourse?.[id]
+    const nextUnit = next.units.find((u) => u.id === saved) ?? defaultUnit(next)
+    remember(next.id, nextUnit.id)
+    if (routeCourseId !== undefined && (routeCourseId !== next.id || routeUnitId !== nextUnit.id)) {
+      navigate(`/c/${next.id}/${nextUnit.id}`, { replace: true })
+    }
+  }
+
+  function selectUnit(unitId: string) {
+    remember(course.id, unitId)
+    if (routeCourseId !== undefined && (routeCourseId !== course.id || routeUnitId !== unitId)) {
+      navigate(`/c/${course.id}/${unitId}`, { replace: true })
+    }
+  }
+
+  function onTabKey(event: KeyboardEvent<HTMLDivElement>) {
+    const index = courses.findIndex((c) => c.id === course.id)
+    if (index < 0) return
+    let next = index
+    if (event.key === 'ArrowRight') next = Math.min(courses.length - 1, index + 1)
+    else if (event.key === 'ArrowLeft') next = Math.max(0, index - 1)
+    else if (event.key === 'Home') next = 0
+    else if (event.key === 'End') next = courses.length - 1
+    else return
+    event.preventDefault()
+    const id = courses[next]!.id
+    if (id !== course.id) selectCourse(id)
+    tabRefs.current[id]?.focus()
+  }
+
   return (
     <div className="mx-auto max-w-4xl space-y-6">
       <header className="space-y-2">
-        <p className="text-sm font-semibold uppercase tracking-wide text-coral-700">Unit 1</p>
-        <h1 className="text-3xl font-semibold text-navy">Precalc Trainer</h1>
+        <h1 className="text-3xl font-semibold text-navy">Math & Science Trainer</h1>
         <p className="max-w-2xl text-navy/80">
-          Type every line of work. Each new line is checked against the one before it: a legal move gets its property
-          named, and an illegal shortcut gets caught the moment it happens.
+          Practice that checks your work as you go. In math, every line is checked against the one before it; in
+          science, every answer is checked with its units and figures. A mistake gets named the moment it happens.
         </p>
       </header>
 
       <A2HSCard />
       {attempt && <ContinueCard attempt={attempt} />}
-      <WeakSpots />
-      <ReviewCard />
 
-      <section aria-labelledby="home-modules" className="space-y-3">
-        <h2 id="home-modules" className="text-lg font-semibold text-navy">
-          {subjects.length > 0 ? 'Precalculus' : 'Modules'}
-        </h2>
+      <div className="space-y-3">
+        <div
+          role="tablist"
+          aria-label="Classes"
+          onKeyDown={onTabKey}
+          className="flex flex-nowrap gap-2 overflow-x-auto py-1"
+        >
+          {courses.map((c) => {
+            const selected = c.id === course.id
+            return (
+              <button
+                key={c.id}
+                type="button"
+                role="tab"
+                aria-selected={selected}
+                tabIndex={selected ? 0 : -1}
+                ref={(node) => {
+                  tabRefs.current[c.id] = node
+                }}
+                onClick={() => selectCourse(c.id)}
+                className={`min-h-11 min-w-11 shrink-0 whitespace-nowrap rounded-xl px-4 text-sm font-semibold ${
+                  selected ? 'bg-navy text-white' : 'border border-navy-100 bg-white text-navy hover:bg-navy-50'
+                }`}
+              >
+                {c.title}
+              </button>
+            )
+          })}
+        </div>
+
+        <WeakSpots course={course} />
+
+        <div role="group" aria-label={`${course.title} units`} className="flex flex-nowrap gap-2 overflow-x-auto py-1">
+          {course.units.map((u) => {
+            const pressed = u.id === unit.id
+            const empty = modulesInUnit(u).length === 0
+            return (
+              <button
+                key={u.id}
+                type="button"
+                aria-pressed={pressed}
+                onClick={() => selectUnit(u.id)}
+                className={`inline-flex min-h-11 min-w-11 shrink-0 items-center whitespace-nowrap rounded-xl px-4 text-sm font-semibold ${
+                  pressed ? 'bg-navy text-white' : 'border border-navy-100 bg-white text-navy hover:bg-navy-50'
+                }`}
+              >
+                {u.label} · {u.title}
+                {empty && (
+                  <span className={`ml-2 text-xs font-semibold uppercase tracking-wide ${pressed ? 'text-white/80' : 'text-navy/60'}`}>
+                    Coming soon
+                  </span>
+                )}
+              </button>
+            )
+          })}
+        </div>
+      </div>
+
+      {reviewId && <ReviewCard reviewId={reviewId} unitLabel={unit.label} />}
+
+      {modules.length > 0 ? (
         <div className="grid gap-4 sm:grid-cols-2">
-          {precalc.map((m) => (
+          {modules.map((m) => (
             <ModuleCard key={m.id} module={m} />
           ))}
         </div>
-      </section>
-
-      {subjects.map((g) => {
-        const id = `home-subject-${g.subject.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`
-        return (
-          <section key={g.subject} aria-labelledby={id} className="space-y-3">
-            <h2 id={id} className="text-lg font-semibold text-navy">
-              {g.subject}
-            </h2>
-            <div className="grid gap-4 sm:grid-cols-2">
-              {g.modules.map((m) => (
-                <ModuleCard key={m.id} module={m} />
-              ))}
-            </div>
-          </section>
-        )
-      })}
+      ) : (
+        <p className="rounded-2xl border border-navy-100 bg-white p-4 text-navy/80">
+          Nothing to practise here yet: this unit is being built.
+        </p>
+      )}
 
       <Link to="/sandbox" className="block rounded-2xl border border-dashed border-navy-100 p-4 hover:border-navy">
         <span className="block text-xs font-semibold uppercase tracking-wide text-coral-700">Sandbox</span>

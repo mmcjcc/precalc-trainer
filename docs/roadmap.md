@@ -24,6 +24,13 @@ templates, not from the core being small; keep cores narrow. Running two builds 
 folders; shared registration files (`src/shared/types.ts`, `catalog.ts`, `Problem.tsx`,
 `modules/index.ts`) have one owner at a time.
 
+## Classes and units in the app
+
+The app is "Math & Science Trainer". Home has a tab per class and a unit switcher inside each class;
+both come from `src/content/courses.ts`. A new module is listed there under its class and unit, and a
+new class (geometry: course 420 H Geometry, grade 10; no syllabus published, waiting on a worksheet
+or the textbook) is one more entry in that file.
+
 ## Pre-Calculus
 
 | Ship by | Module | Engine core (Claude) | Content + screen (Grok) |
@@ -33,9 +40,9 @@ folders; shared registration files (`src/shared/types.ts`, `catalog.ts`, `Proble
 | Sep 24 | Reading a graph (increasing, decreasing, extrema) | - | whole module; reuses interval grading |
 | Sep 28 | Domain & range, composition | domain from a formula as an exact set, composition and composite domain, mistake candidates | templates, flow, catalog |
 | done (Sep 27) | Transformations, piecewise, average rate of change | done: src/engine/transformations (22 mistakes) | done: two modules; Claude cross-check of 1,500 problems |
-| Oct 12 | Unit 1 test review | - | mixed review set across Unit 1 modules |
-| Oct 19 | Completing the square, synthetic division | synthetic-division table checker (remainder and factor theorems) | templates, table UI |
-| Oct 26 | Zeros, multiplicity, end behavior | - | graph-to-equation templates (rational-root candidates need a small core) |
+| done (Oct 1) | Unit 1 test review | - | done: a mixed set of 8, 12 or 20 across the Unit 1 modules; reviewed by Claude and by Gemini |
+| Oct 19 | Completing the square, synthetic division | done (Oct 1): src/engine/polynomials (24 mistakes; API in docs/progress/polynomials-core.md) | templates, table UI: modules quadratics and polyDivision |
+| Oct 26 | Zeros, multiplicity, end behavior, rational roots | done (Oct 1): same core | module polyZeros |
 | Nov 2 | Rational functions; polynomial and rational inequalities | asymptote and hole rules; sign-chart checker on the existing solution-set engine | templates, sign-chart UI |
 | Nov 9 | Complex numbers | complex arithmetic and equivalence in the engine | templates |
 | Nov 23 | Exponentials and logarithms | **fix `ln`/`log10` evaluation first**; log properties; extraneous-solution checks | templates, growth and decay word problems |
@@ -51,7 +58,7 @@ folders; shared registration files (`src/shared/types.ts`, `catalog.ts`, `Proble
 |---|---|---|---|
 | done | 3 Significant figures, 4 Atomic structure | - | periodic-table data (Grok) |
 | done (Sep 27) | 5 Electrons: light (c = λν, E = hν) | - | done: light templates on the sig-fig engine; Claude cross-check of 900 answers |
-| Oct 12 | 5 Electrons: electron configurations | configuration checker: 4s/3d order, Cr/Cu exceptions, ions lose 4s first | templates added to the existing 'electrons' module |
+| done (Oct 1) | 5 Electrons: electron configurations | done: src/engine/econfig (17 mistakes; API in docs/progress/econfig-core.md) | done: six templates on the 'electrons' module; Claude cross-check of 1,800 problems |
 | Oct 26 | 6 Periodic table and trends | - | ranking templates from the element data |
 | Nov 16 | 7 Nomenclature | charge balance, formula to name and back | polyatomic-ion and acid tables (with Claude's test), templates |
 | Dec | 8-9 Ions, bonding | low fit for step checking; drills only | Grok |

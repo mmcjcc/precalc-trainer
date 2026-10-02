@@ -91,6 +91,18 @@ describe('store persistence (pct.* keys)', () => {
     expect(useStore.getState().events.at(-1)?.t).toBe('step_undone')
   })
 
+  it('restores the class and unit from a backup, including one saved under the old app name', () => {
+    useStore.getState().setSettings({ courseId: 'chemistry', unitByCourse: { chemistry: 'ch4' }, calculator: 'nspire' })
+    const json = useStore.getState().exportJson().replaceAll('"math-science-trainer"', '"precalc-trainer"')
+    expect(JSON.parse(json).app).toBe('precalc-trainer')
+    resetStoreForTests()
+    const r = useStore.getState().importJson(json, 'replace')
+    expect(r.ok).toBe(true)
+    expect(useStore.getState().settings.courseId).toBe('chemistry')
+    expect(useStore.getState().settings.unitByCourse).toEqual({ chemistry: 'ch4' })
+    expect(useStore.getState().settings.calculator).toBe('nspire')
+  })
+
   it('export → reset → import(merge) round-trips and stamps lastBackupAt', () => {
     start()
     useStore.getState().acceptStep({ text: 'x <= 1' })

@@ -11,7 +11,7 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { useShallow } from 'zustand/react/shallow'
 import type { ChipId } from '@/shared/types'
-import { buildBackup, importBackup, type ImportMode } from './backup'
+import { buildBackup, importBackup, normalizeSettings, settingsAfterImport, type ImportMode } from './backup'
 import { compact } from './compaction'
 import {
   bumpStreak,
@@ -28,7 +28,6 @@ import {
 import { createFanOutStorage, PERSIST_NAME } from './storage'
 import { dayKey } from './time'
 import {
-  DEFAULT_SETTINGS,
   EMPTY_STREAK,
   SCHEMA_VERSION,
   defaultPersisted,
@@ -49,7 +48,7 @@ export * from './types'
 export * from './selectors'
 export { compact } from './compaction'
 export { STORAGE_KEYS, saveReturnTo, takeReturnTo } from './storage'
-export { relativeDays, daysAgo, dayKey, isoWeekKey } from './time'
+export { relativeDays, daysAgo, dayKey, isoWeekKey, startOfIsoWeek } from './time'
 export type { ImportMode } from './backup'
 
 // ---------------------------------------------------------------------------
@@ -171,9 +170,7 @@ function isPlainObject(v: unknown): v is Record<string, unknown> {
 function mergePersisted(persisted: unknown, current: StoreState): StoreState {
   const p = isPlainObject(persisted) ? (persisted as Partial<PersistedState>) : {}
   const base = defaultPersisted()
-  const settings: Settings = { ...DEFAULT_SETTINGS, ...(isPlainObject(p.settings) ? p.settings : {}) }
-  if (settings.calculator !== 'ti84' && settings.calculator !== 'nspire') settings.calculator = 'ti84'
-  if (settings.askProperty !== 'always' && settings.askProperty !== 'off') settings.askProperty = 'always'
+  const settings = normalizeSettings(p.settings)
   const events = Array.isArray(p.events) ? (p.events as unknown[]).filter((e): e is Ev => isPlainObject(e) && typeof e.t === 'string' && typeof e.at === 'number') : []
   const weekly: Weekly = isPlainObject(p.weekly) ? (p.weekly as Weekly) : {}
   const streak: Streak = isPlainObject(p.streak) && typeof p.streak.count === 'number' ? (p.streak as Streak) : { ...EMPTY_STREAK }
@@ -467,7 +464,7 @@ export const useStore = create<StoreState>()(
         const s = get()
         const r = importBackup(s, text, mode)
         if (!r.ok) return { ok: false, error: r.error }
-        set({ events: r.events, weekly: r.weekly, streak: r.streak })
+        set({ events: r.events, weekly: r.weekly, streak: r.streak, settings: settingsAfterImport(s.settings, r.settings, mode) })
         return { ok: true, added: r.added }
       },
 

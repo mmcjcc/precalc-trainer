@@ -1,6 +1,6 @@
-# Precalc Trainer
+# Math & Science Trainer
 
-Step-by-step precalculus practice for one student. She types every line of her work; the engine
+Step-by-step practice for one student, in honors precalculus and chemistry. She types every line of her work; the engine
 decides whether the new line is a legal transformation of the previous one, names the property
 that justifies it, and coaches the illegal move at the moment it happens (with the counterexample
 that proves it). Fresh problems are generated from seeded templates, every problem has a graph, and

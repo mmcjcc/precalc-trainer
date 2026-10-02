@@ -1,7 +1,7 @@
 {
-  "name": "Precalc Trainer",
-  "short_name": "Precalc",
-  "description": "Step-by-step precalculus trainer: every line of work is checked, every property is named.",
+  "name": "Math & Science Trainer",
+  "short_name": "Trainer",
+  "description": "Step-by-step math and science practice: every line of work is checked, every property is named.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

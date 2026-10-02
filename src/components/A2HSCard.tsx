@@ -24,7 +24,7 @@ export function A2HSCard({ force = false }: { force?: boolean }) {
           Tap the Share button <span aria-hidden>(the square with an arrow)</span> at the bottom of Safari.
         </li>
         <li>Scroll and tap “Add to Home Screen”, then “Add”.</li>
-        <li>Open Precalc from the Home Screen from now on.</li>
+        <li>Open Trainer from the Home Screen from now on.</li>
       </ol>
       {!force && (
         <button

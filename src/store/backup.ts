@@ -1,8 +1,13 @@
 /** Export/import of progress as JSON (she uses a phone AND a desktop). Pure. */
-import { EMPTY_STREAK, SCHEMA_VERSION, type Ev, type PersistedState, type Settings, type Streak, type Weekly, type WeeklySkill } from './types'
+import { DEFAULT_SETTINGS, EMPTY_STREAK, SCHEMA_VERSION, type Ev, type PersistedState, type Settings, type Streak, type Weekly, type WeeklySkill } from './types'
+
+/** Written on every new export. */
+export const BACKUP_APP_ID = 'math-science-trainer'
+/** Accepted on import so a file saved under the old name still loads. */
+export const LEGACY_BACKUP_APP_ID = 'precalc-trainer'
 
 export interface BackupFile {
-  app: 'precalc-trainer'
+  app: typeof BACKUP_APP_ID
   schemaVersion: number
   exportedAt: string
   settings: Settings
@@ -13,7 +18,7 @@ export interface BackupFile {
 
 export function buildBackup(state: Pick<PersistedState, 'settings' | 'events' | 'weekly' | 'streak'>, now = Date.now()): BackupFile {
   return {
-    app: 'precalc-trainer',
+    app: BACKUP_APP_ID,
     schemaVersion: SCHEMA_VERSION,
     exportedAt: new Date(now).toISOString(),
     settings: state.settings,
@@ -26,8 +31,47 @@ export function buildBackup(state: Pick<PersistedState, 'settings' | 'events' | 
 export type ImportMode = 'merge' | 'replace'
 
 export type ImportResult =
-  | { ok: true; events: Ev[]; weekly: Weekly; streak: Streak; settings?: Settings; added: number }
+  | { ok: true; events: Ev[]; weekly: Weekly; streak: Streak; settings: Settings; added: number }
   | { ok: false; error: string }
+
+/**
+ * Settings from storage or a backup. Unknown or missing fields fall back to defaults.
+ * `courseId` and `unitByCourse` are optional: a save from before classes existed loads without them.
+ */
+export function normalizeSettings(raw: unknown): Settings {
+  const src = isRecord(raw) ? raw : {}
+  const settings: Settings = { ...DEFAULT_SETTINGS }
+  if (src.calculator === 'ti84' || src.calculator === 'nspire') settings.calculator = src.calculator
+  if (src.askProperty === 'always' || src.askProperty === 'off') settings.askProperty = src.askProperty
+  if (typeof src.testMode === 'boolean') settings.testMode = src.testMode
+  if (typeof src.seenA2HS === 'boolean') settings.seenA2HS = src.seenA2HS
+  if (typeof src.courseId === 'string' && src.courseId.length > 0) settings.courseId = src.courseId
+  if (isRecord(src.unitByCourse)) {
+    const unitByCourse: Record<string, string> = {}
+    for (const [key, value] of Object.entries(src.unitByCourse)) {
+      if (key.length > 0 && typeof value === 'string' && value.length > 0) unitByCourse[key] = value
+    }
+    if (Object.keys(unitByCourse).length > 0) settings.unitByCourse = unitByCourse
+  }
+  return settings
+}
+
+/**
+ * Settings after an import. Merge adds another device's work to this one, so this device keeps its
+ * own settings and only takes a class or unit choice it does not have yet. Replace takes the file's
+ * settings, except the two that belong to the device or the moment: test mode (imported silently, it
+ * would keep later practice out of the mastery bars) and whether the add-to-home-screen card was
+ * seen here.
+ */
+export function settingsAfterImport(current: Settings, imported: Settings, mode: ImportMode): Settings {
+  if (mode === 'replace') return { ...imported, testMode: current.testMode, seenA2HS: current.seenA2HS }
+  const next: Settings = { ...current }
+  const courseId = current.courseId ?? imported.courseId
+  if (courseId) next.courseId = courseId
+  const unitByCourse = { ...imported.unitByCourse, ...current.unitByCourse }
+  if (Object.keys(unitByCourse).length > 0) next.unitByCourse = unitByCourse
+  return next
+}
 
 function isRecord(v: unknown): v is Record<string, unknown> {
   return typeof v === 'object' && v !== null && !Array.isArray(v)
@@ -82,8 +126,8 @@ export function parseBackup(text: string): { ok: true; backup: BackupFile } | { 
   } catch {
     return { ok: false, error: 'That is not valid JSON. Paste the whole export, from { to }.' }
   }
-  if (!isRecord(raw) || raw.app !== 'precalc-trainer') {
-    return { ok: false, error: 'That file is not a Precalc Trainer export (missing "app": "precalc-trainer").' }
+  if (!isRecord(raw) || (raw.app !== BACKUP_APP_ID && raw.app !== LEGACY_BACKUP_APP_ID)) {
+    return { ok: false, error: `That file is not a Math & Science Trainer export (missing "app": "${BACKUP_APP_ID}").` }
   }
   if (typeof raw.schemaVersion === 'number' && raw.schemaVersion > SCHEMA_VERSION) {
     return { ok: false, error: `That export is from a newer version (schema ${raw.schemaVersion}); update this app first.` }
@@ -94,14 +138,13 @@ export function parseBackup(text: string): { ok: true; backup: BackupFile } | { 
     isRecord(raw.streak) && typeof raw.streak.count === 'number' && typeof raw.streak.lastDay === 'string'
       ? { lastDay: raw.streak.lastDay, count: raw.streak.count }
       : { ...EMPTY_STREAK }
-  const settings = isRecord(raw.settings) ? (raw.settings as unknown as Settings) : undefined
   return {
     ok: true,
     backup: {
-      app: 'precalc-trainer',
+      app: BACKUP_APP_ID,
       schemaVersion: typeof raw.schemaVersion === 'number' ? raw.schemaVersion : 1,
       exportedAt: typeof raw.exportedAt === 'string' ? raw.exportedAt : '',
-      settings: settings ?? ({} as Settings),
+      settings: normalizeSettings(raw.settings),
       events,
       weekly,
       streak,
@@ -118,7 +161,14 @@ export function importBackup(
   if (!parsed.ok) return parsed
   const b = parsed.backup
   if (mode === 'replace') {
-    return { ok: true, events: b.events.slice().sort((x, y) => x.at - y.at), weekly: b.weekly, streak: b.streak, added: b.events.length }
+    return {
+      ok: true,
+      events: b.events.slice().sort((x, y) => x.at - y.at),
+      weekly: b.weekly,
+      streak: b.streak,
+      settings: b.settings,
+      added: b.events.length,
+    }
   }
   const seen = new Set(current.events.map(eventKey))
   let added = 0
@@ -132,5 +182,5 @@ export function importBackup(
   }
   events.sort((x, y) => x.at - y.at)
   const streak = b.streak.lastDay > current.streak.lastDay ? b.streak : current.streak
-  return { ok: true, events, weekly: mergeWeekly(current.weekly, b.weekly), streak, added }
+  return { ok: true, events, weekly: mergeWeekly(current.weekly, b.weekly), streak, settings: b.settings, added }
 }

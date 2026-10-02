@@ -25,6 +25,13 @@ export interface Settings {
   askProperty: AskProperty
   testMode: boolean
   seenA2HS: boolean
+  /**
+   * Class last chosen on Home. Absent on devices that saved settings before classes existed;
+   * Home then picks from the event log.
+   */
+  courseId?: string
+  /** Unit last chosen in each class, keyed by course id. Absent until she picks one. */
+  unitByCourse?: Record<string, string>
 }
 
 export interface Auth {

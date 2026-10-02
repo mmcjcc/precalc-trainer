@@ -30,3 +30,13 @@ export {
   type ResolvedTemplate,
   type ResolvedTopic,
 } from './reviews'
+export {
+  COURSES,
+  courseOfModule,
+  courseOfSkill,
+  getCourse,
+  modulesInUnit,
+  unitsWithModules,
+  type CourseDef,
+  type UnitDef,
+} from './courses'

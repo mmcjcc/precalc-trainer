@@ -1,5 +1,5 @@
 import { lazy, Suspense } from 'react'
-import { HashRouter, Link, Navigate, NavLink, Route, Routes, useLocation, useParams } from 'react-router-dom'
+import { HashRouter, Link, Navigate, Route, Routes, useLocation, useParams } from 'react-router-dom'
 import { Toasts } from '@/components/Toast'
 import { Home } from '@/pages/Home'
 import { ModulePage } from '@/pages/Module'
@@ -41,32 +41,41 @@ function SkipLink() {
   )
 }
 
+/** Home stays current on `/` and on a class deep link (`/c/...`). Other items match their path. */
+function isNavActive(pathname: string, to: string, end?: boolean): boolean {
+  if (to === '/' && (pathname === '/c' || pathname.startsWith('/c/'))) return true
+  if (end || to === '/') return pathname === to
+  return pathname === to || pathname.startsWith(`${to}/`)
+}
+
 function Header() {
+  const { pathname } = useLocation()
   return (
     <header className="border-b border-navy-100 bg-white">
       <div className="mx-auto flex w-full max-w-6xl flex-wrap items-center justify-between gap-x-4 px-4 py-1">
         <Link to="/" className="flex min-h-11 items-center font-semibold text-navy">
-          Precalc Trainer
+          Math & Science Trainer
         </Link>
         <nav aria-label="Main" className="-mx-2 max-w-full overflow-x-auto">
           <ul className="flex items-center gap-0.5">
-            {NAV.map((item) => (
-              <li key={item.to}>
-                <NavLink
-                  to={item.to}
-                  end={item.end}
-                  className={({ isActive }) =>
-                    `flex min-h-11 min-w-11 items-center justify-center whitespace-nowrap rounded-lg px-2.5 text-sm font-semibold ${
-                      isActive
+            {NAV.map((item) => {
+              const active = isNavActive(pathname, item.to, item.end)
+              return (
+                <li key={item.to}>
+                  <Link
+                    to={item.to}
+                    aria-current={active ? 'page' : undefined}
+                    className={`flex min-h-11 min-w-11 items-center justify-center whitespace-nowrap rounded-lg px-2.5 text-sm font-semibold ${
+                      active
                         ? 'text-navy shadow-[inset_0_-3px_0_var(--color-coral)]'
                         : 'text-navy/70 hover:bg-navy-50 hover:text-navy'
-                    }`
-                  }
-                >
-                  {item.label}
-                </NavLink>
-              </li>
-            ))}
+                    }`}
+                  >
+                    {item.label}
+                  </Link>
+                </li>
+              )
+            })}
           </ul>
         </nav>
       </div>
@@ -111,6 +120,8 @@ export function AppShell() {
         <Suspense fallback={<Loading />}>
           <Routes>
             <Route path="/" element={<Home />} />
+            <Route path="/c/:courseId/:unitId" element={<Home />} />
+            <Route path="/c/:courseId" element={<Home />} />
             <Route path="/m/:moduleId" element={<ModulePage />} />
             <Route path="/p/:moduleId/:templateId/:seed" element={<ProblemPage />} />
             <Route path="/g/:moduleId/:templateId/:seed" element={<LegacyGeneratedRedirect />} />

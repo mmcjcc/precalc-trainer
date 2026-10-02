@@ -1,5 +1,5 @@
 /**
- * Cross-layer contracts for the Precalc Trainer.
+ * Cross-layer contracts for Math & Science Trainer.
  *
  * Layers (imports flow downward only):
  *   shared  <-  engine  <-  notation  <-  content  <-  ui
