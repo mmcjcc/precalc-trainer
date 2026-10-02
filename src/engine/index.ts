@@ -264,3 +264,7 @@ export type {
   SubshellLike,
   UnpairedGradeOptions,
 } from './econfig'
+
+// Polynomials (precalculus Unit 2): completing the square, synthetic division, zeros and end behavior, rational
+// root candidates. Exact arithmetic; API in docs/progress/polynomials-core.md.
+export * from './polynomials'

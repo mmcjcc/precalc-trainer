@@ -1,0 +1,85 @@
+/**
+ * Polynomials core (precalculus Unit 2): completing the square, synthetic division with the remainder and
+ * factor theorems, zeros / multiplicity / end behavior of a factored polynomial, rational root candidates.
+ * Exact arithmetic throughout. Public API; the API document is docs/progress/polynomials-core.md.
+ */
+export type {
+  BuiltPolynomial,
+  CompletedSquare,
+  CrossTouch,
+  CrossTouchCheck,
+  EndBehavior,
+  EndDirection,
+  EndMistakeCandidate,
+  FactoredAnalysis,
+  FactoredPoly,
+  FactoredSource,
+  FactorInput,
+  FormulaMistakeCandidate,
+  LinearFactor,
+  NumberMistakeCandidate,
+  PointValueCandidate,
+  PolyGrade,
+  PolyInput,
+  PolyMistakeKind,
+  RootCandidates,
+  RootSetMistakeCandidate,
+  SquareLine,
+  SquareLineGrade,
+  SquareMistakeCandidate,
+  SquareStep,
+  SyntheticAnswer,
+  SyntheticMistakeCandidate,
+  SyntheticTable,
+  ZeroAnswer,
+  ZeroInfo,
+  ZeroMistakeCandidate,
+  ZerosSpec,
+} from './types'
+export { POLY_MISTAKE_KINDS } from './types'
+
+export {
+  axisMistakes,
+  checkSquareLine,
+  completeSquare,
+  gradeAxisOfSymmetry,
+  gradeVertex,
+  gradeVertexForm,
+  isVertexForm,
+  squareMistakes,
+  vertexFormText,
+  vertexMistakes,
+} from './square'
+export {
+  divisorText,
+  gradeBottomRow,
+  gradeCoefficientRow,
+  gradeIsFactor,
+  gradeQuotient,
+  gradeRemainder,
+  gradeSyntheticTable,
+  polyValueAt,
+  quotientMistakes,
+  remainderMistakes,
+  syntheticDivision,
+  syntheticMistakes,
+} from './synthetic'
+export {
+  analyzeFactored,
+  endBehaviorMistakes,
+  endBehaviorOf,
+  expandFactored,
+  factoredFormText,
+  gradeCrossTouch,
+  gradeEndBehavior,
+  gradePolynomialFromZeros,
+  gradeYIntercept,
+  gradeZeros,
+  makeFactored,
+  parseFactored,
+  polynomialFromZeros,
+  polynomialFromZerosMistakes,
+  yInterceptMistakes,
+  zeroMistakes,
+} from './zeros'
+export { gradeRationalZeros, gradeRootCandidates, rationalRootCandidates, rootCandidateMistakes } from './roots'
