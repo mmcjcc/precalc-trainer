@@ -64,6 +64,12 @@ allowlist, no Microsoft Entra app registration: `deploy/azure.md`, scripted by `
 The same image runs on a plain Docker host behind another sign-in proxy, as a non-root user on a
 read-only root file system; the settings for that are in the `Dockerfile` header and `deploy/azure.md` §1.
 
+That is how it runs at home, as `math.apps.mmcjcc.com` on Jason's app platform (app-broker): the platform's
+sign-in (Google) sits in front, and the family list decides who gets in. `deploy/homelab.yml` is the request to
+the platform (port, sign-in profile, settings, the name of the allowlist secret; no addresses and no secret
+values). `sh deploy/deploy.sh` deploys the current commit once it is on `main` and the `deploy` workflow has
+pushed its image; `sh deploy/deploy.sh <older sha>` goes back. The rules are printed by `ssh homelab contract`.
+
 ## AI tutor and privacy
 
 An optional sidecar (`server/`) lets her ask a question about the problem in front of her and get a

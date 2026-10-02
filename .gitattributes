@@ -1,0 +1,3 @@
+# deploy/ is read on Linux (docker01 and CI): the gate rejects a manifest with CR line ends, and sh rejects a CRLF script.
+# If the repo already has a .gitattributes, append the next line instead of replacing the file.
+deploy/* text eol=lf

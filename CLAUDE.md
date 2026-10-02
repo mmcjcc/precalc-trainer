@@ -5,6 +5,10 @@ of each layer, conventions, and points to the research in `docs/research/` (engi
 patterns, content templates, calculators, UX, deployment). `docs/SPEC.md` is the
 original brief; the research docs and BUILD_GUIDE override it where they conflict.
 
+Hosting: use the homelab skill, or run "ssh homelab contract" and follow it. Never ssh to docker01 any other way.
+The app is `math` (https://math.apps.mmcjcc.com); what it asks of the platform is `deploy/homelab.yml`, and
+`sh deploy/deploy.sh` deploys a commit that is on `main` once the `deploy` workflow has pushed its image.
+
 Tooling on this machine: use the **Bash tool** (Git Bash). `node`, `npm`, `npx` are on PATH there
 (portable Node 22 in `C:\Users\cohenjas\bin`). PowerShell does NOT have them.
 
