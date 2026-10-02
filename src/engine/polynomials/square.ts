@@ -31,6 +31,7 @@ import {
   guard,
   invalidParse,
   minusText,
+  plusParen,
   plain,
   polyPretty,
   pretty,
@@ -130,7 +131,7 @@ function build(f: PolyInput): Model | null {
           `Multiply the ${rp(a)} back through: ${rf(a)}·${rf(ratNeg(square))} = ${rp(ratNeg(aSq))}.`,
         )
       }
-      push('combine', vertexForm, `Combine the constants: ${minusText(c, aSq)} = ${rp(k)}.`)
+      push('combine', vertexForm, `Combine the constants: ${aSq.n < 0 ? plusParen(ratNeg(aSq), c) : minusText(c, aSq)} = ${rp(k)}.`)
     }
 
     const vertex: ExactPoint = { x: h, y: k }
@@ -574,8 +575,10 @@ function readLine(line: string): LineRead {
   const text = plain(line)
   const eq = text.indexOf('=')
   const labelled = /^\s*(?:[A-Za-z]\s*\(\s*x\s*\)|y)\s*=[^=]*$/.test(text)
-  if (eq < 0 || labelled) {
-    const her = readFormula(line)
+  // The label on the right, "2(x - 3)^2 - 5 = y": the same line with its sides swapped.
+  const trailing = /^([^=y]*)=\s*(?:[A-Za-z]\s*\(\s*x\s*\)|y)\s*$/.exec(text)
+  if (eq < 0 || labelled || trailing) {
+    const her = readFormula(trailing && !labelled ? text.slice(0, eq) : line)
     if (!her.ok) return { ok: false, grade: invalidParse(her.error) }
     if (!her.poly) return { ok: false, grade: { verdict: 'invalid', reason: 'unreadable', message: NOT_POLYNOMIAL } }
     return { ok: true, poly: her.poly, node: her.node }

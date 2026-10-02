@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { generateProblem, getModule, MODULES } from '@/content/index'
+import { generateProblem, getCourse, getModule, modulesInUnit } from '@/content/index'
 import type { ProblemInstance } from '@/content/types'
 import { differenceQuotient, dqStatus, evaluateExpr, exprEquivalent, fOfXPlusH } from '@/engine'
 import { CHIP_OF_TAG } from '@/shared/types'
@@ -37,8 +37,9 @@ describe('module registration', () => {
     const mod = getModule('diffQuotient')
     expect(mod.title).toBe('Difference quotient')
     expect(mod.subject).toBeUndefined()
-    const precalc = MODULES.filter((m) => !m.subject).map((m) => m.id)
-    expect(precalc[precalc.length - 1]).toBe('diffQuotient')
+    // Last of the Unit 1 modules; the Unit 2 modules come after it.
+    const unit1 = modulesInUnit(getCourse('precalc')!.units[0]!).map((m) => m.id)
+    expect(unit1[unit1.length - 1]).toBe('diffQuotient')
     expect(mod.templates.map((t) => t.id)).toEqual([...TEMPLATES])
     for (const p of TEMPLATES.map((t) => generateProblem('diffQuotient', t, 1))) {
       for (const s of p.canonical) expect(mod.ruleCards.some((c) => c.id === s.ruleCard), s.ruleCard).toBe(true)

@@ -30,6 +30,7 @@ function moduleTitles(): string[] {
 
 const precalc = getCourse('precalc')!
 const unit1Titles = modulesInUnit(precalc.units[0]!).map((module) => module.title)
+const unit2Titles = modulesInUnit(precalc.units[1]!).map((module) => module.title)
 
 function done(at: number, moduleId: string, skill: string): Ev {
   return {
@@ -84,7 +85,8 @@ describe('Home: classes and units', () => {
 
     fireEvent.keyDown(tablist, { key: 'Home' })
     expect(screen.getByRole('tab', { name: 'Honors Precalculus', selected: true })).toBeTruthy()
-    expect(moduleTitles()).toEqual(unit1Titles)
+    // A first visit lands on the last unit that has modules: Unit 2, now that it has some.
+    expect(moduleTitles()).toEqual(unit2Titles)
 
     fireEvent.keyDown(tablist, { key: 'ArrowLeft' })
     expect(screen.getByRole('tab', { name: 'Honors Precalculus', selected: true })).toBeTruthy()
@@ -96,6 +98,10 @@ describe('Home: classes and units', () => {
 
   it('shows only the selected unit, with the review card on precalc Unit 1 only', () => {
     renderHome()
+    // A first visit lands on the last unit that has modules (Unit 2). Unit 1 is one press away.
+    expect(moduleTitles()).toEqual(unit2Titles)
+    expect(screen.queryByRole('heading', { name: 'Unit 1 review' })).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: /Unit 1/ }))
     expect(moduleTitles()).toEqual(unit1Titles)
     expect(moduleTitles().at(-1)).toBe('Difference quotient')
     expect(moduleTitles().indexOf('Domain and range')).toBe(moduleTitles().indexOf('Reading a graph') + 1)
@@ -120,12 +126,15 @@ describe('Home: classes and units', () => {
     expect(screen.getByRole('link', { name: /Choose a type/ }).getAttribute('href')).toBe('/m/atoms')
 
     fireEvent.click(screen.getByRole('tab', { name: 'Honors Precalculus' }))
+    // Unit 2 has modules now (completing the square first), so it is no longer "coming soon".
     fireEvent.click(screen.getByRole('button', { name: /Unit 2/ }))
-    expect(screen.getByText('Nothing to practise here yet: this unit is being built.')).toBeTruthy()
-    expect(screen.queryByRole('button', { name: 'Random problem' })).toBeNull()
+    expect(moduleTitles()).toEqual(unit2Titles)
+    expect(moduleTitles()).toContain('Completing the square')
+    expect(screen.queryByText('Nothing to practise here yet: this unit is being built.')).toBeNull()
+    expect(screen.getAllByRole('link', { name: /Choose a type/ }).map((link) => link.getAttribute('href'))).toContain('/m/quadratics')
     expect(screen.queryByRole('heading', { name: 'Unit 1 review' })).toBeNull()
-    expect(screen.queryByRole('heading', { level: 3 })).toBeNull()
-    expect(screen.getByRole('button', { name: /Unit 2/, pressed: true }).textContent).toMatch(/Coming soon/)
+    expect(screen.queryByRole('heading', { name: 'Difference quotient' })).toBeNull()
+    expect(screen.getByRole('button', { name: /Unit 2/, pressed: true }).textContent).not.toMatch(/Coming soon/)
   })
 
   it('keeps the choice in the store across a remount and a reload of saved settings', async () => {

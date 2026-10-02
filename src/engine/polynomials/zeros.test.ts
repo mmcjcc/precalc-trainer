@@ -252,7 +252,7 @@ describe('gradeZeros', () => {
   it('rows of the table left completely blank are skipped', () => {
     expect(gradeZeros(P, [{ zero: '-1', mult: 2 }, { zero: '', mult: '' }, { zero: '3', mult: 1 }, { zero: '1/2', mult: 3 }, { zero: '' }]).verdict).toBe('correct')
     expect(gradeZeros(P, [{ zero: '-1' }, { zero: '' }, { zero: '3' }, { zero: '1/2' }]).verdict).toBe('correct')
-    expect(gradeZeros(P, [{ zero: '' }, { zero: '', mult: '' }])).toMatchObject({ verdict: 'invalid', message: 'Type the zeros first, like -1, 3, 1/2.' })
+    expect(gradeZeros(P, [{ zero: '' }, { zero: '', mult: '' }])).toMatchObject({ verdict: 'invalid', message: 'Type the zeros first, with a comma between them.' })
   })
 })
 

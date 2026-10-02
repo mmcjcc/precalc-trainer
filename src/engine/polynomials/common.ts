@@ -241,7 +241,9 @@ export function readRow(answer: string | readonly string[], what: string): RowAn
   let items: ListItem[]
   const boxes = typeof answer !== 'string'
   if (typeof answer === 'string') {
-    if (!answer.trim()) return { ok: false, message: `Type the ${what} first, like 2, 1, 2, -1.` }
+    if (!answer.trim()) return { ok: false, message: `Type the ${what} first, with a comma between the numbers.` }
+    // A semicolon between the numbers is a comma typed differently, not a wrong row.
+    if (!answer.includes(',')) answer = answer.replace(/;/g, ',')
     const words = answer.trim().split(/\s+/)
     if (!answer.includes(',') && words.length > 1 && words.every((w) => ratFromString(w))) {
       let at = 0

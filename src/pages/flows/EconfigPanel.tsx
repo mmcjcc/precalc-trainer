@@ -19,28 +19,20 @@ import {
 } from '@/engine'
 import type { EconfigGrade, Spin } from '@/engine'
 import type { PatternHit } from '@/shared/types'
-import { useStore, type Attempt, type AttemptFinal } from '@/store'
+import { useStore, type AttemptFinal } from '@/store'
 import type { ProgressLine } from '@/problem/stepEngine'
 import { verdictFromEconfig } from '@/problem/tutorContext'
-import { RuleCardView } from '@/components/HintPanel'
 import { Katex } from '@/components/Katex'
 import { SigFigCorrect, SigFigExplanation, SigFigRejection } from '@/components/SigFigFeedback'
 import { useBreakpoint } from '@/components/useBreakpoint'
+import { HintLadder, NotAnAttemptNotice, useHintLadder } from './hintLadder'
 import { ProblemFrame } from './ProblemFrame'
 import { recordEconfigGrades } from './record'
 import type { FlowProps } from './types'
 
 type ElectronsAnswer = Extract<AnswerSpec, { type: 'electrons' }>
 
-const FINAL_HINT = 0
 const SAVE_DEBOUNCE_MS = 300
-
-const HINT_LABEL: Record<0 | 1 | 2 | 3, string> = {
-  0: 'Nudge me',
-  1: 'Show the rule',
-  2: 'Explain the answer',
-  3: 'All hints shown',
-}
 
 /** s, p, d, brackets, and the noble-gas cores she actually writes. 44 px targets. */
 const CONFIG_KEYS: { label: string; insert: string; name: string }[] = [
@@ -53,68 +45,6 @@ const CONFIG_KEYS: { label: string; insert: string; name: string }[] = [
   { label: '[Ne]', insert: '[Ne] ', name: 'Neon core' },
   { label: '[Ar]', insert: '[Ar] ', name: 'Argon core' },
 ]
-
-/**
- * Three-rung hint ladder: nudge, rule card, explanation. Rung 3 shows the answer, so it is flagged
- * on the attempt the same way every other flow flags a reveal.
- */
-function useEconfigHint(attempt: Attempt | null, disabled: boolean): { rung: 0 | 1 | 2 | 3; advance: () => void } {
-  const rung = (attempt?.hintsUsed[String(FINAL_HINT)] ?? 0) as 0 | 1 | 2 | 3
-  const advance = useCallback(() => {
-    if (disabled) return
-    const s = useStore.getState()
-    if (!s.attempt) return
-    const cur = s.attempt.hintsUsed[String(FINAL_HINT)] ?? 0
-    if (cur >= 3) return
-    const next = (cur + 1) as 1 | 2 | 3
-    s.useHint(FINAL_HINT, next)
-    if (next === 3) s.setFinal({ revealed: true, firstCorrect: false })
-  }, [disabled])
-  return { rung, advance }
-}
-
-function HintPanel({ rung, nudge, card, related, explanation, onAdvance, disabled }: { rung: 0 | 1 | 2 | 3; nudge: string; card: RuleCard | null; related: RuleCard[]; explanation: string[]; onAdvance: () => void; disabled: boolean }) {
-  const exhausted = rung === 3
-  return (
-    <div className="space-y-3">
-      <p className="text-sm text-navy/70">Hints never appear on their own. Ctrl+Shift+H steps through them.</p>
-      <button
-        type="button"
-        onClick={onAdvance}
-        disabled={disabled || exhausted}
-        className="min-h-11 w-full rounded-xl bg-gold px-3 font-semibold text-navy hover:bg-gold/80 disabled:opacity-50"
-      >
-        {HINT_LABEL[rung]}
-        {rung === 2 && <span className="ml-1 text-xs font-normal text-gold-text">(marks the answer as shown)</span>}
-      </button>
-      {rung >= 1 && (
-        <div className="rounded-xl bg-navy-50 p-3 text-sm text-navy">
-          <p className="text-xs font-semibold uppercase tracking-wide text-navy/60">Nudge</p>
-          <p className="mt-1">{nudge}</p>
-        </div>
-      )}
-      {rung >= 2 && card && (
-        <div>
-          <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-navy/60">Rule</p>
-          <RuleCardView card={card} />
-          {related.length > 0 && (
-            <details className="mt-2 rounded-xl border border-navy-100 bg-white p-2">
-              <summary className="min-h-11 cursor-pointer text-sm font-semibold text-navy">
-                Related {related.length === 1 ? 'rule' : 'rules'} ({related.length})
-              </summary>
-              <div className="mt-2 space-y-2">
-                {related.map((c) => (
-                  <RuleCardView key={c.id} card={c} />
-                ))}
-              </div>
-            </details>
-          )}
-        </div>
-      )}
-      {rung >= 3 && <SigFigExplanation steps={explanation} title="Worked explanation" />}
-    </div>
-  )
-}
 
 function gradeAsk(q: ElectronsEconfigQuestion, text: string, boxes: Spin[][]): EconfigGrade[] {
   const sp = q.species
@@ -248,7 +178,7 @@ function EconfigForm({ instance, attempt, flags, templateTitle, completion, fini
     caret.current = null
   }, [text])
 
-  const hint = useEconfigHint(attempt, done)
+  const hint = useHintLadder(attempt, done)
   const patternCard: RuleCard | null = lastPattern ? { id: lastPattern.id, title: lastPattern.title, body: lastPattern.lesson, example: lastPattern.example } : null
   const related = answer.ruleCards
     .slice(patternCard ? 0 : 1)
@@ -451,12 +381,7 @@ function EconfigForm({ instance, attempt, flags, templateTitle, completion, fini
           Check answer
         </button>
       )}
-      {feedback?.kind === 'invalid' && (
-        <div role="alert" className="rounded-2xl border border-bad bg-bad-100 p-3 text-navy">
-          <p className="font-semibold">This doesn’t count as an attempt</p>
-          <p className="mt-1 text-sm">{feedback.message}</p>
-        </div>
-      )}
+      {feedback?.kind === 'invalid' && <NotAnAttemptNotice messages={[feedback.message]} />}
       {feedback?.kind === 'parts' &&
         feedback.parts.map((part, i) =>
           part.correct ? (
@@ -480,7 +405,7 @@ function EconfigForm({ instance, attempt, flags, templateTitle, completion, fini
       nudgeText="Still here? The answer goes in the box below — the hint button is right there."
       keymap={{ onHint: hint.advance }}
       statement={<EconfigStatement answer={answer} question={question} />}
-      hints={<HintPanel rung={hint.rung} nudge={answer.nudge} card={patternCard ?? cardsById.get(answer.ruleCard) ?? null} related={related} explanation={answer.reveal} onAdvance={hint.advance} disabled={done} />}
+      hints={<HintLadder rung={hint.rung} nudge={answer.nudge} card={patternCard ?? cardsById.get(answer.ruleCard) ?? null} related={related} explanation={answer.reveal} onAdvance={hint.advance} disabled={done} />}
     >
       <section className="space-y-3 rounded-2xl border border-navy-100 bg-white p-4" aria-labelledby="el-answer-title">
         <h2 id="el-answer-title" className="font-semibold text-navy">

@@ -5,12 +5,16 @@
 import { describe, expect, it } from 'vitest'
 import {
   analyzeFactored,
+  checkSquareLine,
   completeSquare,
   gradeBottomRow,
+  gradeCoefficientRow,
+  gradeRationalZeros,
+  gradeRemainder,
+  gradeRootCandidates,
+  gradeZeros,
   gradeEndBehavior,
   gradePolynomialFromZeros,
-  gradeRationalZeros,
-  gradeRootCandidates,
   gradeVertexForm,
   polynomialFromZeros,
   rationalRootCandidates,
@@ -114,5 +118,50 @@ describe('rational root candidates', () => {
     expect(gradeRationalZeros(f, '2, -2, -1/3').verdict).toBe('correct')
     const inverted = gradeRootCandidates(f, '+-1, +-3, +-1/2, +-3/2, +-1/4, +-3/4')
     expect(inverted.verdict === 'mistake' && inverted.mistake).toBe('rrt_inverted')
+  })
+})
+
+describe('slips found while the screens were built', () => {
+  it('reads "none" with a space after it as a remainder of 0', () => {
+    // x^3 - 7x + 6 = (x - 1)(x - 2)(x + 3)
+    expect(gradeRemainder('x^3 - 7x + 6', -3, 'none ').verdict).toBe('correct')
+    expect(gradeRemainder('x^3 - 7x + 6', -3, ' no remainder').verdict).toBe('correct')
+    expect(gradeRemainder('x^3 - 7x + 6', -3, 'snone').verdict).toBe('invalid')
+  })
+
+  it('reads a row typed with semicolons', () => {
+    expect(gradeCoefficientRow('2x^3 - 3x^2 - 5', '2; -3; 0; -5').verdict).toBe('correct')
+    const short = gradeCoefficientRow('2x^3 - 3x^2 - 5', '2; -3; -5')
+    expect(short.verdict === 'mistake' && short.mistake).toBe('sd_missing_placeholder')
+  })
+
+  it('takes vertex form with y on either side as finished', () => {
+    for (const line of ['y = 2(x - 3)^2 - 5', '2(x - 3)^2 - 5 = y', '2(x - 3)^2 - 5 = f(x)']) {
+      const g = checkSquareLine('2x^2 - 12x + 13', line)
+      expect(g.verdict === 'correct' && g.done, line).toBe(true)
+    }
+    const g = checkSquareLine('2x^2 - 12x + 13', '2(x^2 - 6x) + 13 = y')
+    expect(g.verdict === 'correct' && g.done).toBe(false)
+  })
+
+  it('words the last step the way the line above it reads when a is negative', () => {
+    // -(x^2 + 6x + 9) + 9 + 13
+    const reasons = completeSquare('-x^2 - 6x + 13')!.path.map((l) => l.reason)
+    expect(reasons[reasons.length - 1]).toBe('Combine the constants: 9 + 13 = 22.')
+    const up = completeSquare('2x^2 - 12x + 13')!.path.map((l) => l.reason)
+    expect(up[up.length - 1]).toBe('Combine the constants: 13 − 18 = −5.')
+  })
+
+  it('never puts example numbers in an empty-answer notice', () => {
+    const notices = [
+      gradeRootCandidates('2x^3 - 5x^2 - 4x + 3', ''),
+      gradeRationalZeros('2x^3 - 5x^2 - 4x + 3', ''),
+      gradeZeros('-2(x + 1)^2(x - 3)', [{ zero: '' }]),
+      gradeCoefficientRow('2x^3 - 3x^2 - 5', ''),
+    ]
+    for (const g of notices) {
+      expect(g.verdict).toBe('invalid')
+      expect(g.verdict === 'invalid' && g.message).not.toMatch(/\d/)
+    }
   })
 })

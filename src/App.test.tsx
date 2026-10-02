@@ -41,8 +41,9 @@ describe('App routes', () => {
     expect(screen.getByRole('heading', { level: 1, name: 'Math & Science Trainer' })).toBeTruthy()
     expect(screen.getByRole('link', { name: 'Math & Science Trainer' })).toBeTruthy()
     expect(screen.getByRole('button', { name: 'Practice weak spots' })).toBeTruthy()
-    const unit1 = getCourse('precalc')!.units[0]!
-    expect(screen.getAllByRole('button', { name: 'Random problem' })).toHaveLength(modulesInUnit(unit1).length)
+    // A first visit lands on the last unit that has modules (Unit 2 since it got its first module).
+    const landing = [...getCourse('precalc')!.units].reverse().find((unit) => modulesInUnit(unit).length > 0)!
+    expect(screen.getAllByRole('button', { name: 'Random problem' })).toHaveLength(modulesInUnit(landing).length)
     const nav = screen.getByRole('navigation', { name: 'Main' })
     expect(within(nav).getByRole('link', { name: 'Home' }).getAttribute('aria-current')).toBe('page')
     expect(within(nav).getByRole('link', { name: 'Progress' }).getAttribute('aria-current')).toBeNull()

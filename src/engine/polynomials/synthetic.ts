@@ -540,7 +540,7 @@ function gradeRemainderUnchecked(f: PolyInput, c: RatLike, answer: string, optio
   if (!m) return { verdict: 'unsupported', message: UNSUPPORTED }
   const ask = options.ask ?? 'remainder'
   // "none" / "no remainder" is the number 0.
-  const her = readNumber(/^s*(?:none|no remainder|nothing|zero)s*$/i.test(answer ?? '') ? '0' : answer)
+  const her = readNumber(/^\s*(?:none|no remainder|nothing|zero)\s*$/i.test(answer ?? '') ? '0' : answer)
   if (!her.ok) return invalidParse(her.error)
   const explanation = m.explanation
   const C = rp(m.c)

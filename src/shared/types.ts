@@ -15,7 +15,7 @@
 export type RelOp = '=' | '<' | '<=' | '>' | '>='
 /** `h` is the difference-quotient step; the parser accepts it only when the problem owns it (ctx.vars). */
 export type VarName = 'x' | 'y' | 'n' | 'h'
-export type ModuleId = 'numberLine' | 'inequalities' | 'evenOdd' | 'inverses' | 'propertiesDrill' | 'sigFigs' | 'atoms' | 'diffQuotient' | 'graphFeatures' | 'domainRange' | 'composition' | 'transformations' | 'piecewiseRate' | 'electrons'
+export type ModuleId = 'numberLine' | 'inequalities' | 'evenOdd' | 'inverses' | 'propertiesDrill' | 'sigFigs' | 'atoms' | 'diffQuotient' | 'graphFeatures' | 'domainRange' | 'composition' | 'transformations' | 'piecewiseRate' | 'electrons' | 'quadratics' | 'polyDivision' | 'polyZeros'
 export type CalcId = 'ti84' | 'nspire'
 
 /** Fine-grained property tags. Canonical steps carry one; the engine's move detector reports one. */
@@ -294,6 +294,32 @@ export type ErrorPatternId =
   | 'rate_no_division'
   | 'rate_inverted'
   | 'rate_divided_by_b'
+  // polynomials (engine/polynomials; precalculus Unit 2: completing the square, synthetic division, zeros,
+  // rational roots). One per PolyMistakeKind, prefix poly_; content/modules/polynomials/patterns.ts maps them.
+  | 'poly_cs_no_factor_a'
+  | 'poly_cs_unbalanced'
+  | 'poly_cs_constant_not_scaled'
+  | 'poly_cs_half_or_square'
+  | 'poly_cs_h_sign'
+  | 'poly_cs_vertex_swapped'
+  | 'poly_sd_wrong_sign_c'
+  | 'poly_sd_missing_placeholder'
+  | 'poly_sd_subtracted'
+  | 'poly_sd_first_coefficient'
+  | 'poly_sd_quotient_degree'
+  | 'poly_sd_remainder_last_quotient'
+  | 'poly_zero_sign_reversed'
+  | 'poly_zero_nonmonic_factor'
+  | 'poly_multiplicity_ignored'
+  | 'poly_multiplicity_wrong_zero'
+  | 'poly_cross_touch_swapped'
+  | 'poly_end_sign_ignored'
+  | 'poly_end_parity_swapped'
+  | 'poly_lead_coefficient_omitted'
+  | 'poly_rrt_inverted'
+  | 'poly_rrt_no_plus_minus'
+  | 'poly_rrt_integers_only'
+  | 'poly_rrt_wrong_coefficients'
   // behavioral (ui)
   | 'abandoned'
 

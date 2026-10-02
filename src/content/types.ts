@@ -16,7 +16,7 @@ import type {
   VarName,
 } from '@/shared/types'
 
-export type ProblemKind = 'inequality' | 'numberLine' | 'evenOdd' | 'inverse' | 'drill' | 'sigFigs' | 'atoms' | 'diffQuotient' | 'graphFeatures' | 'domainRange' | 'composition' | 'transformations' | 'piecewiseRate' | 'electrons'
+export type ProblemKind = 'inequality' | 'numberLine' | 'evenOdd' | 'inverse' | 'drill' | 'sigFigs' | 'atoms' | 'diffQuotient' | 'graphFeatures' | 'domainRange' | 'composition' | 'transformations' | 'piecewiseRate' | 'electrons' | 'quadratics' | 'polyDivision' | 'polyZeros'
 
 /** Parent functions the transformations engine accepts. Matches `ParentName`. */
 export type TransformParent = 'square' | 'cube' | 'sqrt' | 'cbrt' | 'abs' | 'reciprocal'
@@ -499,6 +499,163 @@ export type AnswerSpec =
       ruleCards: RuleCardId[]
       reveal: string[]
       trap: string
+    }
+  | {
+      /**
+       * Completing the square (precalculus Unit 2). Everything here is read off the ENGINE's
+       * `completeSquare(f)`; grade with `checkSquareLine` (form, line by line), `gradeVertex`,
+       * `gradeAxisOfSymmetry`, and the module's `gradeOpens` / `gradeExtremum` (vertex). Never compare text.
+       */
+      type: 'quadratics'
+      /** `form`: rewrite f in vertex form, one line at a time. `vertex`: vertex, axis, opens, min or max value. */
+      question: 'form' | 'vertex'
+      /** f(x) in standard form, app syntax: "2x^2 - 12x + 13". */
+      f: string
+      /** The question in one line, plain words (not app syntax). Says nothing about the method. */
+      prompt: string
+      /** App syntax: "2(x - 3)^2 - 5". */
+      vertexForm: string
+      /** "(3, -5)". */
+      vertexText: string
+      /** "x = 3". */
+      axisText: string
+      opens: 'up' | 'down'
+      extremumKind: 'minimum' | 'maximum'
+      /** The minimum or maximum value, exact app syntax: "-5", "-5/4". */
+      extremumText: string
+      /** The engine's worked path: every line (app syntax) with why it follows. The first line is f itself. */
+      path: { text: string; reason: string }[]
+      /** The whole answer, pretty, for the tutor: "2(x − 3)^2 − 5" or "vertex (3, −5); axis x = 3; opens up; minimum value −5". */
+      expectedDisplay: string
+      /** Hint rung 1 (never contains the answer). */
+      nudge: string
+      /** Hint rung 2 before any named mistake: id of the rule card to show first. */
+      ruleCard: RuleCardId
+      /** Every rule card this problem leans on, most relevant first (includes `ruleCard`). */
+      ruleCards: RuleCardId[]
+      /** Hint rung 3 and the after-finish explanation: the engine's lines. Reveals the answer. */
+      reveal: string[]
+      /** The named mistake this seed promises (a PolyMistakeKind the engine lists for this f). */
+      trap: string
+      /**
+       * The parabola with its vertex marked. NOT on `instance.graph`: that panel can be opened before she
+       * finishes. The flow shows this one only after the problem is complete.
+       */
+      graph: GraphSpec
+    }
+  | {
+      /**
+       * Synthetic division, the remainder theorem and the factor theorem (precalculus Unit 2). Everything
+       * here is read off the ENGINE's `syntheticDivision(f, c)`. The problem is answered in `stages`, one
+       * check each: grade with `gradeCoefficientRow`, the module's `gradeDivisionTable` (the engine's
+       * `gradeSyntheticTable` on her box, products and bottom row), `gradeBottomRow`, `gradeQuotient`,
+       * `gradeRemainder` and `gradeIsFactor`. Never compare text.
+       */
+      type: 'polyDivision'
+      /** `table`: the whole table, then quotient and remainder. `value`: f(c). `factor`: is x − c a factor? */
+      question: 'table' | 'value' | 'factor'
+      /** f(x) in standard form, app syntax: "2x^3 - 3x^2 - 5". */
+      f: string
+      /** The number that makes the divisor zero, exact app syntax: "2", "-2". */
+      c: string
+      /** The divisor as it is shown, app syntax: "x - 2", "x + 2" (never "x - (-2)"). */
+      divisor: string
+      degree: number
+      /** The question in one line, plain words. Says nothing about the method's steps or the trap. */
+      prompt: string
+      /** The engine's three rows, one string per cell. `products[i]` sits under `coefficients[i + 1]`. */
+      rows: { coefficients: string[]; products: string[]; bottom: string[] }
+      /** App syntax: "2x^2 + x + 2". */
+      quotientText: string
+      /** The remainder, which is f(c): "-1". */
+      remainderText: string
+      isFactor: boolean
+      /** The parts she answers, in order. Each has its own hint ladder (hint key = its index). */
+      stages: {
+        id: 'row' | 'grid' | 'answers' | 'bottom' | 'value' | 'factor'
+        /** Hint rung 1 for this part (never contains the answer). */
+        nudge: string
+        /** Hint rung 2 before any named mistake in this part. */
+        ruleCard: RuleCardId
+        /** Hint rung 3 for this part: the engine's lines that answer it. */
+        reveal: string[]
+      }[]
+      /** The whole answer, pretty, for the tutor. */
+      expectedDisplay: string
+      /** The first part's nudge (the per-part ones are in `stages`). */
+      nudge: string
+      ruleCard: RuleCardId
+      /** Every rule card this problem leans on, most relevant first (includes `ruleCard`). */
+      ruleCards: RuleCardId[]
+      /** The after-finish explanation: the engine's whole worked table. Reveals the answer. */
+      reveal: string[]
+      /** The named mistake this seed promises (a PolyMistakeKind the engine lists for this f and c). */
+      trap: string
+    }
+  | {
+      /**
+       * Zeros and multiplicity, end behavior, a polynomial from its zeros, and rational root candidates
+       * (precalculus Unit 2). Everything here is read off the ENGINE (`analyzeFactored`,
+       * `polynomialFromZeros`, `rationalRootCandidates`). The problem is answered in `stages`, one check
+       * each: grade with the module's `gradeZerosStage`, which calls `gradeZeros`, `gradeCrossTouch`,
+       * `gradeEndBehavior`, `gradePolynomialFromZeros`, `gradeRootCandidates` and `gradeRationalZeros`.
+       * Never compare text.
+       */
+      type: 'polyZeros'
+      /**
+       * `zeros`: zeros with multiplicities, then crosses or touches at each. `end`: the two ends.
+       * `build`: the polynomial of least degree with given zeros through a point. `rational`: every
+       * possible rational zero, then which of them are zeros.
+       */
+      question: 'zeros' | 'end' | 'build' | 'rational'
+      /**
+       * The polynomial, app syntax. `zeros`: factored, "-2(x + 1)^2(x - 3)". `end`: factored or standard
+       * form, as shown. `rational`: standard form. `build`: the ANSWER in factored form, which is never
+       * shown before she finishes (`form` is 'hidden').
+       */
+      f: string
+      form: 'factored' | 'standard' | 'hidden'
+      /** The question in one line, plain words. Says nothing about the method or the trap. */
+      prompt: string
+      /**
+       * `zeros`: the engine's zeros, ascending (the order of the crosses / touches choices), each with what
+       * the graph does there. `build`: the given zeros in the order they are shown. Empty otherwise.
+       */
+      zeros: { text: string; mult: number; behavior?: 'crosses' | 'touches' }[]
+      /** `build`: the point the graph passes through, exact app syntax. */
+      point?: { x: string; y: string }
+      /** `zeros` and `end`: where f(x) goes at the far left and the far right. */
+      end?: { left: 'up' | 'down'; right: 'up' | 'down' }
+      /** `rational`: every candidate, as the engine writes the list: "+-1, +-3, +-1/2, +-3/2". */
+      candidatesText?: string
+      /** `rational`: the candidates that are zeros, "-1, 1/2, 3", or "none". */
+      rationalZerosText?: string
+      /** The parts she answers, in order. Each has its own hint ladder (hint key = its index). */
+      stages: {
+        id: 'zeros' | 'cross' | 'end' | 'formula' | 'candidates' | 'rational'
+        /** Hint rung 1 for this part (never contains the answer). */
+        nudge: string
+        /** Hint rung 2 before any named mistake in this part. */
+        ruleCard: RuleCardId
+        /** Hint rung 3 for this part: the engine's lines that answer it. */
+        reveal: string[]
+      }[]
+      /** The whole answer, pretty, for the tutor. */
+      expectedDisplay: string
+      /** The first part's nudge (the per-part ones are in `stages`). */
+      nudge: string
+      ruleCard: RuleCardId
+      /** Every rule card this problem leans on, most relevant first (includes `ruleCard`). */
+      ruleCards: RuleCardId[]
+      /** The after-finish explanation: the engine's lines. Reveals the answer. */
+      reveal: string[]
+      /** The named mistake this seed promises (a PolyMistakeKind the engine names for this problem). */
+      trap: string
+      /**
+       * The graph of f for `zeros` and `end` ({ kind: 'none' } otherwise). NOT on `instance.graph`: that
+       * panel can be opened before she finishes. The flow shows this one only after the problem is complete.
+       */
+      graph: GraphSpec
     }
   | {
       type: 'drill'

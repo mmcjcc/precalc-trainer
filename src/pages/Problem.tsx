@@ -11,6 +11,9 @@ import { CompositionFlow } from './flows/CompositionFlow'
 import { DiffQuotientFlow } from './flows/DiffQuotientFlow'
 import { DomainRangeFlow } from './flows/DomainRangeFlow'
 import { PiecewiseRateFlow } from './flows/PiecewiseRateFlow'
+import { PolyDivisionFlow } from './flows/PolyDivisionFlow'
+import { PolyZerosFlow } from './flows/PolyZerosFlow'
+import { QuadraticsFlow } from './flows/QuadraticsFlow'
 import { TransformationFlow } from './flows/TransformationFlow'
 import { GraphFeaturesFlow } from './flows/GraphFeaturesFlow'
 import { EvenOddFlow } from './flows/EvenOddFlow'
@@ -107,6 +110,12 @@ function ProblemBody({ instance, flags, templateTitle }: { instance: ProblemInst
       return <TransformationFlow {...props} />
     case 'piecewiseRate':
       return <PiecewiseRateFlow {...props} />
+    case 'quadratics':
+      return <QuadraticsFlow {...props} />
+    case 'polyDivision':
+      return <PolyDivisionFlow {...props} />
+    case 'polyZeros':
+      return <PolyZerosFlow {...props} />
     default:
       return <Navigate to="/" replace />
   }

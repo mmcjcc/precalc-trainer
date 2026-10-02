@@ -224,9 +224,9 @@ type ListRead = { ok: true; values: (Rational | null)[]; texts: string[] } | { o
  * A list of numbers where an item may carry ±: "+-1, +-3, +-1/2", "±1, ±3", "1, -1, 3, -3", "{1, -1}",
  * "+-{1, 3, 1/2}" (the ± applies to every item).
  */
-function readSignedList(text: string, example: string): ListRead {
+function readSignedList(text: string): ListRead {
   let t = plain(text ?? '').trim()
-  if (!t) return { ok: false, grade: { verdict: 'invalid', reason: 'unreadable', message: `Type the list first, like ${example}.` } }
+  if (!t) return { ok: false, grade: { verdict: 'invalid', reason: 'unreadable', message: 'Type the list first, with a comma between the numbers.' } }
   let allPm = false
   const wrapped = t.match(/^(?:\+\s*-|-\s*\+)\s*([{(\[].*[})\]])$/)
   if (wrapped) {
@@ -283,7 +283,7 @@ export function gradeRootCandidates(f: PolyInput, answer: string): PolyGrade {
 function gradeRootCandidatesUnchecked(f: PolyInput, answer: string): PolyGrade {
   const m = build(f)
   if (!m) return { verdict: 'unsupported', message: UNSUPPORTED }
-  const her = readSignedList(answer, '+-1, +-3, +-1/2')
+  const her = readSignedList(answer)
   if (!her.ok) return her.grade
   const explanation = [...m.explanation]
   const rational = her.values.filter((v): v is Rational => v !== null)
@@ -341,7 +341,7 @@ function gradeRationalZerosUnchecked(f: PolyInput, answer: string): PolyGrade {
   let rational: Rational[] = []
   let irrationalText: string | null = null
   if (!none) {
-    const her = readSignedList(answer, '-1, 1/2, 3')
+    const her = readSignedList(answer)
     if (!her.ok) return her.grade
     rational = sortedSet(her.values.filter((v): v is Rational => v !== null))
     const at = her.values.findIndex((v) => v === null)

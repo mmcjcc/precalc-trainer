@@ -1,9 +1,10 @@
 import { FN_PATTERN } from '@/content/modules/domainRange/patterns'
 import { EC_PATTERN } from '@/content/modules/electrons/patterns'
+import { POLY_PATTERN } from '@/content/modules/polynomials/patterns'
 import { TR_PATTERN } from '@/content/modules/transformations/patterns'
 import { useStore } from '@/store'
 import type { FieldResult, FinalAnswerGrade } from '@/problem/inequality'
-import type { DescriptionGrade, EconfigGrade, FunctionGrade, TransformGrade } from '@/engine'
+import type { DescriptionGrade, EconfigGrade, FunctionGrade, PolyGrade, SquareLineGrade, TransformGrade } from '@/engine'
 import type { AtomGrade, SigFigGrade, SigFigTapGrade } from '@/shared/types'
 
 /**
@@ -168,6 +169,31 @@ export function recordEconfigGrades(grades: readonly EconfigGrade[]): void {
     s.recordFinalAnswer({
       correct: false,
       pattern: g.verdict === 'mistake' ? EC_PATTERN[g.mistake] : undefined,
+      via: 'text',
+    })
+  }
+}
+
+/**
+ * Log one polynomial check (Unit 2: completing the square, synthetic division, zeros, rational roots) made of
+ * one or more grades: the parts of one press of Check. A named mistake is stored under its poly_ id.
+ * Unreadable input, or an answer that is equal but not in the form asked for, is not an attempt: one invalid
+ * or unsupported part drops the whole check. All parts correct is ONE correct record; otherwise one wrong
+ * record per part that is not correct (a part that is right is not logged on its own).
+ */
+export function recordPolyGrades(grades: readonly (PolyGrade | SquareLineGrade)[]): void {
+  if (grades.length === 0) return
+  if (grades.some((g) => g.verdict === 'invalid' || g.verdict === 'unsupported')) return
+  const s = useStore.getState()
+  const bad = grades.filter((g) => g.verdict !== 'correct')
+  if (bad.length === 0) {
+    s.recordFinalAnswer({ correct: true, via: 'text' })
+    return
+  }
+  for (const g of bad) {
+    s.recordFinalAnswer({
+      correct: false,
+      pattern: g.verdict === 'mistake' ? POLY_PATTERN[g.mistake] : undefined,
       via: 'text',
     })
   }

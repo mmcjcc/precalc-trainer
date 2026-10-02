@@ -429,7 +429,7 @@ function gradeZerosUnchecked(source: FactoredSource, answer: string | readonly Z
   const hasMult = (r: { mult?: string | number }): boolean => r.mult !== undefined && `${r.mult}`.trim() !== ''
   const rows: { zero: string; mult?: string | number; start: number }[] =
     typeof answer === 'string' ? splitList(plain(answer)).map((it) => ({ zero: it.text, start: it.start })) : answer.map((r) => ({ zero: r.zero ?? '', mult: r.mult, start: 0 }))
-  if (!rows.length || rows.every((r) => !r.zero.trim())) return { verdict: 'invalid', reason: 'unreadable', message: 'Type the zeros first, like -1, 3, 1/2.' }
+  if (!rows.length || rows.every((r) => !r.zero.trim())) return { verdict: 'invalid', reason: 'unreadable', message: 'Type the zeros first, with a comma between them.' }
   const withMult = rows.some(hasMult)
   const entries: Entry[] = []
   for (let i = 0; i < rows.length; i++) {
@@ -961,7 +961,7 @@ function gradePolynomialFromZerosUnchecked(spec: ZerosSpec, answer: string): Pol
   if (!b) return { verdict: 'unsupported', message: 'This problem needs distinct rational zeros with positive whole multiplicities, and a point that is not a zero.' }
   const her = readFormula(answer)
   if (!her.ok) return invalidParse(her.error)
-  if (!her.poly) return { verdict: 'invalid', reason: 'unreadable', message: 'Write f(x) as a polynomial in x: a product of factors like (x - 3), or multiplied out.' }
+  if (!her.poly) return { verdict: 'invalid', reason: 'unreadable', message: 'Write f(x) as a polynomial in x: a product of factors, or multiplied out.' }
   const explanation = b.explanation
   const hp = her.poly
   if (b.point ? polyEquals(hp, b.poly) : proportional(hp, b.body)) {

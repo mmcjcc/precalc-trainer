@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import { generateProblem } from '@/content'
 import { gradeLightAnswer } from '@/content/modules/electrons/grade'
-import { configurationMistakes, gradeConfiguration } from '@/engine'
+import { SD_KEYS, gradeDivisionStage } from '@/content/modules/polyDivision'
+import { canonicalEntries, gradeZerosStage } from '@/content/modules/polyZeros'
+import { checkSquareLine, configurationMistakes, gradeAxisOfSymmetry, gradeConfiguration, gradeVertex, squareMistakes, syntheticMistakes, vertexMistakes } from '@/engine'
+import { ratToString } from '@/notation'
 import { gradeFinalAnswer } from '@/problem/inequality'
 import { encodeSlotStep } from '@/problem/evenOdd'
 import {
@@ -11,6 +14,7 @@ import {
   verdictFromSetAnswer,
   verdictFromStep,
   verdictFromEconfig,
+  verdictFromPoly,
   verdictFromTransform,
 } from '@/problem/tutorContext'
 import type { Attempt, AttemptStep } from '@/store'
@@ -342,6 +346,238 @@ describe('buildTutorContext', () => {
     expect(drawn.answer).toBe(diagram.answer.expectedDisplay)
     expect(drawn.canonical).toEqual(diagram.answer.reveal)
     expect(drawn.instructions).toContain('unpaired')
+  })
+
+  it('describes completing the square line by line, including a named poly_ mistake', () => {
+    const instance = generateProblem('quadratics', 'cs.form', 6)
+    if (instance.answer.type !== 'quadratics') throw new Error('expected a quadratics problem')
+    const a = instance.answer
+    const cand = squareMistakes(a.f)!.find((c) => c.shadows.length === 0)!
+    const grade = checkSquareLine(a.f, cand.text)
+    expect(grade.verdict).toBe('mistake')
+    if (grade.verdict !== 'mistake') return
+    const kept = a.path[1]!.text
+    const ctx = buildTutorContext(instance, attempt('cs-1', { moduleId: 'quadratics', steps: [step(kept)] }), verdictFromPoly([grade], cand.text), false)
+    expect(ctx.subject).toBe('precalculus')
+    expect(ctx.kind).toBe('quadratics')
+    expect(ctx.moduleId).toBe('quadratics')
+    expect(ctx.title).toBe('Rewrite in vertex form')
+    expect(ctx.statement).toBe(`f(x) = ${a.f}. ${a.prompt}`)
+    expect(ctx.work).toEqual([kept])
+    expect(ctx.canonical).toEqual(a.reveal)
+    expect(ctx.answer).toBe(a.expectedDisplay)
+    expect(ctx.finished).toBe(false)
+    expect(ctx.revealed).toBe(false)
+    expect(ctx.verdict?.status).toBe('wrong')
+    expect(ctx.verdict?.line).toBe(cand.text)
+    expect(ctx.verdict?.mistake?.id).toBe(`poly_${cand.kind}`)
+    expect(ctx.verdict?.mistake?.title).toBeTruthy()
+    expect(ctx.verdict?.mistake?.lesson).toBeTruthy()
+    expect(ctx.verdict?.mistake?.witness).toBe(grade.witness)
+
+    const legal = verdictFromPoly([checkSquareLine(a.f, kept)], kept)
+    expect(legal).toMatchObject({ status: 'correct', line: kept, message: 'This line is still equal to f(x).' })
+    const unreadable = verdictFromPoly([checkSquareLine(a.f, `${kept} +`)])
+    expect(unreadable?.status).toBe('parse_error')
+    expect(unreadable?.mistake).toBeUndefined()
+    const plain = verdictFromPoly([checkSquareLine(a.f, 'x + 1')])
+    expect(plain?.status).toBe('wrong')
+    expect(plain?.mistake).toBeUndefined()
+    expect(verdictFromPoly([])).toBeNull()
+  })
+
+  it('describes the vertex question from her boxes, and one check made of several grades', () => {
+    const instance = generateProblem('quadratics', 'cs.vertex', 6)
+    if (instance.answer.type !== 'quadratics') throw new Error('expected a quadratics problem')
+    const a = instance.answer
+    const wrong = vertexMistakes(a.f)!.find((c) => c.kind === 'cs_h_sign')!
+    const grades = [gradeVertex(a.f, wrong.text), gradeAxisOfSymmetry(a.f, a.axisText)]
+    const final = { polyEntries: { extremumValue: a.extremumText, vertex: wrong.text, opens: a.opens, axis: a.axisText, extremumKind: a.extremumKind }, revealed: true }
+    const ctx = buildTutorContext(instance, attempt('cs-2', { moduleId: 'quadratics', final }), verdictFromPoly(grades), true)
+    expect(ctx.kind).toBe('quadratics')
+    expect(ctx.statement).toContain(a.f)
+    expect(ctx.statement).toContain(a.prompt)
+    // Reading order, whatever order the boxes were stored in.
+    expect(ctx.work).toEqual([`vertex: ${wrong.text}`, `axis: ${a.axisText}`, `opens: ${a.opens}`, `extremumKind: ${a.extremumKind}`, `extremumValue: ${a.extremumText}`])
+    expect(ctx.canonical).toEqual(a.reveal)
+    expect(ctx.answer).toBe(a.expectedDisplay)
+    expect(ctx.answer).toContain('vertex')
+    expect(ctx.finished).toBe(true)
+    expect(ctx.revealed).toBe(true)
+    expect(ctx.verdict?.status).toBe('wrong')
+    expect(ctx.verdict?.mistake?.id).toBe('poly_cs_h_sign')
+
+    const right = verdictFromPoly([gradeVertex(a.f, a.vertexText), gradeAxisOfSymmetry(a.f, a.axisText)])
+    expect(right?.status).toBe('correct')
+    expect(right?.message).toContain('the vertex is')
+    expect(right?.message).toContain('axis of symmetry')
+    // One unreadable box makes the whole check a parse error, even beside a named mistake.
+    expect(verdictFromPoly([gradeVertex(a.f, wrong.text), gradeAxisOfSymmetry(a.f, 'y = 3')])?.status).toBe('parse_error')
+  })
+
+  it('describes a synthetic-division table from her cells, row by row, with the named slip', () => {
+    const instance = generateProblem('polyDivision', 'sd.table', 6)
+    if (instance.answer.type !== 'polyDivision') throw new Error('expected a polyDivision problem')
+    const a = instance.answer
+    const row = a.rows.coefficients.join(', ')
+    // The right number in the box, every product subtracted: the same bottom row as −c in the box gives.
+    const sign = syntheticMistakes(a.f, a.c)!.find((c) => c.kind === 'sd_wrong_sign_c')!
+    const entries: Record<string, string> = { [SD_KEYS.row]: row, [SD_KEYS.box]: a.c }
+    sign.bottom.forEach((v, i) => (entries[SD_KEYS.bottom(i)] = ratToString(v)))
+    sign.products.forEach((v, i) => (entries[SD_KEYS.product(i + 1)] = ratToString({ n: -v.n, d: v.d })))
+    const grades = gradeDivisionStage(a, 'grid', entries).parts.map((p) => p.grade)
+    const ctx = buildTutorContext(instance, attempt('sd-1', { moduleId: 'polyDivision', final: { polyEntries: entries, polyStage: 1 } }), verdictFromPoly(grades), false)
+    expect(ctx.subject).toBe('precalculus')
+    expect(ctx.kind).toBe('polyDivision')
+    expect(ctx.moduleId).toBe('polyDivision')
+    expect(ctx.title).toBe('Synthetic division')
+    expect(ctx.statement).toBe(`f(x) = ${a.f}. ${a.prompt}`)
+    expect(ctx.statement).toContain(a.divisor.replace(/-/g, '−'))
+    expect(ctx.work).toEqual([
+      `top row: ${row}`,
+      `box: ${a.c}`,
+      `products row: ${sign.products.map((v) => ratToString({ n: -v.n, d: v.d })).join(', ')}`,
+      `bottom row: ${sign.bottom.map(ratToString).join(', ')}`,
+    ])
+    expect(ctx.canonical).toEqual(a.reveal)
+    expect(ctx.answer).toBe(a.expectedDisplay)
+    expect(ctx.answer).toContain('quotient')
+    expect(ctx.finished).toBe(false)
+    expect(ctx.revealed).toBe(false)
+    expect(ctx.verdict?.status).toBe('wrong')
+    expect(ctx.verdict?.mistake?.id).toBe('poly_sd_subtracted')
+    expect(ctx.verdict?.mistake?.lesson).toBeTruthy()
+    expect(ctx.verdict?.mistake?.witness).toContain('ADDS each column')
+
+    // An empty cell is a parse error, not a wrong answer; a part she has not reached adds no line.
+    const hole = { ...entries, [SD_KEYS.bottom(1)]: '' }
+    const blocked = verdictFromPoly(gradeDivisionStage(a, 'grid', hole).parts.map((p) => p.grade))
+    expect(blocked?.status).toBe('parse_error')
+    expect(blocked?.mistake).toBeUndefined()
+    expect(buildTutorContext(instance, attempt('sd-2', { moduleId: 'polyDivision', final: { polyEntries: { row } } }), null, false).work).toEqual([`top row: ${row}`])
+    expect(buildTutorContext(instance, attempt('sd-3', { moduleId: 'polyDivision' }), null, false).work).toEqual([])
+  })
+
+  it('describes f(c) and the factor question from the bottom row she typed and her answer', () => {
+    const value = generateProblem('polyDivision', 'sd.value', 3)
+    if (value.answer.type !== 'polyDivision') throw new Error('expected a polyDivision problem')
+    const v = value.answer
+    const bottom = v.rows.bottom.join(', ')
+    const early = v.rows.bottom[v.degree - 1]!
+    const grade = gradeDivisionStage(v, 'value', { value: early }).parts[0]!.grade
+    const ctx = buildTutorContext(value, attempt('sd-4', { moduleId: 'polyDivision', final: { polyEntries: { value: early, bottom }, polyStage: 1, revealed: true } }), verdictFromPoly([grade]), true)
+    expect(ctx.kind).toBe('polyDivision')
+    expect(ctx.statement).toBe(`f(x) = ${v.f}. ${v.prompt}`)
+    expect(ctx.work).toEqual([`bottom row: ${bottom}`, `f(${v.c}): ${early}`])
+    expect(ctx.canonical).toEqual(v.reveal)
+    expect(ctx.answer).toBe(v.expectedDisplay)
+    expect(ctx.finished).toBe(true)
+    expect(ctx.revealed).toBe(true)
+    expect(ctx.verdict?.status).toBe('wrong')
+    expect(ctx.verdict?.mistake?.id).toBe('poly_sd_remainder_last_quotient')
+
+    const factor = generateProblem('polyDivision', 'sd.factor', 2)
+    if (factor.answer.type !== 'polyDivision') throw new Error('expected a polyDivision problem')
+    const f = factor.answer
+    const answered = f.isFactor ? 'yes' : 'no'
+    const right = gradeDivisionStage(f, 'factor', { factor: answered }).parts[0]!.grade
+    const done = buildTutorContext(factor, attempt('sd-5', { moduleId: 'polyDivision', final: { polyEntries: { bottom: f.rows.bottom.join(', '), factor: answered } } }), verdictFromPoly([right]), true)
+    expect(done.statement).toContain('a factor of f(x)?')
+    expect(done.work).toEqual([`bottom row: ${f.rows.bottom.join(', ')}`, `factor: ${answered}`])
+    expect(done.answer).toContain(answered)
+    expect(done.verdict?.status).toBe('correct')
+    expect(verdictFromPoly([gradeDivisionStage(f, 'factor', {}).parts[0]!.grade])?.status).toBe('parse_error')
+  })
+
+  it('describes a zeros problem from her rows and her choices, with the named slip', () => {
+    const instance = generateProblem('polyZeros', 'pz.zeros', 2)
+    if (instance.answer.type !== 'polyZeros') throw new Error('expected a polyZeros problem')
+    const a = instance.answer
+    // Every zero typed with the sign of the number in its factor.
+    const entries: Record<string, string> = { rows: String(a.zeros.length) }
+    a.zeros.forEach((z, i) => {
+      entries[`z${i}`] = z.text.startsWith('-') ? z.text.slice(1) : `-${z.text}`
+      entries[`m${i}`] = String(z.mult)
+    })
+    const grades = gradeZerosStage(a, 'zeros', entries).parts.map((p) => p.grade)
+    const ctx = buildTutorContext(instance, attempt('pz-1', { moduleId: 'polyZeros', final: { polyEntries: entries } }), verdictFromPoly(grades), false)
+    expect(ctx.subject).toBe('precalculus')
+    expect(ctx.kind).toBe('polyZeros')
+    expect(ctx.moduleId).toBe('polyZeros')
+    expect(ctx.title).toBe('Zeros and multiplicity')
+    expect(ctx.statement).toBe(`f(x) = ${a.f}. ${a.prompt}`)
+    expect(ctx.work).toEqual(a.zeros.map((z, i) => `zero ${i + 1}: ${entries[`z${i}`]}, multiplicity ${z.mult}`))
+    expect(ctx.canonical).toEqual(a.reveal)
+    expect(ctx.answer).toBe(a.expectedDisplay)
+    expect(ctx.answer).toContain('multiplicity')
+    expect(ctx.finished).toBe(false)
+    expect(ctx.revealed).toBe(false)
+    expect(ctx.verdict?.status).toBe('wrong')
+    expect(ctx.verdict?.mistake?.id).toBe('poly_zero_sign_reversed')
+    expect(ctx.verdict?.mistake?.lesson).toBeTruthy()
+    expect(ctx.verdict?.mistake?.witness).toContain('opposite sign')
+
+    // An empty table is a parse error, not a wrong answer; the second part adds her choices.
+    const blocked = verdictFromPoly(gradeZerosStage(a, 'zeros', {}).parts.map((p) => p.grade))
+    expect(blocked?.status).toBe('parse_error')
+    expect(blocked?.mistake).toBeUndefined()
+    const right = canonicalEntries(a)
+    const done = buildTutorContext(
+      instance,
+      attempt('pz-2', { moduleId: 'polyZeros', final: { polyEntries: right, polyStage: 1 } }),
+      verdictFromPoly(gradeZerosStage(a, 'cross', right).parts.map((p) => p.grade)),
+      true,
+    )
+    expect(done.work).toEqual([
+      ...a.zeros.map((z, i) => `zero ${i + 1}: ${z.text}, multiplicity ${z.mult}`),
+      ...a.zeros.map((z) => `at x = ${z.text}: ${z.behavior}`),
+    ])
+    expect(done.verdict?.status).toBe('correct')
+    expect(done.finished).toBe(true)
+    expect(buildTutorContext(instance, attempt('pz-3', { moduleId: 'polyZeros' }), null, false).work).toEqual([])
+  })
+
+  it('describes end behavior, a polynomial from its zeros, and rational root candidates', () => {
+    const end = generateProblem('polyZeros', 'pz.end', 2)
+    if (end.answer.type !== 'polyZeros') throw new Error('expected a polyZeros problem')
+    const e = end.answer
+    const flipped = { left: e.end!.left === 'up' ? 'down' : 'up', right: e.end!.right }
+    const endVerdict = verdictFromPoly(gradeZerosStage(e, 'end', flipped).parts.map((p) => p.grade))
+    const endCtx = buildTutorContext(end, attempt('pz-4', { moduleId: 'polyZeros', final: { polyEntries: flipped } }), endVerdict, false)
+    expect(endCtx.statement).toBe(`f(x) = ${e.f}. ${e.prompt}`)
+    expect(endCtx.work).toEqual([`left end: ${flipped.left}`, `right end: ${flipped.right}`])
+    expect(endCtx.answer).toContain(`left end ${e.end!.left}`)
+    expect(endCtx.verdict?.mistake?.id).toBe('poly_end_parity_swapped')
+
+    // The zeros and the point are the statement there; the formula is the answer and stays out of it.
+    const build = generateProblem('polyZeros', 'pz.build', 4)
+    if (build.answer.type !== 'polyZeros') throw new Error('expected a polyZeros problem')
+    const b = build.answer
+    const bare = b.f.replace(/^-?\d*/, '')
+    const buildVerdict = verdictFromPoly(gradeZerosStage(b, 'formula', { formula: bare }).parts.map((p) => p.grade))
+    const buildCtx = buildTutorContext(build, attempt('pz-5', { moduleId: 'polyZeros', final: { polyEntries: { formula: bare }, revealed: true } }), buildVerdict, false)
+    expect(buildCtx.statement).toBe(`${build.statementText} ${b.prompt}`)
+    expect(buildCtx.statement).toContain(`(${b.point!.x}, ${b.point!.y})`)
+    expect(buildCtx.statement).toContain('multiplicity')
+    expect(buildCtx.statement).not.toContain(b.f)
+    expect(buildCtx.work).toEqual([`formula: ${bare}`])
+    expect(buildCtx.answer).toBe(b.expectedDisplay)
+    expect(buildCtx.canonical).toEqual(b.reveal)
+    expect(buildCtx.revealed).toBe(true)
+    expect(buildCtx.verdict?.mistake?.id).toBe('poly_lead_coefficient_omitted')
+
+    const rational = generateProblem('polyZeros', 'pz.rational', 1)
+    if (rational.answer.type !== 'polyZeros') throw new Error('expected a polyZeros problem')
+    const r = rational.answer
+    const entries = { candidates: r.candidatesText!, rational: 'none' }
+    const ratVerdict = verdictFromPoly(gradeZerosStage(r, 'rational', entries).parts.map((p) => p.grade))
+    const ratCtx = buildTutorContext(rational, attempt('pz-6', { moduleId: 'polyZeros', final: { polyEntries: entries, polyStage: 1 } }), ratVerdict, false)
+    expect(ratCtx.statement).toBe(`f(x) = ${r.f}. ${r.prompt}`)
+    expect(ratCtx.work).toEqual([`possible rational zeros: ${r.candidatesText}`, 'rational zeros: none'])
+    expect(ratCtx.answer).toContain('possible rational zeros ±1')
+    expect(ratCtx.canonical).toEqual(r.reveal)
+    expect(ratCtx.verdict?.status).toBe('wrong')
+    expect(verdictFromPoly(gradeZerosStage(r, 'candidates', {}).parts.map((p) => p.grade))?.status).toBe('parse_error')
   })
 
   it('never adds a name, email, or account field', () => {

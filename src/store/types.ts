@@ -116,6 +116,17 @@ export interface AttemptFinal {
   ecText?: string
   /** Electron configurations: her orbital diagram in the engine's text form (`ud u u`). */
   ecDiagram?: string
+  /**
+   * Polynomials (precalculus Unit 2): every answer box exactly as typed, keyed by box (completing the
+   * square: vertex, axis, opens, extremumKind, extremumValue). Restored after a reload. The lines of a
+   * line-by-line problem are the attempt's `steps`, and the line being typed is its `draft`.
+   */
+  polyEntries?: Record<string, string>
+  /**
+   * Polynomials, problems answered in several parts (synthetic division: top row, table, quotient and
+   * remainder): how many parts have been checked right. Restored after a reload.
+   */
+  polyStage?: number
 }
 
 export interface Attempt {

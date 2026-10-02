@@ -3,11 +3,14 @@
  * Field sources: docs/progress/tutor-core.md §6. Never her name, email, or account.
  */
 import { FN_PATTERN } from '@/content/modules/domainRange/patterns'
+import { divisionWork } from '@/content/modules/polyDivision/grade'
+import { zerosWork } from '@/content/modules/polyZeros/grade'
 import { EC_PATTERN } from '@/content/modules/electrons/patterns'
+import { POLY_PATTERN } from '@/content/modules/polynomials/patterns'
 import { TR_PATTERN } from '@/content/modules/transformations/patterns'
 import type { ProblemInstance } from '@/content/types'
 import { ERROR_PATTERNS } from '@/engine'
-import type { DescriptionGrade, EconfigGrade, FunctionGrade, TransformGrade } from '@/engine'
+import type { DescriptionGrade, EconfigGrade, FunctionGrade, PolyGrade, SquareLineGrade, TransformGrade } from '@/engine'
 import { getModule } from '@/content/registry'
 import type { FinalAnswerGrade } from '@/problem/inequality'
 import { decodeSlotStep } from '@/problem/evenOdd'
@@ -20,6 +23,8 @@ const STEP_KINDS = new Set(['inequality', 'inverse', 'evenOdd', 'diffQuotient'])
 
 const GF_WORK = ['increasing', 'decreasing', 'globalMax', 'globalMin', 'localMax', 'localMin'] as const
 const FN_WORK = ['answer', 'f', 'g'] as const
+/** Polynomial answer boxes in reading order; a module's other boxes follow in the order they were stored. */
+const POLY_WORK = ['vertex', 'axis', 'opens', 'extremumKind', 'extremumValue'] as const
 
 function clip(text: string, max: number): string {
   return text.length <= max ? text : text.slice(0, max)
@@ -114,6 +119,33 @@ export function verdictFromEconfig(grades: readonly EconfigGrade[]): TutorVerdic
     return withMessage('correct', message)
   }
   return null
+}
+
+/**
+ * Polynomial grades (precalculus Unit 2): one, or the parts of one check together. Unreadable input and an
+ * answer that is equal but not in the form asked for are a parse error, not a wrong answer. A named mistake
+ * carries the catalog lesson plus the engine's sentence about her numbers. `line` is the line she typed,
+ * for a line-by-line problem.
+ */
+export function verdictFromPoly(grades: readonly (PolyGrade | SquareLineGrade)[], line?: string): TutorVerdict | null {
+  if (grades.length === 0) return null
+  const invalid = grades.find((g) => g.verdict === 'invalid' || g.verdict === 'unsupported')
+  if (invalid && (invalid.verdict === 'invalid' || invalid.verdict === 'unsupported')) return withMessage('parse_error', invalid.message, line)
+  const mistake = grades.find((g) => g.verdict === 'mistake')
+  if (mistake && mistake.verdict === 'mistake') {
+    const id = POLY_PATTERN[mistake.mistake]
+    const info = ERROR_PATTERNS[id]
+    return withMessage('wrong', mistake.witness, line, {
+      id,
+      title: clip(info.title, 200),
+      lesson: clip(info.lesson, TUTOR_LIMITS.field),
+      witness: clip(mistake.witness, TUTOR_LIMITS.field),
+    })
+  }
+  const wrong = grades.find((g) => g.verdict === 'wrong')
+  if (wrong && wrong.verdict === 'wrong') return withMessage('wrong', wrong.message, line)
+  const message = grades.map((g) => (g.verdict === 'correct' ? g.message : '')).filter(Boolean).join(' ')
+  return withMessage('correct', message, line)
 }
 
 /** Spectrum order, or any light grade already shaped like a sig-fig grade. Incomplete taps are not a verdict. */
@@ -216,6 +248,25 @@ function workOf(instance: ProblemInstance, attempt: Attempt | null): string[] {
         return clip(prefix + decoded.expr, TUTOR_LIMITS.line)
       })
   }
+  // Polynomials (Unit 2): her accepted lines when the problem is worked line by line, then her answer boxes.
+  if (instance.answer.type === 'quadratics') {
+    const lines = attempt.steps.map((step) => clip(step.text, TUTOR_LIMITS.line))
+    pushRecord(lines, attempt.final?.polyEntries, POLY_WORK)
+    return lines.slice(0, TUTOR_LIMITS.lines)
+  }
+  // Synthetic division: the rows of her table as rows, then her answers, in reading order.
+  if (instance.answer.type === 'polyDivision') {
+    const { question, degree, c } = instance.answer
+    return divisionWork(question, degree, c, attempt.final?.polyEntries)
+      .slice(0, TUTOR_LIMITS.lines)
+      .map((line) => clip(line, TUTOR_LIMITS.line))
+  }
+  // Zeros, end behavior, a polynomial from its zeros, rational root candidates: her boxes in reading order.
+  if (instance.answer.type === 'polyZeros') {
+    return zerosWork(instance.answer, attempt.final?.polyEntries)
+      .slice(0, TUTOR_LIMITS.lines)
+      .map((line) => clip(line, TUTOR_LIMITS.line))
+  }
   const final = attempt.final
   if (!final) return []
   const lines: string[] = []
@@ -252,6 +303,11 @@ function statementOf(instance: ProblemInstance): string {
     text = `${which} ${instance.statementText}`
   } else if (answer.type === 'composition') {
     text = `${answer.question}: ${instance.statementText}`
+  } else if (answer.type === 'quadratics' || answer.type === 'polyDivision') {
+    text = `f(x) = ${answer.f}. ${answer.prompt}`
+  } else if (answer.type === 'polyZeros') {
+    // pz.build gives zeros and a point, not f: there f is the answer, and the statement text is the question.
+    text = answer.form === 'hidden' ? `${instance.statementText} ${answer.prompt}` : `f(x) = ${answer.f}. ${answer.prompt}`
   }
   const clipped = clip(text, TUTOR_LIMITS.field)
   return clipped.trim() ? clipped : clip(instance.title, TUTOR_LIMITS.field)
@@ -269,7 +325,10 @@ function canonicalOf(instance: ProblemInstance): string[] {
     answer.type === 'domainRange' ||
     answer.type === 'composition' ||
     answer.type === 'transformations' ||
-    answer.type === 'piecewiseRate'
+    answer.type === 'piecewiseRate' ||
+    answer.type === 'quadratics' ||
+    answer.type === 'polyDivision' ||
+    answer.type === 'polyZeros'
   ) {
     lines = answer.reveal
   }
@@ -295,6 +354,9 @@ function answerOf(instance: ProblemInstance): string | undefined {
     case 'sigFigs':
     case 'atoms':
     case 'electrons':
+    case 'quadratics':
+    case 'polyDivision':
+    case 'polyZeros':
       text = answer.expectedDisplay
       break
     case 'graphFeatures':

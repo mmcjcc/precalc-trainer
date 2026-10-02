@@ -41,8 +41,8 @@ or the textbook) is one more entry in that file.
 | Sep 28 | Domain & range, composition | domain from a formula as an exact set, composition and composite domain, mistake candidates | templates, flow, catalog |
 | done (Sep 27) | Transformations, piecewise, average rate of change | done: src/engine/transformations (22 mistakes) | done: two modules; Claude cross-check of 1,500 problems |
 | done (Oct 1) | Unit 1 test review | - | done: a mixed set of 8, 12 or 20 across the Unit 1 modules; reviewed by Claude and by Gemini |
-| Oct 19 | Completing the square, synthetic division | done (Oct 1): src/engine/polynomials (24 mistakes; API in docs/progress/polynomials-core.md) | templates, table UI: modules quadratics and polyDivision |
-| Oct 26 | Zeros, multiplicity, end behavior, rational roots | done (Oct 1): same core | module polyZeros |
+| done (Oct 2) | Completing the square, synthetic division | done (Oct 1): src/engine/polynomials (24 mistakes; API in docs/progress/polynomials-core.md) | done: modules quadratics and polyDivision, built by three Claude agents in turn (Grok's balance had run out); Claude cross-check of about 3,300 problems |
+| done (Oct 2) | Zeros, multiplicity, end behavior, rational roots | done (Oct 1): same core | done: module polyZeros (zeros, end behavior, build from zeros, rational roots) |
 | Nov 2 | Rational functions; polynomial and rational inequalities | asymptote and hole rules; sign-chart checker on the existing solution-set engine | templates, sign-chart UI |
 | Nov 9 | Complex numbers | complex arithmetic and equivalence in the engine | templates |
 | Nov 23 | Exponentials and logarithms | **fix `ln`/`log10` evaluation first**; log properties; extraneous-solution checks | templates, growth and decay word problems |
