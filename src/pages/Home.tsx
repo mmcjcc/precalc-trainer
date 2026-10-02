@@ -2,7 +2,8 @@ import { useId, useMemo } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { A2HSCard } from '@/components/A2HSCard'
 import { MasteryBar } from '@/components/MasteryBar'
-import { allTemplates, getTemplate, hasModule, MODULES, randomSeed, type ModuleDef, type TemplateDef } from '@/content'
+import { allTemplates, getReview, getTemplate, hasModule, MODULES, randomSeed, type ModuleDef, type TemplateDef } from '@/content'
+import { loadReview } from '@/pages/review/session'
 import { defaultKnobs, flagsFromKnobs, problemPath } from '@/problem/url'
 import {
   mastery,
@@ -123,6 +124,38 @@ function DrillSummary() {
   )
 }
 
+function ReviewCard() {
+  const review = getReview('unit1')
+  const session = useMemo(() => (review ? loadReview(review.id) : null), [review])
+  const titleId = useId()
+  if (!review) return null
+  const inProgress = session != null && session.index < session.problems.length
+  const finished = session != null && session.index >= session.problems.length
+  const label = inProgress
+    ? `Continue — problem ${session.index + 1} of ${session.problems.length}`
+    : finished
+      ? 'See the last set'
+      : 'Start the review'
+  return (
+    <section aria-labelledby={titleId} className="rounded-2xl border border-coral bg-white p-4">
+      <p className="text-xs font-semibold uppercase tracking-wide text-coral-700">For the Unit 1 test</p>
+      <h2 id={titleId} className="mt-1 text-lg font-semibold text-navy">
+        {review.title}
+      </h2>
+      <p className="mt-1 text-sm text-navy/80">
+        One mixed set from the unit. Every topic that fits comes up, then extra problems lean toward the ones that have
+        been giving you trouble.
+      </p>
+      <Link
+        to={`/review/${review.id}`}
+        className="mt-3 inline-flex min-h-11 items-center rounded-xl bg-navy px-4 font-semibold text-white hover:bg-navy-600"
+      >
+        {label} <span aria-hidden>→</span>
+      </Link>
+    </section>
+  )
+}
+
 function ModuleCard({ module }: { module: ModuleDef }) {
   const navigate = useNavigate()
   const skills = useMemo(() => module.templates.map((t) => t.id), [module])
@@ -213,6 +246,7 @@ export function Home() {
       <A2HSCard />
       {attempt && <ContinueCard attempt={attempt} />}
       <WeakSpots />
+      <ReviewCard />
 
       <section aria-labelledby="home-modules" className="space-y-3">
         <h2 id="home-modules" className="text-lg font-semibold text-navy">

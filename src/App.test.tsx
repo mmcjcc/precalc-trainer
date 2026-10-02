@@ -64,6 +64,13 @@ describe('App routes', () => {
     expect(screen.getByRole('link', { name: 'Continue' }).getAttribute('href')).toBe(`/p/${mod.id}/${t.id}/abc?d=f`)
   })
 
+  it('opens the Unit 1 review from /review/unit1', async () => {
+    renderAt('/review/unit1')
+    expect(await screen.findByRole('heading', { level: 1, name: 'Unit 1 review' }, LAZY)).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Start the set' })).toBeTruthy()
+    expect((screen.getByRole('radio', { name: '12' }) as HTMLInputElement).checked).toBe(true)
+  })
+
   it('renders a module page with a Start button per template', () => {
     const mod = MODULES.find((m) => m.templates.length > 0)!
     renderAt(`/m/${mod.id}`)

@@ -39,18 +39,31 @@ function resolve(moduleId: string | undefined, templateId: string | undefined, s
 }
 
 /**
- * Problem page (route /p/:moduleId/:templateId/:seed?d=<flags>): route → generated instance →
- * attempt lifecycle → flow by instance.kind. Unknown module/template/seed goes home; drill items
- * live on /drill.
+ * The problem screen, from ids rather than the route. The review page wraps this so the flows
+ * stay the ones each module already uses.
  */
-export function ProblemPage() {
-  const { moduleId, templateId, seed } = useParams()
-  const [search] = useSearchParams()
-  const flags = search.get('d') ?? ''
+export function ProblemView({
+  moduleId,
+  templateId,
+  seed,
+  flags = '',
+}: {
+  moduleId: string | undefined
+  templateId: string | undefined
+  seed: string | undefined
+  flags?: string
+}) {
   const resolved = useMemo(() => resolve(moduleId, templateId, seed, flags), [moduleId, templateId, seed, flags])
   if (!resolved) return <Navigate to="/" replace />
   if (resolved.instance.kind === 'drill') return <Navigate to="/drill" replace />
   return <ProblemBody key={`${resolved.instance.id}?${flags}`} instance={resolved.instance} flags={flags} templateTitle={resolved.templateTitle} />
+}
+
+/** Problem page (route /p/:moduleId/:templateId/:seed?d=<flags>). Unknown module, template, or seed goes home. */
+export function ProblemPage() {
+  const { moduleId, templateId, seed } = useParams()
+  const [search] = useSearchParams()
+  return <ProblemView moduleId={moduleId} templateId={templateId} seed={seed} flags={search.get('d') ?? ''} />
 }
 
 function ProblemBody({ instance, flags, templateTitle }: { instance: ProblemInstance; flags: string; templateTitle: string }) {

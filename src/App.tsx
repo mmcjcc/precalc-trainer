@@ -11,6 +11,7 @@ import { useStore } from '@/store'
 
 // Heavy routes (KaTeX, the workspace flows, the engine playground) load on demand.
 const ProblemPage = lazy(() => import('./pages/Problem'))
+const ReviewPage = lazy(() => import('./pages/Review'))
 const DrillPage = lazy(() => import('./pages/Drill'))
 const SandboxPage = lazy(() => import('./pages/Sandbox'))
 
@@ -113,6 +114,7 @@ export function AppShell() {
             <Route path="/m/:moduleId" element={<ModulePage />} />
             <Route path="/p/:moduleId/:templateId/:seed" element={<ProblemPage />} />
             <Route path="/g/:moduleId/:templateId/:seed" element={<LegacyGeneratedRedirect />} />
+            <Route path="/review/:reviewId" element={<ReviewPage />} />
             <Route path="/drill" element={<DrillPage />} />
             <Route path="/progress" element={<ProgressPage />} />
             <Route path="/settings" element={<SettingsPage />} />

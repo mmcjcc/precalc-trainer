@@ -8,6 +8,7 @@ import { Home } from './Home'
 
 beforeEach(() => {
   resetStoreForTests()
+  localStorage.removeItem('pct.review.unit1')
 })
 
 describe('Home: modules grouped by subject', () => {
@@ -39,6 +40,20 @@ describe('Home: modules grouped by subject', () => {
     expect(chemistryTitles).not.toContain('Composition of functions')
     const links = within(chemistrySection).getAllByRole('link', { name: /Choose a type/ }).map((l) => l.getAttribute('href'))
     expect(links).toEqual(['/m/sigFigs', '/m/atoms', '/m/electrons'])
+  })
+
+  it('shows the Unit 1 review card above the module lists', () => {
+    render(
+      <MemoryRouter>
+        <Home />
+      </MemoryRouter>,
+    )
+    const review = screen.getByRole('heading', { name: 'Unit 1 review' })
+    const modules = screen.getByRole('heading', { name: 'Precalculus' })
+    expect(review.compareDocumentPosition(modules) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    const link = screen.getByRole('link', { name: /Start the review/ })
+    expect(link.getAttribute('href')).toBe('/review/unit1')
+    expect(review.compareDocumentPosition(link) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
   })
 
   it('lists Difference quotient last under Precalculus', () => {

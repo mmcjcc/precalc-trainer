@@ -17,3 +17,16 @@ export {
 } from './registry'
 
 import './modules'
+
+export {
+  DEFAULT_REVIEW_COUNT,
+  REVIEW_COUNTS,
+  REVIEWS,
+  getReview,
+  resolveReview,
+  type ReviewCount,
+  type ReviewDef,
+  type ReviewTopicRef,
+  type ResolvedTemplate,
+  type ResolvedTopic,
+} from './reviews'

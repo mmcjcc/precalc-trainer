@@ -8,6 +8,7 @@ import { toLatex } from '@/notation'
 import { useStore, type Attempt } from '@/store'
 import type { TutorVerdict } from '@/shared/tutor'
 import { problemPath } from '@/problem/url'
+import { useReviewChrome } from '@/pages/review/chrome'
 import { useIdleNudge } from '@/problem/useIdleNudge'
 import type { Completion } from '@/problem/useAttempt'
 import type { ProgressLine } from '@/problem/stepEngine'
@@ -109,6 +110,7 @@ function useElapsed(startedAt: string | undefined, running: boolean): string {
  */
 export function ProblemFrame({ instance, attempt, flags, templateTitle, progress, hints, composer, completion, keymap, statement, graphCaption, nudgeText, tutorVerdict, graphFooter, children }: Props) {
   const navigate = useNavigate()
+  const review = useReviewChrome()
   const bp = useBreakpoint()
   const mod = getModule(instance.moduleId)
   const tutor = useTutorStatus()
@@ -291,9 +293,15 @@ export function ProblemFrame({ instance, attempt, flags, templateTitle, progress
               {completion.newlyMastered && <span className="font-semibold"> · {templateTitle} newly mastered</span>}
             </p>
             <div className="flex flex-wrap items-center gap-2">
-              <button type="button" onClick={() => navigate(nextHref)} className="min-h-11 rounded-xl bg-navy px-4 font-semibold text-white hover:bg-navy-600">
-                Next problem
-              </button>
+              {review ? (
+                <button type="button" onClick={review.onNext} className="min-h-11 rounded-xl bg-navy px-4 font-semibold text-white hover:bg-navy-600">
+                  Next
+                </button>
+              ) : (
+                <button type="button" onClick={() => navigate(nextHref)} className="min-h-11 rounded-xl bg-navy px-4 font-semibold text-white hover:bg-navy-600">
+                  Next problem
+                </button>
+              )}
               <button type="button" onClick={() => void copyLink()} className="min-h-11 rounded-xl border border-navy-100 bg-white px-4 font-semibold text-navy hover:bg-navy-50">
                 Copy link
               </button>
