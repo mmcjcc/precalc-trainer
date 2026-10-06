@@ -10,6 +10,7 @@ import { POLY_PATTERN } from '@/content/modules/polynomials/patterns'
 import { TR_PATTERN } from '@/content/modules/transformations/patterns'
 import type { ProblemInstance } from '@/content/types'
 import { ERROR_PATTERNS } from '@/engine'
+import type { OpsGrade } from '@/content/modules/functionOps/ops'
 import type { DescriptionGrade, EconfigGrade, FunctionGrade, PolyGrade, SquareLineGrade, TransformGrade } from '@/engine'
 import { getModule } from '@/content/registry'
 import type { FinalAnswerGrade } from '@/problem/inequality'
@@ -210,6 +211,20 @@ export function verdictFromTransform(grade: TransformGrade | DescriptionGrade): 
   })
 }
 
+/** Operations with functions. The mistake id is already an op_ catalog id. */
+export function verdictFromOps(grade: OpsGrade): TutorVerdict {
+  if (grade.verdict === 'correct') return withMessage('correct', grade.message)
+  if (grade.verdict === 'wrong') return withMessage('wrong', grade.message)
+  if (grade.verdict === 'invalid') return withMessage('parse_error', grade.message)
+  const info = ERROR_PATTERNS[grade.mistake]
+  return withMessage('wrong', grade.witness, undefined, {
+    id: grade.mistake,
+    title: clip(info.title, 200),
+    lesson: clip(info.lesson, TUTOR_LIMITS.field),
+    witness: clip(grade.witness, TUTOR_LIMITS.field),
+  })
+}
+
 /** Decomposition check (composition). A parse or an unsupported problem is a parse_error. */
 export function verdictFromDecomposition(result: { ok: boolean; message: string; reason?: string }): TutorVerdict {
   const parse = !result.ok && (result.reason === 'parse_f' || result.reason === 'parse_g' || result.reason === 'unsupported')
@@ -303,6 +318,8 @@ function statementOf(instance: ProblemInstance): string {
     text = `${which} ${instance.statementText}`
   } else if (answer.type === 'composition') {
     text = `${answer.question}: ${instance.statementText}`
+  } else if (answer.type === 'functionOps') {
+    text = instance.statementText
   } else if (answer.type === 'quadratics' || answer.type === 'polyDivision') {
     text = `f(x) = ${answer.f}. ${answer.prompt}`
   } else if (answer.type === 'polyZeros') {
@@ -324,6 +341,7 @@ function canonicalOf(instance: ProblemInstance): string[] {
     answer.type === 'graphFeatures' ||
     answer.type === 'domainRange' ||
     answer.type === 'composition' ||
+    answer.type === 'functionOps' ||
     answer.type === 'transformations' ||
     answer.type === 'piecewiseRate' ||
     answer.type === 'quadratics' ||
@@ -370,6 +388,9 @@ function answerOf(instance: ProblemInstance): string | undefined {
       else if (answer.question === 'value') text = answer.valueText ?? ''
       else if (answer.question === 'domain') text = answer.interval ?? ''
       else text = `f(x) = ${answer.f}; g(x) = ${answer.g}`
+      break
+    case 'functionOps':
+      text = answer.answerText
       break
     case 'transformations':
       if (answer.question === 'describe') text = answer.sentences.join('; ')

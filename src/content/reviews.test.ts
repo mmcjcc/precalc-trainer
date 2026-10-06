@@ -15,6 +15,7 @@ describe('review definitions', () => {
       'graphFeatures',
       'domainRange',
       'composition',
+      'functionOps',
       'transformations',
       'piecewiseRate',
     ])

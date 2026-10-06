@@ -16,7 +16,22 @@ import type {
   VarName,
 } from '@/shared/types'
 
-export type ProblemKind = 'inequality' | 'numberLine' | 'evenOdd' | 'inverse' | 'drill' | 'sigFigs' | 'atoms' | 'diffQuotient' | 'graphFeatures' | 'domainRange' | 'composition' | 'transformations' | 'piecewiseRate' | 'electrons' | 'quadratics' | 'polyDivision' | 'polyZeros'
+export type ProblemKind = 'inequality' | 'numberLine' | 'evenOdd' | 'inverse' | 'drill' | 'sigFigs' | 'atoms' | 'diffQuotient' | 'graphFeatures' | 'domainRange' | 'composition' | 'functionOps' | 'transformations' | 'piecewiseRate' | 'electrons' | 'quadratics' | 'polyDivision' | 'polyZeros'
+
+/** One operation the function-operations module asks for. `o` is composition. */
+export type FunctionOpsOp =
+  | 'f+g'
+  | 'f-g'
+  | 'g-f'
+  | 'fg'
+  | 'gg'
+  | 'fgf'
+  | 'f/g'
+  | 'f+f+g'
+  | 'fog'
+  | 'gof'
+  | 'fof'
+  | 'fogog'
 
 /** Parent functions the transformations engine accepts. Matches `ParentName`. */
 export type TransformParent = 'square' | 'cube' | 'sqrt' | 'cbrt' | 'abs' | 'reciprocal'
@@ -656,6 +671,42 @@ export type AnswerSpec =
        * panel can be opened before she finishes. The flow shows this one only after the problem is complete.
        */
       graph: GraphSpec
+    }
+  | {
+      /**
+       * Operations with functions (precalculus). One value from a table or from two graphs, or one formula.
+       * Grade with the module's `gradeFunctionOps`: a value is a number or "undefined"; a formula is accepted
+       * when it matches exactly (any equivalent form, including an unsimplified quotient). Named mistakes are
+       * the `op_` ids, each computed for this problem.
+       */
+      type: 'functionOps'
+      question: 'table' | 'graph' | 'formula'
+      op: FunctionOpsOp
+      /** The input, app syntax: "-5" or "x". */
+      at: string
+      /** The sentence above the data. Says what to find and nothing about the method. */
+      prompt: string
+      /** "11", "undefined", or a formula in app syntax. */
+      answerText: string
+      /** What the promised trap produces, app syntax. A number, or a formula. Never the right answer. */
+      trapAnswer: string
+      nudge: string
+      ruleCard: RuleCardId
+      ruleCards: RuleCardId[]
+      /** Hint rung 3. For a value, one step at a time. */
+      reveal: string[]
+      /** The named mistake this seed promises, when one is unambiguous. */
+      trap: string
+      /** Table columns, shared x-values. */
+      xs?: number[]
+      fv?: number[]
+      gv?: number[]
+      /** Graph vertices, piecewise linear, integer lattice points. */
+      fPts?: { x: number; y: number }[]
+      gPts?: { x: number; y: number }[]
+      /** Formulas, app syntax. */
+      f?: string
+      g?: string
     }
   | {
       type: 'drill'

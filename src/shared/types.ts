@@ -15,7 +15,7 @@
 export type RelOp = '=' | '<' | '<=' | '>' | '>='
 /** `h` is the difference-quotient step; the parser accepts it only when the problem owns it (ctx.vars). */
 export type VarName = 'x' | 'y' | 'n' | 'h'
-export type ModuleId = 'numberLine' | 'inequalities' | 'evenOdd' | 'inverses' | 'propertiesDrill' | 'sigFigs' | 'atoms' | 'diffQuotient' | 'graphFeatures' | 'domainRange' | 'composition' | 'transformations' | 'piecewiseRate' | 'electrons' | 'quadratics' | 'polyDivision' | 'polyZeros'
+export type ModuleId = 'numberLine' | 'inequalities' | 'evenOdd' | 'inverses' | 'propertiesDrill' | 'sigFigs' | 'atoms' | 'diffQuotient' | 'graphFeatures' | 'domainRange' | 'composition' | 'functionOps' | 'transformations' | 'piecewiseRate' | 'electrons' | 'quadratics' | 'polyDivision' | 'polyZeros'
 export type CalcId = 'ti84' | 'nspire'
 
 /** Fine-grained property tags. Canonical steps carry one; the engine's move detector reports one. */
@@ -320,6 +320,18 @@ export type ErrorPatternId =
   | 'poly_rrt_no_plus_minus'
   | 'poly_rrt_integers_only'
   | 'poly_rrt_wrong_coefficients'
+  // operations with functions (content/modules/functionOps; precalculus Unit 1). One id per slip the
+  // module computes for the problem in front of her. A candidate equal to the right answer is never used.
+  | 'op_wrong_function'
+  | 'op_sign_flipped'
+  | 'op_difference_reversed'
+  | 'op_quotient_flipped'
+  | 'op_order_reversed'
+  | 'op_product_for_composition'
+  | 'op_composition_for_product'
+  | 'op_undefined_missed'
+  | 'op_minus_not_distributed'
+  | 'op_inner_not_squared'
   // behavioral (ui)
   | 'abandoned'
 
@@ -518,6 +530,15 @@ export interface GraphSpec {
   markers?: GraphMarker[]
   /** Y window for a sampled graph. Expression graphs omit this and stay square (x domain for both). */
   yDomain?: [number, number]
+  /**
+   * Second sampled polyline (operations with functions: g beside f). Drawn in coral, with no turning-point
+   * markers. Existing graphs leave this unset and stay a single navy curve.
+   */
+  gSamples?: GraphSample[]
+  /** Letter drawn at the end of `samples` ("f"). Only used together with `gSamples`. */
+  endLabel?: string
+  /** Letter drawn at the end of `gSamples` ("g"). */
+  gEndLabel?: string
 }
 
 /** One calculator instruction (matches content/calc/types.ts, which is the implementation). */

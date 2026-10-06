@@ -8,6 +8,7 @@ import { useActiveClock } from '@/problem/useIdleNudge'
 import { knobsFromFlags, parseSeedParam } from '@/problem/url'
 import { AtomFlow } from './flows/AtomFlow'
 import { CompositionFlow } from './flows/CompositionFlow'
+import { FunctionOpsFlow } from './flows/FunctionOpsFlow'
 import { DiffQuotientFlow } from './flows/DiffQuotientFlow'
 import { DomainRangeFlow } from './flows/DomainRangeFlow'
 import { PiecewiseRateFlow } from './flows/PiecewiseRateFlow'
@@ -106,6 +107,8 @@ function ProblemBody({ instance, flags, templateTitle }: { instance: ProblemInst
       return <DomainRangeFlow {...props} />
     case 'composition':
       return <CompositionFlow {...props} />
+    case 'functionOps':
+      return <FunctionOpsFlow {...props} />
     case 'transformations':
       return <TransformationFlow {...props} />
     case 'piecewiseRate':

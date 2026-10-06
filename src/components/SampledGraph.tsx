@@ -25,13 +25,22 @@ export function SampledGraph({ spec }: { spec: GraphSpec }) {
   const sy = (y: number) => PAD.top + ((yHi - y) / (yHi - yLo)) * innerH
   const inY = (y: number) => y >= yLo && y <= yHi
 
+  const gSamples = spec.gSamples ?? []
+  const two = gSamples.length > 1
   const pieces = clipPieces(samples, yLo, yHi)
+  const gPieces = two ? clipPieces(gSamples, yLo, yHi) : []
   const axisY = inY(0) ? sy(0) : H - PAD.bottom
   const axisX = xLo <= 0 && 0 <= xHi ? sx(0) : PAD.left
-  const labels = placeLabels(markers, sx, sy)
-  const ends = endPhrase(samples, markers)
+  const labels = two ? [] : placeLabels(markers, sx, sy)
+  const ends = two ? '' : endPhrase(samples, markers)
   const listed = markers.map((m) => m.label).join(', ')
-  const aria = `Graph of the function. Turning points: ${listed}. ${ends}`
+  const fName = spec.endLabel ?? 'f'
+  const gName = spec.gEndLabel ?? 'g'
+  const aria = two
+    ? `Graphs of ${fName} and ${gName}. The navy curve is ${fName}, labelled at its end. The coral curve is ${gName}, labelled at its end.`
+    : `Graph of the function. Turning points: ${listed}. ${ends}`
+  const fTag = two ? letterBox(samples[samples.length - 1]!, fName, 'up', sx, sy) : null
+  const gTag = two ? letterBox(gSamples[gSamples.length - 1]!, gName, 'down', sx, sy) : null
 
   const grid: { x1: number; y1: number; x2: number; y2: number }[] = []
   const x0 = Math.ceil(xLo)
@@ -54,11 +63,15 @@ export function SampledGraph({ spec }: { spec: GraphSpec }) {
         <line x1={PAD.left} y1={axisY} x2={W - PAD.right} y2={axisY} stroke={PALETTE.navy} strokeOpacity={0.55} strokeWidth={1.25} />
         <line x1={axisX} y1={PAD.top} x2={axisX} y2={H - PAD.bottom} stroke={PALETTE.navy} strokeOpacity={0.55} strokeWidth={1.25} />
         {pieces.map((pts, i) => (
-          <polyline key={i} points={pts.map((p) => `${sx(p.x).toFixed(1)},${sy(p.y).toFixed(1)}`).join(' ')} fill="none" stroke={PALETTE.navy} strokeWidth={2.5} strokeLinejoin="round" />
+          <polyline key={`f${i}`} points={pts.map((p) => `${sx(p.x).toFixed(1)},${sy(p.y).toFixed(1)}`).join(' ')} fill="none" stroke={PALETTE.navy} strokeWidth={2.5} strokeLinejoin="round" />
         ))}
-        {markers.map((m) => (
-          <circle key={`${m.x},${m.y}`} cx={sx(m.x)} cy={sy(m.y)} r={4.5} fill={PALETTE.coral} stroke="white" strokeWidth={1.5} />
+        {gPieces.map((pts, i) => (
+          <polyline key={`g${i}`} points={pts.map((p) => `${sx(p.x).toFixed(1)},${sy(p.y).toFixed(1)}`).join(' ')} fill="none" stroke={PALETTE.coral} strokeWidth={2.5} strokeLinejoin="round" />
         ))}
+        {!two &&
+          markers.map((m) => (
+            <circle key={`${m.x},${m.y}`} cx={sx(m.x)} cy={sy(m.y)} r={4.5} fill={PALETTE.coral} stroke="white" strokeWidth={1.5} />
+          ))}
         {labels.map((lab) => (
           <g key={lab.key}>
             <rect x={lab.x - 2} y={lab.y - 1} width={lab.w + 4} height={lab.h + 2} rx={3} fill="white" fillOpacity={0.9} />
@@ -67,8 +80,12 @@ export function SampledGraph({ spec }: { spec: GraphSpec }) {
             </text>
           </g>
         ))}
+        {fTag && <LetterTag box={fTag} fill={PALETTE.navy} />}
+        {gTag && <LetterTag box={gTag} fill={PALETTE.coral700} />}
       </svg>
-      <figcaption className="text-xs text-navy/70">navy: the function · labelled points are the turning points</figcaption>
+      <figcaption className="text-xs text-navy/70">
+        {two ? `${fName} is the navy curve and ${gName} is the coral curve. The letter at the end of each curve is its name.` : 'navy: the function · labelled points are the turning points'}
+      </figcaption>
     </figure>
   )
 }
@@ -171,4 +188,30 @@ function placeLabels(markers: GraphMarker[], sx: (x: number) => number, sy: (y: 
 
 function overlaps(a: LabelBox, b: { x: number; y: number; w: number; h: number }): boolean {
   return a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y
+}
+
+/** A one-letter name drawn at the last vertex, kept inside the frame. */
+function letterBox(pt: Pt, text: string, prefer: 'up' | 'down', sx: (x: number) => number, sy: (y: number) => number): LabelBox {
+  const px = sx(pt.x)
+  const py = sy(pt.y)
+  const w = 16
+  const h = 18
+  let x = px + 8
+  let y = prefer === 'up' ? py - h - 6 : py + 6
+  if (x + w > W - 4) x = px - w - 8
+  if (x < 2) x = 2
+  if (y < 2) y = 2
+  if (y + h > H - 2) y = H - 2 - h
+  return { key: text, text, x, y, w, h }
+}
+
+function LetterTag({ box, fill }: { box: LabelBox; fill: string }) {
+  return (
+    <g>
+      <rect x={box.x - 2} y={box.y - 1} width={box.w + 4} height={box.h + 2} rx={3} fill="white" fillOpacity={0.92} />
+      <text x={box.x} y={box.y + 14} fontSize={16} fontStyle="italic" fontWeight={700} fill={fill}>
+        {box.text}
+      </text>
+    </g>
+  )
 }

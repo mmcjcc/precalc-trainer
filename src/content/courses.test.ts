@@ -56,6 +56,7 @@ describe('course registry', () => {
       'graphFeatures',
       'domainRange',
       'composition',
+      'functionOps',
       'transformations',
       'piecewiseRate',
       'inequalities',

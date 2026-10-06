@@ -93,9 +93,9 @@ function absText(spec: TransformSpec): string {
 }
 
 describe('transformations registration', () => {
-  it('sits under precalculus, right after Composition', () => {
+  it('sits under precalculus, right after Operations with functions', () => {
     const ids = MODULES.filter((m) => !m.subject).map((m) => m.id)
-    expect(ids.indexOf('transformations')).toBe(ids.indexOf('composition') + 1)
+    expect(ids.indexOf('transformations')).toBe(ids.indexOf('functionOps') + 1)
     const mod = MODULES.find((m) => m.id === 'transformations')!
     expect(mod.title).toBe('Transformations')
     expect(mod.subject).toBeUndefined()

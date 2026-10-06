@@ -54,6 +54,7 @@ export const COURSES: readonly CourseDef[] = [
           'graphFeatures',
           'domainRange',
           'composition',
+          'functionOps',
           'transformations',
           'piecewiseRate',
           'inequalities',

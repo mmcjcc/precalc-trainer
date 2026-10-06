@@ -36,6 +36,7 @@ export const REVIEWS: readonly ReviewDef[] = [
       { id: 'graphFeatures', moduleId: 'graphFeatures' },
       { id: 'domainRange', moduleId: 'domainRange' },
       { id: 'composition', moduleId: 'composition' },
+      { id: 'functionOps', moduleId: 'functionOps' },
       { id: 'transformations', moduleId: 'transformations' },
       { id: 'piecewiseRate', moduleId: 'piecewiseRate' },
     ],

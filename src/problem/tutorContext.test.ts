@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { generateProblem } from '@/content'
+import type { OpsMistakeId } from '@/content/modules/functionOps/ops'
 import { gradeLightAnswer } from '@/content/modules/electrons/grade'
 import { SD_KEYS, gradeDivisionStage } from '@/content/modules/polyDivision'
 import { canonicalEntries, gradeZerosStage } from '@/content/modules/polyZeros'
@@ -16,6 +17,7 @@ import {
   verdictFromEconfig,
   verdictFromPoly,
   verdictFromTransform,
+  verdictFromOps,
 } from '@/problem/tutorContext'
 import type { Attempt, AttemptStep } from '@/store'
 import type { StepResult } from '@/shared/types'
@@ -578,6 +580,34 @@ describe('buildTutorContext', () => {
     expect(ratCtx.canonical).toEqual(r.reveal)
     expect(ratCtx.verdict?.status).toBe('wrong')
     expect(verdictFromPoly(gradeZerosStage(r, 'candidates', {}).parts.map((p) => p.grade))?.status).toBe('parse_error')
+  })
+
+  it('describes an operations-with-functions answer, her box, and the named mistake', () => {
+    const instance = generateProblem('functionOps', 'ops.formula', 3)
+    if (instance.answer.type !== 'functionOps') throw new Error('expected a functionOps problem')
+    const a = instance.answer
+    const ctx = buildTutorContext(
+      instance,
+      attempt('ops-1', { moduleId: 'functionOps', final: { fnEntries: { answer: a.trapAnswer } } }),
+      verdictFromOps({ verdict: 'mistake', mistake: a.trap as OpsMistakeId, witness: 'That is the other order.' }),
+      false,
+    )
+    expect(ctx.subject).toBe('precalculus')
+    expect(ctx.kind).toBe('functionOps')
+    expect(ctx.statement).toBe(instance.statementText)
+    expect(ctx.statement).toContain(a.prompt)
+    expect(ctx.work).toEqual([`answer: ${a.trapAnswer}`])
+    expect(ctx.canonical).toEqual(a.reveal)
+    expect(ctx.answer).toBe(a.answerText)
+    expect(ctx.finished).toBe(false)
+    expect(ctx.revealed).toBe(false)
+    expect(ctx.verdict?.status).toBe('wrong')
+    expect(ctx.verdict?.mistake?.id).toBe(a.trap)
+    expect(ctx.verdict?.mistake?.title).toBeTruthy()
+    expect(ctx.verdict?.mistake?.lesson).toBeTruthy()
+    expect(ctx.verdict?.mistake?.witness).toBe('That is the other order.')
+    expect(verdictFromOps({ verdict: 'invalid', message: 'Type a formula in x.' }).status).toBe('parse_error')
+    expect(verdictFromOps({ verdict: 'wrong', message: 'That is not it.' }).mistake).toBeUndefined()
   })
 
   it('never adds a name, email, or account field', () => {

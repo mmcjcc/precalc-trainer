@@ -1,4 +1,5 @@
 import { FN_PATTERN } from '@/content/modules/domainRange/patterns'
+import type { OpsGrade } from '@/content/modules/functionOps/ops'
 import { EC_PATTERN } from '@/content/modules/electrons/patterns'
 import { POLY_PATTERN } from '@/content/modules/polynomials/patterns'
 import { TR_PATTERN } from '@/content/modules/transformations/patterns'
@@ -97,6 +98,24 @@ export function recordFunctionGrade(grade: FunctionGrade): void {
   }
   if (grade.verdict === 'mistake') {
     s.recordFinalAnswer({ correct: false, pattern: FN_PATTERN[grade.mistake], via: 'text' })
+    return
+  }
+  s.recordFinalAnswer({ correct: false, via: 'text' })
+}
+
+/**
+ * Log one final_answer for an operations-with-functions check. A named mistake is stored under its
+ * op_ id. Unreadable input is not an attempt.
+ */
+export function recordOpsGrade(grade: OpsGrade): void {
+  if (grade.verdict === 'invalid') return
+  const s = useStore.getState()
+  if (grade.verdict === 'correct') {
+    s.recordFinalAnswer({ correct: true, via: 'text' })
+    return
+  }
+  if (grade.verdict === 'mistake') {
+    s.recordFinalAnswer({ correct: false, pattern: grade.mistake, via: 'text' })
     return
   }
   s.recordFinalAnswer({ correct: false, via: 'text' })

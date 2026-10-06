@@ -1063,6 +1063,67 @@ export const ERROR_PATTERNS: Record<ErrorPatternId, ErrorPatternInfo> = {
     lesson: 'p comes from the constant term and q from the leading coefficient. The coefficients in the middle play no part in the list.',
     example: '2x^3 − 5x^2 − 4x + 3: factors of −4 over 2 ✗ → factors of 3 over 2',
   },
+  // --- operations with functions (content/modules/functionOps; precalculus) ---
+  op_wrong_function: {
+    id: 'op_wrong_function',
+    title: 'That value belongs to the other function',
+    lesson: 'f and g are different functions, so their outputs are not interchangeable. Read the letter the question names, at that same input.',
+    example: 'f(−5) = 4 when g was asked ✗ → g(−5) = −3',
+  },
+  op_sign_flipped: {
+    id: 'op_sign_flipped',
+    title: 'Below the x-axis is negative',
+    lesson: 'A point under the x-axis has a negative height. Dropping the sign turns that output into its opposite.',
+    example: 'g(3) = 1 ✗ → g(3) = −1',
+  },
+  op_difference_reversed: {
+    id: 'op_difference_reversed',
+    title: 'g − f is not f − g',
+    lesson: 'Subtraction cares about order. g(a) minus f(a) is the opposite of f(a) minus g(a), so swapping the two functions flips the sign.',
+    example: 'f(−4) − g(−4) = −5 ✗ → g(−4) − f(−4) = 5',
+  },
+  op_quotient_flipped: {
+    id: 'op_quotient_flipped',
+    title: 'The fraction is upside down',
+    lesson: '(f/g) puts f on top and g underneath. g/f is the reciprocal, a different value.',
+    example: 'g(x)/f(x) ✗ → f(x)/g(x)',
+  },
+  op_order_reversed: {
+    id: 'op_order_reversed',
+    title: 'f ∘ g means f on the outside',
+    lesson: '(f ∘ g)(a) is f(g(a)): the inside function goes first, then the outside one. g(f(a)) is (g ∘ f)(a), the other order.',
+    example: '2x^2 + 4x + 1 for (g ∘ f) ✗ → 4x^2 + 8x + 3',
+  },
+  op_product_for_composition: {
+    id: 'op_product_for_composition',
+    title: 'The circle is not multiplication',
+    lesson: 'The circle in f ∘ g means composition: the inside output goes into the outside function. Multiplying the two outputs is a product, not a composition.',
+    example: 'f(4) · f(4) = 9 ✗ → f(f(4)) = 8',
+  },
+  op_composition_for_product: {
+    id: 'op_composition_for_product',
+    title: 'Side by side means multiply',
+    lesson: '(fg)(a) and (gg)(a) have no circle, so they are products. Putting one function inside the other is a composition, a different calculation.',
+    example: 'g(g(2)) = 3 ✗ → g(2) · g(2) = 64',
+  },
+  op_undefined_missed: {
+    id: 'op_undefined_missed',
+    title: 'That value does not exist',
+    lesson: 'If the input is not in the table, the curve has already stopped, or a denominator is 0, there is no number to give. The answer is the word undefined.',
+    example: '(f ∘ g)(−5) = 2 ✗ → undefined',
+  },
+  op_minus_not_distributed: {
+    id: 'op_minus_not_distributed',
+    title: 'The minus sign reaches every term',
+    lesson: 'Subtracting a function subtracts every term of it, not only the first. The signs of the other terms change too.',
+    example: '−3x^2 − 2x + 10 ✗ → −3x^2 + 18x − 6',
+  },
+  op_inner_not_squared: {
+    id: 'op_inner_not_squared',
+    title: 'Square the whole inside',
+    lesson: '(px + q)^2 is p^2 x^2 plus the cross term 2pq x plus q^2. Squaring each term on its own leaves that middle term out.',
+    example: '(8x + 2)^2 = 64x^2 + 4 ✗ → 64x^2 + 32x + 4',
+  },
   // --- behavioral (ui) ---
   abandoned: {
     id: 'abandoned',
