@@ -18,6 +18,7 @@ import {
   verdictFromPoly,
   verdictFromTransform,
   verdictFromOps,
+  verdictFromPw,
 } from '@/problem/tutorContext'
 import type { Attempt, AttemptStep } from '@/store'
 import type { StepResult } from '@/shared/types'
@@ -301,6 +302,38 @@ describe('buildTutorContext', () => {
     expect(rateCtx.answer).toBe(rate.answer.rateText)
     expect(rateCtx.verdict?.mistake?.id).toBe('rate_no_division')
     expect(rateCtx.verdict?.mistake?.lesson).toBeTruthy()
+  })
+
+  it('answers a piecewise graph, domain, continuity, and written function, not the rate', () => {
+    const graph = generateProblem('piecewiseRate', 'pw.graph', 1)
+    if (graph.answer.type !== 'piecewiseRate' || graph.answer.question !== 'graph') throw new Error('expected a graph')
+    const graphAnswer = (graph.answer.asks ?? []).map((ask) => `f(${ask.x}) = ${ask.valueText}`).join(' | ')
+    const graphCtx = buildTutorContext(graph, attempt('pw-g'), null, false)
+    expect(graphCtx.answer).toBe(graphAnswer)
+    expect(graphCtx.answer).not.toContain('Average rate')
+    expect(graphCtx.kind).toBe('piecewiseRate')
+
+    const domain = generateProblem('piecewiseRate', 'pw.domain', 2)
+    if (domain.answer.type !== 'piecewiseRate' || !domain.answer.domainText || !domain.answer.rangeText) throw new Error('expected a domain')
+    const domainCtx = buildTutorContext(
+      domain,
+      attempt('pw-d'),
+      verdictFromPw({ verdict: 'mistake', id: 'pw_domain_gap', witness: 'That fills a gap the pieces leave out.', message: 'That fills a gap the pieces leave out.' }),
+      false,
+    )
+    expect(domainCtx.answer).toBe(`${domain.answer.domainText} | ${domain.answer.rangeText}`)
+    expect(domainCtx.verdict?.mistake).toMatchObject({ id: 'pw_domain_gap' })
+    expect(domainCtx.verdict?.mistake?.title).toBeTruthy()
+    expect(domainCtx.verdict?.mistake?.lesson).toBeTruthy()
+
+    const found = generateProblem('piecewiseRate', 'pw.continuous', 1)
+    if (found.answer.type !== 'piecewiseRate' || !found.answer.kText) throw new Error('expected continuity')
+    expect(buildTutorContext(found, attempt('pw-k'), null, false).answer).toBe(found.answer.kText)
+
+    const written = generateProblem('piecewiseRate', 'pw.write', 1)
+    if (written.answer.type !== 'piecewiseRate' || !written.answer.rows) throw new Error('expected a written function')
+    const rows = written.answer.rows.map((row) => `${row.formula} for ${row.condition}`).join(' | ')
+    expect(buildTutorContext(written, attempt('pw-w'), null, false).answer).toBe(rows)
   })
 
   it('describes an electron configuration, including a named ec_ mistake', () => {

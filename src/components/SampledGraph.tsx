@@ -1,4 +1,4 @@
-import { PALETTE, type GraphMarker, type GraphSample, type GraphSpec } from '@/shared/types'
+import { PALETTE, type GraphDot, type GraphMarker, type GraphSample, type GraphSpec } from '@/shared/types'
 
 const W = 440
 const H = 360
@@ -11,6 +11,7 @@ type Pt = { x: number; y: number }
  * expression. Expression graphs never set `samples`, so they stay on function-plot.
  */
 export function SampledGraph({ spec }: { spec: GraphSpec }) {
+  if (spec.runs && spec.runs.length > 0) return <RunsGraph spec={spec} />
   const samples = spec.samples ?? []
   const markers = [...(spec.markers ?? [])].sort((a, b) => a.x - b.x)
   const [xLo, xHi] = spec.xDomain ?? [Math.min(...samples.map((s) => s.x)), Math.max(...samples.map((s) => s.x))]
@@ -88,6 +89,64 @@ export function SampledGraph({ spec }: { spec: GraphSpec }) {
       </figcaption>
     </figure>
   )
+}
+
+/**
+ * Separate polylines with filled and hollow endpoint dots. Used for a piecewise graph.
+ * Existing sampled graphs leave `runs` unset and never reach this.
+ */
+function RunsGraph({ spec }: { spec: GraphSpec }) {
+  const runs = (spec.runs ?? []).filter((run) => run.length > 1)
+  const dots = spec.dots ?? []
+  const xs = [...runs.flatMap((run) => run.map((p) => p.x)), ...dots.map((d) => d.x)]
+  const [xLo, xHi] = spec.xDomain ?? [Math.min(...xs), Math.max(...xs)]
+  const [yLo, yHi] = spec.yDomain ?? [xLo, xHi]
+  if (runs.length === 0 || !(xHi > xLo) || !(yHi > yLo)) {
+    return <p className="text-sm text-navy/60">Nothing to graph for this problem.</p>
+  }
+  const innerW = W - PAD.left - PAD.right
+  const innerH = H - PAD.top - PAD.bottom
+  const sx = (x: number) => PAD.left + ((x - xLo) / (xHi - xLo)) * innerW
+  const sy = (y: number) => PAD.top + ((yHi - y) / (yHi - yLo)) * innerH
+  const axisY = yLo <= 0 && 0 <= yHi ? sy(0) : H - PAD.bottom
+  const axisX = xLo <= 0 && 0 <= xHi ? sx(0) : PAD.left
+  const grid: { x1: number; y1: number; x2: number; y2: number }[] = []
+  const x0 = Math.ceil(xLo)
+  const x1 = Math.floor(xHi)
+  if (x1 - x0 <= 24) {
+    for (let x = x0; x <= x1; x++) grid.push({ x1: sx(x), y1: PAD.top, x2: sx(x), y2: H - PAD.bottom })
+  }
+  const y0 = Math.ceil(yLo)
+  const y1 = Math.floor(yHi)
+  if (y1 - y0 <= 24) {
+    for (let y = y0; y <= y1; y++) grid.push({ x1: PAD.left, y1: sy(y), x2: W - PAD.right, y2: sy(y) })
+  }
+  const drawn = runs.map((run) => clipPieces(run, yLo, yHi))
+  return (
+    <figure className="space-y-1">
+      <svg viewBox={`0 0 ${W} ${H}`} className="w-full max-w-[440px] rounded-xl bg-white" role="img" aria-label="Graph of f. Closed dots are filled and open dots are hollow.">
+        {grid.map((g, i) => (
+          <line key={i} x1={g.x1} y1={g.y1} x2={g.x2} y2={g.y2} stroke={PALETTE.gray} strokeOpacity={0.25} strokeWidth={1} />
+        ))}
+        <line x1={PAD.left} y1={axisY} x2={W - PAD.right} y2={axisY} stroke={PALETTE.navy} strokeOpacity={0.55} strokeWidth={1.25} />
+        <line x1={axisX} y1={PAD.top} x2={axisX} y2={H - PAD.bottom} stroke={PALETTE.navy} strokeOpacity={0.55} strokeWidth={1.25} />
+        {drawn.map((parts, i) =>
+          parts.map((pts, j) => (
+            <polyline key={`${i}-${j}`} points={pts.map((p) => `${sx(p.x).toFixed(1)},${sy(p.y).toFixed(1)}`).join(' ')} fill="none" stroke={PALETTE.navy} strokeWidth={2.5} strokeLinejoin="round" />
+          )),
+        )}
+        {dots.map((d, i) => (
+          <Dot key={i} dot={d} cx={sx(d.x)} cy={sy(d.y)} />
+        ))}
+      </svg>
+      <figcaption className="text-xs text-navy/70">Filled dots are included. Hollow dots are not.</figcaption>
+    </figure>
+  )
+}
+
+function Dot({ dot, cx, cy }: { dot: GraphDot; cx: number; cy: number }) {
+  if (dot.closed) return <circle cx={cx} cy={cy} r={4.5} fill={PALETTE.navy} stroke="white" strokeWidth={1.5} data-dot="closed" />
+  return <circle cx={cx} cy={cy} r={5.5} fill="#fff" stroke={PALETTE.navy} strokeWidth={2.5} data-dot="open" />
 }
 
 function endPhrase(samples: GraphSample[], markers: GraphMarker[]): string {

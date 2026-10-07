@@ -8,7 +8,8 @@ import { SecantGraph } from './SecantGraph'
 
 /** Graph panel: function plot, sampled curve, or number line, from `instance.graph`. */
 export function GraphPanel({ spec, caption }: { spec: GraphSpec; caption?: string }) {
-  if (spec.kind === 'function' && spec.samples && spec.samples.length > 0) return <SampledGraph spec={spec} />
+  const sampled = (spec.samples && spec.samples.length > 0) || (spec.runs && spec.runs.length > 0)
+  if (spec.kind === 'function' && sampled) return <SampledGraph spec={spec} />
   if (spec.kind === 'function' && spec.f && spec.secant) return <SecantGraph spec={spec} />
   if (spec.kind === 'function' && spec.f) return <Graph spec={spec} />
   if (spec.kind === 'numberLine' && spec.set) {

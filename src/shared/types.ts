@@ -290,6 +290,19 @@ export type ErrorPatternId =
   | 'pw_piecewise_wrong_piece'
   | 'pw_piecewise_value_where_undefined'
   | 'pw_piecewise_undefined_where_defined'
+  // More piecewise practice (content/modules/piecewiseRate). One id per slip the module computes
+  // for the problem in front of her. A candidate equal to the right answer is never used.
+  | 'pw_domain_gap'
+  | 'pw_domain_closed'
+  | 'pw_range_from_x'
+  | 'pw_range_unrestricted'
+  | 'pw_k_wrong_piece'
+  | 'pw_k_sign'
+  | 'pw_k_other_boundary'
+  | 'pw_write_boundary'
+  | 'pw_write_slope'
+  | 'pw_write_intercept'
+  | 'pw_write_overlap'
   | 'rate_sign_flipped'
   | 'rate_no_division'
   | 'rate_inverted'
@@ -539,6 +552,23 @@ export interface GraphSpec {
   endLabel?: string
   /** Letter drawn at the end of `gSamples` ("g"). */
   gEndLabel?: string
+  /**
+   * Separate polylines that are not joined to each other (piecewise pieces). When set, these are drawn
+   * instead of connecting `samples`. Existing graphs leave this unset.
+   */
+  runs?: GraphSample[][]
+  /**
+   * Endpoint dots on a piecewise graph. `closed` is filled; otherwise a hollow ring. Existing graphs
+   * leave this unset.
+   */
+  dots?: GraphDot[]
+}
+
+/** One endpoint of a piecewise graph. Filled when the piece includes it, hollow when it does not. */
+export interface GraphDot {
+  x: number
+  y: number
+  closed: boolean
 }
 
 /** One calculator instruction (matches content/calc/types.ts, which is the implementation). */

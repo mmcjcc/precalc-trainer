@@ -1,5 +1,5 @@
 import { problemId } from '@/content/registry'
-import type { DifficultyKnobs, ProblemInstance } from '@/content/types'
+import type { AnswerSpec, DifficultyKnobs, ProblemInstance } from '@/content/types'
 import type { CalcPanels } from '@/shared/types'
 
 const NO_CALC: CalcPanels = { ti84: [], nspire: [] }
@@ -106,5 +106,39 @@ export function buildRate(d: RateBuild): ProblemInstance {
     graph: NO_GRAPH,
     calc: NO_CALC,
     params: { trap: d.trap, question: 'rate', f: d.f },
+  }
+}
+
+type PwAnswer = Extract<AnswerSpec, { type: 'piecewiseRate' }>
+
+export function buildMore(d: {
+  templateId: 'pw.graph' | 'pw.domain' | 'pw.continuous' | 'pw.write'
+  version: number
+  seed: number
+  knobs: DifficultyKnobs
+  title: string
+  instructions: string
+  statementText: string
+  answer: Omit<PwAnswer, 'type'>
+}): ProblemInstance {
+  return {
+    id: problemId('piecewiseRate', d.templateId, d.version, d.seed),
+    moduleId: 'piecewiseRate',
+    templateId: d.templateId,
+    skill: d.templateId,
+    genVersion: d.version,
+    seed: d.seed >>> 0,
+    knobs: d.knobs,
+    kind: 'piecewiseRate',
+    title: d.title,
+    instructions: d.instructions,
+    statementText: d.statementText,
+    vars: ['x'],
+    start: null,
+    canonical: [],
+    answer: { type: 'piecewiseRate', ...d.answer },
+    graph: NO_GRAPH,
+    calc: NO_CALC,
+    params: { trap: d.answer.trap, question: d.answer.question },
   }
 }

@@ -484,11 +484,14 @@ export type AnswerSpec =
     }
   | {
       /**
-       * Piecewise evaluation or average rate of change (precalculus). Grade with `gradePiecewiseValue`
-       * or `gradeAverageRate`. A value may be "undefined".
+       * Piecewise evaluation, a graph reading, domain and range, continuity, writing a piecewise
+       * function, or an average rate of change (precalculus). Evaluate and rate grade with
+       * `gradePiecewiseValue` or `gradeAverageRate`. A value may be "undefined". The later questions
+       * grade in the module. `sketch` is the picture: on screen before she answers when the graph is
+       * the problem, and only after she finishes when it would give the answer away.
        */
       type: 'piecewiseRate'
-      question: 'evaluate' | 'rate'
+      question: 'evaluate' | 'rate' | 'graph' | 'domain' | 'continuous' | 'write'
       pieces?: {
         formula: string
         /** App syntax, e.g. "x < 2" or "1 <= x < 4". */
@@ -497,6 +500,8 @@ export type AnswerSpec =
         hi: string
         loClosed: boolean
         hiClosed: boolean
+        /** Exact piece, so domain and range can be recomputed. Evaluate and rate omit it. */
+        expr?: { kind: 'const'; c: string } | { kind: 'linear'; m: string; b: string } | { kind: 'square' } | { kind: 'abs' }
       }[]
       /** Input for an evaluation, app syntax. */
       x?: string
@@ -509,6 +514,44 @@ export type AnswerSpec =
       b?: string
       /** The rate, app syntax: "5", "-1/3". */
       rateText?: string
+      /** One sentence: what the problem is. Nothing about the method or the trap. */
+      prompt?: string
+      /** Parts checked one at a time (graph values, domain then range, k). */
+      parts?: {
+        key: string
+        label: string
+        placeholder: string
+        nudge: string
+        ruleCard: RuleCardId
+        reveal: string[]
+        answerText: string
+      }[]
+      /** pw.graph: each x she reads, in order. The first is the promised trap. */
+      asks?: { x: string; valueText: string; trapText?: string }[]
+      /** Interval notation. */
+      domainText?: string
+      rangeText?: string
+      /** Exact k, app syntax. */
+      kText?: string
+      /** Formulas still containing the letter k (continuous). */
+      leftFormula?: string
+      rightFormula?: string
+      /** Which piece contains k. */
+      kSide?: 'left' | 'right'
+      /** Shared boundary, and the other boundary the wrong-boundary slip uses. */
+      boundary?: string
+      other?: string
+      /** pw.write: one row per piece. */
+      rows?: { formula: string; condition: string }[]
+      /** Named slips for this problem. A slip equal to the right answer is not stored. */
+      traps?: {
+        id: ErrorPatternId
+        text?: string
+        rows?: { formula: string; condition: string }[]
+        witness: string
+      }[]
+      /** Piecewise graph (runs and open/closed dots). Omitted when this seed is not drawn. */
+      sketch?: GraphSpec
       nudge: string
       ruleCard: RuleCardId
       ruleCards: RuleCardId[]

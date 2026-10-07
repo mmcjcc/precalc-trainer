@@ -2,6 +2,7 @@
  * Builds the tutor's TutorContext at the moment she presses Send.
  * Field sources: docs/progress/tutor-core.md §6. Never her name, email, or account.
  */
+import type { PwGrade } from '@/content/modules/piecewiseRate/grade'
 import { FN_PATTERN } from '@/content/modules/domainRange/patterns'
 import { divisionWork } from '@/content/modules/polyDivision/grade'
 import { zerosWork } from '@/content/modules/polyZeros/grade'
@@ -211,6 +212,20 @@ export function verdictFromTransform(grade: TransformGrade | DescriptionGrade): 
   })
 }
 
+/** Piecewise domain, range, continuity, or a function written from a graph. The id is already a pw_ catalog id. */
+export function verdictFromPw(grade: PwGrade): TutorVerdict | null {
+  if (grade.verdict === 'correct') return withMessage('correct', grade.message)
+  if (grade.verdict === 'wrong') return withMessage('wrong', grade.message)
+  if (grade.verdict === 'invalid') return withMessage('parse_error', grade.message)
+  const info = ERROR_PATTERNS[grade.id]
+  return withMessage('wrong', grade.witness, undefined, {
+    id: grade.id,
+    title: clip(info.title, 200),
+    lesson: clip(info.lesson, TUTOR_LIMITS.field),
+    witness: clip(grade.witness, TUTOR_LIMITS.field),
+  })
+}
+
 /** Operations with functions. The mistake id is already an op_ catalog id. */
 export function verdictFromOps(grade: OpsGrade): TutorVerdict {
   if (grade.verdict === 'correct') return withMessage('correct', grade.message)
@@ -398,7 +413,12 @@ function answerOf(instance: ProblemInstance): string | undefined {
       else text = answer.formula
       break
     case 'piecewiseRate':
-      text = answer.question === 'evaluate' ? (answer.valueText ?? '') : (answer.rateText ?? '')
+      if (answer.question === 'evaluate') text = answer.valueText ?? ''
+      else if (answer.question === 'rate') text = answer.rateText ?? ''
+      else if (answer.question === 'graph') text = (answer.asks ?? []).map((a) => `f(${a.x}) = ${a.valueText}`).join(' | ')
+      else if (answer.question === 'domain') text = [answer.domainText, answer.rangeText].filter(Boolean).join(' | ')
+      else if (answer.question === 'continuous') text = answer.kText ?? ''
+      else text = (answer.rows ?? []).map((r) => `${r.formula} for ${r.condition}`).join(' | ')
       break
     default:
       text = ''

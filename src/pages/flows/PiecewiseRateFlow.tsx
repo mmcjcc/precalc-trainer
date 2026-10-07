@@ -9,6 +9,7 @@ import { gradeAverageRate, gradePiecewiseValue, toRational, type PiecewisePiece,
 import { safeLatex, type ProgressLine } from '@/problem/stepEngine'
 import { verdictFromTransform } from '@/problem/tutorContext'
 import type { ErrorPatternId } from '@/shared/types'
+import { PiecewiseMore } from './PiecewiseMore'
 import { ProblemFrame } from './ProblemFrame'
 import { FnHintLadder, saveFnEntries, useFnHint } from './fnUi'
 import { recordTransformGrade } from './record'
@@ -51,6 +52,9 @@ function casesTex(answer: PiecewiseAnswer): string {
 export function PiecewiseRateFlow(props: FlowProps) {
   const answer = props.instance.answer
   if (answer.type !== 'piecewiseRate') return <p className="text-navy">This problem has no function to work with — pick another from the module page.</p>
+  if (answer.question === 'graph' || answer.question === 'domain' || answer.question === 'continuous' || answer.question === 'write') {
+    return <PiecewiseMore {...props} answer={answer} />
+  }
   return <PiecewiseBody {...props} answer={answer} />
 }
 

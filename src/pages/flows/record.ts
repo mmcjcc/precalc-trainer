@@ -1,5 +1,6 @@
 import { FN_PATTERN } from '@/content/modules/domainRange/patterns'
 import type { OpsGrade } from '@/content/modules/functionOps/ops'
+import type { PwGrade } from '@/content/modules/piecewiseRate/grade'
 import { EC_PATTERN } from '@/content/modules/electrons/patterns'
 import { POLY_PATTERN } from '@/content/modules/polynomials/patterns'
 import { TR_PATTERN } from '@/content/modules/transformations/patterns'
@@ -129,6 +130,24 @@ export function recordOpsGrade(grade: OpsGrade): void {
  * rate_ id. A description can name several steps at once, so each distinct one is its own record.
  * Unreadable input is not an attempt.
  */
+/**
+ * Log a piecewise domain, range, continuity, or write check. The id is already a pw_ catalog id.
+ * Unreadable input is not an attempt.
+ */
+export function recordPwGrade(grade: PwGrade): void {
+  if (grade.verdict === 'invalid') return
+  const s = useStore.getState()
+  if (grade.verdict === 'correct') {
+    s.recordFinalAnswer({ correct: true, via: 'text' })
+    return
+  }
+  if (grade.verdict === 'mistake') {
+    s.recordFinalAnswer({ correct: false, pattern: grade.id, via: 'text' })
+    return
+  }
+  s.recordFinalAnswer({ correct: false, via: 'text' })
+}
+
 export function recordTransformGrade(grade: TransformGrade | DescriptionGrade): void {
   if (grade.verdict === 'invalid' || grade.verdict === 'unsupported') return
   const s = useStore.getState()
