@@ -296,7 +296,7 @@ cmd_check() {
 cmd_ci() {
   need_login
   command -v gh >/dev/null || die "the GitHub CLI (gh) is required"
-  local sub tenant rg_id client_id principal_id n
+  local sub tenant rg_id client_id principal_id n ids
   sub=$(tsv account show --query id)
   tenant=$(tsv account show --query tenantId)
   rg_id=$(tsv group show -n "$RG" --query id)
@@ -308,6 +308,10 @@ cmd_ci() {
   azp identity federated-credential create --name gh-main --identity-name "$IDENTITY" -g "$RG" \
     --issuer https://token.actions.githubusercontent.com \
     --subject "repo:$REPO:ref:refs/heads/main" --audiences api://AzureADTokenExchange -o none
+  # GitHub may present the ID-based subject instead (repo:<owner>@<owner id>/<repo>@<repo id>:...): trust
+  # that form too, or the login is refused with AADSTS700213 (seen 2026-10-08).
+  ids=$(gh api "repos/$REPO" --jq '"\(.owner.id)@\(.id)"')
+  azp identity federated-credential create --name gh-main-ids --identity-name "$IDENTITY" -g "$RG" \n    --issuer https://token.actions.githubusercontent.com \n    --subject "repo:${REPO%%/*}@${ids%%@*}/${REPO#*/}@${ids#*@}:ref:refs/heads/main" --audiences api://AzureADTokenExchange -o none
   say "Role: Contributor on resource group $RG only"
   n=$(tsvp role assignment list --scope "$rg_id" \
     --query "length([?principalId=='$principal_id' && roleDefinitionName=='Contributor'])")
