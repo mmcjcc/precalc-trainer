@@ -10,7 +10,7 @@ uid: 10002                             # the image runs as any uid; the platform
 port: 8080
 health: /healthz
 exposure: public                       # reachable from the internet, only after the platform's sign-in
-auth: {profile: family}                # who may sign in is Jason's list on the platform, not this repo's
+auth: {profile: math}                  # math's own user list on the platform (ssh homelab access show math)
 resources: {cpu: 0.5, memory: 128m}
 
 # The image's defaults are Azure's (port 80, Azure's identity header). These are the home platform's values;
