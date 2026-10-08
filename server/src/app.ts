@@ -16,6 +16,7 @@ import {
   type TutorAskRequest,
   type TutorErrorCode,
   type TutorFlagResponse,
+  type TutorFreeformContext,
   type TutorLogResponse,
   type TutorStatus,
   type TutorStreamEvent,
@@ -24,7 +25,7 @@ import { identify } from './auth.ts'
 import { HEARTBEAT, formatEvent, parseJson, readBody, sendError, sendJson, startEventStream } from './http.ts'
 import type { DailyLimiter } from './limits.ts'
 import type { AskRecord, TutorLog } from './log.ts'
-import { buildRequest } from './prompt.ts'
+import { buildFreeformRequest, buildRequest } from './prompt.ts'
 import { ProviderError, type TutorProvider } from './providers/types.ts'
 import { RequestError, parseAskRequest, parseFlagRequest, redactPersonal } from './validate.ts'
 
@@ -53,6 +54,25 @@ export const MESSAGES: Record<TutorErrorCode, string> = {
   not_configured: "The tutor isn't set up yet.",
 }
 
+/** 400 when she asks for the full solution before two earlier questions in that conversation. */
+export const FULL_SOLUTION_TOO_SOON =
+  'Ask two questions about this problem first. Then you can ask for the full solution.'
+
+function isFreeform(context: TutorAskRequest['context']): context is TutorFreeformContext {
+  return 'mode' in context && context.mode === 'freeform'
+}
+
+/** What the provider sees. The log keeps the text she actually typed. */
+function redactFreeform(context: TutorFreeformContext): TutorFreeformContext {
+  const tried = context.tried ? redactPersonal(context.tried) : undefined
+  return {
+    ...context,
+    className: redactPersonal(context.className),
+    problem: redactPersonal(context.problem),
+    ...(tried ? { tried } : {}),
+  }
+}
+
 type Handler = (req: IncomingMessage, res: ServerResponse) => void
 
 export function createHandler(deps: AppDeps): Handler {
@@ -64,25 +84,47 @@ export function createHandler(deps: AppDeps): Handler {
   async function ask(req: IncomingMessage, res: ServerResponse, user: string): Promise<void> {
     const body: TutorAskRequest = parseAskRequest(parseJson(await readBody(req, TUTOR_LIMITS.bodyBytes)))
     const { question, context } = body
+    // Count comes from this server's log for the conversation id. A number on the request is ignored.
+    if (isFreeform(context) && context.fullSolution && deps.log.conversationQuestions(user, context.conversationId) < 2) {
+      throw new RequestError(FULL_SOLUTION_TOO_SOON)
+    }
     const started = Date.now()
     const id = newId()
-    const base = {
+    const shared = {
       type: 'ask' as const,
       v: 1 as const,
       id,
       user,
-      problemId: context.problemId,
-      ...(context.attemptId ? { attemptId: context.attemptId } : {}),
-      moduleId: context.moduleId,
-      kind: context.kind,
       question,
-      finished: context.finished,
-      revealed: context.revealed,
-      ...(context.verdict ? { verdict: context.verdict.status } : {}),
-      ...(context.verdict?.mistake?.id ? { mistake: context.verdict.mistake.id } : {}),
       provider: deps.provider.name,
       model: deps.provider.model,
     }
+    const base = isFreeform(context)
+      ? {
+          ...shared,
+          problemId: context.conversationId,
+          moduleId: 'freeform',
+          kind: 'freeform',
+          askKind: 'freeform' as const,
+          conversationId: context.conversationId,
+          className: context.className,
+          problemText: context.problem,
+          ...(context.fullSolution ? { fullSolution: true as const } : {}),
+          finished: false,
+          revealed: false,
+        }
+      : {
+          ...shared,
+          problemId: context.problemId,
+          ...(context.attemptId ? { attemptId: context.attemptId } : {}),
+          moduleId: context.moduleId,
+          kind: context.kind,
+          askKind: 'problem' as const,
+          finished: context.finished,
+          revealed: context.revealed,
+          ...(context.verdict ? { verdict: context.verdict.status } : {}),
+          ...(context.verdict?.mistake?.id ? { mistake: context.verdict.mistake.id } : {}),
+        }
     const record = (fields: Pick<AskRecord, 'answer' | 'status' | 'counted'> & Partial<AskRecord>): AskRecord => {
       const at = now()
       return { ...base, at: at.toISOString(), day: deps.log.today(), ms: Date.now() - started, ...fields }
@@ -127,8 +169,15 @@ export function createHandler(deps: AppDeps): Handler {
 
     let answer = ''
     try {
-      const history = deps.log.history(user, context.problemId, context.attemptId, TUTOR_LIMITS.historyTurns)
-      const request = buildRequest(context, redactPersonal(question), history)
+      const history = isFreeform(context)
+        ? deps.log.conversationHistory(user, context.conversationId, TUTOR_LIMITS.historyTurns).map((h) => ({
+            question: redactPersonal(h.question),
+            answer: h.answer,
+          }))
+        : deps.log.history(user, context.problemId, context.attemptId, TUTOR_LIMITS.historyTurns)
+      const request = isFreeform(context)
+        ? buildFreeformRequest(redactFreeform(context), redactPersonal(question), history)
+        : buildRequest(context, redactPersonal(question), history)
       const result = await deps.provider.stream(
         request,
         (text) => {

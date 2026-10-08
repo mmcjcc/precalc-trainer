@@ -33,6 +33,7 @@ import {
   type Attempt,
   type Ev,
 } from '@/store'
+import { useTutorStatus } from '@/tutor/useTutorStatus'
 
 function percent(rate: number): string {
   return `${Math.round(rate * 100)}%`
@@ -142,6 +143,17 @@ function ContinueCard({ attempt }: { attempt: Attempt }) {
         Continue <span aria-hidden>→</span>
       </Link>
     </section>
+  )
+}
+
+/** Hidden unless the tutor is configured, the same rule as the Ask tab on a problem. */
+function AskAnythingCard() {
+  const tutor = useTutorStatus()
+  if (!tutor.status?.configured) return null
+  return (
+    <Link to="/ask" className="block rounded-2xl border border-navy-100 bg-white p-4 hover:border-navy">
+      <span className="font-semibold text-navy">Ask about any problem: type a problem from your homework</span>
+    </Link>
   )
 }
 
@@ -422,6 +434,8 @@ export function Home() {
             )
           })}
         </div>
+
+        <AskAnythingCard />
 
         <WeakSpots course={course} />
 

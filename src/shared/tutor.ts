@@ -27,6 +27,12 @@ export const TUTOR_LIMITS = {
   flagNote: 500,
   /** Earlier questions on the same attempt that the server replays to the model. */
   historyTurns: 4,
+  /** Homework she types on Ask about any problem. */
+  freeProblem: 2000,
+  /** Optional "what I've tried" on that page. */
+  tried: 1000,
+  /** Class name she picks on that page. */
+  className: 100,
 } as const
 
 // ---------------------------------------------------------------------------
@@ -96,10 +102,30 @@ export interface TutorContext {
   revealed: boolean
 }
 
+/**
+ * Homework she typed herself (Ask about any problem). No checker, no verdict.
+ * `mode` is the discriminant: a problem-page context never sends it, so old requests stay valid.
+ */
+export interface TutorFreeformContext {
+  mode: 'freeform'
+  /** Groups her questions. The server counts earlier ones on this id from its own log. */
+  conversationId: string
+  /** Class she picked, e.g. "Honors Precalculus" or "Other math or science". */
+  className: string
+  /** The problem, 1..TUTOR_LIMITS.freeProblem characters. */
+  problem: string
+  /** Optional, up to TUTOR_LIMITS.tried characters. */
+  tried?: string
+  /** This turn asks for the complete worked solution. The server allows it only after two earlier questions. */
+  fullSolution: boolean
+}
+
+export type TutorAskContext = TutorContext | TutorFreeformContext
+
 export interface TutorAskRequest {
   /** Her question in her own words. 1..TUTOR_LIMITS.question characters after trimming. */
   question: string
-  context: TutorContext
+  context: TutorAskContext
 }
 
 /** Every SSE `data:` line is one of these (the `event:` name equals `type`). */
@@ -202,6 +228,17 @@ export interface TutorLogItem {
   /** Checker verdict status and mistake id at the time of the question. */
   verdict?: string
   mistake?: string
+  /**
+   * 'freeform': homework she typed. 'problem': a generated problem.
+   * Older lines omit it; those are problem-page questions.
+   */
+  kind?: 'problem' | 'freeform'
+  /** Homework she typed (free-form only). */
+  problemText?: string
+  /** Class she picked (free-form only). */
+  className?: string
+  /** She asked for the complete worked solution. */
+  fullSolution?: boolean
   flags: TutorFlag[]
 }
 

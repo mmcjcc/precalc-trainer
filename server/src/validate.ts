@@ -8,6 +8,7 @@ import {
   type TutorAskRequest,
   type TutorContext,
   type TutorFlagRequest,
+  type TutorFreeformContext,
   type TutorMistake,
   type TutorVerdict,
 } from '../../src/shared/tutor.ts'
@@ -131,6 +132,26 @@ export function parseContext(v: unknown): TutorContext {
   }
 }
 
+function parseFreeform(o: Obj): TutorFreeformContext {
+  const p = 'context.'
+  const conversationId = reqStr(o, 'conversationId', p, 200)
+  if (!ID.test(conversationId)) throw new RequestError('context.conversationId has unexpected characters')
+  const className = reqStr(o, 'className', p, TUTOR_LIMITS.className).trim()
+  if (!className) throw new RequestError('context.className is empty')
+  if (/[\u0000-\u001f]/.test(className)) throw new RequestError('context.className has unexpected characters')
+  const problem = reqStr(o, 'problem', p, TUTOR_LIMITS.freeProblem).trim()
+  if (!problem) throw new RequestError('context.problem is empty')
+  const tried = str(o, 'tried', p, TUTOR_LIMITS.tried, false)?.trim()
+  return {
+    mode: 'freeform',
+    conversationId,
+    className,
+    problem,
+    ...(tried ? { tried } : {}),
+    fullSolution: bool(o, 'fullSolution', p),
+  }
+}
+
 export function parseAskRequest(body: unknown): TutorAskRequest {
   const o = obj(body, 'body')
   const raw = o.question
@@ -139,6 +160,12 @@ export function parseAskRequest(body: unknown): TutorAskRequest {
   if (!question) throw new RequestError('question is empty')
   if (question.length > TUTOR_LIMITS.question) {
     throw new RequestError(`question is longer than ${TUTOR_LIMITS.question} characters`, 'question_too_long')
+  }
+  const ctx = obj(o.context, 'context')
+  // Absent `mode` is a problem-page context, so a request from before this field still parses.
+  if (ctx.mode !== undefined) {
+    if (ctx.mode !== 'freeform') throw new RequestError('context.mode must be freeform')
+    return { question, context: parseFreeform(ctx) }
   }
   return { question, context: parseContext(o.context) }
 }

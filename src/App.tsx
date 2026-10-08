@@ -8,12 +8,14 @@ import { ProgressPage } from '@/pages/Progress'
 import { SettingsPage } from '@/pages/Settings'
 import { TutorLogPage } from '@/pages/TutorLog'
 import { useStore } from '@/store'
+import { useTutorStatus } from '@/tutor/useTutorStatus'
 
 // Heavy routes (KaTeX, the workspace flows, the engine playground) load on demand.
 const ProblemPage = lazy(() => import('./pages/Problem'))
 const ReviewPage = lazy(() => import('./pages/Review'))
 const DrillPage = lazy(() => import('./pages/Drill'))
 const SandboxPage = lazy(() => import('./pages/Sandbox'))
+const AskPage = lazy(() => import('./pages/AskAnything'))
 
 const NAV: { to: string; label: string; end?: boolean }[] = [
   { to: '/', label: 'Home', end: true },
@@ -50,6 +52,10 @@ function isNavActive(pathname: string, to: string, end?: boolean): boolean {
 
 function Header() {
   const { pathname } = useLocation()
+  const tutor = useTutorStatus()
+  const items = tutor.status?.configured
+    ? [NAV[0], { to: '/ask', label: 'Ask' }, ...NAV.slice(1)]
+    : NAV
   return (
     <header className="border-b border-navy-100 bg-white">
       <div className="mx-auto flex w-full max-w-6xl flex-wrap items-center justify-between gap-x-4 px-4 py-1">
@@ -58,7 +64,7 @@ function Header() {
         </Link>
         <nav aria-label="Main" className="-mx-2 max-w-full overflow-x-auto">
           <ul className="flex items-center gap-0.5">
-            {NAV.map((item) => {
+            {items.map((item) => {
               const active = isNavActive(pathname, item.to, item.end)
               return (
                 <li key={item.to}>
@@ -129,6 +135,7 @@ export function AppShell() {
             <Route path="/drill" element={<DrillPage />} />
             <Route path="/progress" element={<ProgressPage />} />
             <Route path="/settings" element={<SettingsPage />} />
+            <Route path="/ask" element={<AskPage />} />
             <Route path="/tutor-log" element={<TutorLogPage />} />
             <Route path="/sandbox" element={<SandboxPage />} />
             <Route path="*" element={<Navigate to="/" replace />} />

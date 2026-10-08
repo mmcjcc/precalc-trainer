@@ -19,9 +19,20 @@ function LogCard({ item }: { item: TutorLogItem }) {
         <time dateTime={item.at}>{formatWhen(item.at)}</time>
         {item.status !== 'ok' && <span className="ml-2 font-semibold text-navy">· {item.status}</span>}
       </p>
-      <p className="text-sm font-semibold text-navy">
-        {item.moduleId} · <span className="font-mono font-normal">{item.problemId}</span>
-      </p>
+      {item.kind === 'freeform' ? (
+        <div className="space-y-1">
+          <p className="text-sm font-semibold text-navy">{item.className ?? 'Homework'}</p>
+          {item.fullSolution && <p className="text-sm font-semibold text-navy">Full solution</p>}
+          <p className="whitespace-pre-wrap text-sm text-navy">
+            <span className="font-semibold">Problem: </span>
+            {item.problemText}
+          </p>
+        </div>
+      ) : (
+        <p className="text-sm font-semibold text-navy">
+          {item.moduleId} · <span className="font-mono font-normal">{item.problemId}</span>
+        </p>
+      )}
       <p className="whitespace-pre-wrap text-sm text-navy">
         <span className="font-semibold">Question: </span>
         {item.question}

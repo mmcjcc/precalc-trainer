@@ -47,15 +47,21 @@ export function mockReply(req: ProviderRequest): string {
   const lesson = field(block, 'Lesson:')
   const witness = field(block, 'About her numbers:')
   const open = block.includes('Status: OPEN')
+  const coach = block.includes('Mode: COACH')
+  const full = block.includes('Mode: FULL SOLUTION')
   const parts = ['(Mock tutor)']
   if (mistake) {
     parts.push(`The checker named this one: ${mistake}.`)
     if (lesson) parts.push(lesson)
     if (witness) parts.push(witness)
+  } else if (coach || full) {
+    parts.push('Good question. Start from what the problem is asking.')
   } else {
     parts.push('Good question. Start from what the problem is asking and look at your last line.')
   }
-  parts.push(open ? 'What single move gets you one step closer? Try it and check it.' : 'You finished it, so here is the idea from start to end: each step kept the statement equivalent.')
+  if (coach) parts.push('What single move gets you one step closer? Try it and check it.')
+  else if (full) parts.push('Here is the whole solution, one short line at a time. The step easiest to get wrong is the first change of a sign or a side.')
+  else parts.push(open ? 'What single move gets you one step closer? Try it and check it.' : 'You finished it, so here is the idea from start to end: each step kept the statement equivalent.')
   if (req.turns.length > 1) parts.push(`(I can see ${Math.floor(req.turns.length / 2)} earlier question(s) on this problem.)`)
   return parts.join(' ')
 }

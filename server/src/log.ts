@@ -37,6 +37,16 @@ export interface AskRecord {
   revealed: boolean
   verdict?: string
   mistake?: string
+  /** 'problem' or 'freeform'. Absent on lines written before ask-anything. */
+  askKind?: 'problem' | 'freeform'
+  /** Free-form conversation. The full-solution gate counts earlier questions on this id. */
+  conversationId?: string
+  /** Class she picked (free-form). */
+  className?: string
+  /** Homework she typed (free-form). Shown on the parent log. */
+  problemText?: string
+  /** This question asked for the complete worked solution. */
+  fullSolution?: boolean
   provider: TutorProviderName
   model: string
   ms: number
@@ -192,6 +202,32 @@ export class TutorLog {
   }
 
   /**
+   * Answered free-form questions on this conversation (status ok or blocked). Errors, timeouts and
+   * aborts do not count. This is the server's own log: the client cannot supply the number.
+   */
+  conversationQuestions(user: string, conversationId: string): number {
+    let n = 0
+    for (const a of this.asks) {
+      if (a.user === user && a.conversationId === conversationId && (a.status === 'ok' || a.status === 'blocked')) n++
+    }
+    return n
+  }
+
+  /**
+   * Her last `limit` answered questions in this free-form conversation, oldest first.
+   * Same rule as `history`: only answers that actually came back.
+   */
+  conversationHistory(user: string, conversationId: string, limit: number): AskRecord[] {
+    const out: AskRecord[] = []
+    for (let i = this.asks.length - 1; i >= 0 && out.length < limit; i--) {
+      const a = this.asks[i]
+      if (!a || a.user !== user || a.conversationId !== conversationId || a.status !== 'ok' || !a.answer) continue
+      out.push(a)
+    }
+    return out.reverse()
+  }
+
+  /**
    * Her last `limit` answered questions on this attempt (or, without an attempt id, on this problem
    * today), oldest first. The server replays them so a follow-up question has its thread.
    */
@@ -228,6 +264,10 @@ export class TutorLog {
         model: a.model,
         ...(a.verdict ? { verdict: a.verdict } : {}),
         ...(a.mistake ? { mistake: a.mistake } : {}),
+        kind: a.askKind ?? 'problem',
+        ...(a.problemText ? { problemText: a.problemText } : {}),
+        ...(a.className ? { className: a.className } : {}),
+        ...(a.fullSolution ? { fullSolution: true } : {}),
         flags: this.flags.get(a.id) ?? [],
       })
     }

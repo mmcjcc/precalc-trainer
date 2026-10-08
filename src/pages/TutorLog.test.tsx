@@ -91,6 +91,44 @@ describe('Tutor log', () => {
     expect(screen.getByText(/cleared when the tutor restarts/)).toBeTruthy()
   })
 
+  it('shows a homework problem she typed, and marks a full solution', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: RequestInfo | URL) => {
+        const url = String(input)
+        if (url.includes('/api/tutor/status')) return json(status({ isParent: true }))
+        if (url.includes('/api/tutor/log')) {
+          return json({
+            logging: 'file',
+            items: [
+              item({
+                id: 'hw',
+                kind: 'freeform',
+                className: 'Honors Precalculus',
+                problemText: 'Solve 2x + 3 = 11',
+                fullSolution: true,
+                moduleId: 'freeform',
+                problemId: 'conv-1',
+                question: 'Show me the full solution',
+                answer: 'Subtract 3, then divide by 2. x = 4.',
+              }),
+            ],
+          })
+        }
+        return json({ error: 'nope' }, 404)
+      }),
+    )
+    render(
+      <MemoryRouter>
+        <TutorLogPage />
+      </MemoryRouter>,
+    )
+    expect(await screen.findByText(/Solve 2x \+ 3 = 11/)).toBeTruthy()
+    expect(screen.getByText('Full solution')).toBeTruthy()
+    expect(screen.getByText('Honors Precalculus')).toBeTruthy()
+    expect(screen.getByText(/Subtract 3, then divide by 2/)).toBeTruthy()
+  })
+
   it('refuses anyone who is not a parent', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => json(status({ isParent: false }))))
     render(
