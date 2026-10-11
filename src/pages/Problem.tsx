@@ -14,6 +14,7 @@ import { DomainRangeFlow } from './flows/DomainRangeFlow'
 import { PiecewiseRateFlow } from './flows/PiecewiseRateFlow'
 import { PolyDivisionFlow } from './flows/PolyDivisionFlow'
 import { PolyZerosFlow } from './flows/PolyZerosFlow'
+import { RationalFnsFlow } from './flows/RationalFnsFlow'
 import { QuadraticsFlow } from './flows/QuadraticsFlow'
 import { TransformationFlow } from './flows/TransformationFlow'
 import { GraphFeaturesFlow } from './flows/GraphFeaturesFlow'
@@ -119,6 +120,8 @@ function ProblemBody({ instance, flags, templateTitle }: { instance: ProblemInst
       return <PolyDivisionFlow {...props} />
     case 'polyZeros':
       return <PolyZerosFlow {...props} />
+    case 'rationalFns':
+      return <RationalFnsFlow {...props} />
     default:
       return <Navigate to="/" replace />
   }

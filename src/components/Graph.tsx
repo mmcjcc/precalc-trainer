@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { evalExpr } from '@/engine'
-import { PALETTE, type GraphSpec, type PlotColor, type PlotStyle } from '@/shared/types'
+import { PALETTE, type GraphDot, type GraphGuide, type GraphSpec, type PlotColor, type PlotStyle } from '@/shared/types'
 import { splitDomain } from './graphBreaks'
 
 const COLOR: Record<PlotColor, string> = {
@@ -70,6 +70,10 @@ export function Graph({ spec, className }: Props) {
   const badge = spec.badge
   const extraKey = JSON.stringify(extra ?? [])
   const fBreakKey = JSON.stringify(fBreaks ?? [])
+  const guides = spec.guides
+  const dots = spec.dots
+  const guidesKey = JSON.stringify(guides ?? [])
+  const dotsKey = JSON.stringify(dots ?? [])
 
   useEffect(() => {
     const el = ref.current
@@ -77,6 +81,8 @@ export function Graph({ spec, className }: Props) {
     let cancelled = false
     setStatus('loading')
     const curves = JSON.parse(extraKey) as NonNullable<GraphSpec['extra']>
+    const guideLines = JSON.parse(guidesKey) as GraphGuide[]
+    const dotList = JSON.parse(dotsKey) as GraphDot[]
     import('function-plot')
       .then((mod) => {
         if (cancelled) return
@@ -111,6 +117,35 @@ export function Graph({ spec, className }: Props) {
           })
         }
         for (const c of curves) pushCurve(data, c.expr, COLOR[c.color], c.style, [lo, hi], c.breaks, 180)
+        // Asymptotes are guides, not part of f: a vertical segment, or a line that is allowed to cross a break.
+        for (const g of guideLines) {
+          if (typeof g.x === 'number' && Number.isFinite(g.x)) {
+            data.push({
+              points: [
+                [g.x, lo],
+                [g.x, hi],
+              ],
+              fnType: 'points',
+              graphType: 'polyline',
+              color: COLOR.gray,
+              attr: { 'stroke-dasharray': '6 4' },
+            })
+          } else if (g.expr) {
+            pushCurve(data, g.expr, COLOR.gray, 'dashed', [lo, hi], undefined, 2)
+          }
+        }
+        for (const dot of dotList) {
+          if (!Number.isFinite(dot.x) || !Number.isFinite(dot.y)) continue
+          data.push({
+            points: [[dot.x, dot.y]],
+            fnType: 'points',
+            graphType: 'scatter',
+            color: COLOR.navy,
+            attr: dot.closed
+              ? { r: 4.5, fill: PALETTE.navy, stroke: PALETTE.navy, opacity: 1 }
+              : { r: 5.5, fill: '#fff', stroke: PALETTE.navy, 'stroke-width': 2.5, opacity: 1 },
+          })
+        }
         functionPlot({
           target: el,
           width,
@@ -130,7 +165,7 @@ export function Graph({ spec, className }: Props) {
       cancelled = true
       el.innerHTML = ''
     }
-  }, [f, fColor, fBreakKey, fBreaks, finv, extraKey, lo, hi, identity, reflect, spec.kind])
+  }, [f, fColor, fBreakKey, fBreaks, finv, extraKey, guidesKey, dotsKey, lo, hi, identity, reflect, spec.kind])
 
   if (spec.kind !== 'function' || !f) return null
   const legend: string[] = [`${fColor}: f`]
@@ -138,8 +173,10 @@ export function Graph({ spec, className }: Props) {
   if (reflect) legend.push('coral dashed: mirror of f across y = x')
   if (identity || reflect) legend.push('gray dotted: y = x')
   for (const c of extra ?? []) legend.push(`${c.color} ${c.style}: ${c.label}`)
+  if ((guides?.length ?? 0) > 0) legend.push('gray dashed: asymptotes')
+  if ((dots ?? []).some((d) => !d.closed)) legend.push('open dot: a hole')
   const extraNames = (extra ?? []).map((c) => c.label)
-  const aria = `Graph of ${f}${finv ? ' and its inverse' : ''}${reflect ? ', with its reflection across y = x' : ''}${extraNames.length ? `, with ${extraNames.join(' and ')}` : ''}`
+  const aria = `Graph of ${f}${finv ? ' and its inverse' : ''}${reflect ? ', with its reflection across y = x' : ''}${extraNames.length ? `, with ${extraNames.join(' and ')}` : ''}${(guides?.length ?? 0) > 0 ? ', with asymptotes' : ''}${(dots ?? []).some((d) => !d.closed) ? ', with a hole' : ''}`
   return (
     <div className={className}>
       <div ref={ref} className="overflow-hidden rounded-xl bg-white" role="img" aria-label={aria} aria-busy={status === 'loading'} />

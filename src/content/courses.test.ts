@@ -65,7 +65,7 @@ describe('course registry', () => {
       'propertiesDrill',
       'diffQuotient',
     ])
-    expect(modulesInUnit(precalc!.units[1]!).map((m) => m.id)).toEqual(['quadratics', 'polyDivision', 'polyZeros'])
+    expect(modulesInUnit(precalc!.units[1]!).map((m) => m.id)).toEqual(['quadratics', 'polyDivision', 'polyZeros', 'rationalFns'])
     expect(unitsWithModules(precalc!).map((u) => u.id)).toEqual(['unit1', 'unit2'])
     expect(precalc!.units.map((u) => u.id)).toEqual(['unit1', 'unit2'])
     expect(unitsWithModules(chemistry!).map((u) => u.id)).toEqual(['ch3', 'ch4', 'ch5'])

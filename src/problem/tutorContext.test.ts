@@ -4,6 +4,7 @@ import type { OpsMistakeId } from '@/content/modules/functionOps/ops'
 import { gradeLightAnswer } from '@/content/modules/electrons/grade'
 import { SD_KEYS, gradeDivisionStage } from '@/content/modules/polyDivision'
 import { canonicalEntries, gradeZerosStage } from '@/content/modules/polyZeros'
+import { canonicalEntries as rfEntries, gradeRfStage, RF_KEYS, rfWork } from '@/content/modules/rationalFns'
 import { checkSquareLine, configurationMistakes, gradeAxisOfSymmetry, gradeConfiguration, gradeVertex, squareMistakes, syntheticMistakes, vertexMistakes } from '@/engine'
 import { ratToString } from '@/notation'
 import { gradeFinalAnswer } from '@/problem/inequality'
@@ -19,6 +20,7 @@ import {
   verdictFromTransform,
   verdictFromOps,
   verdictFromPw,
+  verdictFromRf,
 } from '@/problem/tutorContext'
 import type { Attempt, AttemptStep } from '@/store'
 import type { StepResult } from '@/shared/types'
@@ -641,6 +643,46 @@ describe('buildTutorContext', () => {
     expect(ctx.verdict?.mistake?.witness).toBe('That is the other order.')
     expect(verdictFromOps({ verdict: 'invalid', message: 'Type a formula in x.' }).status).toBe('parse_error')
     expect(verdictFromOps({ verdict: 'wrong', message: 'That is not it.' }).mistake).toBeUndefined()
+  })
+
+  it('describes a rational function from her boxes, with the named slip', () => {
+    const instance = generateProblem('rationalFns', 'rf.features', 1)
+    if (instance.answer.type !== 'rationalFns') throw new Error('expected a rationalFns problem')
+    const a = instance.answer
+    const entries = rfEntries(a)
+    const ctx = buildTutorContext(instance, attempt('rf-1', { moduleId: 'rationalFns', final: { polyEntries: entries } }), null, false)
+    expect(ctx.subject).toBe('precalculus')
+    expect(ctx.kind).toBe('rationalFns')
+    expect(ctx.moduleId).toBe('rationalFns')
+    expect(ctx.statement).toBe(`f(x) = ${a.f}. ${a.prompt}`)
+    expect(ctx.work).toEqual(rfWork(a, entries))
+    expect(ctx.answer).toBe(a.expectedDisplay)
+    expect(ctx.canonical[0]).toBe(a.reveal[0])
+    expect(ctx.finished).toBe(false)
+
+    const trap = gradeRfStage(a, a.trapStage, a.trapAnswer)
+    expect(trap.verdict).toBe('mistake')
+    if (trap.verdict !== 'mistake') return
+    const verdict = verdictFromRf(trap)
+    expect(verdict?.status).toBe('wrong')
+    expect(verdict?.mistake?.id).toBe(a.trap)
+    expect(verdict?.mistake?.lesson).toBeTruthy()
+    expect(verdict?.mistake?.witness).toBe(trap.witness)
+    const bad = buildTutorContext(
+      instance,
+      attempt('rf-2', { moduleId: 'rationalFns', final: { polyEntries: { [RF_KEYS[a.trapStage]]: a.trapAnswer } } }),
+      verdict,
+      false,
+    )
+    expect(bad.work).toEqual([expect.stringContaining(a.trapAnswer)])
+    expect(bad.verdict?.mistake?.id).toBe(a.trap)
+    expect(verdictFromRf(gradeRfStage(a, a.stages[0]!.id, '???'))?.status).toBe('parse_error')
+    expect(buildTutorContext(instance, attempt('rf-3', { moduleId: 'rationalFns' }), null, false).work).toEqual([])
+
+    const eq = generateProblem('rationalFns', 'rf.equation', 1)
+    if (eq.answer.type !== 'rationalFns') throw new Error('expected a rational equation')
+    expect(buildTutorContext(eq, attempt('rf-4', { moduleId: 'rationalFns' }), null, true).statement).toBe(`${eq.answer.equation}. ${eq.answer.prompt}`)
+    expect(buildTutorContext(eq, attempt('rf-4', { moduleId: 'rationalFns' }), verdictFromRf(gradeRfStage(eq.answer, 'solution', eq.answer.trapAnswer)), true).finished).toBe(true)
   })
 
   it('never adds a name, email, or account field', () => {

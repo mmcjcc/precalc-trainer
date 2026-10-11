@@ -16,7 +16,13 @@ import type {
   VarName,
 } from '@/shared/types'
 
-export type ProblemKind = 'inequality' | 'numberLine' | 'evenOdd' | 'inverse' | 'drill' | 'sigFigs' | 'atoms' | 'diffQuotient' | 'graphFeatures' | 'domainRange' | 'composition' | 'functionOps' | 'transformations' | 'piecewiseRate' | 'electrons' | 'quadratics' | 'polyDivision' | 'polyZeros'
+export type ProblemKind = 'inequality' | 'numberLine' | 'evenOdd' | 'inverse' | 'drill' | 'sigFigs' | 'atoms' | 'diffQuotient' | 'graphFeatures' | 'domainRange' | 'composition' | 'functionOps' | 'transformations' | 'piecewiseRate' | 'electrons' | 'quadratics' | 'polyDivision' | 'polyZeros' | 'rationalFns'
+
+/** Which rational-function screen this problem is. */
+export type RationalFnsQuestion = 'features' | 'asymptote' | 'equation'
+
+/** One checked part of a rational-function problem. */
+export type RationalFnsStageId = 'domain' | 'va' | 'holes' | 'asymptote' | 'xint' | 'yint' | 'solution'
 
 /** One operation the function-operations module asks for. `o` is composition. */
 export type FunctionOpsOp =
@@ -712,6 +718,44 @@ export type AnswerSpec =
       /**
        * The graph of f for `zeros` and `end` ({ kind: 'none' } otherwise). NOT on `instance.graph`: that
        * panel can be opened before she finishes. The flow shows this one only after the problem is complete.
+       */
+      graph: GraphSpec
+    }
+  | {
+      /**
+       * Rational functions (precalculus Unit 2). Domain, holes, asymptotes and intercepts, or one
+       * asymptote, or a rational equation. Grade a part with the module's `gradeRfStage`, which
+       * recomputes the answer from `f` or `equation`. Named mistakes are the `rf_` ids.
+       */
+      type: 'rationalFns'
+      question: RationalFnsQuestion
+      /** The function, app syntax. Empty when `question` is `equation`. */
+      f: string
+      /** The equation, app syntax. Empty unless `question` is `equation`. */
+      equation: string
+      /** The question in one line. Says what to find and nothing about the method or the trap. */
+      prompt: string
+      stages: {
+        id: RationalFnsStageId
+        /** Hint rung 1 for this part (the rule, not this problem's answer). */
+        nudge: string
+        ruleCard: RuleCardId
+        /** Hint rung 3 for this part. */
+        reveal: string[]
+      }[]
+      expectedDisplay: string
+      nudge: string
+      ruleCard: RuleCardId
+      ruleCards: RuleCardId[]
+      reveal: string[]
+      /** The named mistake this seed promises (an `rf_` id). */
+      trap: ErrorPatternId
+      trapStage: RationalFnsStageId
+      /** What that slip produces, in the form she would type. Never the right answer. */
+      trapAnswer: string
+      /**
+       * The graph of f, or of the two sides of an equation. NOT on `instance.graph`: that panel can be
+       * opened before she finishes. The flow shows this one only after the problem is complete.
        */
       graph: GraphSpec
     }

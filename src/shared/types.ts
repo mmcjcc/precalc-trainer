@@ -15,7 +15,7 @@
 export type RelOp = '=' | '<' | '<=' | '>' | '>='
 /** `h` is the difference-quotient step; the parser accepts it only when the problem owns it (ctx.vars). */
 export type VarName = 'x' | 'y' | 'n' | 'h'
-export type ModuleId = 'numberLine' | 'inequalities' | 'evenOdd' | 'inverses' | 'propertiesDrill' | 'sigFigs' | 'atoms' | 'diffQuotient' | 'graphFeatures' | 'domainRange' | 'composition' | 'functionOps' | 'transformations' | 'piecewiseRate' | 'electrons' | 'quadratics' | 'polyDivision' | 'polyZeros'
+export type ModuleId = 'numberLine' | 'inequalities' | 'evenOdd' | 'inverses' | 'propertiesDrill' | 'sigFigs' | 'atoms' | 'diffQuotient' | 'graphFeatures' | 'domainRange' | 'composition' | 'functionOps' | 'transformations' | 'piecewiseRate' | 'electrons' | 'quadratics' | 'polyDivision' | 'polyZeros' | 'rationalFns'
 export type CalcId = 'ti84' | 'nspire'
 
 /** Fine-grained property tags. Canonical steps carry one; the engine's move detector reports one. */
@@ -345,6 +345,19 @@ export type ErrorPatternId =
   | 'op_undefined_missed'
   | 'op_minus_not_distributed'
   | 'op_inner_not_squared'
+  // rational functions (content/modules/rationalFns; precalculus Unit 2). One id per slip the module
+  // computes for the function in front of her. A candidate equal to the right answer is never used.
+  | 'rf_hole_as_asymptote'
+  | 'rf_asymptote_from_numerator'
+  | 'rf_hole_left_out'
+  | 'rf_hole_y_unreduced'
+  | 'rf_degree_rule'
+  | 'rf_ratio_not_leading'
+  | 'rf_slant_remainder'
+  | 'rf_intercept_at_hole'
+  | 'rf_intercept_swapped'
+  | 'rf_extraneous_kept'
+  | 'rf_valid_dropped'
   // behavioral (ui)
   | 'abandoned'
 
@@ -558,10 +571,15 @@ export interface GraphSpec {
    */
   runs?: GraphSample[][]
   /**
-   * Endpoint dots on a piecewise graph. `closed` is filled; otherwise a hollow ring. Existing graphs
-   * leave this unset.
+   * Endpoint dots on a piecewise graph, or an open dot at a hole on a function graph. `closed` is
+   * filled; otherwise a hollow ring. Existing graphs leave this unset.
    */
   dots?: GraphDot[]
+  /**
+   * Dashed guide lines on a function graph (asymptotes): a vertical line at `x`, or the graph of
+   * `expr`. Existing graphs leave this unset.
+   */
+  guides?: GraphGuide[]
 }
 
 /** One endpoint of a piecewise graph. Filled when the piece includes it, hollow when it does not. */
@@ -569,6 +587,16 @@ export interface GraphDot {
   x: number
   y: number
   closed: boolean
+}
+
+/**
+ * A dashed guide on a function graph. Set `x` for a vertical line, or `expr` for a curve in x
+ * (a horizontal or slant asymptote). Existing graphs leave `guides` unset.
+ */
+export interface GraphGuide {
+  x?: number
+  expr?: string
+  label: string
 }
 
 /** One calculator instruction (matches content/calc/types.ts, which is the implementation). */

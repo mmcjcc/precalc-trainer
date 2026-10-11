@@ -1190,6 +1190,73 @@ export const ERROR_PATTERNS: Record<ErrorPatternId, ErrorPatternInfo> = {
     lesson: '(px + q)^2 is p^2 x^2 plus the cross term 2pq x plus q^2. Squaring each term on its own leaves that middle term out.',
     example: '(8x + 2)^2 = 64x^2 + 4 ✗ → 64x^2 + 32x + 4',
   },
+  // --- rational functions (precalculus Unit 2) ---
+  rf_hole_as_asymptote: {
+    id: 'rf_hole_as_asymptote',
+    title: 'A canceled factor is a hole',
+    lesson: 'A vertical asymptote comes from a factor that is still in the denominator after you cancel. A factor in both the top and the bottom cancels, and that x-value is a hole, not an asymptote.',
+    example: 'x = 3 ✗ → hole (3, 6/5), vertical asymptote x = −2',
+  },
+  rf_asymptote_from_numerator: {
+    id: 'rf_asymptote_from_numerator',
+    title: 'A numerator zero is not an asymptote',
+    lesson: 'A vertical asymptote is where the denominator is still 0 after canceling. A zero of the numerator, with the denominator not 0, is an x-intercept.',
+    example: 'x = −3 ✗ → x-intercept (−3, 0), vertical asymptote x = −2',
+  },
+  rf_hole_left_out: {
+    id: 'rf_hole_left_out',
+    title: 'A hole is still out of the domain',
+    lesson: 'Canceling a common factor does not put that x-value back in. The function is undefined wherever the original denominator is 0, hole included.',
+    example: '(−∞, −2) ∪ (−2, ∞) ✗ → (−∞, −2) ∪ (−2, 3) ∪ (3, ∞)',
+  },
+  rf_hole_y_unreduced: {
+    id: 'rf_hole_y_unreduced',
+    title: "A hole's height comes from the reduced function",
+    lesson: 'Where a factor cancels, the original function is 0/0, and that is not a number. Cancel first, then substitute into what remains.',
+    example: '(3, 0) ✗ → (3, 6/5)',
+  },
+  rf_degree_rule: {
+    id: 'rf_degree_rule',
+    title: 'Compare the two degrees first',
+    lesson: 'If the numerator has a lower degree, the horizontal asymptote is y = 0. If the degrees are equal, it is the ratio of the leading coefficients. If the numerator is exactly one degree higher, the asymptote is a slant line, the quotient of the division.',
+    example: 'y = 0 for equal degrees ✗ → y = 1',
+  },
+  rf_ratio_not_leading: {
+    id: 'rf_ratio_not_leading',
+    title: 'Use the leading coefficients',
+    lesson: 'When the degrees match, divide the leading coefficient of the numerator by the leading coefficient of the denominator. The constant terms are a different ratio, and a number in front of a factor counts toward the leading coefficient.',
+    example: 'y = −1/−3 ✗ → y = 2',
+  },
+  rf_slant_remainder: {
+    id: 'rf_slant_remainder',
+    title: 'The slant line is the quotient only',
+    lesson: 'When the numerator is one degree higher, divide. The asymptote is the quotient. The remainder is what is left over; it is not added onto the line.',
+    example: 'y = x + 5 ✗ → y = x + 2',
+  },
+  rf_intercept_at_hole: {
+    id: 'rf_intercept_at_hole',
+    title: 'A canceled zero is not an intercept',
+    lesson: 'An x-intercept is a zero of the numerator that was not canceled. A factor that cancels is a hole, so the graph does not meet the x-axis there.',
+    example: '(−3, 0) and (3, 0) ✗ → (−3, 0)',
+  },
+  rf_intercept_swapped: {
+    id: 'rf_intercept_swapped',
+    title: 'An intercept is a point',
+    lesson: 'An x-intercept is a point on the x-axis, and the y-intercept is the point (0, f(0)). A bare number is not a point, and the two intercepts are not interchangeable.',
+    example: '3/2 ✗ → (0, 3/2)',
+  },
+  rf_extraneous_kept: {
+    id: 'rf_extraneous_kept',
+    title: 'A denominator of 0 is not a solution',
+    lesson: 'After you clear denominators, test each candidate in the original equation. A value that makes a denominator 0 is not a solution, even when it solves the polynomial you got.',
+    example: '{1, 3} ✗ → {1}',
+  },
+  rf_valid_dropped: {
+    id: 'rf_valid_dropped',
+    title: 'A value that works stays in the set',
+    lesson: 'Leave out only a candidate that makes a denominator 0. A value that makes the equation true, and keeps every denominator defined, is a solution.',
+    example: 'no solution ✗ → {1}',
+  },
   // --- behavioral (ui) ---
   abandoned: {
     id: 'abandoned',
