@@ -65,10 +65,18 @@ The same image runs on a plain Docker host behind another sign-in proxy, as a no
 read-only root file system; the settings for that are in the `Dockerfile` header and `deploy/azure.md` §1.
 
 That is how it runs at home, as `math.apps.mmcjcc.com` on Jason's app platform (app-broker): the platform's
-sign-in (Google) sits in front, and the family list decides who gets in. `deploy/homelab.yml` is the request to
+sign-in (Google, or the home AD) sits in front, and the app's own list on the platform decides who gets in.
+Pushes to `main` roll out to Azure by themselves (the `deploy` workflow). `deploy/homelab.yml` is the request to
 the platform (port, sign-in profile, settings, the name of the allowlist secret; no addresses and no secret
 values). `sh deploy/deploy.sh` deploys the current commit once it is on `main` and the `deploy` workflow has
 pushed its image; `sh deploy/deploy.sh <older sha>` goes back. The rules are printed by `ssh homelab contract`.
+
+**Who may use it** is one file outside the repo, the lists file beside Jason's key file: an `ALLOWED_USERS=` line
+(everyone, comma-separated) and a `PARENT_USERS=` line (who may also read the tutor's log). After editing it,
+`bash deploy/users.sh` makes the home site match it in one step: the app's own allowlist and the tutor's (through
+app-broker's set-secrets tool) and the platform's sign-in list (`ssh homelab access set`, so the two never drift).
+`--azure` also sets the Azure site's lists; `--check` changes nothing. The app keeps its own allowlist on purpose:
+on Azure it is the only gate.
 
 ## AI tutor and privacy
 
