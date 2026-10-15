@@ -1257,6 +1257,55 @@ export const ERROR_PATTERNS: Record<ErrorPatternId, ErrorPatternInfo> = {
     lesson: 'Leave out only a candidate that makes a denominator 0. A value that makes the equation true, and keeps every denominator defined, is a solution.',
     example: 'no solution ✗ → {1}',
   },
+  // --- polynomial and rational inequalities (precalculus Unit 2) ---
+  sc_denominator_included: {
+    id: 'sc_denominator_included',
+    title: 'A denominator zero is undefined',
+    lesson: 'A zero of the denominator makes the expression undefined, so it is never part of the solution. That stays true for ≤ and ≥.',
+    example: '[−3, 1] ✗ → [−3, 1)',
+  },
+  sc_endpoints_wrong: {
+    id: 'sc_endpoints_wrong',
+    title: 'A numerator zero follows the inequality sign',
+    lesson: 'A zero of the numerator makes the expression 0. It is included for ≤ and ≥, and left out for < and >.',
+    example: '(−1, ∞) ✗ → [−1, ∞)',
+  },
+  sc_even_sign_flip: {
+    id: 'sc_even_sign_flip',
+    title: 'An even power does not change the sign',
+    lesson: 'The sign changes only when the factor has an odd power. A factor raised to an even power touches and the sign stays the same on both sides.',
+    example: '(−∞, −1] ∪ [2, ∞) ✗ → [−1, ∞)',
+  },
+  sc_signs_reversed: {
+    id: 'sc_signs_reversed',
+    title: 'The far-right sign follows the leading coefficient',
+    lesson: 'The sign on the far right is the sign of the leading coefficient. Flipping every sign, or ignoring which way the inequality points, shades the wrong intervals.',
+    example: '(−∞, −1] ∪ {2} ✗ → [−1, ∞)',
+  },
+  sc_not_one_side: {
+    id: 'sc_not_one_side',
+    title: 'Move every term to one side first',
+    lesson: 'An inequality with terms on both sides has to become one expression compared with 0. Solving one side on its own, or comparing a numerator with a denominator, skips that step.',
+    example: '(3, ∞) ✗ → (−∞, 1) ∪ (3, ∞)',
+  },
+  sc_multiplied_by_denominator: {
+    id: 'sc_multiplied_by_denominator',
+    title: 'Do not multiply by an expression whose sign you do not know',
+    lesson: 'Multiplying both sides by the denominator keeps the inequality direction only where that denominator is positive. Where it is negative, the direction flips, so the solution is not the numerator alone.',
+    example: '(−∞, −3] ✗ → [−3, 1)',
+  },
+  sc_critical_missing: {
+    id: 'sc_critical_missing',
+    title: 'Every zero of the top and the bottom is a critical number',
+    lesson: 'The critical numbers are the zeros of the numerator and the zeros of the denominator. Leaving one out glues two intervals into one.',
+    example: '−3 ✗ → −3, 1',
+  },
+  sc_wrong_intervals: {
+    id: 'sc_wrong_intervals',
+    title: 'Keep the intervals with the sign you want',
+    lesson: 'The sign chart says where the expression is positive and where it is negative. The solution is the intervals whose sign matches the inequality, not the ones with the other sign.',
+    example: '(−∞, −1] ✗ → [−1, ∞)',
+  },
   // --- behavioral (ui) ---
   abandoned: {
     id: 'abandoned',

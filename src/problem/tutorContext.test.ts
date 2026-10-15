@@ -5,6 +5,7 @@ import { gradeLightAnswer } from '@/content/modules/electrons/grade'
 import { SD_KEYS, gradeDivisionStage } from '@/content/modules/polyDivision'
 import { canonicalEntries, gradeZerosStage } from '@/content/modules/polyZeros'
 import { canonicalEntries as rfEntries, gradeRfStage, RF_KEYS, rfWork } from '@/content/modules/rationalFns'
+import { canonicalEntries as scEntries, gradeScStage, SC_KEYS, scWork } from '@/content/modules/signCharts'
 import { checkSquareLine, configurationMistakes, gradeAxisOfSymmetry, gradeConfiguration, gradeVertex, squareMistakes, syntheticMistakes, vertexMistakes } from '@/engine'
 import { ratToString } from '@/notation'
 import { gradeFinalAnswer } from '@/problem/inequality'
@@ -21,6 +22,7 @@ import {
   verdictFromOps,
   verdictFromPw,
   verdictFromRf,
+  verdictFromSc,
 } from '@/problem/tutorContext'
 import type { Attempt, AttemptStep } from '@/store'
 import type { StepResult } from '@/shared/types'
@@ -683,6 +685,48 @@ describe('buildTutorContext', () => {
     if (eq.answer.type !== 'rationalFns') throw new Error('expected a rational equation')
     expect(buildTutorContext(eq, attempt('rf-4', { moduleId: 'rationalFns' }), null, true).statement).toBe(`${eq.answer.equation}. ${eq.answer.prompt}`)
     expect(buildTutorContext(eq, attempt('rf-4', { moduleId: 'rationalFns' }), verdictFromRf(gradeRfStage(eq.answer, 'solution', eq.answer.trapAnswer)), true).finished).toBe(true)
+  })
+
+  it('describes a sign-chart inequality from her boxes, with the named slip', () => {
+    const instance = generateProblem('signCharts', 'sc.chart', 1)
+    if (instance.answer.type !== 'signCharts') throw new Error('expected a signCharts problem')
+    const a = instance.answer
+    const entries = scEntries(a)
+    const ctx = buildTutorContext(instance, attempt('sc-1', { moduleId: 'signCharts', final: { polyEntries: entries } }), null, false)
+    expect(ctx.subject).toBe('precalculus')
+    expect(ctx.kind).toBe('signCharts')
+    expect(ctx.moduleId).toBe('signCharts')
+    expect(ctx.statement).toBe(`${a.inequality}. ${a.prompt}`)
+    expect(ctx.work).toEqual(scWork(a, entries))
+    expect(ctx.answer).toBe(a.expectedDisplay)
+    expect(ctx.canonical[0]).toBe(a.reveal[0])
+    expect(ctx.finished).toBe(false)
+
+    const trap = gradeScStage(a, a.trapStage, a.trapAnswer)
+    expect(trap.verdict).toBe('mistake')
+    if (trap.verdict !== 'mistake') return
+    const verdict = verdictFromSc(trap)
+    expect(verdict?.status).toBe('wrong')
+    expect(verdict?.mistake?.id).toBe(a.trap)
+    expect(verdict?.mistake?.lesson).toBeTruthy()
+    expect(verdict?.mistake?.witness).toBe(trap.witness)
+    const bad = buildTutorContext(
+      instance,
+      attempt('sc-2', { moduleId: 'signCharts', final: { polyEntries: { [SC_KEYS[a.trapStage]]: a.trapAnswer } } }),
+      verdict,
+      false,
+    )
+    expect(bad.work).toEqual([expect.stringContaining(a.trapAnswer)])
+    expect(bad.verdict?.mistake?.id).toBe(a.trap)
+    expect(verdictFromSc(gradeScStage(a, a.stages[0]!.id, '???'))?.status).toBe('parse_error')
+    expect(buildTutorContext(instance, attempt('sc-3', { moduleId: 'signCharts' }), null, false).work).toEqual([])
+
+    const poly = generateProblem('signCharts', 'sc.poly', 1)
+    if (poly.answer.type !== 'signCharts') throw new Error('expected a polynomial inequality')
+    expect(buildTutorContext(poly, attempt('sc-4', { moduleId: 'signCharts' }), null, true).statement).toBe(`${poly.answer.inequality}. ${poly.answer.prompt}`)
+    expect(
+      buildTutorContext(poly, attempt('sc-4', { moduleId: 'signCharts' }), verdictFromSc(gradeScStage(poly.answer, 'solution', poly.answer.trapAnswer)), true).finished,
+    ).toBe(true)
   })
 
   it('never adds a name, email, or account field', () => {

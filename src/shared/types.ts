@@ -15,7 +15,7 @@
 export type RelOp = '=' | '<' | '<=' | '>' | '>='
 /** `h` is the difference-quotient step; the parser accepts it only when the problem owns it (ctx.vars). */
 export type VarName = 'x' | 'y' | 'n' | 'h'
-export type ModuleId = 'numberLine' | 'inequalities' | 'evenOdd' | 'inverses' | 'propertiesDrill' | 'sigFigs' | 'atoms' | 'diffQuotient' | 'graphFeatures' | 'domainRange' | 'composition' | 'functionOps' | 'transformations' | 'piecewiseRate' | 'electrons' | 'quadratics' | 'polyDivision' | 'polyZeros' | 'rationalFns'
+export type ModuleId = 'numberLine' | 'inequalities' | 'evenOdd' | 'inverses' | 'propertiesDrill' | 'sigFigs' | 'atoms' | 'diffQuotient' | 'graphFeatures' | 'domainRange' | 'composition' | 'functionOps' | 'transformations' | 'piecewiseRate' | 'electrons' | 'quadratics' | 'polyDivision' | 'polyZeros' | 'rationalFns' | 'signCharts'
 export type CalcId = 'ti84' | 'nspire'
 
 /** Fine-grained property tags. Canonical steps carry one; the engine's move detector reports one. */
@@ -358,6 +358,16 @@ export type ErrorPatternId =
   | 'rf_intercept_swapped'
   | 'rf_extraneous_kept'
   | 'rf_valid_dropped'
+  // polynomial and rational inequalities (content/modules/signCharts; precalculus Unit 2). One id per slip
+  // the module computes for the inequality in front of her. A candidate equal to the right answer is never used.
+  | 'sc_denominator_included'
+  | 'sc_endpoints_wrong'
+  | 'sc_even_sign_flip'
+  | 'sc_signs_reversed'
+  | 'sc_not_one_side'
+  | 'sc_multiplied_by_denominator'
+  | 'sc_critical_missing'
+  | 'sc_wrong_intervals'
   // behavioral (ui)
   | 'abandoned'
 
@@ -538,6 +548,11 @@ export interface GraphSpec {
   extra?: PlotCurve[]
   /** Solution set for kind = numberLine. */
   set?: SolutionSet
+  /**
+   * Solution of an inequality, drawn on the x-axis of a function graph (gold segments, closed and open dots).
+   * Existing graphs leave this unset and draw nothing extra.
+   */
+  solutionMarks?: SolutionSet
   /** Suggested x-range (square window derived from it). */
   xDomain?: [number, number]
   /** Optional badge, e.g. "fails vertical line test". */

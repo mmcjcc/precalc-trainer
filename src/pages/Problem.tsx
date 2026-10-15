@@ -15,6 +15,7 @@ import { PiecewiseRateFlow } from './flows/PiecewiseRateFlow'
 import { PolyDivisionFlow } from './flows/PolyDivisionFlow'
 import { PolyZerosFlow } from './flows/PolyZerosFlow'
 import { RationalFnsFlow } from './flows/RationalFnsFlow'
+import { SignChartsFlow } from './flows/SignChartsFlow'
 import { QuadraticsFlow } from './flows/QuadraticsFlow'
 import { TransformationFlow } from './flows/TransformationFlow'
 import { GraphFeaturesFlow } from './flows/GraphFeaturesFlow'
@@ -122,6 +123,8 @@ function ProblemBody({ instance, flags, templateTitle }: { instance: ProblemInst
       return <PolyZerosFlow {...props} />
     case 'rationalFns':
       return <RationalFnsFlow {...props} />
+    case 'signCharts':
+      return <SignChartsFlow {...props} />
     default:
       return <Navigate to="/" replace />
   }

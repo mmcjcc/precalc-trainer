@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { evalExpr } from '@/engine'
-import { PALETTE, type GraphDot, type GraphGuide, type GraphSpec, type PlotColor, type PlotStyle } from '@/shared/types'
+import { PALETTE, type GraphDot, type GraphGuide, type GraphSpec, type PlotColor, type PlotStyle, type SolutionSet } from '@/shared/types'
+import { ratToNumber } from '@/notation'
 import { splitDomain } from './graphBreaks'
 
 const COLOR: Record<PlotColor, string> = {
@@ -40,6 +41,53 @@ function pushCurve(
   }
 }
 
+function pushGoldDot(data: Record<string, unknown>[], x: number, closed: boolean) {
+  data.push({
+    points: [[x, 0]],
+    fnType: 'points',
+    graphType: 'scatter',
+    color: PALETTE.goldText,
+    attr: closed
+      ? { r: 4.5, fill: PALETTE.goldText, stroke: PALETTE.goldText, opacity: 1 }
+      : { r: 5, fill: '#fff', stroke: PALETTE.goldText, 'stroke-width': 2.5, opacity: 1 },
+  })
+}
+
+/** Clip an endpoint to the window. An infinite end, or one that falls outside, gets no dot. */
+function axisEnd(e: '-inf' | 'inf' | { n: number; d: number }, lo: number, hi: number): { x: number; bare: boolean } {
+  if (e === '-inf') return { x: lo, bare: true }
+  if (e === 'inf') return { x: hi, bare: true }
+  const x = ratToNumber(e)
+  if (!Number.isFinite(x) || x < lo || x > hi) return { x: Math.min(hi, Math.max(lo, Number.isFinite(x) ? x : lo)), bare: true }
+  return { x, bare: false }
+}
+
+/** Gold marks on y = 0 for the solution set. No mark at a clipped infinite end. */
+function pushSolution(data: Record<string, unknown>[], set: SolutionSet, lo: number, hi: number) {
+  for (const p of set.pieces) {
+    const a = axisEnd(p.lo, lo, hi)
+    const b = axisEnd(p.hi, lo, hi)
+    if (b.x - a.x > 1e-8) {
+      data.push({
+        points: [
+          [a.x, 0],
+          [b.x, 0],
+        ],
+        fnType: 'points',
+        graphType: 'polyline',
+        color: PALETTE.goldText,
+        attr: { 'stroke-width': 4 },
+      })
+    }
+    if (!a.bare) pushGoldDot(data, a.x, p.loClosed)
+    if (!b.bare) pushGoldDot(data, b.x, p.hiClosed)
+  }
+  for (const pt of set.points) {
+    const x = ratToNumber(pt)
+    if (x >= lo && x <= hi) pushGoldDot(data, x, true)
+  }
+}
+
 type Props = {
   spec: GraphSpec
   className?: string
@@ -74,6 +122,7 @@ export function Graph({ spec, className }: Props) {
   const dots = spec.dots
   const guidesKey = JSON.stringify(guides ?? [])
   const dotsKey = JSON.stringify(dots ?? [])
+  const solutionKey = JSON.stringify(spec.solutionMarks ?? null)
 
   useEffect(() => {
     const el = ref.current
@@ -83,6 +132,7 @@ export function Graph({ spec, className }: Props) {
     const curves = JSON.parse(extraKey) as NonNullable<GraphSpec['extra']>
     const guideLines = JSON.parse(guidesKey) as GraphGuide[]
     const dotList = JSON.parse(dotsKey) as GraphDot[]
+    const marks = JSON.parse(solutionKey) as SolutionSet | null
     import('function-plot')
       .then((mod) => {
         if (cancelled) return
@@ -146,6 +196,7 @@ export function Graph({ spec, className }: Props) {
               : { r: 5.5, fill: '#fff', stroke: PALETTE.navy, 'stroke-width': 2.5, opacity: 1 },
           })
         }
+        if (marks && (marks.pieces.length > 0 || marks.points.length > 0)) pushSolution(data, marks, lo, hi)
         functionPlot({
           target: el,
           width,
@@ -165,7 +216,7 @@ export function Graph({ spec, className }: Props) {
       cancelled = true
       el.innerHTML = ''
     }
-  }, [f, fColor, fBreakKey, fBreaks, finv, extraKey, guidesKey, dotsKey, lo, hi, identity, reflect, spec.kind])
+  }, [f, fColor, fBreakKey, fBreaks, finv, extraKey, guidesKey, dotsKey, solutionKey, lo, hi, identity, reflect, spec.kind])
 
   if (spec.kind !== 'function' || !f) return null
   const legend: string[] = [`${fColor}: f`]
@@ -175,8 +226,10 @@ export function Graph({ spec, className }: Props) {
   for (const c of extra ?? []) legend.push(`${c.color} ${c.style}: ${c.label}`)
   if ((guides?.length ?? 0) > 0) legend.push('gray dashed: asymptotes')
   if ((dots ?? []).some((d) => !d.closed)) legend.push('open dot: a hole')
+  const marked = !!spec.solutionMarks && (spec.solutionMarks.pieces.length > 0 || spec.solutionMarks.points.length > 0)
+  if (marked) legend.push('gold: solution on the x-axis')
   const extraNames = (extra ?? []).map((c) => c.label)
-  const aria = `Graph of ${f}${finv ? ' and its inverse' : ''}${reflect ? ', with its reflection across y = x' : ''}${extraNames.length ? `, with ${extraNames.join(' and ')}` : ''}${(guides?.length ?? 0) > 0 ? ', with asymptotes' : ''}${(dots ?? []).some((d) => !d.closed) ? ', with a hole' : ''}`
+  const aria = `Graph of ${f}${finv ? ' and its inverse' : ''}${reflect ? ', with its reflection across y = x' : ''}${extraNames.length ? `, with ${extraNames.join(' and ')}` : ''}${(guides?.length ?? 0) > 0 ? ', with asymptotes' : ''}${(dots ?? []).some((d) => !d.closed) ? ', with a hole' : ''}${marked ? ', with the solution marked on the x-axis' : ''}`
   return (
     <div className={className}>
       <div ref={ref} className="overflow-hidden rounded-xl bg-white" role="img" aria-label={aria} aria-busy={status === 'loading'} />

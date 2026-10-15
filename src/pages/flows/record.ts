@@ -1,6 +1,7 @@
 import { FN_PATTERN } from '@/content/modules/domainRange/patterns'
 import type { OpsGrade } from '@/content/modules/functionOps/ops'
 import type { RfGrade } from '@/content/modules/rationalFns/grade'
+import type { ScGrade } from '@/content/modules/signCharts/grade'
 import type { PwGrade } from '@/content/modules/piecewiseRate/grade'
 import { EC_PATTERN } from '@/content/modules/electrons/patterns'
 import { POLY_PATTERN } from '@/content/modules/polynomials/patterns'
@@ -243,6 +244,24 @@ export function recordPolyGrades(grades: readonly (PolyGrade | SquareLineGrade)[
  * not an attempt: nothing is logged.
  */
 export function recordRfGrades(grade: RfGrade): void {
+  if (grade.verdict === 'invalid') return
+  const s = useStore.getState()
+  if (grade.verdict === 'correct') {
+    s.recordFinalAnswer({ correct: true, via: 'text' })
+    return
+  }
+  if (grade.verdict === 'mistake') {
+    s.recordFinalAnswer({ correct: false, pattern: grade.mistake, via: 'text' })
+    return
+  }
+  s.recordFinalAnswer({ correct: false, via: 'text' })
+}
+
+/**
+ * Log one sign-chart check. A named mistake is stored under its sc_ id. Unreadable input is
+ * not an attempt: nothing is logged.
+ */
+export function recordScGrades(grade: ScGrade): void {
   if (grade.verdict === 'invalid') return
   const s = useStore.getState()
   if (grade.verdict === 'correct') {

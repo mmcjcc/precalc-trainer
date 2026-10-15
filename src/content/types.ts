@@ -16,7 +16,16 @@ import type {
   VarName,
 } from '@/shared/types'
 
-export type ProblemKind = 'inequality' | 'numberLine' | 'evenOdd' | 'inverse' | 'drill' | 'sigFigs' | 'atoms' | 'diffQuotient' | 'graphFeatures' | 'domainRange' | 'composition' | 'functionOps' | 'transformations' | 'piecewiseRate' | 'electrons' | 'quadratics' | 'polyDivision' | 'polyZeros' | 'rationalFns'
+export type ProblemKind = 'inequality' | 'numberLine' | 'evenOdd' | 'inverse' | 'drill' | 'sigFigs' | 'atoms' | 'diffQuotient' | 'graphFeatures' | 'domainRange' | 'composition' | 'functionOps' | 'transformations' | 'piecewiseRate' | 'electrons' | 'quadratics' | 'polyDivision' | 'polyZeros' | 'rationalFns' | 'signCharts'
+
+/** Which sign-chart screen this problem is. */
+export type SignChartsQuestion = 'poly' | 'rational' | 'chart'
+
+/** One checked part of a sign-chart problem. */
+export type SignChartsStageId = 'critical' | 'signs' | 'solution'
+
+/** Comparison on a sign-chart inequality, app syntax. */
+export type SignChartsOp = '>' | '>=' | '<' | '<='
 
 /** Which rational-function screen this problem is. */
 export type RationalFnsQuestion = 'features' | 'asymptote' | 'equation'
@@ -756,6 +765,54 @@ export type AnswerSpec =
       /**
        * The graph of f, or of the two sides of an equation. NOT on `instance.graph`: that panel can be
        * opened before she finishes. The flow shows this one only after the problem is complete.
+       */
+      graph: GraphSpec
+    }
+  | {
+      /**
+       * Polynomial and rational inequalities (precalculus Unit 2), solved with a sign chart.
+       * Grade a part with the module's `gradeScStage`, which recomputes the chart from `left`, `op`, and
+       * `right`. Named mistakes are the `sc_` ids. Denominator zeros are never in the solution.
+       */
+      type: 'signCharts'
+      question: SignChartsQuestion
+      /** The inequality, app syntax: "left op right". */
+      inequality: string
+      left: string
+      right: string
+      op: SignChartsOp
+      /** The question in one line. Says what to find and nothing about the method or the trap. */
+      prompt: string
+      /** Critical numbers, least to greatest, or "none". */
+      criticalText: string
+      /** One sign per interval, left to right: "+, -, +". */
+      signsText: string
+      /** The open intervals between the critical numbers, left to right, app syntax. */
+      intervals: string[]
+      /** The solution set, interval notation. "no solution" when there is none. */
+      solutionText: string
+      stages: {
+        id: SignChartsStageId
+        /** Hint rung 1 for this part (the rule, not this problem's answer). */
+        nudge: string
+        ruleCard: RuleCardId
+        /** Hint rung 3 for this part. */
+        reveal: string[]
+      }[]
+      expectedDisplay: string
+      nudge: string
+      ruleCard: RuleCardId
+      ruleCards: RuleCardId[]
+      reveal: string[]
+      /** The named mistake this seed promises (an `sc_` id). */
+      trap: ErrorPatternId
+      trapStage: SignChartsStageId
+      /** What that slip produces, in the form she would type. Never the right answer. */
+      trapAnswer: string
+      /**
+       * The graph of the expression moved to one side, with the solution marked on the x-axis.
+       * NOT on `instance.graph`: that panel can be opened before she finishes. The flow shows this
+       * one only after the problem is complete.
        */
       graph: GraphSpec
     }

@@ -44,7 +44,7 @@ or the textbook) is one more entry in that file.
 | done (Oct 2) | Completing the square, synthetic division | done (Oct 1): src/engine/polynomials (24 mistakes; API in docs/progress/polynomials-core.md) | done: modules quadratics and polyDivision, built by three Claude agents in turn (Grok's balance had run out); Claude cross-check of about 3,300 problems |
 | done (Oct 2) | Zeros, multiplicity, end behavior, rational roots | done (Oct 1): same core | done: module polyZeros (zeros, end behavior, build from zeros, rational roots) |
 | done (Oct 11) | Rational functions | - (exact logic in the module; Claude cross-check of 900 problems) | done: module rationalFns (features, asymptotes, rational equations), built by Grok |
-| Nov 2 | Polynomial and rational inequalities | sign-chart checker on the existing solution-set engine | templates, sign-chart UI |
+| done (Oct 14) | Polynomial and rational inequalities | - (sign-chart logic in the module; Claude cross-check of 900 problems; adversarial review by Gemini, three gaps fixed) | done: module signCharts (polynomial, rational, and a checkable sign chart), built by Grok |
 | Nov 9 | Complex numbers | complex arithmetic and equivalence in the engine | templates |
 | Nov 23 | Exponentials and logarithms | **fix `ln`/`log10` evaluation first**; log properties; extraneous-solution checks | templates, growth and decay word problems |
 | Jan | Unit circle, radians, trig of any angle | exact-value table and its independent test | drills |
