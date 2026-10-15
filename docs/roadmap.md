@@ -57,7 +57,7 @@ or the textbook) is one more entry in that file.
 
 | Ship by | Unit | Modules | Status |
 |---|---|---|---|
-| Oct | 1 Tools of geometry | geoSegments (segment addition, midpoints, distance and midpoint on the plane), geoAngles (angle addition, bisectors, angle pairs, complement and supplement word problems) | building (Grok) |
+| Oct | 1 Tools of geometry | geoSegments (segment addition, midpoints, distance and midpoint on the plane), geoAngles (angle addition, bisectors, angle pairs, complement and supplement word problems) | shipped 2026-10-15 |
 | Nov | 2 Reasoning and proof | conditionals, converse, inverse, contrapositive, laws of logic; properties and two-column proofs | next |
 | Nov | 3 Parallel and perpendicular lines | transversal angle pairs, proving lines parallel, slopes and equations of lines; triangle and polygon angle sums | after that |
 

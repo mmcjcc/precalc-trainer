@@ -15,7 +15,7 @@
 export type RelOp = '=' | '<' | '<=' | '>' | '>='
 /** `h` is the difference-quotient step; the parser accepts it only when the problem owns it (ctx.vars). */
 export type VarName = 'x' | 'y' | 'n' | 'h'
-export type ModuleId = 'numberLine' | 'inequalities' | 'evenOdd' | 'inverses' | 'propertiesDrill' | 'sigFigs' | 'atoms' | 'diffQuotient' | 'graphFeatures' | 'domainRange' | 'composition' | 'functionOps' | 'transformations' | 'piecewiseRate' | 'electrons' | 'quadratics' | 'polyDivision' | 'polyZeros' | 'rationalFns' | 'signCharts' | 'complexNums'
+export type ModuleId = 'numberLine' | 'inequalities' | 'evenOdd' | 'inverses' | 'propertiesDrill' | 'sigFigs' | 'atoms' | 'diffQuotient' | 'graphFeatures' | 'domainRange' | 'composition' | 'functionOps' | 'transformations' | 'piecewiseRate' | 'electrons' | 'quadratics' | 'polyDivision' | 'polyZeros' | 'rationalFns' | 'signCharts' | 'complexNums' | 'geoSegments' | 'geoAngles'
 export type CalcId = 'ti84' | 'nspire'
 
 /** Fine-grained property tags. Canonical steps carry one; the engine's move detector reports one. */
@@ -380,6 +380,20 @@ export type ErrorPatternId =
   | 'cx_discriminant_sign'
   | 'cx_conjugate_missing'
   | 'cx_half_formula'
+  // honors geometry (content/modules/geometry). One id per slip the module computes for the figure in
+  // front of her. A candidate equal to the right answer is never used.
+  | 'geo_answered_x'
+  | 'geo_parts_equal'
+  | 'geo_part_equals_whole'
+  | 'geo_half_for_whole'
+  | 'geo_midpoint_subtracted'
+  | 'geo_endpoint_averaged'
+  | 'geo_distance_not_squared'
+  | 'geo_distance_no_root'
+  | 'geo_comp_supp_swapped'
+  | 'geo_vertical_as_supplementary'
+  | 'geo_linear_pair_equal'
+  | 'geo_complement_reversed'
   // behavioral (ui)
   | 'abandoned'
 
@@ -624,6 +638,81 @@ export interface GraphGuide {
   x?: number
   expr?: string
   label: string
+}
+
+/**
+ * A geometry figure drawn to the problem's true sizes. Labels are what the problem states
+ * (an expression or a given number), never the solved answer. Later units add fields; they do not
+ * replace these.
+ */
+export interface GeoFigureSpec {
+  /** Math coordinates, y up. */
+  points: GeoPoint[]
+  segments?: GeoSegment[]
+  /** Infinite lines through two points, arrowheads at both ends. */
+  lines?: GeoLine[]
+  rays?: GeoRay[]
+  angles?: GeoAngleMark[]
+  /** Integer lattice and axes. Omit on a figure that is not on the coordinate plane. */
+  grid?: GeoGrid
+  /** Words for role="img" and for the tutor. Describes the picture, not the method. */
+  ariaLabel: string
+}
+
+export interface GeoPoint {
+  id: string
+  x: number
+  y: number
+  /** Defaults to above the dot. */
+  labelSide?: 'above' | 'below' | 'left' | 'right' | 'above-left' | 'above-right' | 'below-left' | 'below-right'
+  /** Defaults to `id`. */
+  label?: string
+}
+
+export interface GeoSegment {
+  from: string
+  to: string
+  /** Expression or given number, e.g. "2x + 3". */
+  label?: string
+  /** Matching tick counts mean congruent segments. */
+  ticks?: 1 | 2 | 3
+  /** Which side of the segment the length label sits on. Defaults to the side above the line. */
+  labelSide?: 'above' | 'below'
+}
+
+export interface GeoLine {
+  through: [string, string]
+}
+
+export interface GeoRay {
+  from: string
+  through: string
+}
+
+export interface GeoAngleMark {
+  vertex: string
+  /** One side: the ray from the vertex through this point. */
+  from: string
+  /** The other side. */
+  to: string
+  /** "(3x + 5)°" or "1". What the problem states, not the solved measure. */
+  label?: string
+  /** Matching arc counts mean congruent angles. Ignored when `right` is set. */
+  marks?: 1 | 2 | 3
+  /**
+   * Arc radius in SVG units. Set when several arcs share a vertex and are not congruent,
+   * so a larger arc is not read as a second congruence mark.
+   */
+  radius?: number
+  /** A right-angle square. Only when the angle really is 90°. */
+  right?: boolean
+}
+
+export interface GeoGrid {
+  xMin: number
+  xMax: number
+  yMin: number
+  yMax: number
 }
 
 /** One calculator instruction (matches content/calc/types.ts, which is the implementation). */

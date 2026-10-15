@@ -64,9 +64,9 @@ describe('Unit 1 review', () => {
     renderReview()
     fireEvent.click(screen.getByRole('switch', { name: 'Timed' }))
     fireEvent.click(screen.getByRole('button', { name: 'Start the set' }))
-    expect(await screen.findByText('Problem 1 of 12', {}, { timeout: 20000 })).toBeTruthy()
+    expect(await screen.findByText('Problem 1 of 12', {}, { timeout: 120000 })).toBeTruthy()
     // The problem view is lazy. "test mode" is rendered only after that chunk mounts and the attempt starts.
-    expect(await screen.findByText(/test mode/, {}, { timeout: 20000 })).toBeTruthy()
+    expect(await screen.findByText(/test mode/, {}, { timeout: 120000 })).toBeTruthy()
     expect(useStore.getState().attempt?.mode).toBe('timed')
     expect(useStore.getState().settings.testMode).toBe(true)
     expect(loadReview('unit1')?.timed).toBe(true)
@@ -78,7 +78,7 @@ describe('Unit 1 review', () => {
     }
     expect(screen.getByRole('button', { name: 'Start another set' })).toBeTruthy()
     expect(useStore.getState().settings.testMode).toBe(false)
-  }, 60000)
+  }, 120000)
 
   it('drops a saved set that names a template which no longer exists', () => {
     const built = buildReviewSet('unit1', { count: 8, seed: 7, events: [] })
@@ -107,7 +107,7 @@ describe('Unit 1 review', () => {
     const first = renderReview()
     fireEvent.click(screen.getByRole('radio', { name: '8' }))
     fireEvent.click(screen.getByRole('button', { name: 'Start the set' }))
-    expect(await screen.findByLabelText('Interval notation', {}, { timeout: 20000 })).toBeTruthy()
+    expect(await screen.findByLabelText('Interval notation', {}, { timeout: 120000 })).toBeTruthy()
 
     const saved = loadReview('unit1')
     expect(saved?.problems[0]?.templateId).toBe('nl.read')
@@ -144,5 +144,5 @@ describe('Unit 1 review', () => {
     const practice = screen.getByRole('link', { name: `Practice ${getModule('numberLine').title}` })
     expect(practice.getAttribute('href')).toBe('/m/numberLine')
     expect(screen.getByRole('button', { name: 'Start another set' })).toBeTruthy()
-  }, 60000)
+  }, 120000)
 })

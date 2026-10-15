@@ -43,7 +43,8 @@ describe('course registry', () => {
         if (unit.reviewId) expect(getReview(unit.reviewId)).toBeTruthy()
       }
     }
-    expect(getCourse('geometry')).toBeUndefined()
+    expect(getCourse('geometry')?.title).toBe('Honors Geometry')
+    expect(getCourse('geometry')?.short).toBe('Geometry')
   })
 
   it('sorts a unit by module order and skips units that have no modules', () => {
@@ -81,6 +82,16 @@ describe('course registry', () => {
       ['ch4', ['atoms']],
       ['ch5', ['electrons']],
     ])
+    const geometry = getCourse('geometry')
+    expect(geometry?.units.map((u) => [u.id, u.label, u.title, u.moduleIds])).toEqual([
+      ['g1', 'Unit 1', 'Tools of geometry', ['geoSegments', 'geoAngles']],
+      ['g2', 'Unit 2', 'Reasoning and proof', []],
+      ['g3', 'Unit 3', 'Parallel and perpendicular lines', []],
+    ])
+    expect(unitsWithModules(geometry!).map((u) => u.id)).toEqual(['g1'])
+    expect(modulesInUnit(geometry!.units[0]!).map((m) => m.id)).toEqual(['geoSegments', 'geoAngles'])
+    expect(modulesInUnit(geometry!.units[1]!)).toEqual([])
+    expect(modulesInUnit(geometry!.units[2]!)).toEqual([])
     expect(precalc!.units[0]!.reviewId).toBe('unit1')
     expect(precalc!.units[1]!.reviewId).toBeUndefined()
   })

@@ -8,6 +8,10 @@
 
 export type TutorProviderName = 'gemini' | 'anthropic' | 'mock'
 
+/** The classes a problem can come from. The server accepts exactly these. */
+export const TUTOR_SUBJECTS = ['precalculus', 'chemistry', 'geometry'] as const
+export type TutorSubject = (typeof TUTOR_SUBJECTS)[number]
+
 // ---------------------------------------------------------------------------
 // Limits the server enforces (the UI should enforce the question cap too)
 // ---------------------------------------------------------------------------
@@ -76,7 +80,7 @@ export interface TutorContext {
   attemptId?: string
   /** ModuleId, e.g. "inequalities", "sigFigs". */
   moduleId: string
-  subject: 'precalculus' | 'chemistry'
+  subject: TutorSubject
   /** ProblemKind, e.g. "inequality", "domainRange". */
   kind: string
   /** ProblemInstance.title, e.g. "Solve the inequality". */

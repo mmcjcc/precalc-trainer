@@ -1367,6 +1367,79 @@ export const ERROR_PATTERNS: Record<ErrorPatternId, ErrorPatternInfo> = {
     lesson: 'The quadratic formula is x = (−b ± √D) / (2a). The 2a in the denominator applies to −b and to the square root, not only to the square root.',
     example: '4 ± 3i ✗ → 2 ± 3i',
   },
+  // --- honors geometry (Unit 1: tools of geometry) ---
+  geo_answered_x: {
+    id: 'geo_answered_x',
+    title: 'That number is x, not the measure',
+    lesson: 'x is the number that makes the equation true. A length or an angle measure is what the expression equals after you substitute that x. They match only by accident.',
+    example: '4 ✗ → 33',
+  },
+  geo_parts_equal: {
+    id: 'geo_parts_equal',
+    title: 'Those parts are not marked congruent',
+    lesson: 'The segment addition postulate (and the angle addition postulate) says the parts add up to the whole. Setting the two parts equal is the definition of a midpoint or a bisector, and this figure has neither.',
+    example: 'x = 1/2 ✗ → x = 4',
+  },
+  geo_part_equals_whole: {
+    id: 'geo_part_equals_whole',
+    title: 'A part is shorter than the whole',
+    lesson: 'One piece of a segment or an angle is not the whole thing, as long as the other piece has some size. Set the sum of the parts equal to the whole, or twice a half equal to the whole when a midpoint or a bisector is marked.',
+    example: 'x = 35/6 ✗ → x = 4',
+  },
+  geo_half_for_whole: {
+    id: 'geo_half_for_whole',
+    title: 'That is one piece, not the whole',
+    lesson: 'A midpoint cuts a segment into two congruent parts, and an angle bisector does the same for an angle. The whole is twice one part: AB = 2·AM, and m∠ABC = 2·m∠ABD. Giving the part when the whole was asked, or the whole when a part was asked, swaps them.',
+    example: '43 ✗ → 86',
+  },
+  geo_midpoint_subtracted: {
+    id: 'geo_midpoint_subtracted',
+    title: 'The midpoint adds the coordinates',
+    lesson: 'The midpoint formula adds each pair of coordinates and divides by 2. Subtracting them, then dividing, gives half of a difference, which is a different point.',
+    example: '(−3/2, −5/2) ✗ → (5/2, 11/2)',
+  },
+  geo_endpoint_averaged: {
+    id: 'geo_endpoint_averaged',
+    title: 'The other endpoint is not another average',
+    lesson: 'If M is the midpoint of AB, then M is already the average of A and B, so B = 2M − A. Averaging A and M finds the midpoint of segment AM, not point B.',
+    example: '(5/2, 4) ✗ → (7, 7)',
+  },
+  geo_distance_not_squared: {
+    id: 'geo_distance_not_squared',
+    title: 'Distance squares the changes',
+    lesson: 'The distance formula is √((x₂ − x₁)² + (y₂ − y₁)²). Adding |Δx| and |Δy| walks the grid, one direction at a time. The straight segment is the hypotenuse.',
+    example: '8 ✗ → 2√10',
+  },
+  geo_distance_no_root: {
+    id: 'geo_distance_no_root',
+    title: 'Take the square root at the end',
+    lesson: 'After you add the squared changes in x and y, the distance is the square root of that sum. The sum itself is the square of the distance, not the distance.',
+    example: '40 ✗ → 2√10',
+  },
+  geo_comp_supp_swapped: {
+    id: 'geo_comp_supp_swapped',
+    title: 'Complementary is 90 and supplementary is 180',
+    lesson: 'Complementary angles add to 90°. Supplementary angles add to 180°. Using the other total solves a different pair of angles.',
+    example: 'x = 61/4 ✗ → x = 4',
+  },
+  geo_vertical_as_supplementary: {
+    id: 'geo_vertical_as_supplementary',
+    title: 'Vertical angles are congruent',
+    lesson: 'Vertical angles are the opposite angles made by two intersecting lines, and they are congruent. The neighboring angles are the ones that add to 180°, because those form a linear pair.',
+    example: 'x = 35 ✗ → x = 15',
+  },
+  geo_linear_pair_equal: {
+    id: 'geo_linear_pair_equal',
+    title: 'A linear pair adds to 180',
+    lesson: 'A linear pair is two adjacent angles that form a straight line, so their measures add to 180°. They are congruent only in the special case where each one is 90°.',
+    example: 'x = −10 ✗ → x = 30',
+  },
+  geo_complement_reversed: {
+    id: 'geo_complement_reversed',
+    title: 'The sentence describes the angle, not its partner',
+    lesson: '“An angle measures 2 less than three times its complement” puts the angle on the left of that sentence and the complement on the right. Writing the complement in the angle’s place swaps the two.',
+    example: '23 ✗ → 67',
+  },
   // --- behavioral (ui) ---
   abandoned: {
     id: 'abandoned',

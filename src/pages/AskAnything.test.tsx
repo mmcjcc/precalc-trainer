@@ -71,6 +71,7 @@ describe('Ask about any problem', () => {
     expect(Array.from(classBox.options).map((option) => option.text)).toEqual([
       'Honors Precalculus',
       'Chemistry',
+      'Honors Geometry',
       'Other math or science',
     ])
     expect((screen.getByRole('button', { name: 'Start' }) as HTMLButtonElement).disabled).toBe(true)

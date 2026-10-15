@@ -12,6 +12,8 @@ import type { ScGrade } from '@/content/modules/signCharts/grade'
 import { scWork } from '@/content/modules/signCharts/build'
 import type { CxGrade } from '@/content/modules/complexNums/grade'
 import { cxWork } from '@/content/modules/complexNums/build'
+import type { GeoGrade } from '@/content/modules/geometry/grade'
+import { geoWork } from '@/content/modules/geometry/build'
 import { EC_PATTERN } from '@/content/modules/electrons/patterns'
 import { POLY_PATTERN } from '@/content/modules/polynomials/patterns'
 import { TR_PATTERN } from '@/content/modules/transformations/patterns'
@@ -19,7 +21,7 @@ import type { ProblemInstance } from '@/content/types'
 import { ERROR_PATTERNS } from '@/engine'
 import type { OpsGrade } from '@/content/modules/functionOps/ops'
 import type { DescriptionGrade, EconfigGrade, FunctionGrade, PolyGrade, SquareLineGrade, TransformGrade } from '@/engine'
-import { getModule } from '@/content/registry'
+import { getModule, hasModule } from '@/content/registry'
 import type { FinalAnswerGrade } from '@/problem/inequality'
 import { decodeSlotStep } from '@/problem/evenOdd'
 import type { GfGrade } from '@/content/modules/graphFeatures/grade'
@@ -274,6 +276,20 @@ export function verdictFromCx(grade: CxGrade): TutorVerdict | null {
   })
 }
 
+/** Geometry. The mistake id is already a geo_ catalog id. Unreadable input is a parse error. */
+export function verdictFromGeo(grade: GeoGrade): TutorVerdict | null {
+  if (grade.verdict === 'correct') return withMessage('correct', grade.message)
+  if (grade.verdict === 'wrong') return withMessage('wrong', grade.message)
+  if (grade.verdict === 'invalid') return withMessage('parse_error', grade.message)
+  const info = ERROR_PATTERNS[grade.mistake]
+  return withMessage('wrong', grade.witness, undefined, {
+    id: grade.mistake,
+    title: clip(info.title, 200),
+    lesson: clip(info.lesson, TUTOR_LIMITS.field),
+    witness: clip(grade.witness, TUTOR_LIMITS.field),
+  })
+}
+
 /** Operations with functions. The mistake id is already an op_ catalog id. */
 export function verdictFromOps(grade: OpsGrade): TutorVerdict {
   if (grade.verdict === 'correct') return withMessage('correct', grade.message)
@@ -360,6 +376,11 @@ function workOf(instance: ProblemInstance, attempt: Attempt | null): string[] {
       .slice(0, TUTOR_LIMITS.lines)
       .map((line) => clip(line, TUTOR_LIMITS.line))
   }
+  if (instance.answer.type === 'geometry') {
+    return geoWork(instance.answer, attempt.final?.polyEntries)
+      .slice(0, TUTOR_LIMITS.lines)
+      .map((line) => clip(line, TUTOR_LIMITS.line))
+  }
   const final = attempt.final
   if (!final) return []
   const lines: string[] = []
@@ -412,6 +433,8 @@ function statementOf(instance: ProblemInstance): string {
       answer.question === 'zeros'
         ? `f(x) = ${answer.f}. One zero is ${answer.givenZero}. ${answer.prompt}`
         : `${answer.expression}. ${answer.prompt}`
+  } else if (answer.type === 'geometry') {
+    text = `${answer.prompt} Figure: ${answer.figure.ariaLabel}`
   }
   const clipped = clip(text, TUTOR_LIMITS.field)
   return clipped.trim() ? clipped : clip(instance.title, TUTOR_LIMITS.field)
@@ -436,7 +459,8 @@ function canonicalOf(instance: ProblemInstance): string[] {
     answer.type === 'polyZeros' ||
     answer.type === 'rationalFns' ||
     answer.type === 'signCharts' ||
-    answer.type === 'complexNums'
+    answer.type === 'complexNums' ||
+    answer.type === 'geometry'
   ) {
     lines = answer.reveal
   }
@@ -468,6 +492,7 @@ function answerOf(instance: ProblemInstance): string | undefined {
     case 'rationalFns':
     case 'signCharts':
     case 'complexNums':
+    case 'geometry':
       text = answer.expectedDisplay
       break
     case 'graphFeatures':
@@ -517,6 +542,14 @@ function cleanVerdict(verdict: TutorVerdict): TutorVerdict {
   return withMessage(verdict.status, verdict.message, verdict.line, mistake)
 }
 
+function subjectOf(moduleId: string): TutorContext['subject'] {
+  if (!hasModule(moduleId)) return 'precalculus'
+  const subject = getModule(moduleId).subject
+  if (subject === 'Chemistry') return 'chemistry'
+  if (subject === 'Geometry') return 'geometry'
+  return 'precalculus'
+}
+
 /**
  * Problem, her work so far, the checker's latest verdict, and the reference solution.
  * `finished` is true once the flow is showing its completion card.
@@ -528,7 +561,7 @@ export function buildTutorContext(
   finished: boolean,
 ): TutorContext {
   const answer = answerOf(instance)
-  const subject = getModule(instance.moduleId).subject === 'Chemistry' ? 'chemistry' : 'precalculus'
+  const subject = subjectOf(instance.moduleId)
   return {
     problemId: instance.id,
     ...(attempt?.id ? { attemptId: attempt.id } : {}),

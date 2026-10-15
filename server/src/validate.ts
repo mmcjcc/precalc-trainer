@@ -5,6 +5,7 @@
  */
 import {
   TUTOR_LIMITS,
+  TUTOR_SUBJECTS,
   type TutorAskRequest,
   type TutorContext,
   type TutorFlagRequest,
@@ -64,7 +65,7 @@ function lines(o: Obj, key: string, path: string): string[] {
 }
 
 const VERDICTS: ReadonlySet<string> = new Set(['accepted', 'rejected', 'correct', 'wrong', 'parse_error'])
-const SUBJECTS: ReadonlySet<string> = new Set(['precalculus', 'chemistry'])
+const SUBJECTS: ReadonlySet<string> = new Set(TUTOR_SUBJECTS)
 const ID = /^[A-Za-z0-9_.:@/#?=&+-]{1,200}$/
 const WORD = /^[A-Za-z0-9_-]{1,60}$/
 
@@ -111,7 +112,7 @@ export function parseContext(v: unknown): TutorContext {
   const kind = reqStr(o, 'kind', p, 60)
   if (!WORD.test(kind)) throw new RequestError('context.kind has unexpected characters')
   const subject = reqStr(o, 'subject', p, 20)
-  if (!SUBJECTS.has(subject)) throw new RequestError('context.subject must be precalculus or chemistry')
+  if (!SUBJECTS.has(subject)) throw new RequestError(`context.subject must be one of ${TUTOR_SUBJECTS.join(', ')}`)
   const answer = str(o, 'answer', p, TUTOR_LIMITS.field, false)
   const vd = verdict(o.verdict)
   return {

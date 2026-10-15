@@ -53,7 +53,7 @@ function templateTitle(moduleId: string, templateId: string): string {
   }
 }
 
-/** Courses that have something to practise. An empty course (geometry, later) stays hidden. */
+/** Courses that have something to practise. A course with no registered module stays hidden. */
 function visibleCourses(): CourseDef[] {
   return COURSES.filter((course) => unitsWithModules(course).length > 0)
 }

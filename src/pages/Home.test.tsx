@@ -59,7 +59,7 @@ describe('Home: classes and units', () => {
     renderHome()
     expect(screen.getByRole('heading', { level: 1, name: 'Math & Science Trainer' })).toBeTruthy()
     const tabs = screen.getAllByRole('tab')
-    expect(tabs.map((tab) => tab.textContent)).toEqual(['Honors Precalculus', 'Chemistry'])
+    expect(tabs.map((tab) => tab.textContent)).toEqual(['Honors Precalculus', 'Chemistry', 'Honors Geometry'])
     expect(screen.queryByRole('tab', { name: 'Geometry' })).toBeNull()
     const tablist = screen.getByRole('tablist', { name: 'Classes' })
     expect(tablist.className).toMatch(/flex-nowrap/)
@@ -81,7 +81,11 @@ describe('Home: classes and units', () => {
     expect(moduleTitles()).toEqual(['Electrons and light'])
 
     fireEvent.keyDown(tablist, { key: 'ArrowRight' })
-    expect(screen.getByRole('tab', { name: 'Chemistry', selected: true })).toBeTruthy()
+    expect(screen.getByRole('tab', { name: 'Honors Geometry', selected: true })).toBeTruthy()
+    expect(moduleTitles()).toEqual(['Segments, midpoints and distance', 'Angles and angle pairs'])
+
+    fireEvent.keyDown(tablist, { key: 'ArrowRight' })
+    expect(screen.getByRole('tab', { name: 'Honors Geometry', selected: true })).toBeTruthy()
 
     fireEvent.keyDown(tablist, { key: 'Home' })
     expect(screen.getByRole('tab', { name: 'Honors Precalculus', selected: true })).toBeTruthy()
@@ -92,8 +96,30 @@ describe('Home: classes and units', () => {
     expect(screen.getByRole('tab', { name: 'Honors Precalculus', selected: true })).toBeTruthy()
 
     fireEvent.keyDown(tablist, { key: 'End' })
-    expect(screen.getByRole('tab', { name: 'Chemistry', selected: true })).toBeTruthy()
+    expect(screen.getByRole('tab', { name: 'Honors Geometry', selected: true })).toBeTruthy()
     expect(screen.queryByRole('heading', { name: 'Unit 1 review' })).toBeNull()
+  })
+
+  it('shows Honors Geometry Unit 1, and marks Units 2 and 3 coming soon', () => {
+    renderHome('/c/geometry')
+    expect(screen.getByRole('tab', { name: 'Honors Geometry', selected: true })).toBeTruthy()
+    expect(moduleTitles()).toEqual(['Segments, midpoints and distance', 'Angles and angle pairs'])
+    const unit1 = screen.getByRole('button', { name: /Unit 1/ })
+    const unit2 = screen.getByRole('button', { name: /Unit 2/ })
+    const unit3 = screen.getByRole('button', { name: /Unit 3/ })
+    expect(unit1.textContent).not.toMatch(/Coming soon/)
+    expect(unit1.getAttribute('aria-pressed')).toBe('true')
+    expect(unit2.textContent).toMatch(/Coming soon/)
+    expect(unit3.textContent).toMatch(/Coming soon/)
+    expect(unit2.textContent).toMatch(/Reasoning and proof/)
+    expect(unit3.textContent).toMatch(/Parallel and perpendicular lines/)
+    fireEvent.click(unit2)
+    expect(screen.getByText(/Nothing to practise here yet/)).toBeTruthy()
+    expect(moduleTitles()).toEqual([])
+    fireEvent.click(unit3)
+    expect(screen.getByText(/Nothing to practise here yet/)).toBeTruthy()
+    fireEvent.click(unit1)
+    expect(moduleTitles()).toEqual(['Segments, midpoints and distance', 'Angles and angle pairs'])
   })
 
   it('shows only the selected unit, with the review card on precalc Unit 1 only', () => {

@@ -7,6 +7,7 @@ import { canonicalEntries, gradeZerosStage } from '@/content/modules/polyZeros'
 import { canonicalEntries as rfEntries, gradeRfStage, RF_KEYS, rfWork } from '@/content/modules/rationalFns'
 import { canonicalEntries as scEntries, gradeScStage, SC_KEYS, scWork } from '@/content/modules/signCharts'
 import { canonicalEntries as cxEntries, gradeCxStage, CX_KEYS, cxWork } from '@/content/modules/complexNums'
+import { canonicalEntries as geoEntries, gradeGeoStage, GEO_KEYS, geoWork } from '@/content/modules/geometry'
 import { checkSquareLine, configurationMistakes, gradeAxisOfSymmetry, gradeConfiguration, gradeVertex, squareMistakes, syntheticMistakes, vertexMistakes } from '@/engine'
 import { ratToString } from '@/notation'
 import { gradeFinalAnswer } from '@/problem/inequality'
@@ -25,6 +26,7 @@ import {
   verdictFromRf,
   verdictFromSc,
   verdictFromCx,
+  verdictFromGeo,
 } from '@/problem/tutorContext'
 import type { Attempt, AttemptStep } from '@/store'
 import type { StepResult } from '@/shared/types'
@@ -774,6 +776,47 @@ describe('buildTutorContext', () => {
       buildTutorContext(zeros, attempt('cx-4', { moduleId: 'complexNums' }), verdictFromCx(gradeCxStage(zeros.answer, 'answer', zeros.answer.trapAnswer)), true)
         .finished,
     ).toBe(true)
+  })
+
+  it('describes a geometry figure and her parts, with the named slip', () => {
+    const instance = generateProblem('geoSegments', 'gs.addition', 1)
+    if (instance.answer.type !== 'geometry') throw new Error('expected a geometry problem')
+    const a = instance.answer
+    const entries = geoEntries(a)
+    const ctx = buildTutorContext(instance, attempt('geo-1', { moduleId: 'geoSegments', final: { polyEntries: entries } }), null, false)
+    expect(ctx.subject).toBe('geometry')
+    expect(ctx.kind).toBe('geometry')
+    expect(ctx.moduleId).toBe('geoSegments')
+    expect(ctx.statement).toBe(`${a.prompt} Figure: ${a.figure.ariaLabel}`)
+    expect(ctx.statement).toContain('B is between A and C')
+    expect(ctx.work).toEqual(geoWork(a, entries))
+    expect(ctx.answer).toBe(a.expectedDisplay)
+    expect(ctx.canonical[0]).toBe(a.reveal[0])
+    expect(ctx.finished).toBe(false)
+
+    const trap = gradeGeoStage(a, a.trapStage, a.trapAnswer)
+    expect(trap.verdict).toBe('mistake')
+    if (trap.verdict !== 'mistake') return
+    const verdict = verdictFromGeo(trap)
+    expect(verdict?.status).toBe('wrong')
+    expect(verdict?.mistake?.id).toBe(a.trap)
+    expect(verdict?.mistake?.lesson).toBeTruthy()
+    expect(verdict?.mistake?.witness).toBe(trap.witness)
+    const bad = buildTutorContext(
+      instance,
+      attempt('geo-2', { moduleId: 'geoSegments', final: { polyEntries: { [GEO_KEYS[a.trapStage]]: a.trapAnswer } } }),
+      verdict,
+      false,
+    )
+    expect(bad.work).toEqual([expect.stringContaining(a.trapAnswer)])
+    expect(bad.verdict?.mistake?.id).toBe(a.trap)
+    expect(verdictFromGeo(gradeGeoStage(a, a.stages[0]!.id, '???'))?.status).toBe('parse_error')
+    expect(buildTutorContext(instance, attempt('geo-3', { moduleId: 'geoSegments' }), null, false).work).toEqual([])
+
+    const words = generateProblem('geoAngles', 'ga.words', 1)
+    if (words.answer.type !== 'geometry') throw new Error('expected a word problem')
+    expect(buildTutorContext(words, attempt('geo-4', { moduleId: 'geoAngles' }), null, true).statement).toContain(words.answer.figure.ariaLabel)
+    expect(buildTutorContext(words, attempt('geo-4', { moduleId: 'geoAngles' }), null, true).subject).toBe('geometry')
   })
 
   it('never adds a name, email, or account field', () => {

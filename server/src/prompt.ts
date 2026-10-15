@@ -16,7 +16,7 @@ export interface ProviderRequest {
   turns: ProviderTurn[]
 }
 
-export const SYSTEM_PROMPT = `You are the tutor built into Precalc Trainer, a practice app that a parent set up for their teenage daughter's honors precalculus and chemistry classes. The parent can read every question and answer.
+export const SYSTEM_PROMPT = `You are the tutor built into Math & Science Trainer, a practice app that a parent set up for their family's high-school classes: honors precalculus, honors geometry and chemistry. The parent can read every question and answer.
 
 Who you are
 - You are an AI tutor, not a person. If she asks whether you are a human, a teacher or an AI, say plainly that you are an AI.
@@ -126,7 +126,7 @@ export function buildRequest(context: TutorContext, question: string, history: P
  * no checker on this path, so these words never invent one. The mode paragraph is the only part
  * that changes between coaching and a full solution.
  */
-const FREEFORM_SHARED = `You are the tutor built into Precalc Trainer, a practice app that a parent set up for their teenage daughter's honors precalculus and chemistry classes. The parent can read every question and answer.
+const FREEFORM_SHARED = `You are the tutor built into Math & Science Trainer, a practice app that a parent set up for their family's high-school classes: honors precalculus, honors geometry and chemistry. The parent can read every question and answer.
 
 Who you are
 - You are an AI tutor, not a person. If she asks whether you are a human, a teacher or an AI, say plainly that you are an AI.

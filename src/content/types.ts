@@ -7,6 +7,7 @@ import type {
   CalcPanels,
   ChipId,
   ErrorPatternId,
+  GeoFigureSpec,
   GraphSpec,
   ModuleId,
   PropertyTag,
@@ -16,7 +17,13 @@ import type {
   VarName,
 } from '@/shared/types'
 
-export type ProblemKind = 'inequality' | 'numberLine' | 'evenOdd' | 'inverse' | 'drill' | 'sigFigs' | 'atoms' | 'diffQuotient' | 'graphFeatures' | 'domainRange' | 'composition' | 'functionOps' | 'transformations' | 'piecewiseRate' | 'electrons' | 'quadratics' | 'polyDivision' | 'polyZeros' | 'rationalFns' | 'signCharts' | 'complexNums'
+export type ProblemKind = 'inequality' | 'numberLine' | 'evenOdd' | 'inverse' | 'drill' | 'sigFigs' | 'atoms' | 'diffQuotient' | 'graphFeatures' | 'domainRange' | 'composition' | 'functionOps' | 'transformations' | 'piecewiseRate' | 'electrons' | 'quadratics' | 'polyDivision' | 'polyZeros' | 'rationalFns' | 'signCharts' | 'complexNums' | 'geometry'
+
+/** Which geometry screen this problem is. */
+export type GeometryQuestion = 'addition' | 'midpoint' | 'coord' | 'angleAddition' | 'bisector' | 'pairs' | 'words'
+
+/** One checked part of a geometry problem. `x` is the variable; `result` is the length, measure, or point. */
+export type GeometryStageId = 'x' | 'result'
 
 /** Which complex-number screen this problem is. */
 export type ComplexNumsQuestion = 'arith' | 'divide' | 'powers' | 'quadratic' | 'zeros'
@@ -894,6 +901,47 @@ export type AnswerSpec =
       g?: string
     }
   | {
+      /**
+       * Honors geometry. A figure (the problem) plus one or two parts checked one at a time.
+       * Grade a part with `gradeGeoStage`. Named mistakes are the `geo_` ids, each computed for this figure.
+       * An equal value that is not in simplest radical form is not an attempt.
+       */
+      type: 'geometry'
+      question: GeometryQuestion
+      /** What the problem is. No method and no trap. */
+      prompt: string
+      figure: GeoFigureSpec
+      stages: {
+        id: GeometryStageId
+        kind: 'number' | 'point'
+        /** An angle measure, where a degree sign is welcome. Anywhere else a degree sign is refused. */
+        unit?: 'deg'
+        /** Box label, e.g. "x", "AB", "Midpoint". */
+        label: string
+        /** Line under the box. */
+        hint: string
+        /** What a correct answer looks like typed. */
+        answerText: string
+        nudge: string
+        ruleCard: RuleCardId
+        reveal: string[]
+        /** Slips that produce a different value on this part, in detection order. */
+        traps: { id: ErrorPatternId; text: string; witness: string }[]
+      }[]
+      /** Lengths that must stay positive, for the generator's own check. */
+      lengths: number[]
+      /** Angle measures that must stay strictly between 0 and 180. */
+      angles: number[]
+      expectedDisplay: string
+      reveal: string[]
+      ruleCards: RuleCardId[]
+      /** The named mistake this seed promises (a `geo_` id). */
+      trap: ErrorPatternId
+      trapStage: GeometryStageId
+      /** What that slip produces. Never the right answer. */
+      trapAnswer: string
+    }
+  | {
       type: 'drill'
       question: 'which_property' | 'legal_or_illegal'
       verdict: 'legal' | 'illegal'
@@ -901,6 +949,9 @@ export type AnswerSpec =
       patternId?: ErrorPatternId
       lesson: string
     }
+
+/** The geometry arm of `AnswerSpec`, named so the flow and the generators share it. */
+export type GeometryAnswer = Extract<AnswerSpec, { type: 'geometry' }>
 
 export interface ProblemInstance {
   /** `${moduleId}/${templateId}@${genVersion}/${seedBase36}` */

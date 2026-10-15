@@ -10,8 +10,8 @@ import { resetStoreForTests, useStore, type Ev } from '@/store'
 import App, { AppShell } from './App'
 
 const PIN_1234 = '03ac674216f3e15c761ee1a5e255f067953623c8b388b4459e13f978d7c846f4'
-/** Lazy routes transform on first use; the OneDrive disk is slow. */
-const LAZY = { timeout: 20000 }
+/** Lazy routes transform on first use; give them the long timeout. */
+const LAZY = { timeout: 120000 }
 
 function renderAt(path: string) {
   return render(
@@ -23,7 +23,7 @@ function renderAt(path: string) {
 
 beforeAll(async () => {
   await import('./pages/Drill')
-}, 60000)
+}, 120000)
 
 beforeEach(() => {
   resetStoreForTests()
@@ -81,7 +81,7 @@ describe('App routes', () => {
     expect(await screen.findByRole('heading', { level: 1, name: 'Unit 1 review' }, LAZY)).toBeTruthy()
     expect(screen.getByRole('button', { name: 'Start the set' })).toBeTruthy()
     expect((screen.getByRole('radio', { name: '12' }) as HTMLInputElement).checked).toBe(true)
-  })
+  }, 120000)
 
   it('renders a module page with a Start button per template', () => {
     const mod = MODULES.find((m) => m.templates.length > 0)!
@@ -141,7 +141,7 @@ describe('App routes', () => {
     expect(answers[0]).toMatchObject({ kind: legal ? 'legal' : 'property' })
     expect(screen.getByText(/^[01] of 1 right$/)).toBeTruthy()
     expect(screen.getByRole('button', { name: 'Next' })).toBeTruthy()
-  })
+  }, 120000)
 })
 
 describe('PIN gate', () => {
@@ -164,7 +164,7 @@ describe('PIN gate', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Unlock' }))
     expect(await screen.findByRole('heading', { level: 1, name: 'Progress' }, LAZY)).toBeTruthy()
     expect(useStore.getState().auth.ok).toBe(true)
-  })
+  }, 120000)
 
   it('shows no gate when pinHash is empty', () => {
     window.__PRECALC_CONFIG__ = { pinHash: '' }

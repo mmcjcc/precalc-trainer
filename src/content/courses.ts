@@ -2,7 +2,7 @@
  * Classes and units. Home, the module page and Progress group by this file, not by
  * `ModuleDef.subject` (that field stays; other code still reads it).
  *
- * Adding a class — geometry, when it is ready — is adding one entry to `COURSES`.
+ * Adding a class is adding one entry to `COURSES`.
  * A course with no registered module in any unit is not shown anywhere.
  * A unit with no modules is still listed in the unit switcher, marked "coming soon",
  * until its `moduleIds` are filled in. Every module id here is one registered in
@@ -94,6 +94,31 @@ export const COURSES: readonly CourseDef[] = [
         label: 'Chapter 5',
         title: 'Electrons in atoms',
         moduleIds: ['electrons'],
+      },
+    ],
+  },
+  {
+    id: 'geometry',
+    title: 'Honors Geometry',
+    short: 'Geometry',
+    units: [
+      {
+        id: 'g1',
+        label: 'Unit 1',
+        title: 'Tools of geometry',
+        moduleIds: ['geoSegments', 'geoAngles'],
+      },
+      {
+        id: 'g2',
+        label: 'Unit 2',
+        title: 'Reasoning and proof',
+        moduleIds: [],
+      },
+      {
+        id: 'g3',
+        label: 'Unit 3',
+        title: 'Parallel and perpendicular lines',
+        moduleIds: [],
       },
     ],
   },

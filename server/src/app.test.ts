@@ -2,7 +2,7 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
-import { TUTOR_LIMITS, type TutorLogResponse, type TutorStatus } from '../../src/shared/tutor.ts'
+import { TUTOR_LIMITS, TUTOR_SUBJECTS, type TutorLogResponse, type TutorStatus } from '../../src/shared/tutor.ts'
 import { MESSAGES } from './app.ts'
 import { ProviderError } from './providers/types.ts'
 import {
@@ -199,6 +199,21 @@ describe('request caps', () => {
     const bad = await fetch(`${a.url}/api/tutor/ask`, { method: 'POST', headers: headers(), body: '{"question": ' })
     expect(bad.status).toBe(400)
     expect((await status(a)).body.remaining).toBe(30)
+  })
+
+  it('accepts every class the app can send, and the subject reaches the prompt', async () => {
+    const provider = scripted(async (_req, onText) => {
+      onText('ok')
+      return { truncated: false }
+    })
+    const a = await app({ provider })
+    for (const subject of TUTOR_SUBJECTS) {
+      const r = await ask(a, askBody('where do I start?', { subject }))
+      expect(r.res.status, subject).toBe(200)
+      const req = provider.requests[provider.requests.length - 1]
+      expect(req.turns.map((t) => t.text).join('\n'), subject).toContain(`Subject: ${subject}`)
+    }
+    expect(TUTOR_SUBJECTS).toContain('geometry')
   })
 
   it('wants JSON and the right method', async () => {
