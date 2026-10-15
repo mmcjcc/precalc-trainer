@@ -45,13 +45,21 @@ or the textbook) is one more entry in that file.
 | done (Oct 2) | Zeros, multiplicity, end behavior, rational roots | done (Oct 1): same core | done: module polyZeros (zeros, end behavior, build from zeros, rational roots) |
 | done (Oct 11) | Rational functions | - (exact logic in the module; Claude cross-check of 900 problems) | done: module rationalFns (features, asymptotes, rational equations), built by Grok |
 | done (Oct 14) | Polynomial and rational inequalities | - (sign-chart logic in the module; Claude cross-check of 900 problems; adversarial review by Gemini, three gaps fixed) | done: module signCharts (polynomial, rational, and a checkable sign chart), built by Grok |
-| Nov 9 | Complex numbers | complex arithmetic and equivalence in the engine | templates |
+| done (Oct 15) | Complex numbers | - (exact complex arithmetic in the module; Claude cross-check of 1,500 problems; adversarial review by Gemini, four reader gaps fixed) | done: module complexNums (arithmetic, division, powers of i, complex quadratic roots, conjugate zeros), built by Grok |
 | Nov 23 | Exponentials and logarithms | **fix `ln`/`log10` evaluation first**; log properties; extraneous-solution checks | templates, growth and decay word problems |
 | Jan | Unit circle, radians, trig of any angle | exact-value table and its independent test | drills |
 | Feb | Trig identities | identity proof flow: line-by-line equivalence already works for trig | identity bank, hints |
 | Mar | Trig graphs and equations | solutions on [0, 2π) as exact sets | templates |
 | Apr | Inverse trig, laws of sines and cosines | ambiguous-case (SSA) checker | templates |
 | May | Conics | completing the square to standard form (reuses the step engine) | identify centre, vertices, foci |
+
+## Honors Geometry (first quarter, the standard honors sequence: Jurgensen's chapter order)
+
+| Ship by | Unit | Modules | Status |
+|---|---|---|---|
+| Oct | 1 Tools of geometry | geoSegments (segment addition, midpoints, distance and midpoint on the plane), geoAngles (angle addition, bisectors, angle pairs, complement and supplement word problems) | building (Grok) |
+| Nov | 2 Reasoning and proof | conditionals, converse, inverse, contrapositive, laws of logic; properties and two-column proofs | next |
+| Nov | 3 Parallel and perpendicular lines | transversal angle pairs, proving lines parallel, slopes and equations of lines; triangle and polygon angle sums | after that |
 
 ## Chemistry (CK-12 order)
 

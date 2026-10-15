@@ -1306,6 +1306,67 @@ export const ERROR_PATTERNS: Record<ErrorPatternId, ErrorPatternInfo> = {
     lesson: 'The sign chart says where the expression is positive and where it is negative. The solution is the intervals whose sign matches the inequality, not the ones with the other sign.',
     example: '(−∞, −1] ✗ → [−1, ∞)',
   },
+  // --- complex numbers (precalculus Unit 2) ---
+  cx_i_squared_positive: {
+    id: 'cx_i_squared_positive',
+    title: 'i² is −1, not +1',
+    lesson: 'The square of i is −1. In a product (a + bi)(c + di) the last term is bdi² = −bd, so the real part is ac − bd, not ac + bd.',
+    example: '10 − 5i ✗ → 14 − 5i',
+  },
+  cx_foil_dropped: {
+    id: 'cx_foil_dropped',
+    title: 'A product of binomials has four terms',
+    lesson: 'FOIL keeps the First, Outer, Inner, and Last pieces. Using only the first and last terms drops the two middle pieces that make the imaginary part.',
+    example: '14 ✗ → 14 − 5i',
+  },
+  cx_conjugate_wrong: {
+    id: 'cx_conjugate_wrong',
+    title: 'Multiply top and bottom by the conjugate of the bottom',
+    lesson: 'The conjugate of c + di is c − di. Both the numerator and the denominator need that factor, so the bottom becomes the real number c² + d².',
+    example: '2/5 + 3/5 i ✗ → −4/5 + 7/5 i',
+  },
+  cx_not_simplified: {
+    id: 'cx_not_simplified',
+    title: 'Write the answer in a + bi form',
+    lesson: 'A complex answer is finished when it reads a + bi: no i² left, and no i in a denominator. Multiply by the conjugate until the bottom is a real number, then combine.',
+    example: '(2 + 3i)/(1 − 2i) ✗ → −4/5 + 7/5 i',
+  },
+  cx_power_cycle: {
+    id: 'cx_power_cycle',
+    title: 'Powers of i repeat every four',
+    lesson: 'i¹ = i, i² = −1, i³ = −i, i⁴ = 1, then the list starts over. For a negative power, i^(−n) is the reciprocal, which is not the same as i^n.',
+    example: 'i ✗ → −i',
+  },
+  cx_sqrt_product: {
+    id: 'cx_sqrt_product',
+    title: '√(−a) · √(−b) is not √(ab)',
+    lesson: 'Each square root of a negative is an i times a real square root, so the product has i² = −1. The identity √x · √y = √(xy) does not hold when both x and y are negative.',
+    example: '6 ✗ → −6',
+  },
+  cx_sqrt_negative_sign: {
+    id: 'cx_sqrt_negative_sign',
+    title: 'The square root of a negative is imaginary',
+    lesson: '√(−c) = i√c when c is positive. Leaving the i out, or turning the whole value real and negative, drops the imaginary unit.',
+    example: '4√3 ✗ → 4i√3',
+  },
+  cx_discriminant_sign: {
+    id: 'cx_discriminant_sign',
+    title: 'A negative discriminant gives complex roots',
+    lesson: 'In the quadratic formula the number under the square root is b² − 4ac. When that is negative, the roots are complex; taking its opposite instead invents two real roots that the equation does not have.',
+    example: '5, −1 ✗ → 2 + 3i, 2 − 3i',
+  },
+  cx_conjugate_missing: {
+    id: 'cx_conjugate_missing',
+    title: 'Non-real zeros come in conjugate pairs',
+    lesson: 'A polynomial with real coefficients cannot have  a + bi  as a zero unless  a − bi  is a zero too. After you are given one, write its conjugate, then find any remaining real zeros.',
+    example: '1, 2 + 3i ✗ → 1, 2 + 3i, 2 − 3i',
+  },
+  cx_half_formula: {
+    id: 'cx_half_formula',
+    title: 'Divide the whole numerator by 2a',
+    lesson: 'The quadratic formula is x = (−b ± √D) / (2a). The 2a in the denominator applies to −b and to the square root, not only to the square root.',
+    example: '4 ± 3i ✗ → 2 ± 3i',
+  },
   // --- behavioral (ui) ---
   abandoned: {
     id: 'abandoned',

@@ -16,7 +16,13 @@ import type {
   VarName,
 } from '@/shared/types'
 
-export type ProblemKind = 'inequality' | 'numberLine' | 'evenOdd' | 'inverse' | 'drill' | 'sigFigs' | 'atoms' | 'diffQuotient' | 'graphFeatures' | 'domainRange' | 'composition' | 'functionOps' | 'transformations' | 'piecewiseRate' | 'electrons' | 'quadratics' | 'polyDivision' | 'polyZeros' | 'rationalFns' | 'signCharts'
+export type ProblemKind = 'inequality' | 'numberLine' | 'evenOdd' | 'inverse' | 'drill' | 'sigFigs' | 'atoms' | 'diffQuotient' | 'graphFeatures' | 'domainRange' | 'composition' | 'functionOps' | 'transformations' | 'piecewiseRate' | 'electrons' | 'quadratics' | 'polyDivision' | 'polyZeros' | 'rationalFns' | 'signCharts' | 'complexNums'
+
+/** Which complex-number screen this problem is. */
+export type ComplexNumsQuestion = 'arith' | 'divide' | 'powers' | 'quadratic' | 'zeros'
+
+/** One checked part of a complex-number problem. */
+export type ComplexNumsStageId = 'answer'
 
 /** Which sign-chart screen this problem is. */
 export type SignChartsQuestion = 'poly' | 'rational' | 'chart'
@@ -815,6 +821,41 @@ export type AnswerSpec =
        * one only after the problem is complete.
        */
       graph: GraphSpec
+    }
+  | {
+      /**
+       * Complex numbers (precalculus Unit 2). Arithmetic, division, powers of i and square roots of
+       * negatives, a quadratic with a negative discriminant, or the zeros of a real polynomial given one
+       * complex zero. Grade a part with the module's `gradeCxStage`. Named mistakes are the `cx_` ids.
+       */
+      type: 'complexNums'
+      question: ComplexNumsQuestion
+      /** The expression or equation, app syntax. Empty when `question` is `zeros`. */
+      expression: string
+      /** f(x) in app syntax. Set when `question` is `zeros`. */
+      f: string
+      /** The given complex zero, app syntax. Set when `question` is `zeros`. */
+      givenZero: string
+      /** The question in one line. Says what to find and nothing about the method or the trap. */
+      prompt: string
+      stages: {
+        id: ComplexNumsStageId
+        /** Hint rung 1 for this part (the rule, not this problem's answer). */
+        nudge: string
+        ruleCard: RuleCardId
+        /** Hint rung 3 for this part. */
+        reveal: string[]
+      }[]
+      expectedDisplay: string
+      nudge: string
+      ruleCard: RuleCardId
+      ruleCards: RuleCardId[]
+      reveal: string[]
+      /** The named mistake this seed promises (a `cx_` id). */
+      trap: ErrorPatternId
+      trapStage: ComplexNumsStageId
+      /** What that slip produces, in the form she would type. Never the right answer. */
+      trapAnswer: string
     }
   | {
       /**

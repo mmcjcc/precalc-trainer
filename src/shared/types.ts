@@ -15,7 +15,7 @@
 export type RelOp = '=' | '<' | '<=' | '>' | '>='
 /** `h` is the difference-quotient step; the parser accepts it only when the problem owns it (ctx.vars). */
 export type VarName = 'x' | 'y' | 'n' | 'h'
-export type ModuleId = 'numberLine' | 'inequalities' | 'evenOdd' | 'inverses' | 'propertiesDrill' | 'sigFigs' | 'atoms' | 'diffQuotient' | 'graphFeatures' | 'domainRange' | 'composition' | 'functionOps' | 'transformations' | 'piecewiseRate' | 'electrons' | 'quadratics' | 'polyDivision' | 'polyZeros' | 'rationalFns' | 'signCharts'
+export type ModuleId = 'numberLine' | 'inequalities' | 'evenOdd' | 'inverses' | 'propertiesDrill' | 'sigFigs' | 'atoms' | 'diffQuotient' | 'graphFeatures' | 'domainRange' | 'composition' | 'functionOps' | 'transformations' | 'piecewiseRate' | 'electrons' | 'quadratics' | 'polyDivision' | 'polyZeros' | 'rationalFns' | 'signCharts' | 'complexNums'
 export type CalcId = 'ti84' | 'nspire'
 
 /** Fine-grained property tags. Canonical steps carry one; the engine's move detector reports one. */
@@ -368,6 +368,18 @@ export type ErrorPatternId =
   | 'sc_multiplied_by_denominator'
   | 'sc_critical_missing'
   | 'sc_wrong_intervals'
+  // complex numbers (content/modules/complexNums; precalculus Unit 2). One id per slip the module
+  // computes for the problem in front of her. A candidate equal to the right answer is never used.
+  | 'cx_i_squared_positive'
+  | 'cx_foil_dropped'
+  | 'cx_conjugate_wrong'
+  | 'cx_not_simplified'
+  | 'cx_power_cycle'
+  | 'cx_sqrt_product'
+  | 'cx_sqrt_negative_sign'
+  | 'cx_discriminant_sign'
+  | 'cx_conjugate_missing'
+  | 'cx_half_formula'
   // behavioral (ui)
   | 'abandoned'
 

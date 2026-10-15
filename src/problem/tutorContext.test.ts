@@ -6,6 +6,7 @@ import { SD_KEYS, gradeDivisionStage } from '@/content/modules/polyDivision'
 import { canonicalEntries, gradeZerosStage } from '@/content/modules/polyZeros'
 import { canonicalEntries as rfEntries, gradeRfStage, RF_KEYS, rfWork } from '@/content/modules/rationalFns'
 import { canonicalEntries as scEntries, gradeScStage, SC_KEYS, scWork } from '@/content/modules/signCharts'
+import { canonicalEntries as cxEntries, gradeCxStage, CX_KEYS, cxWork } from '@/content/modules/complexNums'
 import { checkSquareLine, configurationMistakes, gradeAxisOfSymmetry, gradeConfiguration, gradeVertex, squareMistakes, syntheticMistakes, vertexMistakes } from '@/engine'
 import { ratToString } from '@/notation'
 import { gradeFinalAnswer } from '@/problem/inequality'
@@ -23,6 +24,7 @@ import {
   verdictFromPw,
   verdictFromRf,
   verdictFromSc,
+  verdictFromCx,
 } from '@/problem/tutorContext'
 import type { Attempt, AttemptStep } from '@/store'
 import type { StepResult } from '@/shared/types'
@@ -726,6 +728,51 @@ describe('buildTutorContext', () => {
     expect(buildTutorContext(poly, attempt('sc-4', { moduleId: 'signCharts' }), null, true).statement).toBe(`${poly.answer.inequality}. ${poly.answer.prompt}`)
     expect(
       buildTutorContext(poly, attempt('sc-4', { moduleId: 'signCharts' }), verdictFromSc(gradeScStage(poly.answer, 'solution', poly.answer.trapAnswer)), true).finished,
+    ).toBe(true)
+  })
+
+  it('describes a complex-number problem from her box, with the named slip', () => {
+    const instance = generateProblem('complexNums', 'cx.arith', 1)
+    if (instance.answer.type !== 'complexNums') throw new Error('expected a complexNums problem')
+    const a = instance.answer
+    const entries = cxEntries(a)
+    const ctx = buildTutorContext(instance, attempt('cx-1', { moduleId: 'complexNums', final: { polyEntries: entries } }), null, false)
+    expect(ctx.subject).toBe('precalculus')
+    expect(ctx.kind).toBe('complexNums')
+    expect(ctx.moduleId).toBe('complexNums')
+    expect(ctx.statement).toBe(`${a.expression}. ${a.prompt}`)
+    expect(ctx.work).toEqual(cxWork(a, entries))
+    expect(ctx.answer).toBe(a.expectedDisplay)
+    expect(ctx.canonical[0]).toBe(a.reveal[0])
+    expect(ctx.finished).toBe(false)
+
+    const trap = gradeCxStage(a, a.trapStage, a.trapAnswer)
+    expect(trap.verdict).toBe('mistake')
+    if (trap.verdict !== 'mistake') return
+    const verdict = verdictFromCx(trap)
+    expect(verdict?.status).toBe('wrong')
+    expect(verdict?.mistake?.id).toBe(a.trap)
+    expect(verdict?.mistake?.lesson).toBeTruthy()
+    expect(verdict?.mistake?.witness).toBe(trap.witness)
+    const bad = buildTutorContext(
+      instance,
+      attempt('cx-2', { moduleId: 'complexNums', final: { polyEntries: { [CX_KEYS[a.trapStage]]: a.trapAnswer } } }),
+      verdict,
+      false,
+    )
+    expect(bad.work).toEqual([expect.stringContaining(a.trapAnswer)])
+    expect(bad.verdict?.mistake?.id).toBe(a.trap)
+    expect(verdictFromCx(gradeCxStage(a, a.stages[0]!.id, '???'))?.status).toBe('parse_error')
+    expect(buildTutorContext(instance, attempt('cx-3', { moduleId: 'complexNums' }), null, false).work).toEqual([])
+
+    const zeros = generateProblem('complexNums', 'cx.zeros', 1)
+    if (zeros.answer.type !== 'complexNums') throw new Error('expected a zeros problem')
+    expect(buildTutorContext(zeros, attempt('cx-4', { moduleId: 'complexNums' }), null, true).statement).toBe(
+      `f(x) = ${zeros.answer.f}. One zero is ${zeros.answer.givenZero}. ${zeros.answer.prompt}`,
+    )
+    expect(
+      buildTutorContext(zeros, attempt('cx-4', { moduleId: 'complexNums' }), verdictFromCx(gradeCxStage(zeros.answer, 'answer', zeros.answer.trapAnswer)), true)
+        .finished,
     ).toBe(true)
   })
 

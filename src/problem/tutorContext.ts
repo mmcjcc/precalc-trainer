@@ -10,6 +10,8 @@ import type { RfGrade } from '@/content/modules/rationalFns/grade'
 import { rfWork } from '@/content/modules/rationalFns/build'
 import type { ScGrade } from '@/content/modules/signCharts/grade'
 import { scWork } from '@/content/modules/signCharts/build'
+import type { CxGrade } from '@/content/modules/complexNums/grade'
+import { cxWork } from '@/content/modules/complexNums/build'
 import { EC_PATTERN } from '@/content/modules/electrons/patterns'
 import { POLY_PATTERN } from '@/content/modules/polynomials/patterns'
 import { TR_PATTERN } from '@/content/modules/transformations/patterns'
@@ -258,6 +260,20 @@ export function verdictFromSc(grade: ScGrade): TutorVerdict | null {
   })
 }
 
+/** Complex numbers. The mistake id is already a cx_ catalog id. Unreadable input is a parse error. */
+export function verdictFromCx(grade: CxGrade): TutorVerdict | null {
+  if (grade.verdict === 'correct') return withMessage('correct', grade.message)
+  if (grade.verdict === 'wrong') return withMessage('wrong', grade.message)
+  if (grade.verdict === 'invalid') return withMessage('parse_error', grade.message)
+  const info = ERROR_PATTERNS[grade.mistake]
+  return withMessage('wrong', grade.witness, undefined, {
+    id: grade.mistake,
+    title: clip(info.title, 200),
+    lesson: clip(info.lesson, TUTOR_LIMITS.field),
+    witness: clip(grade.witness, TUTOR_LIMITS.field),
+  })
+}
+
 /** Operations with functions. The mistake id is already an op_ catalog id. */
 export function verdictFromOps(grade: OpsGrade): TutorVerdict {
   if (grade.verdict === 'correct') return withMessage('correct', grade.message)
@@ -339,6 +355,11 @@ function workOf(instance: ProblemInstance, attempt: Attempt | null): string[] {
       .slice(0, TUTOR_LIMITS.lines)
       .map((line) => clip(line, TUTOR_LIMITS.line))
   }
+  if (instance.answer.type === 'complexNums') {
+    return cxWork(instance.answer, attempt.final?.polyEntries)
+      .slice(0, TUTOR_LIMITS.lines)
+      .map((line) => clip(line, TUTOR_LIMITS.line))
+  }
   const final = attempt.final
   if (!final) return []
   const lines: string[] = []
@@ -386,6 +407,11 @@ function statementOf(instance: ProblemInstance): string {
     text = answer.question === 'equation' ? `${answer.equation}. ${answer.prompt}` : `f(x) = ${answer.f}. ${answer.prompt}`
   } else if (answer.type === 'signCharts') {
     text = `${answer.inequality}. ${answer.prompt}`
+  } else if (answer.type === 'complexNums') {
+    text =
+      answer.question === 'zeros'
+        ? `f(x) = ${answer.f}. One zero is ${answer.givenZero}. ${answer.prompt}`
+        : `${answer.expression}. ${answer.prompt}`
   }
   const clipped = clip(text, TUTOR_LIMITS.field)
   return clipped.trim() ? clipped : clip(instance.title, TUTOR_LIMITS.field)
@@ -409,7 +435,8 @@ function canonicalOf(instance: ProblemInstance): string[] {
     answer.type === 'polyDivision' ||
     answer.type === 'polyZeros' ||
     answer.type === 'rationalFns' ||
-    answer.type === 'signCharts'
+    answer.type === 'signCharts' ||
+    answer.type === 'complexNums'
   ) {
     lines = answer.reveal
   }
@@ -440,6 +467,7 @@ function answerOf(instance: ProblemInstance): string | undefined {
     case 'polyZeros':
     case 'rationalFns':
     case 'signCharts':
+    case 'complexNums':
       text = answer.expectedDisplay
       break
     case 'graphFeatures':

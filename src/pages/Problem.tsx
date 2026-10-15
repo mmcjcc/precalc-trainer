@@ -16,6 +16,7 @@ import { PolyDivisionFlow } from './flows/PolyDivisionFlow'
 import { PolyZerosFlow } from './flows/PolyZerosFlow'
 import { RationalFnsFlow } from './flows/RationalFnsFlow'
 import { SignChartsFlow } from './flows/SignChartsFlow'
+import { ComplexNumsFlow } from './flows/ComplexNumsFlow'
 import { QuadraticsFlow } from './flows/QuadraticsFlow'
 import { TransformationFlow } from './flows/TransformationFlow'
 import { GraphFeaturesFlow } from './flows/GraphFeaturesFlow'
@@ -125,6 +126,8 @@ function ProblemBody({ instance, flags, templateTitle }: { instance: ProblemInst
       return <RationalFnsFlow {...props} />
     case 'signCharts':
       return <SignChartsFlow {...props} />
+    case 'complexNums':
+      return <ComplexNumsFlow {...props} />
     default:
       return <Navigate to="/" replace />
   }
