@@ -58,6 +58,8 @@ jobs:
   build-push-deploy:
     name: image -> ghcr.io -> Azure
     needs: check
+    # Only the family app publishes images and deploys. A copy of this repo (the store app) runs the checks only.
+    if: github.repository == 'mmcjcc/precalc-trainer'
     runs-on: ubuntu-latest
     env:
       AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
