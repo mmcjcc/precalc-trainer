@@ -1565,9 +1565,9 @@ export const ERROR_PATTERNS: Record<ErrorPatternId, ErrorPatternInfo> = {
   },
   geo_parallel_only_when_not: {
     id: 'geo_parallel_only_when_not',
-    title: 'That pair needs the lines to be parallel',
-    lesson: 'A pair that matches only when the lines are parallel cannot decide that they are, unless the measures actually fit that pair. Opposite angles at one crossing match whether or not the lines are parallel, so they do not decide it.',
-    example: 'opposite angles match, so the lines are parallel ✗ → opposite angles match either way',
+    title: 'Not every pair decides parallel lines',
+    lesson: 'The pairs named for parallel lines have one angle at each crossing: the same corner, opposite sides between the lines, opposite sides outside them, or one side between them. Two angles at one crossing are different. Opposite angles there always match, and a straight pair always adds to a straight angle, whether or not the lines are parallel. So those two measures cannot show that the lines are parallel, and they cannot show that the lines meet: you cannot tell from them.',
+    example: 'opposite angles match, so the lines are parallel ✗ → opposite angles match either way, so you cannot tell',
   },
   geo_congruent_as_same_side: {
     id: 'geo_congruent_as_same_side',

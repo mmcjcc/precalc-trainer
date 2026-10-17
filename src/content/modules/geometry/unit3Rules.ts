@@ -53,8 +53,8 @@ export const PARALLEL_RULES: RuleCard[] = [
   {
     id: UNIT3_RULE_IDS.converse,
     title: 'Deciding whether the lines meet',
-    body: 'You may conclude that the lines do not meet only when a pair that needs that fact actually fits: same corner, opposite sides between the lines, opposite sides outside the lines, or the one-side pair adding to a straight angle. Opposite angles at one crossing match either way, so they do not decide it.',
-    example: 'opposite angles match either way → they do not decide whether the lines meet',
+    body: 'These pairs, with one angle at each crossing, decide it: the same corner, opposite sides between the lines, opposite sides outside the lines, and the one-side pair between the lines. When the measures fit the pair (matching, or adding to a straight angle for the one-side pair), the lines do not meet. When they do not fit, the lines meet, because lines that do not meet would make them fit. Two angles at one crossing, opposite angles or a straight pair, fit either way, so you cannot tell from them.',
+    example: 'opposite angles match either way → you cannot tell whether the lines meet',
   },
   {
     id: UNIT3_RULE_IDS.slope,

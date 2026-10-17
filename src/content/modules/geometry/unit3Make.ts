@@ -11,7 +11,7 @@ import { rat, ratAdd, ratMul, ratSub, ratToString, type Rational } from '@/notat
 import type { GeoBuilt } from './build'
 import { angleLabel, fitExpr, fitTwo, formatLin, lin, qText, solveEqual, type Lin } from './expr'
 import { containsAnswer, exampleShowsAnswer, gradeGeoStage, isGeoMistake, stageDisplay } from './grade'
-import { formatLine, readLine } from './lines'
+import { formatLine, readLine, slopeCoefficient } from './lines'
 import { PARALLEL_RULES, POLYGON_RULES, UNIT3_RULE_FOR, UNIT3_RULE_IDS } from './unit3Rules'
 import type { RuleCard } from '@/content/types'
 
@@ -59,10 +59,34 @@ const FACTS: { id: string; text: string }[] = [
   { id: 'none', text: 'None of these facts' },
 ]
 
-const YESNO = [
+/** The numeric converse: the two measures show the lines are parallel, show they are not, or cannot tell. */
+type Verdict = 'yes' | 'no' | 'cant'
+
+const VERDICTS: readonly { id: Verdict; text: string }[] = [
   { id: 'yes', text: 'Yes' },
   { id: 'no', text: 'No' },
+  { id: 'cant', text: 'Can’t tell from these angles' },
 ]
+
+/**
+ * The numeric converse names the pair itself, so one name is right whether the lines turn out parallel
+ * or not. The algebraic converse keeps FACTS, since there the lines are parallel by construction.
+ */
+const DECIDING_PAIRS: readonly { id: string; text: string }[] = [
+  { id: 'corr', text: 'Corresponding angles' },
+  { id: 'alt-int', text: 'Alternate interior angles' },
+  { id: 'alt-ext', text: 'Alternate exterior angles' },
+  { id: 'ssi', text: 'Same-side interior angles' },
+  { id: 'none', text: 'None: these two angles do not decide it' },
+]
+
+/** The worked line for a deciding pair: where the two angles sit, then the pair's name. */
+const PAIR_WORDS: Record<'corr' | 'alt-int' | 'alt-ext' | 'ssi', string> = {
+  corr: 'sit in the same corner at each crossing, so they are corresponding angles',
+  'alt-int': 'sit between the lines on opposite sides of the transversal, so they are alternate interior angles',
+  'alt-ext': 'sit outside the lines on opposite sides of the transversal, so they are alternate exterior angles',
+  ssi: 'sit between the lines on the same side of the transversal, so they are same-side interior angles',
+}
 
 const LINE_REL = [
   { id: 'par', text: 'Parallel' },
@@ -193,6 +217,13 @@ function fitDelta(theta: number, angle: number, target: number): number {
   return best
 }
 
+/** The start of every transversal figure's description: the prompt names m and n, and the figure labels t too. */
+const LINES_ARIA = 'Line m (the upper line) and line n (the lower line) are'
+
+/**
+ * Two lines cut by a transversal, drawn the way a textbook does: the eight angles carry their numbers
+ * with no arcs (four arcs at one crossing would close into a circle), and the lines are labeled m, n, and t.
+ */
 function transversalFigure(theta: number, delta: number, arrows: boolean, aria: string): GeoFigureSpec {
   assertNumbering()
   const pts = transversalPoints(theta, delta)
@@ -200,15 +231,15 @@ function transversalFigure(theta: number, delta: number, arrows: boolean, aria: 
     const spec = ANGLE_RAYS[n]!
     const got = wedge(pts[spec.vertex]!, pts[spec.from]!, pts[spec.to]!)
     if (!(got > 0.5 && got < 179.5)) throw new Error(`angle ${n} drew at ${got}`)
-    return { vertex: spec.vertex, from: spec.from, to: spec.to, label: String(n), radius: 22 }
+    return { vertex: spec.vertex, from: spec.from, to: spec.to, label: String(n), arc: false }
   })
   return {
     ariaLabel: aria,
     points: Object.entries(pts).map(([id, p]) => ({ id, x: p.x, y: p.y })),
     lines: [
-      { through: ['L1', 'R1'], ...(arrows ? { arrows: 1 as const } : {}) },
-      { through: ['L2', 'R2'], ...(arrows ? { arrows: 1 as const } : {}) },
-      { through: ['U', 'D'] },
+      { through: ['L1', 'R1'], label: 'm', ...(arrows ? { arrows: 1 as const } : {}) },
+      { through: ['L2', 'R2'], label: 'n', ...(arrows ? { arrows: 1 as const } : {}) },
+      { through: ['U', 'D'], label: 't' },
     ],
     angles,
   }
@@ -267,6 +298,7 @@ function leakOf(answer: GeometryAnswer, cards: RuleCard[]): string | null {
     for (const p of answer.figure.points) shared.push(p.label ?? '')
     for (const s of answer.figure.segments ?? []) if (s.label) shared.push(s.label)
     for (const a of answer.figure.angles ?? []) if (a.label) shared.push(a.label)
+    for (const l of answer.figure.lines ?? []) if (l.label) shared.push(l.label)
     if (containsAnswer(shared.join('\n'), display)) return `${stage.id} answer is on screen`
   }
   return null
@@ -391,14 +423,11 @@ function showInt(n: number): string {
   return n < 0 ? `−${-n}` : String(n)
 }
 
-function showRat(r: Rational): string {
-  return ratToString(r).replace(/-/g, '−')
-}
-
+/** "2x", "−3x", "(2/5)x", "−(1/5)x": a fractional slope is in parentheses, so it never reads as 2 over 5x. */
 function slopeHead(m: Rational): string {
   if (ratToString(m) === '1') return 'x'
   if (ratToString(m) === '-1') return '−x'
-  return `${showRat(m)}x`
+  return `${slopeCoefficient(m, '−')}x`
 }
 
 /** Prompt form of a non-vertical line. Unicode minus. */
@@ -464,12 +493,7 @@ function signOnly(m: Rational): Rational {
 
 export function drawTransversalPairs(seed: number): GeoBuilt {
   const row = PAIR_BANK[(seed - 1) % PAIR_BANK.length]!
-  const figure = transversalFigure(
-    64,
-    18,
-    false,
-    `Lines m and n are cut by a transversal. The angles are numbered 1 to 8. ${NUMBERING}`,
-  )
+  const figure = transversalFigure(64, 18, false, `${LINES_ARIA} cut by transversal t. The angles are numbered 1 to 8. ${NUMBERING}`)
   const prompt = `Lines m and n are cut by a transversal. What is the relationship between ∠${row.a} and ∠${row.b}?`
   const witness = pairWitness(row.rel)
   const stage = choiceStage(
@@ -548,7 +572,7 @@ function finishSolve(spec: SolveSpec, seed: number): GeoBuilt {
     : 'Those angles match. Adding them to a straight angle is a different relationship.'
   const traps: Draft[] = [{ id, stage: 'x', text: qText(wrong), witness }]
   const prompt = `Lines m and n are parallel and are cut by a transversal. ∠${spec.a} = (${formatLin(spec.left)})° and ∠${spec.b} = (${formatLin(spec.right)})°. Find x, then m∠${spec.ask}.`
-  const figure = transversalFigure(theta, 0, true, `Lines m and n are parallel, marked with arrows, and cut by a transversal. ${NUMBERING}`)
+  const figure = transversalFigure(theta, 0, true, `${LINES_ARIA} parallel, marked with arrows, and cut by transversal t. ${NUMBERING}`)
   const xReveal = [`The equation from the two angles gives x = ${spec.x}.`]
   const stages = [
     numberStage('x', 'x', X_HINT, String(spec.x), 'Write the equation the two positions call for, then solve it.', sameSide ? UNIT3_RULE_IDS.parallelAngles : UNIT3_RULE_IDS.parallelAngles, xReveal, traps),
@@ -596,7 +620,8 @@ function factFor(rel: Rel): string {
   return 'none'
 }
 
-function parallelFacts(rel: Rel): boolean {
+/** The four pairs with one angle at each crossing that a parallel-lines converse names. */
+function parallelFacts(rel: Rel): rel is 'corr' | 'alt-int' | 'alt-ext' | 'ssi' {
   return rel === 'corr' || rel === 'alt-int' || rel === 'alt-ext' || rel === 'ssi'
 }
 
@@ -606,71 +631,181 @@ function measuresFit(rel: Rel, left: number, right: number): boolean {
   return false
 }
 
-function finishConverseNumbers(a: number, b: number, left: number, right: number, seed: number): GeoBuilt {
+type Choice = { id: string; text: string; trap?: ErrorPatternId; witness?: string }
+type Slip = { trap: ErrorPatternId; witness: string }
+
+/**
+ * Where the two measures leave lines m and n. A deciding pair settles it either way: parallel when
+ * the measures fit the pair, not parallel when they do not. A pair at one crossing settles nothing.
+ */
+function verdictOf(rel: Rel, left: number, right: number): Verdict {
+  if (!parallelFacts(rel)) return 'cant'
+  return measuresFit(rel, left, right) ? 'yes' : 'no'
+}
+
+/**
+ * Wrong first-part picks that a named slip produces on THIS problem. On a pair at one crossing, deciding
+ * either way treats the pair as if it could decide. On a deciding pair, mixing up "match" and "add to a
+ * straight angle" is named only when it lands on a different verdict; any other wrong pick is plain wrong.
+ */
+function verdictSlips(rel: Rel, verdict: Verdict, left: number, right: number): Partial<Record<Verdict, Slip>> {
+  if (verdict === 'cant') {
+    const why =
+      rel === 'vert'
+        ? 'Opposite angles at one crossing match whether or not the lines are parallel.'
+        : 'Two angles side by side on one line add to a straight angle whether or not the lines are parallel.'
+    return {
+      yes: { trap: 'geo_parallel_only_when_not', witness: `${why} So these measures do not show that the lines are parallel.` },
+      no: { trap: 'geo_parallel_only_when_not', witness: `${why} So these measures do not show that the lines meet, either.` },
+    }
+  }
+  if (rel === 'ssi') {
+    // She sets the one-side pair equal, as if it matched.
+    const slip: Verdict = left === right ? 'yes' : 'no'
+    if (slip === verdict) return {}
+    return {
+      [slip]: {
+        trap: 'geo_same_side_congruent',
+        witness: 'These two angles sit between the lines on one side of the transversal. When the lines are parallel, that pair adds to a straight angle; it does not match.',
+      },
+    }
+  }
+  // She adds a matching pair to a straight angle, as if it were the one-side pair.
+  const slip: Verdict = left + right === 180 ? 'yes' : 'no'
+  if (slip === verdict) return {}
+  return {
+    [slip]: {
+      trap: 'geo_congruent_as_same_side',
+      witness: 'When the lines are parallel, this pair matches. Adding the two angles to a straight angle is the test for a different pair.',
+    },
+  }
+}
+
+/** The second-part pick that names a different pair, with the same slip the angle-pairs template uses. */
+function pairSlip(a: number, b: number, rel: Rel): Slip & { pick: string } {
+  const lo = Math.min(a, b)
+  const hi = Math.max(a, b)
+  const row = PAIR_BANK.find((item) => item.a === lo && item.b === hi && item.rel === rel)
+  const pick = row?.trap ?? (rel === 'corr' ? 'alt-int' : rel === 'linear' ? 'ssi' : 'corr')
+  const trap: ErrorPatternId =
+    row?.id ??
+    (rel === 'vert' || rel === 'linear'
+      ? 'geo_parallel_only_when_not'
+      : rel === 'ssi'
+        ? 'geo_same_side_congruent'
+        : rel === 'alt-ext'
+          ? 'geo_alt_ext_corr_swapped'
+          : 'geo_alt_int_corr_swapped')
+  if (rel === 'vert' || rel === 'linear') {
+    const where =
+      rel === 'vert' ? 'Those two angles are opposite each other at one crossing.' : 'Those two angles sit side by side on one line at one crossing.'
+    return { pick, trap, witness: `${where} A pair named for parallel lines has one angle at each crossing.` }
+  }
+  if (rel === 'ssi') {
+    return {
+      pick,
+      trap,
+      witness: 'These two angles sit between the lines on one side of the transversal. That pair adds to a straight angle when the lines are parallel; it is not a matching pair.',
+    }
+  }
+  return {
+    pick,
+    trap,
+    witness: 'That name is a different pair from the one these two angles make. Check which side of each line they sit on, and which side of the transversal.',
+  }
+}
+
+function withSlips(choices: readonly { id: string; text: string }[], slips: Partial<Record<string, Slip>>): Choice[] {
+  return choices.map((choice) => {
+    const slip = slips[choice.id]
+    return slip ? { ...choice, trap: slip.trap, witness: slip.witness } : { ...choice }
+  })
+}
+
+/**
+ * "∠a = 70° and ∠b = 70°. Are lines m and n parallel?" A deciding pair (one angle at each crossing in a
+ * named position) answers yes when the measures fit it and no when they do not, since parallel lines
+ * would make them fit. Vertical angles and a linear pair fit whatever the lines do, so the honest answer
+ * is that these angles cannot tell. The figure draws the true measures. A can't-tell figure is drawn
+ * with the lines looking parallel or tilted (`parallelLook`), so the picture never answers for her.
+ */
+function finishConverseNumbers(a: number, b: number, left: number, right: number, seed: number, parallelLook: boolean): GeoBuilt {
   const rel = classifyBank(a, b)
-  const yes = measuresFit(rel, left, right)
-  const fact = yes ? factFor(rel) : 'none'
+  // Every other pair with one angle at each crossing still decides the lines, in two steps (∠1 and ∠6:
+  // ∠1 = ∠3 as vertical angles, then ∠3 and ∠6 are same-side interior). "Can't tell" would be wrong there,
+  // and no single named pair decides it, so this template does not ask those pairs.
+  if (rel === 'none') throw new Error(`∠${a} and ∠${b} decide the lines in two steps`)
+  // Vertical angles always match and a linear pair always adds to 180°. Other measures are no figure at all.
+  if (rel === 'vert' && left !== right) throw new Error('vertical angles that differ')
+  if (rel === 'linear' && left + right !== 180) throw new Error('a linear pair that does not add to 180')
+  const verdict = verdictOf(rel, left, right)
+  const flat = verdict === 'yes' || (verdict === 'cant' && parallelLook)
   const top = a <= 4 ? a : b <= 4 ? b : 0
-  let theta = 70
-  let delta = yes ? 0 : 18
+  let theta: number
+  let delta: number
   if (top) {
     const topMeasure = top === a ? left : right
     theta = thetaFor(top, topMeasure)
     const bottom = top === a ? b : a
     const bottomMeasure = top === a ? right : left
-    if (bottom > 4) delta = fitDelta(theta, bottom, bottomMeasure)
-    else delta = yes ? 0 : 18
+    delta = bottom > 4 ? fitDelta(theta, bottom, bottomMeasure) : flat ? 0 : 18
   } else {
-    theta = thetaFor(1, 58)
+    // Both angles at the lower crossing: the transversal is free. `match` would make the lines parallel.
+    const match = thetaFor(a - 4, left)
+    theta = flat ? match : match <= 90 ? match + 18 : match - 18
     delta = fitDelta(theta, a, left)
-    const other = measureAngle(theta, delta, b)
-    if (Math.abs(other - right) > 1.2) throw new Error('bottom pair does not match')
   }
-  if (yes && Math.abs(delta) > 0.8) throw new Error('yes figure is not parallel')
-  if (!yes && Math.abs(delta) < 1) throw new Error('no figure looks parallel')
+  if (flat && Math.abs(delta) > 0.8) throw new Error('the lines should look parallel')
+  if (!flat && Math.abs(delta) < 1) throw new Error('the lines should not look parallel')
   const gotA = measureAngle(theta, delta, a)
   const gotB = measureAngle(theta, delta, b)
   if (Math.abs(gotA - left) > 1.2 || Math.abs(gotB - right) > 1.2) throw new Error(`drew ${gotA.toFixed(1)} and ${gotB.toFixed(1)}`)
-  const yesWitness =
-    rel === 'vert' || rel === 'linear'
-      ? 'Those two angles match either way, or they sit next to each other on a straight line either way. That does not decide whether the lines meet.'
-      : 'The two measures do not fit a pair that decides the lines.'
-  const factWitness = parallelFacts(rel)
-    ? 'That fact is about a different pair than these two angles.'
-    : 'That fact decides the lines only for a different pair. These two angles do not decide whether the lines meet.'
-  const factTrap = fact === 'none' ? 'corr' : fact === 'corr' ? 'alt-int' : fact === 'alt-int' ? 'corr' : fact === 'alt-ext' ? 'corr' : 'corr'
-  const factTrapId: ErrorPatternId = fact === 'alt-ext' ? 'geo_alt_ext_corr_swapped' : fact === 'ssi' || rel === 'ssi' ? 'geo_same_side_congruent' : fact === 'none' || !parallelFacts(rel) ? 'geo_parallel_only_when_not' : 'geo_alt_int_corr_swapped'
+  const decides = parallelFacts(rel)
+  const pair = pairSlip(a, b, rel)
+  const verdictReveal =
+    verdict === 'yes'
+      ? 'These two angles are a pair that decides it, and their measures fit that pair, so the lines are parallel.'
+      : verdict === 'no'
+        ? 'These two angles are a pair that decides it, and their measures do not fit that pair. Parallel lines would make them fit, so the lines are not parallel.'
+        : rel === 'vert'
+          ? 'Vertical angles are congruent whether or not the lines are parallel, so these two measures cannot tell you.'
+          : 'A linear pair adds to 180° whether or not the lines are parallel, so these two measures cannot tell you.'
+  const pairReveal = decides
+    ? `∠${a} and ∠${b} ${PAIR_WORDS[rel]}.`
+    : rel === 'vert'
+      ? `∠${a} and ∠${b} are vertical angles at one crossing, so they do not decide it.`
+      : `∠${a} and ∠${b} are a linear pair at one crossing, so they do not decide it.`
   const stages = [
     choiceStage(
       'a',
       'Parallel?',
       'Decide from the two angles.',
-      YESNO.map((choice) => (!yes && choice.id === 'yes' ? { ...choice, trap: 'geo_parallel_only_when_not' as const, witness: yesWitness } : choice)),
-      yes ? 'yes' : 'no',
-      'A pair decides the lines only when the measures fit that pair.',
+      withSlips(VERDICTS, verdictSlips(rel, verdict, left, right)),
+      verdict,
+      'First ask whether these two positions can decide it. If they can, check whether the measures fit that pair.',
       UNIT3_RULE_IDS.converse,
-      [yes ? 'The measures fit a pair that decides the lines.' : 'The measures do not fit a pair that decides the lines.'],
+      [verdictReveal],
       seed,
     ),
     choiceStage(
       'b',
-      'The fact',
-      'Pick the fact that fits these two angles.',
-      FACTS.map((choice) => (choice.id === factTrap ? { ...choice, trap: factTrapId, witness: factWitness } : choice)),
-      fact,
-      'Match the fact to the positions of the two numbered angles.',
+      'The angle pair',
+      'Name the pair from where the two angles sit.',
+      withSlips(DECIDING_PAIRS, { [pair.pick]: pair }),
+      decides ? rel : 'none',
+      'Look at where each angle sits: which crossing, above or below its line, and which side of the transversal.',
       UNIT3_RULE_IDS.converse,
-      ['The fact is the one that belongs to these two positions, and only if the measures agree.'],
+      [pairReveal],
       seed + 3,
     ),
   ]
-  const prompt = `∠${a} = ${left}° and ∠${b} = ${right}°. Are lines m and n parallel? Name the fact that decides it.`
-  const figure = transversalFigure(theta, delta, false, `Lines m and n are cut by a transversal. ${NUMBERING}`)
+  const prompt = `∠${a} = ${left}° and ∠${b} = ${right}°. Are lines m and n parallel? Name the angle pair that decides it.`
+  const figure = transversalFigure(theta, delta, false, `${LINES_ARIA} cut by transversal t. ${NUMBERING}`)
   const angles = [left, right].filter((n) => n > 0 && n < 180)
   return pack('parallelConverse', prompt, figure, stages, angles, stages.flatMap((s) => s.reveal), seed, 'Parallel or not', PICK, PARALLEL_RULES, {
     a,
     b,
-    yes,
+    verdict,
   })
 }
 
@@ -737,7 +872,7 @@ function finishConverseX(spec: SolveSpec, seed: number): GeoBuilt {
     ),
   ]
   const prompt = `∠${spec.a} = (${formatLin(spec.left)})° and ∠${spec.b} = (${formatLin(spec.right)})°. Find x so that lines m and n are parallel, and name the fact that decides it.`
-  const figure = transversalFigure(theta, 0, false, `Lines m and n are cut by a transversal. ${NUMBERING}`)
+  const figure = transversalFigure(theta, 0, false, `${LINES_ARIA} cut by transversal t. ${NUMBERING}`)
   return pack('parallelConverse', prompt, figure, stages, [leftM.n, rightM.n], [`x = ${spec.x}.`, 'The fact is the pair these angles make.'], seed, 'Make the lines parallel', MIXED, PARALLEL_RULES, {
     a: spec.a,
     b: spec.b,
@@ -746,14 +881,16 @@ function finishConverseX(spec: SolveSpec, seed: number): GeoBuilt {
 }
 
 export function drawParallelConverse(seed: number): GeoBuilt {
-  if (seed === 1) return finishConverseNumbers(4, 6, 70, 70, seed)
-  if (seed === 2) return finishConverseNumbers(1, 3, 70, 70, seed)
+  if (seed === 1) return finishConverseNumbers(4, 6, 70, 70, seed, true)
+  // Vertical angles under lines drawn to look parallel, the way a textbook asks "can you conclude m ∥ n?".
+  if (seed === 2) return finishConverseNumbers(1, 3, 70, 70, seed, true)
   if (seed === 3) return finishConverseX({ a: 3, b: 6, left: lin(2, 10), right: lin(3, 20), x: 30, ask: 3 }, seed)
   let last = 'no candidate'
   for (let bump = 0; bump < 24; bump++) {
     try {
       const s = seed + bump
       if (s % 3 === 0) return finishConverseX(solveSpec(s, 0), seed)
+      // Five deciding pairs, then two vertical pairs and a linear pair, which cannot decide it.
       const pool = [
         [4, 6],
         [3, 5],
@@ -766,14 +903,14 @@ export function drawParallelConverse(seed: number): GeoBuilt {
       ] as const
       const [a, b] = pool[s % pool.length]!
       const rel = classifyBank(a, b)
-      const yes = s % 3 === 1 && parallelFacts(rel)
+      const fit = s % 3 === 1 && parallelFacts(rel)
       let left = 40 + ((s * 3) % 40)
       let right = left
       if (rel === 'ssi') {
         left = 40 + ((s * 3) % 30)
-        right = yes ? 180 - left : left
+        right = fit ? 180 - left : left
       } else if (parallelFacts(rel)) {
-        right = yes ? left : left + 15
+        right = fit ? left : left + 15
       } else if (rel === 'linear') {
         left = 50
         right = 130
@@ -781,7 +918,8 @@ export function drawParallelConverse(seed: number): GeoBuilt {
         right = left
       }
       if (right <= 0 || right >= 180 || left <= 0 || left >= 180) throw new Error('range')
-      return finishConverseNumbers(a, b, left, right, seed)
+      // A can't-tell figure alternates between lines that look parallel and lines that do not.
+      return finishConverseNumbers(a, b, left, right, seed, Math.floor(s / 8) % 2 === 0)
     } catch (e) {
       last = e instanceof Error ? e.message : 'bad'
     }

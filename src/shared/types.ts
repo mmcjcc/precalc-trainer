@@ -725,6 +725,8 @@ export interface GeoLine {
    * 1 is a single arrow mark; 2 is a double arrow mark.
    */
   arrows?: 1 | 2
+  /** The line's name, e.g. "m" or "t", drawn near one end of the line, clear of the other labels. */
+  label?: string
 }
 
 export interface GeoRay {
@@ -749,6 +751,11 @@ export interface GeoAngleMark {
   radius?: number
   /** A right-angle square. Only when the angle really is 90°. */
   right?: boolean
+  /**
+   * Draw the arc. Defaults to true. False draws only the label inside the angle, the way a textbook
+   * numbers the eight angles at two crossings (four arcs at one vertex would join into a circle).
+   */
+  arc?: boolean
 }
 
 export interface GeoGrid {

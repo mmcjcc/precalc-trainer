@@ -85,7 +85,7 @@ describe('geometry unit 3 registration', () => {
     const trap = (module: ModuleId, template: string) => answerOf(module, template, 1).trap
     expect(trap('geoParallel', 'gl3.pairs')).toBe('geo_alt_int_corr_swapped')
     expect(trap('geoParallel', 'gl3.solve')).toBe('geo_same_side_congruent')
-    expect(trap('geoParallel', 'gl3.converse')).toBe('geo_alt_int_corr_swapped')
+    expect(trap('geoParallel', 'gl3.converse')).toBe('geo_congruent_as_same_side')
     expect(trap('geoParallel', 'gl3.slopes')).toBe('geo_perp_reciprocal_only')
     expect(trap('geoPolygonAngles', 'gpa.triangle')).toBe('geo_exterior_adjacent')
     expect(trap('geoPolygonAngles', 'gpa.polygon')).toBe('geo_interior_sum_n180')
@@ -118,6 +118,7 @@ describe.each(TEMPLATES)('$module/$template over 300 seeds', ({ module, template
       const before = [a.prompt, a.figure.ariaLabel]
       for (const stage of a.stages) before.push(stage.hint, stage.nudge, stage.note ?? '')
       for (const ang of a.figure.angles ?? []) if (ang.label) before.push(ang.label)
+      for (const line of a.figure.lines ?? []) if (line.label) before.push(line.label)
       const blob = before.join('\n')
       for (const stage of a.stages) {
         expect(cardIds.has(stage.ruleCard), stage.ruleCard).toBe(true)
@@ -197,6 +198,13 @@ function text(a: GeometryAnswer, id: GeometryAnswer['stages'][number]['id']): st
   return stage.answerText
 }
 
+/** The words on a choice part's buttons, sorted, since the order is shuffled by seed. */
+function choiceTexts(a: GeometryAnswer, id: GeometryAnswer['stages'][number]['id']): string[] {
+  const stage = a.stages.find((s) => s.id === id)
+  if (!stage) throw new Error(`no ${id}`)
+  return (stage.choices ?? []).map((c) => c.text).sort()
+}
+
 function trapText(a: GeometryAnswer, id: string): string {
   for (const stage of a.stages) {
     const hit = stage.traps.find((t) => t.id === id)
@@ -259,28 +267,79 @@ describe('hand-worked unit 3', () => {
     expect(gradeGeoStage(a, 'x', '94/5')).toMatchObject({ verdict: 'mistake', mistake: 'geo_congruent_as_same_side' })
   })
 
-  it('converse: angles 4 and 6 both 70, so the lines are parallel by alternate interior', () => {
+  it('converse: angles 4 and 6 both 70, so the lines are parallel, and the pair is alternate interior', () => {
     const a = answerOf('geoParallel', 'gl3.converse', 1)
-    expect(a.prompt).toContain('∠4 = 70°')
-    expect(a.prompt).toContain('∠6 = 70°')
+    expect(a.prompt).toBe('∠4 = 70° and ∠6 = 70°. Are lines m and n parallel? Name the angle pair that decides it.')
+    expect(a.stages.map((s) => s.label)).toEqual(['Parallel?', 'The angle pair'])
+    expect(choiceTexts(a, 'a')).toEqual(['Can’t tell from these angles', 'No', 'Yes'])
+    expect(choiceTexts(a, 'b')).toEqual(['Alternate exterior angles', 'Alternate interior angles', 'Corresponding angles', 'None: these two angles do not decide it', 'Same-side interior angles'])
     expect(text(a, 'a')).toBe('yes')
     expect(text(a, 'b')).toBe('alt-int')
-    expect(a.trap).toBe('geo_alt_int_corr_swapped')
-    expect(a.trapAnswer).toBe('corr')
-    expect(a.stages[0]!.choices?.find((c) => c.id === 'no')?.trap).toBeUndefined()
+    // Adding a matching pair to 180 gives 70 + 70 ≠ 180, so that slip answers No.
+    expect(a.trap).toBe('geo_congruent_as_same_side')
+    expect(a.trapStage).toBe('a')
+    expect(a.trapAnswer).toBe('no')
+    expect(gradeGeoStage(a, 'a', 'no')).toMatchObject({ verdict: 'mistake', mistake: 'geo_congruent_as_same_side' })
+    expect(gradeGeoStage(a, 'a', 'cant').verdict).toBe('wrong')
     expect(gradeGeoStage(a, 'b', 'corr')).toMatchObject({ verdict: 'mistake', mistake: 'geo_alt_int_corr_swapped' })
-    expect(gradeGeoStage(a, 'a', 'no').verdict).toBe('wrong')
+    expect(gradeGeoStage(a, 'b', 'none').verdict).toBe('wrong')
   })
 
-  it('converse: vertical angles 1 and 3 both 70 do not make the lines parallel', () => {
+  it('converse: vertical angles 1 and 3 both 70 cannot tell, so Yes and No are both the slip', () => {
     const a = answerOf('geoParallel', 'gl3.converse', 2)
-    expect(a.prompt).toContain('∠1 = 70°')
-    expect(a.prompt).toContain('∠3 = 70°')
-    expect(text(a, 'a')).toBe('no')
+    expect(a.prompt).toBe('∠1 = 70° and ∠3 = 70°. Are lines m and n parallel? Name the angle pair that decides it.')
+    expect(text(a, 'a')).toBe('cant')
     expect(text(a, 'b')).toBe('none')
-    expect(a.stages[0]!.choices?.find((c) => c.id === 'yes')?.trap).toBe('geo_parallel_only_when_not')
+    expect(stageDisplay(a.stages[0]!)).toBe('Can’t tell from these angles')
+    expect(stageDisplay(a.stages[1]!)).toBe('None: these two angles do not decide it')
+    expect(gradeGeoStage(a, 'a', 'cant').verdict).toBe('correct')
     expect(gradeGeoStage(a, 'a', 'yes')).toMatchObject({ verdict: 'mistake', mistake: 'geo_parallel_only_when_not' })
+    expect(gradeGeoStage(a, 'a', 'no')).toMatchObject({ verdict: 'mistake', mistake: 'geo_parallel_only_when_not' })
     expect(gradeGeoStage(a, 'b', 'corr')).toMatchObject({ verdict: 'mistake', mistake: 'geo_parallel_only_when_not' })
+    expect(gradeGeoStage(a, 'b', 'alt-int').verdict).toBe('wrong')
+    // The lesson teaches that these angles cannot tell, not that the lines meet.
+    const lesson = ERROR_PATTERNS.geo_parallel_only_when_not
+    expect(lesson.lesson).toContain('cannot show that the lines are parallel')
+    expect(lesson.lesson).toContain('cannot show that the lines meet')
+    expect(lesson.example).toMatch(/✗ → .*cannot tell/)
+    // Drawn the way a textbook asks it: the lines look parallel (∠3 and ∠7 drawn equal), with no arrow marks.
+    const fig = a.figure
+    const drawn = (n: string) => {
+      const ang = fig.angles!.find((item) => item.label === n)!
+      return wedge(point(fig, ang.vertex), point(fig, ang.from), point(fig, ang.to))
+    }
+    expect(Math.abs(drawn('3') - drawn('7'))).toBeLessThan(0.8)
+    expect(fig.lines?.some((l) => l.arrows)).toBe(false)
+  })
+
+  it('converse: alternate interior 64° and 79° do not fit, so the answer is No and the pair is still named', () => {
+    const a = answerOf('geoParallel', 'gl3.converse', 8)
+    expect(a.prompt).toBe('∠4 = 64° and ∠6 = 79°. Are lines m and n parallel? Name the angle pair that decides it.')
+    expect(text(a, 'a')).toBe('no')
+    expect(text(a, 'b')).toBe('alt-int')
+    // 64 + 79 ≠ 180 and 64 ≠ 79: no named slip lands on Yes or on can't tell, so those are plain wrong.
+    expect(gradeGeoStage(a, 'a', 'yes').verdict).toBe('wrong')
+    expect(gradeGeoStage(a, 'a', 'cant').verdict).toBe('wrong')
+    expect(gradeGeoStage(a, 'b', 'corr')).toMatchObject({ verdict: 'mistake', mistake: 'geo_alt_int_corr_swapped' })
+    expect(gradeGeoStage(a, 'b', 'none').verdict).toBe('wrong')
+  })
+
+  it('converse: same-side interior 52° and 128° are parallel; treating them as a matching pair says No', () => {
+    const a = answerOf('geoParallel', 'gl3.converse', 4)
+    expect(a.prompt).toBe('∠3 = 52° and ∠6 = 128°. Are lines m and n parallel? Name the angle pair that decides it.')
+    expect(text(a, 'a')).toBe('yes')
+    expect(text(a, 'b')).toBe('ssi')
+    expect(gradeGeoStage(a, 'a', 'no')).toMatchObject({ verdict: 'mistake', mistake: 'geo_same_side_congruent' })
+    expect(gradeGeoStage(a, 'b', 'corr')).toMatchObject({ verdict: 'mistake', mistake: 'geo_same_side_congruent' })
+  })
+
+  it('converse: same-side interior 64° and 64° are not parallel; treating them as a matching pair says Yes', () => {
+    const a = answerOf('geoParallel', 'gl3.converse', 68)
+    expect(a.prompt).toBe('∠3 = 64° and ∠6 = 64°. Are lines m and n parallel? Name the angle pair that decides it.')
+    expect(text(a, 'a')).toBe('no')
+    expect(text(a, 'b')).toBe('ssi')
+    expect(gradeGeoStage(a, 'a', 'yes')).toMatchObject({ verdict: 'mistake', mistake: 'geo_same_side_congruent' })
+    expect(gradeGeoStage(a, 'a', 'cant').verdict).toBe('wrong')
   })
 
   it('converse: find x so angles 3 and 6 are same-side interior', () => {
@@ -428,4 +487,160 @@ describe('hand-worked unit 3', () => {
     expect(trapText(a, 'geo_exterior_sum_as_interior')).toBe('1440')
     expect(gradeGeoStage(a, 'result', '1440')).toMatchObject({ verdict: 'mistake', mistake: 'geo_exterior_sum_as_interior' })
   })
+})
+
+/** Upper crossing 1 upper-left, 2 upper-right, 3 lower-right, 4 lower-left; lower crossing 5-8 the same. */
+function pairOf(a: number, b: number): 'corr' | 'alt-int' | 'alt-ext' | 'ssi' | 'vert' | 'linear' | 'none' {
+  const at = (n: number) => ({ low: n > 4, up: (n - 1) % 4 <= 1, left: (n - 1) % 4 === 0 || (n - 1) % 4 === 3 })
+  const A = at(a)
+  const B = at(b)
+  if (A.low === B.low) return A.up !== B.up && A.left !== B.left ? 'vert' : 'linear'
+  if (A.up === B.up && A.left === B.left) return 'corr'
+  // Between the two lines: below the upper line, or above the lower line.
+  const inside = (p: typeof A) => (p.low ? p.up : !p.up)
+  if (inside(A) && inside(B)) return A.left === B.left ? 'ssi' : 'alt-int'
+  if (!inside(A) && !inside(B) && A.left !== B.left) return 'alt-ext'
+  return 'none'
+}
+
+const NUMERIC = /^∠(\d) = (\d+)° and ∠(\d) = (\d+)°\. Are lines m and n parallel\? Name the angle pair that decides it\.$/
+
+describe('numeric converse: yes, no, or can’t tell', () => {
+  it('over 2000 seeds, vertical angles, a linear pair, or an unrelated pair never answers Yes or No', () => {
+    const seen = { yes: 0, no: 0, vert: 0, linear: 0, unrelated: 0, flatLook: 0, tiltLook: 0 }
+    for (let seed = 1; seed <= 2000; seed++) {
+      const a = answerOf('geoParallel', 'gl3.converse', seed)
+      const m = NUMERIC.exec(a.prompt)
+      if (!m) {
+        expect(a.prompt, `gl3.converse/${seed}`).toMatch(/Find x so that lines m and n are parallel, and name the fact that decides it\.$/)
+        continue
+      }
+      const where = `gl3.converse/${seed}: ${a.prompt}`
+      const [i, left, j, right] = [Number(m[1]), Number(m[2]), Number(m[3]), Number(m[4])]
+      const rel = pairOf(i, j)
+      const verdict = text(a, 'a')
+      const pair = text(a, 'b')
+      if (rel === 'vert' || rel === 'linear' || rel === 'none') {
+        expect(verdict, where).toBe('cant')
+        expect(pair, where).toBe('none')
+        expect(stageDisplay(a.stages[0]!), where).toBe('Can’t tell from these angles')
+        // Only a measure that can exist: vertical angles match, a linear pair adds to 180.
+        if (rel === 'vert') expect(left, where).toBe(right)
+        if (rel === 'linear') expect(left + right, where).toBe(180)
+        // Deciding either way is the named slip, and its witness says the pair fits whatever the lines do.
+        for (const pick of ['yes', 'no']) {
+          const g = gradeGeoStage(a, 'a', pick)
+          expect(g, `${where} ${pick}`).toMatchObject({ verdict: 'mistake', mistake: 'geo_parallel_only_when_not' })
+          if (g.verdict === 'mistake') expect(g.witness, where).toMatch(/whether or not the lines are parallel/)
+        }
+        if (rel === 'none') seen.unrelated += 1
+        else seen[rel] += 1
+        const drawn = (n: string) => {
+          const ang = a.figure.angles!.find((item) => item.label === n)!
+          return wedge(point(a.figure, ang.vertex), point(a.figure, ang.from), point(a.figure, ang.to))
+        }
+        if (Math.abs(drawn('3') - drawn('7')) < 0.8) seen.flatLook += 1
+        else seen.tiltLook += 1
+        continue
+      }
+      // A deciding pair settles it either way, and the pair is named both times.
+      const fit = rel === 'ssi' ? left + right === 180 : left === right
+      expect(verdict, where).toBe(fit ? 'yes' : 'no')
+      expect(pair, where).toBe(rel)
+      seen[fit ? 'yes' : 'no'] += 1
+    }
+    expect(seen.yes, JSON.stringify(seen)).toBeGreaterThan(100)
+    expect(seen.no, JSON.stringify(seen)).toBeGreaterThan(100)
+    expect(seen.vert, JSON.stringify(seen)).toBeGreaterThan(100)
+    expect(seen.linear, JSON.stringify(seen)).toBeGreaterThan(50)
+    // Any other pair with one angle at each crossing decides the lines in two steps (∠1 = ∠3, then ∠3 and
+    // ∠6 are same-side interior), so "can't tell" would be wrong for it: the template never asks one.
+    expect(seen.unrelated, JSON.stringify(seen)).toBe(0)
+    // A can't-tell picture is drawn both ways, so the look of the lines never answers for her.
+    expect(seen.flatLook, JSON.stringify(seen)).toBeGreaterThan(50)
+    expect(seen.tiltLook, JSON.stringify(seen)).toBeGreaterThan(50)
+  }, HEAVY)
+
+  it('the algebraic converse keeps its wording and its facts', () => {
+    const a = answerOf('geoParallel', 'gl3.converse', 3)
+    expect(a.stages.map((s) => s.label)).toEqual(['x', 'The fact'])
+    expect(choiceTexts(a, 'result')).toEqual([
+      'Alternate exterior angles match',
+      'Alternate interior angles match',
+      'Corresponding angles match',
+      'None of these facts',
+      'Same-side interior angles add to a straight angle',
+    ])
+  })
+})
+
+/** A fraction written right against x or a parenthesis reads as 2 over 5x. */
+const BARE_FRACTION = /\d\/\d+\s*[xy(]/
+
+describe('slopes: a fractional slope is always in parentheses', () => {
+  it('every fractional slope she reads is parenthesized, over 2000 seeds', () => {
+    let prompts = 0
+    let answers = 0
+    for (let seed = 1; seed <= 2000; seed++) {
+      const a = answerOf('geoParallel', 'gl3.slopes', seed)
+      const where = `gl3.slopes/${seed}`
+      const stage = a.stages[0]!
+      const graded = gradeGeoStage(a, stage.id, stage.answerText)
+      const said = graded.verdict === 'correct' ? graded.message : ''
+      const shown = [a.prompt, a.figure.ariaLabel, a.expectedDisplay, ...a.reveal, said]
+      for (const s of a.stages) {
+        shown.push(s.hint, s.nudge, s.note ?? '', s.answerText, ...s.reveal)
+        for (const t of s.traps) shown.push(t.text, t.witness)
+        for (const c of s.choices ?? []) shown.push(c.text)
+      }
+      for (const line of shown) expect(line, `${where}: ${line}`).not.toMatch(BARE_FRACTION)
+      // Prompts keep the Unicode minus; answers and traps keep the ASCII hyphen she types.
+      expect(a.prompt, where).not.toMatch(/-\(\d/)
+      if (stage.kind === 'line') {
+        for (const t of [stage.answerText, ...stage.traps.map((x) => x.text)]) expect(t, where).not.toContain('−')
+        if (/\(\d+\/\d+\)x/.test(stage.answerText)) answers += 1
+      }
+      if (/\(\d+\/\d+\)x/.test(a.prompt)) prompts += 1
+    }
+    expect(prompts).toBeGreaterThan(100)
+    expect(answers).toBeGreaterThan(50)
+  }, HEAVY)
+
+  it('seed 8 reads the parenthesized answer back from any spelling', () => {
+    const a = answerOf('geoParallel', 'gl3.slopes', 8)
+    expect(text(a, 'result')).toBe('y = -(1/5)x + 23/5')
+    expect(gradeGeoStage(a, 'result', 'y = -1/5x + 23/5')).toMatchObject({ verdict: 'correct', message: 'Correct: y = -(1/5)x + 23/5.' })
+    expect(trapText(a, 'geo_perp_reciprocal_only')).toBe('y = (1/5)x + 17/5')
+    expect(gradeGeoStage(a, 'result', 'y = 1/5x + 17/5')).toMatchObject({ verdict: 'mistake', mistake: 'geo_perp_reciprocal_only' })
+    expect(gradeGeoStage(a, 'result', 'y = (1/5)x + 17/5')).toMatchObject({ verdict: 'mistake', mistake: 'geo_perp_reciprocal_only' })
+  })
+
+  it('a prompt shows the slope as (2/5)x and −(5/2)x', () => {
+    const a = answerOf('geoParallel', 'gl3.slopes', 7)
+    expect(a.prompt).toBe('The line y = (2/5)x + 8 and the line y = −(5/2)x + 11 are drawn. Are the lines parallel, perpendicular, or neither?')
+    expect(a.figure.ariaLabel).toBe('A coordinate grid showing y = (2/5)x + 8 and y = −(5/2)x + 11.')
+  })
+})
+
+describe('unit 3 figures, drawn the textbook way', () => {
+  it('the eight numbered angles have no arcs, and lines m, n, and t carry their names, over 300 seeds', () => {
+    for (const template of ['gl3.pairs', 'gl3.solve', 'gl3.converse']) {
+      for (const seed of SEEDS) {
+        const a = answerOf('geoParallel', template, seed)
+        const where = `${template}/${seed}`
+        const angles = a.figure.angles ?? []
+        expect(angles.map((ang) => ang.label), where).toEqual(['1', '2', '3', '4', '5', '6', '7', '8'])
+        for (const ang of angles) expect(ang.arc, where).toBe(false)
+        expect((a.figure.lines ?? []).map((line) => line.label), where).toEqual(['m', 'n', 't'])
+        expect(a.prompt, where).toMatch(/lines m and n/i)
+        expect(a.figure.ariaLabel, where).toMatch(/^Line m \(the upper line\) and line n \(the lower line\) are .*transversal t\./)
+      }
+    }
+    // The slope figures name lines by their equations, and the triangle and polygon angles keep their arcs.
+    for (const seed of SEEDS.slice(0, 60)) {
+      for (const line of answerOf('geoParallel', 'gl3.slopes', seed).figure.lines ?? []) expect(line.label).toBeUndefined()
+      for (const ang of answerOf('geoPolygonAngles', 'gpa.triangle', seed).figure.angles ?? []) expect(ang.arc).toBeUndefined()
+      for (const ang of answerOf('geoPolygonAngles', 'gpa.polygon', seed).figure.angles ?? []) expect(ang.arc).toBeUndefined()
+    }
+  }, HEAVY)
 })

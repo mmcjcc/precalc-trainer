@@ -189,6 +189,65 @@ describe('GeometryFlow unit 3 parts', () => {
   )
 
   it(
+    'vertical angles cannot decide it: three choices, the slip named, then can’t tell and no pair',
+    () => {
+      const { a, path } = load('geoParallel', 'gl3.converse', 2)
+      expect(a.stages.map((stage) => stage.answerText)).toEqual(['cant', 'none'])
+      renderAt(path)
+      const figure = screen.getByRole('img', { name: a.figure.ariaLabel })
+      expect([...figure.querySelectorAll('[data-geo="line-label"]')].map((el) => el.textContent)).toEqual(['m', 'n', 't'])
+      expect(figure.querySelectorAll('[data-arc="none"]')).toHaveLength(8)
+      expect(figure.querySelector('[data-geo="arc"]')).toBeNull()
+      for (const name of ['Yes', 'No', 'Can’t tell from these angles']) expect(within(openRegion()).getByRole('radio', { name })).toBeTruthy()
+      walk(a)
+    },
+    FLOW_TIMEOUT,
+  )
+
+  it(
+    'on a pair that cannot decide it, No is the same named slip, and it teaches can’t tell',
+    () => {
+      const { a, path } = load('geoParallel', 'gl3.converse', 2)
+      renderAt(path)
+      enter(a.stages[0]!, 'no')
+      click('Check Parallel?')
+      const alert = screen.getByRole('alert')
+      const info = ERROR_PATTERNS.geo_parallel_only_when_not
+      expect(alert.textContent).toContain(info.title)
+      expect(alert.textContent).toContain(info.lesson)
+      expect(alert.textContent).toContain('do not show that the lines meet')
+      expect(finals()).toHaveLength(1)
+      expect(finals()[0]).toMatchObject({ correct: false, pattern: 'geo_parallel_only_when_not', via: 'text' })
+      enter(a.stages[0]!, 'cant')
+      click('Check Parallel?')
+      expect(within(openRegion()).getByRole('heading', { name: 'Part 2 of 2: The angle pair' })).toBeTruthy()
+    },
+    FLOW_TIMEOUT,
+  )
+
+  it(
+    'a fractional slope reads in parentheses on screen, and her unparenthesized spelling still counts',
+    () => {
+      const shown = load('geoParallel', 'gl3.slopes', 7)
+      const view = renderAt(shown.path)
+      const prompt = screen.getByText(exactText(shown.a.prompt))
+      expect(prompt.textContent).toContain('y = (2/5)x + 8')
+      expect(prompt.textContent).toContain('y = −(5/2)x + 11')
+      expect(screen.getByRole('img', { name: shown.a.figure.ariaLabel }).getAttribute('aria-label')).toContain('(2/5)x')
+      view.unmount()
+      resetStoreForTests()
+      const { a, path } = load('geoParallel', 'gl3.slopes', 8)
+      expect(a.stages[0]!.answerText).toBe('y = -(1/5)x + 23/5')
+      renderAt(path)
+      enter(a.stages[0]!, 'y = -1/5x + 23/5')
+      click(`Check ${a.stages[0]!.label}`)
+      expect(finals().at(-1)).toMatchObject({ correct: true, via: 'text' })
+      expect(screen.getByRole('heading', { name: /Problem complete/ })).toBeTruthy()
+    },
+    FLOW_TIMEOUT,
+  )
+
+  it(
     'the third hint shows the answer and marks it shown',
     () => {
       const { a, path } = load('geoParallel', 'gl3.solve', 1)

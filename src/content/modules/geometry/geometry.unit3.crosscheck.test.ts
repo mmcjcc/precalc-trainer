@@ -290,8 +290,18 @@ function fits(rel: Rel, left: number, right: number): boolean {
   return false
 }
 
+/**
+ * What two given measures show. A deciding pair settles it both ways: parallel when the measures fit,
+ * not parallel when they do not (parallel lines would make them fit). Two angles at one crossing fit
+ * whatever the lines do, so they cannot tell.
+ */
+function verdictOf(rel: Rel, left: number, right: number): 'yes' | 'no' | 'cant' {
+  if (!parallelFact(rel)) return 'cant'
+  return fits(rel, left, right) ? 'yes' : 'no'
+}
+
 function auditConverse(answer: GeometryAnswer) {
-  const numbers = /^∠(\d) = (\d+)° and ∠(\d) = (\d+)°\. Are lines m and n parallel\? Name the fact that decides it\.$/.exec(answer.prompt)
+  const numbers = /^∠(\d) = (\d+)° and ∠(\d) = (\d+)°\. Are lines m and n parallel\? Name the angle pair that decides it\.$/.exec(answer.prompt)
   const findX = /^∠(\d) = \(([^)]+)\)° and ∠(\d) = \(([^)]+)\)°\. Find x so that lines m and n are parallel, and name the fact that decides it\.$/.exec(answer.prompt)
   if (numbers) {
     const a = Number(numbers[1])
@@ -301,14 +311,21 @@ function auditConverse(answer: GeometryAnswer) {
     openAngle(left, answer.prompt)
     openAngle(right, answer.prompt)
     const rel = relation(a, b)
-    const yes = fits(rel, left, right)
-    expect(stageText(answer, 'Parallel?')).toBe(yes ? 'yes' : 'no')
-    expect(stageText(answer, 'The fact')).toBe(yes ? rel : 'none')
+    // Any other pair at the two crossings decides the lines in two steps, so it is never asked here.
+    expect(rel, answer.prompt).not.toBe('none')
+    // A figure exists only if vertical angles match and a linear pair adds to 180.
+    if (rel === 'vert') expect(left, answer.prompt).toBe(right)
+    if (rel === 'linear') expect(left + right, answer.prompt).toBe(180)
+    const verdict = verdictOf(rel, left, right)
+    expect(stageText(answer, 'Parallel?')).toBe(verdict)
+    expect(stageText(answer, 'The angle pair')).toBe(parallelFact(rel) ? rel : 'none')
     near(labeled(answer.figure, String(a)), left, answer.prompt)
     near(labeled(answer.figure, String(b)), right, answer.prompt)
+    // ∠3 and ∠7 correspond, so they are drawn equal exactly when the lines are drawn parallel.
+    // A can't-tell figure may be drawn either way.
     const gap = Math.abs(pairMeasures(answer.figure).a - pairMeasures(answer.figure).b)
-    if (yes) expect(gap, answer.prompt).toBeLessThan(1.5)
-    else expect(gap, answer.prompt).toBeGreaterThan(0.8)
+    if (verdict === 'yes') expect(gap, answer.prompt).toBeLessThan(1.5)
+    if (verdict === 'no') expect(gap, answer.prompt).toBeGreaterThan(0.8)
     return
   }
   if (!findX) throw new Error(`unread converse: ${answer.prompt}`)

@@ -14,19 +14,15 @@ const GOLD = 'var(--color-gold-text)'
 
 const VW = 360
 const PAD = 48
+/** A line's name ("m", "t") is a little larger than an angle number, and italic, as in a textbook. */
+const LINE_LABEL_SIZE = 15
+/** Where an angle number without an arc starts, measured from the vertex along the angle's middle. */
+const NUMBER_R = 14
 
 export function GeoFigure({ spec }: { spec: GeoFigureSpec }) {
   const rawId = useId().replace(/:/g, '')
   const marker = `geo-arrow-${rawId}`
-  const layout = layoutOf(spec)
-  const { sx, sy, h } = layout
-  const at = (id: string) => {
-    const p = spec.points.find((point) => point.id === id)
-    if (!p) throw new Error(`GeoFigure: no point ${id}`)
-    return { x: sx(p.x), y: sy(p.y), point: p }
-  }
-  const pointSides = placePointLabels(spec, at, sx, sy, h)
-  const anglePlaces = placeAngleLabels(spec, at, sx, sy, h, pointSides)
+  const { sx, sy, h, at, pointSides, anglePlaces, linePlaces } = placeLabels(spec)
 
   return (
     <div className="w-full max-w-full overflow-hidden">
@@ -48,6 +44,7 @@ export function GeoFigure({ spec }: { spec: GeoFigureSpec }) {
           const b = at(line.through[1])
           const drawn = clipExtended(a.x, a.y, b.x, b.y, 8, 8, VW - 8, h - 8)
           if (!drawn) return null
+          const name = linePlaces[i]
           return (
             <g key={`line-${i}`}>
               <line
@@ -63,6 +60,22 @@ export function GeoFigure({ spec }: { spec: GeoFigureSpec }) {
               />
               {line.arrows ? (
                 <ParallelMarks x1={drawn[0]} y1={drawn[1]} x2={drawn[2]} y2={drawn[3]} count={line.arrows} />
+              ) : null}
+              {line.label && name ? (
+                <text
+                  data-geo="line-label"
+                  x={name.x}
+                  y={name.y}
+                  textAnchor="middle"
+                  dominantBaseline="middle"
+                  fill={INK}
+                  fontSize={LINE_LABEL_SIZE}
+                  fontStyle="italic"
+                  fontWeight={600}
+                  {...HALO}
+                >
+                  {line.label}
+                </text>
               ) : null}
             </g>
           )
@@ -287,7 +300,10 @@ const POINT_SHIFT: Record<NonNullable<GeoPoint['labelSide']>, [number, number, '
 /** A thin outline in the card colour, so a label stays readable where it crosses a line. */
 const HALO = { stroke: 'var(--color-gold-100)', strokeWidth: 4, strokeLinejoin: 'round', paintOrder: 'stroke' } as const
 
-/** The arcs and the usual label spot of one angle mark. */
+/**
+ * The arcs and the usual label spot of one angle mark. Without an arc the number starts close to the
+ * vertex, inside the angle, and moves out along the angle's middle only as far as it must.
+ */
 function angleShape(angle: GeoAngleMark, at: (id: string) => { x: number; y: number }) {
   const v = at(angle.vertex)
   const a = at(angle.from)
@@ -297,10 +313,11 @@ function angleShape(angle: GeoAngleMark, at: (id: string) => { x: number; y: num
   let delta = angB - angA
   while (delta <= -Math.PI) delta += 2 * Math.PI
   while (delta > Math.PI) delta -= 2 * Math.PI
+  const arc = angle.arc !== false
   const count = angle.marks ?? 1
   const base = angle.radius ?? 22
   const outer = base + (count - 1) * 7
-  return { v, a, b, angA, delta, count, base, outer, bis: angA + delta / 2, labelR: outer + 16 }
+  return { v, a, b, angA, delta, count, base, outer, arc, bis: angA + delta / 2, labelR: arc ? outer + 16 : NUMBER_R }
 }
 
 interface LabelPlace {
@@ -361,18 +378,17 @@ function placePointLabels(
 }
 
 /**
- * Where each angle's label goes. A label starts at its usual spot inside the angle and moves out
- * along the angle's middle until it clears every label already placed (point letters first, then
- * angles in order) and stays inside the figure. Narrow angles drawn to their true size need this.
+ * Every label's spot, in drawing order: point letters, then angle labels, then line names. Each one keeps
+ * clear of the lines, of the labels placed before it, and of the figure's edge.
  */
-function placeAngleLabels(
-  spec: GeoFigureSpec,
-  at: (id: string) => { x: number; y: number },
-  sx: (x: number) => number,
-  sy: (y: number) => number,
-  h: number,
-  pointSides: Map<string, Side>,
-): (LabelPlace | null)[] {
+function placeLabels(spec: GeoFigureSpec) {
+  const { sx, sy, h } = layoutOf(spec)
+  const at = (id: string) => {
+    const p = spec.points.find((point) => point.id === id)
+    if (!p) throw new Error(`GeoFigure: no point ${id}`)
+    return { x: sx(p.x), y: sy(p.y), point: p }
+  }
+  const pointSides = placePointLabels(spec, at, sx, sy, h)
   const taken: Box[] = []
   for (const p of spec.points) {
     // The dot, and its letter.
@@ -380,7 +396,57 @@ function placeAngleLabels(
     if (!p.label) continue
     taken.push(pointLabelBox(p, pointSides.get(p.id) ?? p.labelSide ?? 'above', sx, sy))
   }
+  taken.push(...parallelMarkBoxes(spec, at, h))
   const strokes = drawnStrokes(spec, at, h)
+  const anglePlaces = placeAngleLabels(spec, at, h, taken, strokes)
+  const linePlaces = placeLineLabels(spec, at, h, taken, strokes)
+  return { sx, sy, h, at, pointSides, anglePlaces, linePlaces, strokes }
+}
+
+/** One drawn label as a box in SVG units (the viewBox is 360 wide), for checks that labels stay apart. */
+export interface GeoLabelBox extends Box {
+  kind: 'point' | 'angle' | 'line'
+  text: string
+}
+
+/**
+ * The figure's size, every stroke it draws (lines and rays clipped as drawn, segments), every dot it draws,
+ * and every label it draws as a box. Tests use this to check that labels keep off the lines, off the dots,
+ * off each other, and inside the figure.
+ */
+export function geoFigureLayout(spec: GeoFigureSpec): { width: number; height: number; strokes: Stroke[]; dots: Box[]; labels: GeoLabelBox[] } {
+  const { sx, sy, h, pointSides, anglePlaces, linePlaces, strokes } = placeLabels(spec)
+  const labels: GeoLabelBox[] = []
+  const dots: Box[] = []
+  for (const p of spec.points) {
+    if (!p.label) continue
+    dots.push({ l: sx(p.x) - 4, t: sy(p.y) - 4, r: sx(p.x) + 4, b: sy(p.y) + 4 })
+    labels.push({ kind: 'point', text: p.label, ...pointLabelBox(p, pointSides.get(p.id) ?? p.labelSide ?? 'above', sx, sy) })
+  }
+  ;(spec.angles ?? []).forEach((angle, i) => {
+    const place = anglePlaces[i]
+    if (angle.label && place) labels.push({ kind: 'angle', text: angle.label, ...textBox(place.x, place.y, angle.label, 13) })
+  })
+  ;(spec.lines ?? []).forEach((line, i) => {
+    const place = linePlaces[i]
+    if (line.label && place) labels.push({ kind: 'line', text: line.label, ...textBox(place.x, place.y, line.label, LINE_LABEL_SIZE) })
+  })
+  return { width: VW, height: h, strokes, dots, labels }
+}
+
+/**
+ * Where each angle's label goes. A label starts at its usual spot inside the angle and moves out
+ * along the angle's middle until it clears every label already placed (point letters first, then
+ * angles in order) and stays inside the figure. Narrow angles drawn to their true size need this.
+ * A number with no arc stays on the angle's middle, so it needs no leader.
+ */
+function placeAngleLabels(
+  spec: GeoFigureSpec,
+  at: (id: string) => { x: number; y: number },
+  h: number,
+  taken: Box[],
+  strokes: Stroke[],
+): (LabelPlace | null)[] {
   const shapes = (spec.angles ?? []).map((angle) => angleShape(angle, at))
   return (spec.angles ?? []).map((angle, i) => {
     if (!angle.label || angle.right) return null
@@ -401,15 +467,25 @@ function placeAngleLabels(
         for (const deg of [10, 16, 24]) for (let r = g.outer + 10; r <= g.outer + 90; r += 8) candidates.push({ dir: past + away * (deg * Math.PI) / 180, r })
       }
     }
-    for (let r = g.labelR; r <= g.labelR + 200; r += 6) candidates.push({ dir: g.bis, r })
+    // A number without an arc creeps out in small steps, so it stays near its vertex.
+    const step = g.arc ? 6 : 2
+    for (let r = g.labelR; r <= g.labelR + 200; r += step) candidates.push({ dir: g.bis, r })
+    // A narrow angle with no room inside (a long label in a triangle's sharp corner): just outside the
+    // angle, past either side, with a leader back to its arc.
+    if (!whole && g.arc) {
+      for (const past of [g.angA + g.delta, g.angA]) {
+        const away = past === g.angA ? -sign : sign
+        for (const deg of [12, 20, 30, 45]) for (let r = g.outer + 8; r <= g.outer + 110; r += 8) candidates.push({ dir: past + away * (deg * Math.PI) / 180, r })
+      }
+    }
     for (const c of candidates) {
       const { x, y } = at_(c.dir, c.r)
       const box = textBox(x, y, angle.label, 13)
       if (!clear(box)) continue
       taken.push(box)
-      if (c.dir === g.bis && c.r === g.labelR) return { x, y }
-      // A leader from the arc to the nearest edge of the label.
-      const onArc = at_(clampAngle(c.dir, g.angA, g.delta), g.outer + 2)
+      if (c.dir === g.bis && (c.r === g.labelR || !g.arc)) return { x, y }
+      // A leader from the arc (or, with no arc, from inside the angle) to the nearest edge of the label.
+      const onArc = at_(clampAngle(c.dir, g.angA, g.delta), g.arc ? g.outer + 2 : NUMBER_R)
       const near = { x: Math.min(Math.max(onArc.x, box.l), box.r), y: Math.min(Math.max(onArc.y, box.t), box.b) }
       return { x, y, leader: [onArc.x, onArc.y, near.x, near.y] }
     }
@@ -420,7 +496,86 @@ function placeAngleLabels(
   })
 }
 
-type Stroke = [number, number, number, number]
+/**
+ * Where each line's name goes: near one end of the line as drawn, just off it, clear of every stroke and
+ * every label already placed, and inside the figure. A line that runs across is named near its right end,
+ * above it when there is room; a steep line near its upper end, to its right when there is room.
+ */
+function placeLineLabels(
+  spec: GeoFigureSpec,
+  at: (id: string) => { x: number; y: number },
+  h: number,
+  taken: Box[],
+  strokes: Stroke[],
+): (LabelPlace | null)[] {
+  return (spec.lines ?? []).map((line) => {
+    const name = line.label
+    if (!name) return null
+    const a = at(line.through[0])
+    const b = at(line.through[1])
+    const d = clipExtended(a.x, a.y, b.x, b.y, 8, 8, VW - 8, h - 8)
+    if (!d) return null
+    const [x1, y1, x2, y2] = d as [number, number, number, number]
+    const u = unit(x2 - x1, y2 - y1)
+    const across = Math.abs(u.x) >= Math.abs(u.y)
+    // Each end, with the direction that walks back into the figure along the line.
+    const ends = [
+      { x: x1, y: y1, ix: u.x, iy: u.y },
+      { x: x2, y: y2, ix: -u.x, iy: -u.y },
+    ].sort((p, q) => (across ? q.x - p.x : p.y - q.y))
+    // The two sides of the line: above first for a line that runs across, right first for a steep one.
+    const sides = [
+      { x: -u.y, y: u.x },
+      { x: u.y, y: -u.x },
+    ].sort((p, q) => (across ? p.y - q.y : q.x - p.x))
+    const probe = textBox(0, 0, name, LINE_LABEL_SIZE)
+    const halfW = (probe.r - probe.l) / 2
+    const halfH = (probe.b - probe.t) / 2
+    const inBounds = (box: Box) => box.l >= 2 && box.r <= VW - 2 && box.t >= 2 && box.b <= h - 2
+    let fallback: LabelPlace | null = null
+    for (const end of ends) {
+      for (const along of [18, 26, 34, 44, 56, 70, 86, 104]) {
+        for (const side of sides) {
+          // Far enough from its own line that the box (with the 2 px margin) does not touch it.
+          const off = 4 + Math.abs(side.x) * (halfW + 2) + Math.abs(side.y) * (halfH + 2)
+          const x = end.x + end.ix * along + side.x * off
+          const y = end.y + end.iy * along + side.y * off
+          const box = textBox(x, y, name, LINE_LABEL_SIZE)
+          if (!inBounds(box)) continue
+          fallback ??= { x, y }
+          if (strokes.some((s) => segmentHitsBox(s, box)) || taken.some((t) => overlaps(t, box))) continue
+          taken.push(box)
+          return { x, y }
+        }
+      }
+    }
+    // Nowhere clear: the first spot inside the figure near an end.
+    if (fallback) taken.push(textBox(fallback.x, fallback.y, name, LINE_LABEL_SIZE))
+    return fallback
+  })
+}
+
+/** A box around each arrow mark drawn along a line, so no label covers one. */
+function parallelMarkBoxes(spec: GeoFigureSpec, at: (id: string) => { x: number; y: number }, h: number): Box[] {
+  const out: Box[] = []
+  for (const line of spec.lines ?? []) {
+    if (!line.arrows) continue
+    const a = at(line.through[0])
+    const b = at(line.through[1])
+    const d = clipExtended(a.x, a.y, b.x, b.y, 8, 8, VW - 8, h - 8)
+    if (!d) continue
+    const [x1, y1, x2, y2] = d as [number, number, number, number]
+    const len = Math.hypot(x2 - x1, y2 - y1) || 1
+    for (const t of line.arrows === 1 ? [0.32] : [0.32, 0.32 + 12 / len]) {
+      const cx = x1 + (x2 - x1) * t
+      const cy = y1 + (y2 - y1) * t
+      out.push({ l: cx - 9, t: cy - 9, r: cx + 9, b: cy + 9 })
+    }
+  }
+  return out
+}
+
+export type Stroke = [number, number, number, number]
 
 /** Every line the figure draws (rays and lines clipped as drawn), for labels to keep off. */
 function drawnStrokes(spec: GeoFigureSpec, at: (id: string) => { x: number; y: number }, h: number): Stroke[] {
@@ -501,10 +656,12 @@ function AngleMark({ angle, at, place }: { angle: GeoAngleMark; at: (id: string)
   }
   const spot = place ?? { x: g.v.x + Math.cos(g.bis) * g.labelR, y: g.v.y + Math.sin(g.bis) * g.labelR }
   return (
-    <g data-geo="angle" data-marks={angle.marks ?? undefined}>
-      {Array.from({ length: g.count }, (_, i) => (
-        <path key={i} d={arcPath(g.v.x, g.v.y, g.base + i * 7, g.angA, g.delta)} fill="none" stroke={CORAL} strokeWidth={2} />
-      ))}
+    <g data-geo="angle" data-marks={g.arc ? (angle.marks ?? undefined) : undefined} data-arc={g.arc ? undefined : 'none'}>
+      {g.arc
+        ? Array.from({ length: g.count }, (_, i) => (
+            <path key={i} data-geo="arc" d={arcPath(g.v.x, g.v.y, g.base + i * 7, g.angA, g.delta)} fill="none" stroke={CORAL} strokeWidth={2} />
+          ))
+        : null}
       {place?.leader ? (
         <line data-geo="leader" x1={place.leader[0]} y1={place.leader[1]} x2={place.leader[2]} y2={place.leader[3]} stroke={CORAL} strokeWidth={1} />
       ) : null}

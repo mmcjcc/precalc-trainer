@@ -59,7 +59,7 @@ or the textbook) is one more entry in that file.
 |---|---|---|---|
 | Oct | 1 Tools of geometry | geoSegments (segment addition, midpoints, distance and midpoint on the plane), geoAngles (angle addition, bisectors, angle pairs, complement and supplement word problems) | shipped 2026-10-15 |
 | Nov | 2 Reasoning and proof | conditionals, converse, inverse, contrapositive, laws of logic; properties and two-column proofs | shipped 2026-10-17 |
-| Nov | 3 Parallel and perpendicular lines | transversal angle pairs, proving lines parallel, slopes and equations of lines; triangle and polygon angle sums | after that |
+| Nov | 3 Parallel and perpendicular lines | transversal angle pairs, proving lines parallel, slopes and equations of lines; triangle and polygon angle sums | shipped 2026-10-17 |
 
 ## Chemistry (CK-12 order)
 

@@ -47,7 +47,10 @@ export function sameLine(a: LineEq, b: LineEq): boolean {
   return a.a === b.a && a.b === b.b && a.c === b.c
 }
 
-/** A canonical equation: "x = 3", "y = -2", or "y = -1/2x + 1". ASCII hyphen, so it matches what she types. */
+/**
+ * A canonical equation: "x = 3", "y = -2", "y = 2x + 1", or "y = -(1/2)x + 1". A fractional slope is
+ * in parentheses, so it cannot be read as 1 over 2x. ASCII hyphen, so it matches what she types.
+ */
 export function formatLine(line: LineEq): string {
   if (line.b === 0) return `x = ${ratToString(rat(-line.c, line.a))}`
   if (line.a === 0) return `y = ${ratToString(rat(-line.c, line.b))}`
@@ -65,7 +68,18 @@ export function lineSlope(line: LineEq): Rational | null {
 function slopeTerm(m: Rational): string {
   if (ratEquals(m, ONE)) return 'x'
   if (ratEquals(m, rat(-1, 1))) return '-x'
-  return `${ratToString(m)}x`
+  return slopeCoefficient(m, '-') + 'x'
+}
+
+/**
+ * The coefficient of x as she reads it: "2", "-3", "(2/5)", or "-(1/5)". A fraction goes in parentheses
+ * with the sign outside, so "(2/5)x" never reads as 2 over 5x. `minus` is the sign to print: an ASCII
+ * hyphen in an answer, the Unicode minus in a prompt.
+ */
+export function slopeCoefficient(m: Rational, minus: '-' | '−'): string {
+  const sign = m.n < 0 ? minus : ''
+  const size = ratToString(rat(Math.abs(m.n), m.d))
+  return m.d === 1 ? `${sign}${size}` : `${sign}(${size})`
 }
 
 function tail(k: Rational): string {

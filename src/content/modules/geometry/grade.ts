@@ -406,6 +406,7 @@ function visibleBlob(answer: GeometryAnswer): string {
   for (const p of answer.figure.points) bits.push(p.label ?? '', p.id)
   for (const s of answer.figure.segments ?? []) if (s.label) bits.push(s.label)
   for (const a of answer.figure.angles ?? []) if (a.label) bits.push(a.label)
+  for (const l of answer.figure.lines ?? []) if (l.label) bits.push(l.label)
   return bits.join(' \n ')
 }
 
