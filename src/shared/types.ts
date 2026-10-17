@@ -15,7 +15,7 @@
 export type RelOp = '=' | '<' | '<=' | '>' | '>='
 /** `h` is the difference-quotient step; the parser accepts it only when the problem owns it (ctx.vars). */
 export type VarName = 'x' | 'y' | 'n' | 'h'
-export type ModuleId = 'numberLine' | 'inequalities' | 'evenOdd' | 'inverses' | 'propertiesDrill' | 'sigFigs' | 'atoms' | 'diffQuotient' | 'graphFeatures' | 'domainRange' | 'composition' | 'functionOps' | 'transformations' | 'piecewiseRate' | 'electrons' | 'quadratics' | 'polyDivision' | 'polyZeros' | 'rationalFns' | 'signCharts' | 'complexNums' | 'geoSegments' | 'geoAngles' | 'geoLogic' | 'geoProof'
+export type ModuleId = 'numberLine' | 'inequalities' | 'evenOdd' | 'inverses' | 'propertiesDrill' | 'sigFigs' | 'atoms' | 'diffQuotient' | 'graphFeatures' | 'domainRange' | 'composition' | 'functionOps' | 'transformations' | 'piecewiseRate' | 'electrons' | 'quadratics' | 'polyDivision' | 'polyZeros' | 'rationalFns' | 'signCharts' | 'complexNums' | 'geoSegments' | 'geoAngles' | 'geoLogic' | 'geoProof' | 'geoParallel' | 'geoPolygonAngles'
 export type CalcId = 'ti84' | 'nspire'
 
 /** Fine-grained property tags. Canonical steps carry one; the engine's move detector reports one. */
@@ -413,6 +413,25 @@ export type ErrorPatternId =
   | 'geo_congruent_for_midpoint'
   | 'geo_linear_for_vertical'
   | 'geo_vertical_for_linear'
+  // honors geometry Unit 3 (content/modules/geometry). Each id is the value that slip produces
+  // on this problem: a wrong angle name, a wrong equation, or the number the wrong relationship gives.
+  | 'geo_same_side_congruent'
+  | 'geo_alt_int_corr_swapped'
+  | 'geo_alt_ext_corr_swapped'
+  | 'geo_parallel_only_when_not'
+  | 'geo_congruent_as_same_side'
+  | 'geo_perp_reciprocal_only'
+  | 'geo_perp_sign_only'
+  | 'geo_parallel_kept_intercept'
+  | 'geo_vertical_as_zero'
+  | 'geo_exterior_adjacent'
+  | 'geo_interior_sum_n180'
+  | 'geo_interior_not_divided'
+  | 'geo_exterior_180_over_n'
+  | 'geo_sides_from_interior_360'
+  | 'geo_sides_from_exterior_180'
+  | 'geo_exterior_sum_as_interior'
+  | 'geo_lines_relation_swapped'
   // behavioral (ui)
   | 'abandoned'
 
@@ -701,6 +720,11 @@ export interface GeoSegment {
 
 export interface GeoLine {
   through: [string, string]
+  /**
+   * Matching chevrons on a pair of lines, drawn along the line (not the endpoint arrowheads).
+   * 1 is a single arrow mark; 2 is a double arrow mark.
+   */
+  arrows?: 1 | 2
 }
 
 export interface GeoRay {

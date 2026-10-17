@@ -63,4 +63,25 @@ describe('GeoFigure', () => {
     expect(ray?.hasAttribute('marker-start')).toBe(false)
     expect(ray?.getAttribute('marker-end')).toContain(marker?.id)
   })
+
+  it('draws matching arrow marks on a pair of lines, separate from the endpoint arrowheads', () => {
+    const marked: GeoFigureSpec = {
+      ariaLabel: 'Two parallel lines with one arrow mark each.',
+      points: [
+        { id: 'A', x: 0, y: 0 },
+        { id: 'B', x: 4, y: 0 },
+        { id: 'C', x: 0, y: 2 },
+        { id: 'D', x: 4, y: 2 },
+      ],
+      lines: [
+        { through: ['A', 'B'], arrows: 1 },
+        { through: ['C', 'D'], arrows: 1 },
+      ],
+    }
+    const { container } = render(<GeoFigure spec={marked} />)
+    const marks = [...container.querySelectorAll('[data-geo="parallel"]')]
+    expect(marks).toHaveLength(2)
+    expect(marks[0]?.getAttribute('data-count')).toBe('1')
+    expect(container.querySelectorAll('[data-geo="line"]')).toHaveLength(2)
+  })
 })

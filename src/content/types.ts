@@ -19,7 +19,7 @@ import type {
 
 export type ProblemKind = 'inequality' | 'numberLine' | 'evenOdd' | 'inverse' | 'drill' | 'sigFigs' | 'atoms' | 'diffQuotient' | 'graphFeatures' | 'domainRange' | 'composition' | 'functionOps' | 'transformations' | 'piecewiseRate' | 'electrons' | 'quadratics' | 'polyDivision' | 'polyZeros' | 'rationalFns' | 'signCharts' | 'complexNums' | 'geometry'
 
-/** Which geometry screen this problem is. Unit 2 adds the logic and proof screens. */
+/** Which geometry screen this problem is. Unit 2 adds logic and proof; Unit 3 adds parallels and polygons. */
 export type GeometryQuestion =
   | 'addition'
   | 'midpoint'
@@ -34,6 +34,12 @@ export type GeometryQuestion =
   | 'reason'
   | 'algebraic'
   | 'twocolumn'
+  | 'transversalPairs'
+  | 'parallelSolve'
+  | 'parallelConverse'
+  | 'lineSlopes'
+  | 'triangleAngles'
+  | 'polygonAngles'
 
 /**
  * One checked part of a geometry problem. `x` and `result` are the Unit 1 boxes.
@@ -933,9 +939,11 @@ export type AnswerSpec =
       lines?: string[]
       stages: {
         id: GeometryStageId
-        kind: 'number' | 'point' | 'choice' | 'reason'
+        kind: 'number' | 'point' | 'choice' | 'reason' | 'line'
         /** An angle measure, where a degree sign is welcome. Anywhere else a degree sign is refused. */
         unit?: 'deg'
+        /** A vertical line has no slope number. The word "undefined" is an answer only when this is set. */
+        allowUndefined?: boolean
         /** Box label, e.g. "x", "AB", "Reason for line 2". */
         label: string
         /** Line under the box or the choices. Never this part's answer. */

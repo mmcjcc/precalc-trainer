@@ -16,6 +16,15 @@ import {
 import { drawAlgebraic, drawReason, drawTwoColumn } from './proofMake'
 import { ANGLE_RULES, SEGMENT_RULES } from './rules'
 import { LOGIC_RULES, PROOF_RULES } from './unit2Rules'
+import { PARALLEL_RULES, POLYGON_RULES } from './unit3Rules'
+import {
+  drawLineSlopes,
+  drawParallelConverse,
+  drawParallelSolve,
+  drawPolygonAngles,
+  drawTransversalPairs,
+  drawTriangleAngles,
+} from './unit3Make'
 
 export { readGeoAnswer, formatPoint, formatQty, formatValue, geoQty, sameGeoValue, sameQty, simplifyRadical } from './answer'
 export type { GeoQty, GeoRead, GeoReadOptions, GeoValue } from './answer'
@@ -155,7 +164,49 @@ export const geoProofModule: ModuleDef = {
   nextStep: () => null,
 }
 
+/**
+ * Parallel lines and transversals (honors geometry Unit 3). Angle pairs, solving with
+ * parallel lines, the converses, and slopes of parallel and perpendicular lines.
+ */
+export const geoParallelModule: ModuleDef = {
+  id: 'geoParallel',
+  subject: 'Geometry',
+  title: 'Parallel lines and transversals',
+  blurb: 'Name an angle pair, solve with parallel lines, decide whether two lines are parallel, and use slopes.',
+  order: 13,
+  templates: [
+    geoTemplate('geoParallel', 'gl3.pairs', 'Angle pairs', 'Two lines are cut by a transversal. Name the relationship of two numbered angles.', drawTransversalPairs),
+    geoTemplate('geoParallel', 'gl3.solve', 'Parallel lines', 'The two lines are parallel. Two angles are expressions in x. Find x, then a measure.', drawParallelSolve),
+    geoTemplate('geoParallel', 'gl3.converse', 'Are the lines parallel?', 'Two angles are given. Decide whether the lines are parallel, and name the fact.', drawParallelConverse),
+    geoTemplate('geoParallel', 'gl3.slopes', 'Slopes and equations', 'A slope, a comparison, or the equation of a parallel or perpendicular line.', drawLineSlopes),
+  ],
+  ruleCards: PARALLEL_RULES,
+  progress: PROGRESS,
+  nextStep: () => null,
+}
+
+/**
+ * Angles of triangles and polygons (honors geometry Unit 3). The triangle sum, an exterior
+ * angle, and the interior and exterior angles of a convex polygon.
+ */
+export const geoPolygonAnglesModule: ModuleDef = {
+  id: 'geoPolygonAngles',
+  subject: 'Geometry',
+  title: 'Angles of triangles and polygons',
+  blurb: 'Find an angle in a triangle, or an interior or exterior angle of a polygon.',
+  order: 14,
+  templates: [
+    geoTemplate('geoPolygonAngles', 'gpa.triangle', 'Triangle angles', 'A triangle with expressions in x. Find x, then an angle measure.', drawTriangleAngles),
+    geoTemplate('geoPolygonAngles', 'gpa.polygon', 'Polygon angles', 'An interior or exterior angle of a convex polygon, or the number of sides.', drawPolygonAngles),
+  ],
+  ruleCards: POLYGON_RULES,
+  progress: PROGRESS,
+  nextStep: () => null,
+}
+
 registerModule(geoSegmentsModule)
 registerModule(geoAnglesModule)
 registerModule(geoLogicModule)
 registerModule(geoProofModule)
+registerModule(geoParallelModule)
+registerModule(geoPolygonAnglesModule)

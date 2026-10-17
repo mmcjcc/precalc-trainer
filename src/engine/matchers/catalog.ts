@@ -1543,6 +1543,110 @@ export const ERROR_PATTERNS: Record<ErrorPatternId, ErrorPatternInfo> = {
     lesson: 'Opposite angles are the pair made by two crossing lines. The angles in this line sit next to each other and form a straight line, so their measures add to 180.',
     example: 'Angle 8 and the angle beside it on the straight line are called vertical ✗ → the two angles add to 180',
   },
+  // --- honors geometry Unit 3. Examples use 4, 17, 1/4, −4, 24, 165, 90/11, and 180/11.
+  // No template generates those as an answer. Button names (Corresponding, Yes, Parallel, …) stay out of these lines.
+  geo_same_side_congruent: {
+    id: 'geo_same_side_congruent',
+    title: 'Those angles add; they do not match',
+    lesson: 'The two angles between the lines on one side of the transversal add to a straight angle. Setting them equal treats them as a matching pair, which is a different relationship.',
+    example: 'x = 17 ✗ → x = 4',
+  },
+  geo_alt_int_corr_swapped: {
+    id: 'geo_alt_int_corr_swapped',
+    title: 'Those two pairs are not the same',
+    lesson: 'One pair sits between the two lines on opposite sides of the transversal. The other sits in the same corner at each crossing. The figure shows one of those, and the choice was the other.',
+    example: 'the pair in the same corner ✗ → the pair between the lines on opposite sides',
+  },
+  geo_alt_ext_corr_swapped: {
+    id: 'geo_alt_ext_corr_swapped',
+    title: 'Outside the lines is not the same corner',
+    lesson: 'One pair sits outside the two lines on opposite sides of the transversal. The other sits in the same corner at each crossing. Naming one when the figure shows the other swaps the pairs.',
+    example: 'the outside pair on opposite sides ✗ → the pair in the same corner',
+  },
+  geo_parallel_only_when_not: {
+    id: 'geo_parallel_only_when_not',
+    title: 'That pair needs the lines to be parallel',
+    lesson: 'A pair that matches only when the lines are parallel cannot decide that they are, unless the measures actually fit that pair. Opposite angles at one crossing match whether or not the lines are parallel, so they do not decide it.',
+    example: 'opposite angles match, so the lines are parallel ✗ → opposite angles match either way',
+  },
+  geo_congruent_as_same_side: {
+    id: 'geo_congruent_as_same_side',
+    title: 'These angles match; they do not add',
+    lesson: 'These two angles match when the lines are parallel. Adding them as if they made a straight angle is the move for the pair that sits between the lines on one side of the transversal.',
+    example: 'x = 90/11 ✗ → x = 17',
+  },
+  geo_perp_reciprocal_only: {
+    id: 'geo_perp_reciprocal_only',
+    title: 'Flip the fraction and change the sign',
+    lesson: 'The slope of a line that meets this one at a right angle is the flipped fraction with the opposite sign. Flipping the fraction and keeping the sign is a different slope.',
+    example: '1/4 ✗ → −4',
+  },
+  geo_perp_sign_only: {
+    id: 'geo_perp_sign_only',
+    title: 'The sign is only half of the change',
+    lesson: 'Changing only the sign of the slope, and not flipping the fraction, does not make a right angle. Both changes belong together.',
+    example: '−4 ✗ → −1/4',
+  },
+  geo_parallel_kept_intercept: {
+    id: 'geo_parallel_kept_intercept',
+    title: 'A new point needs a new intercept',
+    lesson: 'A line through a new point that rises the same way keeps the slope and gets a new intercept. Copying the original intercept writes the original line, which misses the point.',
+    example: 'y = 4x + 17 ✗ → y = 4x − 15',
+  },
+  geo_vertical_as_zero: {
+    id: 'geo_vertical_as_zero',
+    title: 'A vertical line has no slope number',
+    lesson: 'A vertical line has no number for its slope. The number that means “does not rise” belongs to a horizontal line. Swapping those two is a different line.',
+    example: 'the horizontal number ✗ → no number for a vertical line',
+  },
+  geo_exterior_adjacent: {
+    id: 'geo_exterior_adjacent',
+    title: 'Use the two angles that are not beside it',
+    lesson: 'An exterior angle of a triangle equals the two interior angles that are not next to it. The angle beside it adds with the exterior to a straight angle, and treating the exterior as a third interior angle is a different equation.',
+    example: 'x = 90/11 ✗ → x = 17',
+  },
+  geo_interior_sum_n180: {
+    id: 'geo_interior_sum_n180',
+    title: 'The sum is not one straight angle per side',
+    lesson: 'The interior angles of a convex polygon add to a straight angle for each side after the first two, which is (n − 2) straight angles. Using one straight angle for every side counts two extra.',
+    example: '24 × 165 = 3960 ✗ → (24 − 2) × 165 = 3630',
+  },
+  geo_interior_not_divided: {
+    id: 'geo_interior_not_divided',
+    title: 'Divide the sum by the number of sides',
+    lesson: 'A regular polygon shares one interior angle equally among its sides. The sum of the interior angles is the whole; each angle is that sum divided by the number of sides.',
+    example: '(24 − 2) × 165 = 3630 ✗ → 3630/24',
+  },
+  geo_exterior_180_over_n: {
+    id: 'geo_exterior_180_over_n',
+    title: 'One exterior angle is a full turn shared out',
+    lesson: 'The exterior angles of a convex polygon, one at each vertex, make a full turn. Each exterior angle of a regular polygon is that full turn divided by the number of sides, not a straight angle divided by the number of sides.',
+    example: '90/11 ✗ → 180/11',
+  },
+  geo_sides_from_interior_360: {
+    id: 'geo_sides_from_interior_360',
+    title: 'The interior angle is not the exterior angle',
+    lesson: 'A full turn divided by one exterior angle gives the number of sides. Dividing a full turn by the interior angle uses the angle inside the polygon, which is not the turn at the vertex.',
+    example: '360/165 = 24/11 ✗ → 24',
+  },
+  geo_sides_from_exterior_180: {
+    id: 'geo_sides_from_exterior_180',
+    title: 'Divide a full turn, not a straight angle',
+    lesson: 'The number of sides is a full turn divided by one exterior angle. Using a straight angle instead of a full turn cuts that count in half.',
+    example: '90/11 ✗ → 180/11',
+  },
+  geo_exterior_sum_as_interior: {
+    id: 'geo_exterior_sum_as_interior',
+    title: 'The exterior angles make one full turn',
+    lesson: 'One exterior angle at each vertex of a convex polygon makes a full turn, no matter how many sides there are. The sum that grows with the number of sides is the interior angles.',
+    example: 'the interior-angle total ✗ → one full turn',
+  },
+  geo_lines_relation_swapped: {
+    id: 'geo_lines_relation_swapped',
+    title: 'Same slope and a right angle are different',
+    lesson: 'Lines that rise the same way share a slope. Lines that meet at a right angle have slopes that multiply to −1, unless one of them is vertical. Anything else is a third relationship.',
+    example: 'a right angle ✗ → the lines rise the same way',
+  },
   // --- behavioral (ui) ---
   abandoned: {
     id: 'abandoned',

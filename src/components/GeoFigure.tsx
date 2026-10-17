@@ -48,18 +48,22 @@ export function GeoFigure({ spec }: { spec: GeoFigureSpec }) {
           const drawn = clipExtended(a.x, a.y, b.x, b.y, 8, 8, VW - 8, h - 8)
           if (!drawn) return null
           return (
-            <line
-              key={`line-${i}`}
-              data-geo="line"
-              x1={drawn[0]}
-              y1={drawn[1]}
-              x2={drawn[2]}
-              y2={drawn[3]}
-              stroke={NAVY}
-              strokeWidth={2}
-              markerStart={`url(#${marker})`}
-              markerEnd={`url(#${marker})`}
-            />
+            <g key={`line-${i}`}>
+              <line
+                data-geo="line"
+                x1={drawn[0]}
+                y1={drawn[1]}
+                x2={drawn[2]}
+                y2={drawn[3]}
+                stroke={NAVY}
+                strokeWidth={2}
+                markerStart={`url(#${marker})`}
+                markerEnd={`url(#${marker})`}
+              />
+              {line.arrows ? (
+                <ParallelMarks x1={drawn[0]} y1={drawn[1]} x2={drawn[2]} y2={drawn[3]} count={line.arrows} />
+              ) : null}
+            </g>
           )
         })}
         {spec.rays?.map((ray, i) => {
@@ -138,6 +142,37 @@ function Grid({ spec, sx, sy }: { spec: GeoFigureSpec; sx: (x: number) => number
           y
         </text>
       ) : null}
+    </g>
+  )
+}
+
+/** Arrow marks along a line, about a third of the way across, pointing with the line. */
+function ParallelMarks({ x1, y1, x2, y2, count }: { x1: number; y1: number; x2: number; y2: number; count: 1 | 2 }) {
+  const len = Math.hypot(x2 - x1, y2 - y1) || 1
+  const ux = (x2 - x1) / len
+  const uy = (y2 - y1) / len
+  const nx = -uy
+  const ny = ux
+  const spots = count === 1 ? [0.32] : [0.32, 0.32 + 12 / len]
+  return (
+    <g data-geo="parallel" data-count={count}>
+      {spots.map((t, i) => {
+        const cx = x1 + (x2 - x1) * t
+        const cy = y1 + (y2 - y1) * t
+        const back = 7
+        const wing = 5
+        return (
+          <polyline
+            key={i}
+            points={`${cx - ux * back + nx * wing},${cy - uy * back + ny * wing} ${cx},${cy} ${cx - ux * back - nx * wing},${cy - uy * back - ny * wing}`}
+            fill="none"
+            stroke={CORAL}
+            strokeWidth={2}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        )
+      })}
     </g>
   )
 }

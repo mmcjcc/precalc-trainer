@@ -82,8 +82,8 @@ describe('Home: classes and units', () => {
 
     fireEvent.keyDown(tablist, { key: 'ArrowRight' })
     expect(screen.getByRole('tab', { name: 'Honors Geometry', selected: true })).toBeTruthy()
-    // A first visit lands on the last unit that has modules: Unit 2.
-    expect(moduleTitles()).toEqual(['Conditionals and logic', 'Properties and proofs'])
+    // A first visit lands on the last unit that has modules: Unit 3.
+    expect(moduleTitles()).toEqual(['Parallel lines and transversals', 'Angles of triangles and polygons'])
 
     fireEvent.keyDown(tablist, { key: 'ArrowRight' })
     expect(screen.getByRole('tab', { name: 'Honors Geometry', selected: true })).toBeTruthy()
@@ -101,28 +101,28 @@ describe('Home: classes and units', () => {
     expect(screen.queryByRole('heading', { name: 'Unit 1 review' })).toBeNull()
   })
 
-  it('shows Honors Geometry Units 1 and 2, and marks Unit 3 coming soon', () => {
+  it('shows Honors Geometry Units 1, 2, and 3', () => {
     renderHome('/c/geometry')
     expect(screen.getByRole('tab', { name: 'Honors Geometry', selected: true })).toBeTruthy()
-    // A first visit lands on the last unit that has modules: Unit 2.
-    expect(moduleTitles()).toEqual(['Conditionals and logic', 'Properties and proofs'])
+    // A first visit lands on the last unit that has modules: Unit 3.
+    expect(moduleTitles()).toEqual(['Parallel lines and transversals', 'Angles of triangles and polygons'])
     const unit1 = screen.getByRole('button', { name: /Unit 1/ })
     const unit2 = screen.getByRole('button', { name: /Unit 2/ })
     const unit3 = screen.getByRole('button', { name: /Unit 3/ })
     expect(unit1.textContent).not.toMatch(/Coming soon/)
     expect(unit2.textContent).not.toMatch(/Coming soon/)
-    expect(unit2.getAttribute('aria-pressed')).toBe('true')
-    expect(unit3.textContent).toMatch(/Coming soon/)
+    expect(unit3.textContent).not.toMatch(/Coming soon/)
+    expect(unit3.getAttribute('aria-pressed')).toBe('true')
     expect(unit1.textContent).toMatch(/Tools of geometry/)
     expect(unit2.textContent).toMatch(/Reasoning and proof/)
     expect(unit3.textContent).toMatch(/Parallel and perpendicular lines/)
-    fireEvent.click(unit3)
-    expect(screen.getByText(/Nothing to practise here yet/)).toBeTruthy()
-    expect(moduleTitles()).toEqual([])
+    expect(screen.queryByText(/Nothing to practise here yet/)).toBeNull()
     fireEvent.click(unit1)
     expect(moduleTitles()).toEqual(['Segments, midpoints and distance', 'Angles and angle pairs'])
     fireEvent.click(unit2)
     expect(moduleTitles()).toEqual(['Conditionals and logic', 'Properties and proofs'])
+    fireEvent.click(unit3)
+    expect(moduleTitles()).toEqual(['Parallel lines and transversals', 'Angles of triangles and polygons'])
   })
 
   it('shows only the selected unit, with the review card on precalc Unit 1 only', () => {
