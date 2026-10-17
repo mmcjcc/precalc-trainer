@@ -953,6 +953,13 @@ export type AnswerSpec =
          * Choice or reason: the id of the correct choice (a statement id, or a reason id).
          */
         answerText: string
+        /**
+         * Reason parts only: other reasons that are also correct for this row. Books name some proof
+         * steps differently (many write substitution where others write transitive), so a pick in this
+         * list grades correct, the same as `answerText`. `answerText` stays the reason the answer key
+         * shows first. Absent means only `answerText` is correct.
+         */
+        accept?: string[]
         /** Printed above a Unit 2 picker: the given half of a proof row. */
         note?: string
         /**

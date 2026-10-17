@@ -1499,13 +1499,13 @@ export const ERROR_PATTERNS: Record<ErrorPatternId, ErrorPatternInfo> = {
     id: 'geo_midpoint_for_addition',
     title: 'Equal pieces are not this line',
     lesson: 'The midpoint fact says the two pieces match. This line adds the pieces to get the whole segment. The pieces are not marked congruent here, so the midpoint fact is the wrong reason.',
-    example: 'J is between K and L, so JK + KL = JL, called a midpoint ✗ → JK + KL = JL by adding the pieces',
+    example: 'K is between J and L, so JK + KL = JL, called a midpoint ✗ → JK + KL = JL by adding the pieces',
   },
   geo_addition_for_midpoint: {
     id: 'geo_addition_for_midpoint',
     title: 'This line says the pieces match',
     lesson: 'A midpoint cuts a segment into two pieces of the same length. Adding those pieces to get the whole segment is a different line. This line only says the two pieces are equal.',
-    example: 'M is the midpoint of JK, so JM + MK = JK ✗ → JM = MK',
+    example: 'M is the midpoint of JK. Next line: JM = MK because the pieces add to JK ✗ → JM = MK because M is the midpoint of JK',
   },
   geo_substitution_for_transitive: {
     id: 'geo_substitution_for_transitive',
@@ -1517,7 +1517,7 @@ export const ERROR_PATTERNS: Record<ErrorPatternId, ErrorPatternInfo> = {
     id: 'geo_equality_for_postulate',
     title: 'This sum comes from the figure, not from an equation',
     lesson: 'The addition property takes an equation you already have and adds the same quantity to both sides. This line says a point lies between two others, or a ray lies inside an angle, so the whole is the sum of the pieces. That is a postulate about the figure.',
-    example: 'J is between K and L, so JK + KL = JL by adding KL to both sides of an equation ✗ → JK + KL = JL because J is between K and L',
+    example: 'K is between J and L, so JK + KL = JL by adding KL to both sides of an equation ✗ → JK + KL = JL because K is between J and L',
   },
   geo_reflexive_for_symmetric: {
     id: 'geo_reflexive_for_symmetric',
@@ -1528,8 +1528,8 @@ export const ERROR_PATTERNS: Record<ErrorPatternId, ErrorPatternInfo> = {
   geo_congruent_for_midpoint: {
     id: 'geo_congruent_for_midpoint',
     title: 'The equal lengths come from the midpoint',
-    lesson: 'Congruent segments are segments with the same length, and that definition starts after you already know the lengths match. This line is the reason the lengths match: the point is the midpoint.',
-    example: 'M is the midpoint of JK, so JM and MK are congruent segments ✗ → JM = MK because M is the midpoint',
+    lesson: 'Congruent segments are segments with the same length. That meaning turns a congruence already written in the proof into equal lengths, or equal lengths into a congruence. No line here says the pieces are congruent yet, so the equal lengths come from the midpoint itself.',
+    example: 'M is the midpoint of JK. Next line: JM = MK because congruent segments have equal lengths ✗ → JM = MK because M is the midpoint of JK',
   },
   geo_linear_for_vertical: {
     id: 'geo_linear_for_vertical',

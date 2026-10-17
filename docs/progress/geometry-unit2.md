@@ -333,3 +333,12 @@ Hash routes. Seed 1 is the base36 seed `1`.
 ## Checked
 
 `npm run typecheck`, the full Vitest suite (151 files, 2323 tests), and `vite build` passed. No browser pass: a dev server was not started. The jsdom flow tests cover a named mistake and the fix, a reload, the reason list by keyboard, a plain wrong choice, and the missing figure on an everyday statement.
+
+## Review (2026-10-17)
+
+Reviewed by Claude, with an adversarial review of the proof half by Gemini 4 (five findings, all real) and a Claude helper agent for the proof fixes.
+
+- **Logic.** "If angle ABD is congruent to angle DBC, then ray BD bisects angle ABC" was marked true; BD can point straight out of the angle. The bank now says "ray BD divides angle ABC into two congruent angles", which is the definition. Sentences name their subject once and then say "they" or "it" ("If two angles are congruent, then they are vertical angles"), through one builder, `ifThen`. The related-conditionals parts are named Converse, Inverse and Contrapositive (they were labeled by their definitions). Two if-thens that share an ending now come from two different true statements, so the tempting chained conclusion is plainly false ("If two angles are vertical angles, then they are right angles"); before, it was always a true sentence. Detachment premises state the fact ("Angle 1 and angle 2 are vertical angles"). Figures: two-angle statements show two angles, "between" shows B between A and C, the bisector figure bisects.
+- **Proofs.** Moving a negative constant across is the Addition property (it was labeled Subtraction); "x = 6" after "6 = x" is the Symmetric property, and "12 = 2x" now goes to "6 = x" (Division) and then "x = 6" (Symmetric). Inside proofs, Substitution is accepted wherever Transitive is (Pearson and others write it); in "name the property" items Transitive is still the answer. Proof skeletons that promised the substitution slip now promise reflexive-for-symmetric on a new swap-sides row. Rule cards and catalog examples: the midpoint card no longer calls "the pieces are congruent" a mistake (it is the definition), and three examples had the wrong point between ("J is between K and L, so JK + KL = JL").
+- **Figures (all units).** Point letters move off a line they would sit on; a browser pass over 158 figures at 375 px found no overlapping, clipped or line-crossing labels.
+

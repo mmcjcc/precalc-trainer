@@ -25,7 +25,8 @@ export function GeoFigure({ spec }: { spec: GeoFigureSpec }) {
     if (!p) throw new Error(`GeoFigure: no point ${id}`)
     return { x: sx(p.x), y: sy(p.y), point: p }
   }
-  const anglePlaces = placeAngleLabels(spec, at, sx, sy, h)
+  const pointSides = placePointLabels(spec, at, sx, sy, h)
+  const anglePlaces = placeAngleLabels(spec, at, sx, sy, h, pointSides)
 
   return (
     <div className="w-full max-w-full overflow-hidden">
@@ -104,7 +105,7 @@ export function GeoFigure({ spec }: { spec: GeoFigureSpec }) {
           return (
             <g key={p.id} data-geo="point">
               <circle cx={sx(p.x)} cy={sy(p.y)} r={4} fill={NAVY} />
-              <PointLabel x={sx(p.x)} y={sy(p.y)} text={p.label} side={p.labelSide ?? 'above'} />
+              <PointLabel x={sx(p.x)} y={sy(p.y)} text={p.label} side={pointSides.get(p.id) ?? p.labelSide ?? 'above'} />
             </g>
           )
         })}
@@ -319,6 +320,46 @@ function textBox(x: number, y: number, text: string, size: number, anchor: 'star
   return { l, t: y - size * 0.62, r: l + w, b: y + size * 0.62 }
 }
 
+type Side = NonNullable<GeoPoint['labelSide']>
+const SIDES: readonly Side[] = ['above', 'below', 'right', 'left', 'above-right', 'above-left', 'below-right', 'below-left']
+
+function pointLabelBox(p: GeoPoint, side: Side, sx: (x: number) => number, sy: (y: number) => number): Box {
+  const [dx, dy, anchor] = POINT_SHIFT[side]
+  return textBox(sx(p.x) + dx, sy(p.y) + dy, p.label ?? p.id, 14, anchor)
+}
+
+/**
+ * Which side of its dot each point's letter goes on. The spec's side wins unless the letter would sit
+ * on a drawn line (a point partway along a line, labeled along the line), cover another letter or dot,
+ * or leave the figure; then the first clear side is used.
+ */
+function placePointLabels(
+  spec: GeoFigureSpec,
+  at: (id: string) => { x: number; y: number },
+  sx: (x: number) => number,
+  sy: (y: number) => number,
+  h: number,
+): Map<string, Side> {
+  const strokes = drawnStrokes(spec, at, h)
+  const dots: Box[] = spec.points.map((p) => ({ l: sx(p.x) - 6, t: sy(p.y) - 6, r: sx(p.x) + 6, b: sy(p.y) + 6 }))
+  const taken: Box[] = []
+  const sides = new Map<string, Side>()
+  for (const p of spec.points) {
+    if (!p.label) continue
+    const preferred = p.labelSide ?? 'above'
+    const own = dots[spec.points.indexOf(p)]!
+    const clear = (box: Box) =>
+      box.l >= 2 && box.r <= VW - 2 && box.t >= 2 && box.b <= h - 2 &&
+      !strokes.some((s) => segmentHitsBox(s, box)) &&
+      !taken.some((t) => overlaps(t, box)) &&
+      !dots.some((d) => d !== own && overlaps(d, box))
+    const side = [preferred, ...SIDES.filter((s) => s !== preferred)].find((s) => clear(pointLabelBox(p, s, sx, sy))) ?? preferred
+    sides.set(p.id, side)
+    taken.push(pointLabelBox(p, side, sx, sy))
+  }
+  return sides
+}
+
 /**
  * Where each angle's label goes. A label starts at its usual spot inside the angle and moves out
  * along the angle's middle until it clears every label already placed (point letters first, then
@@ -330,14 +371,14 @@ function placeAngleLabels(
   sx: (x: number) => number,
   sy: (y: number) => number,
   h: number,
+  pointSides: Map<string, Side>,
 ): (LabelPlace | null)[] {
   const taken: Box[] = []
   for (const p of spec.points) {
     // The dot, and its letter.
     taken.push({ l: sx(p.x) - 6, t: sy(p.y) - 6, r: sx(p.x) + 6, b: sy(p.y) + 6 })
     if (!p.label) continue
-    const [dx, dy, anchor] = POINT_SHIFT[p.labelSide ?? 'above']
-    taken.push(textBox(sx(p.x) + dx, sy(p.y) + dy, p.label, 14, anchor))
+    taken.push(pointLabelBox(p, pointSides.get(p.id) ?? p.labelSide ?? 'above', sx, sy))
   }
   const strokes = drawnStrokes(spec, at, h)
   const shapes = (spec.angles ?? []).map((angle) => angleShape(angle, at))
