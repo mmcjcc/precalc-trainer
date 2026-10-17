@@ -10,6 +10,8 @@ import {
   LAW_CHAINS,
   STATEMENT_BANK,
   biconditionalOf,
+  factOf,
+  ifThen,
   biconditionalTruth,
   formAtoms,
   formTruth,
@@ -94,7 +96,7 @@ function identify(seed: number, entry: BankEntry, figure: GeoFigureSpec): GeoBui
   const half1 = halfNegation(entry, 1)
   const stages: StageDraft[] = [
     {
-      label: 'Parts swapped',
+      label: 'Converse',
       hint: RELATED_HINT,
       nudge: RELATED_NUDGE,
       ruleCard: UNIT2_RULE_IDS.related,
@@ -110,10 +112,10 @@ function identify(seed: number, entry: BankEntry, figure: GeoFigureSpec): GeoBui
         { id: 'half', text: half1 },
       ],
       answerId: 'converse',
-      reveal: [`The sentence that only swaps the two parts is: ${converse}`],
+      reveal: [`The converse swaps the two parts: ${converse}`],
     },
     {
-      label: 'Both parts negated',
+      label: 'Inverse',
       hint: RELATED_HINT,
       nudge: RELATED_NUDGE,
       ruleCard: UNIT2_RULE_IDS.related,
@@ -129,10 +131,10 @@ function identify(seed: number, entry: BankEntry, figure: GeoFigureSpec): GeoBui
         { id: 'half', text: half0 },
       ],
       answerId: 'inverse',
-      reveal: [`The sentence that keeps the order and negates both parts is: ${inverse}`],
+      reveal: [`The inverse keeps the order and negates both parts: ${inverse}`],
     },
     {
-      label: 'Negated and swapped',
+      label: 'Contrapositive',
       hint: RELATED_HINT,
       nudge: RELATED_NUDGE,
       ruleCard: UNIT2_RULE_IDS.contra,
@@ -153,7 +155,7 @@ function identify(seed: number, entry: BankEntry, figure: GeoFigureSpec): GeoBui
         { id: 'converse', text: converse },
       ],
       answerId: 'contra',
-      reveal: [`The sentence that negates both parts and swaps them is: ${contra}`],
+      reveal: [`The contrapositive negates both parts and swaps them: ${contra}`],
     },
   ]
   const which = (seed - 1) % 3
@@ -325,16 +327,19 @@ function exampleStage(entry: BankEntry, direction: LogicForm, iff: boolean, hold
 }
 
 function lawStage(chain: LawChain, pattern: number): { stage: StageDraft; p1: string; p2: string } {
-  const ifpq = `If ${chain.p}, then ${chain.q}.`
-  const ifqr = `If ${chain.q}, then ${chain.r}.`
-  const ifpr = `If ${chain.p}, then ${chain.r}.`
-  const ifrp = `If ${chain.r}, then ${chain.p}.`
-  const ifrq = `If ${chain.r}, then ${chain.q}.`
-  const cp = cap(chain.p)
-  const cq = cap(chain.q)
-  const cr = cap(chain.r)
-  const cnq = cap(chain.notQ)
-  const cnp = cap(chain.notP)
+  const ifpq = ifThen(chain.p, chain.q)
+  const ifqr = ifThen(chain.q, chain.r)
+  const ifpr = ifThen(chain.p, chain.r)
+  const ifrp = ifThen(chain.r, chain.p)
+  const ifqp = ifThen(chain.q, chain.p)
+  const ifpAlt = ifThen(chain.p, chain.alt)
+  const ifAltP = ifThen(chain.alt, chain.p)
+  const ifAltQ = ifThen(chain.alt, chain.q)
+  const cp = cap(factOf(chain, 'p'))
+  const cq = cap(factOf(chain, 'q'))
+  const cr = cap(factOf(chain, 'r'))
+  const cnq = cap(factOf(chain, 'notQ'))
+  const cnp = cap(factOf(chain, 'notP'))
   if (pattern === 0) {
     return {
       p1: ifpq,
@@ -344,7 +349,7 @@ function lawStage(chain: LawChain, pattern: number): { stage: StageDraft; p1: st
           { id: 'none', text: NONE },
           { id: 'affirm', text: cp, trap: 'geo_affirm_conclusion', witness: 'The second premise matches the ending. That does not let you claim the opening.' },
           { id: 'notq', text: cnq },
-          { id: 'back', text: `If ${chain.q}, then ${chain.p}.` },
+          { id: 'back', text: ifqp },
         ],
         'none',
         UNIT2_RULE_IDS.fallacy,
@@ -361,7 +366,7 @@ function lawStage(chain: LawChain, pattern: number): { stage: StageDraft; p1: st
           { id: 'none', text: NONE },
           { id: 'deny', text: cnq, trap: 'geo_deny_hypothesis', witness: 'The second premise says the opening failed. The ending can still hold.' },
           { id: 'q', text: cq },
-          { id: 'inverse', text: `If ${chain.notP}, then ${chain.notQ}.` },
+          { id: 'inverse', text: ifThen(chain.notP, chain.notQ) },
         ],
         'none',
         UNIT2_RULE_IDS.fallacy,
@@ -389,12 +394,12 @@ function lawStage(chain: LawChain, pattern: number): { stage: StageDraft; p1: st
   if (pattern === 3) {
     return {
       p1: ifpq,
-      p2: ifrq,
+      p2: ifAltQ,
       stage: oneLaw(
         [
           { id: 'none', text: NONE },
-          { id: 'bad', text: ifpr, trap: 'geo_syllogism_order', witness: 'Those two if-thens share an ending, so there is no middle term to chain.' },
-          { id: 'back', text: ifrp },
+          { id: 'bad', text: ifpAlt, trap: 'geo_syllogism_order', witness: 'Those two if-thens share an ending, so there is no middle term to chain.' },
+          { id: 'back', text: ifAltP },
           { id: 'end', text: cq },
         ],
         'none',
@@ -404,7 +409,7 @@ function lawStage(chain: LawChain, pattern: number): { stage: StageDraft; p1: st
     }
   }
   // "So, …" so the conclusion is not a copy of the words already inside the if-then.
-  const follows = `So, ${chain.q}.`
+  const follows = `So, ${factOf(chain, 'q')}.`
   return {
     p1: ifpq,
     p2: cp,
@@ -413,7 +418,7 @@ function lawStage(chain: LawChain, pattern: number): { stage: StageDraft; p1: st
         { id: 'end', text: follows },
         { id: 'none', text: NONE, trap: 'geo_missed_detachment', witness: 'The second premise is the opening of the if-then, so the ending does follow.' },
         { id: 'notq', text: cnq },
-        { id: 'back', text: `If ${chain.q}, then ${chain.p}.` },
+        { id: 'back', text: ifqp },
       ],
       'end',
       UNIT2_RULE_IDS.detachment,

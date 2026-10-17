@@ -91,31 +91,31 @@ export const PROOF_RULES: RuleCard[] = [
   {
     id: UNIT2_RULE_IDS.equality,
     title: 'Equality moves',
-    body: 'Swapping the two sides of an equality is not the same as saying a quantity equals itself. Chaining two equalities that share a middle quantity is not the same as replacing one expression inside a line you already have. JK = LM can be rewritten with the sides the other way. If JK = LM and LM = 17, then JK = 17 because both equal the middle, not because one expression was dropped into a different line.',
-    example: 'JK = LM, so JK = JK ✗ → LM = JK. x = 4 is a different problem and is not this line.',
+    body: 'Swapping the two sides of an equality is not the same as saying a quantity equals itself: JK = LM can be rewritten with the sides the other way. Chaining two equalities that share a middle quantity is its own move: if JK = LM and LM = 17, then JK = 17 because both equal the middle. When you are asked to name the move for a single chain like that, name the chaining property. Inside a longer proof, many books call that same step substitution, and either name is accepted there.',
+    example: 'JK = LM, so JK = JK ✗ → LM = JK',
   },
   {
     id: UNIT2_RULE_IDS.congruence,
     title: 'Congruence moves',
     body: 'Congruence swaps and chains the same way equality does. Writing an angle congruent to itself is not the same as reversing a congruence you already had. A chain of two congruences uses the middle angle twice.',
-    example: 'Angle 8 is congruent to an angle of 17 degrees, so angle 8 is congruent to itself ✗ → the 17 degree angle is congruent to angle 8',
+    example: 'Angle JKL is congruent to angle 8, so angle 8 is congruent to itself ✗ → angle 8 is congruent to angle JKL',
   },
   {
     id: UNIT2_RULE_IDS.definitions,
     title: 'Definitions say what the word means',
-    body: 'A midpoint is the point that cuts a segment into two pieces of the same length. Matching lengths are what you already know before you call the pieces congruent. A right angle measures 90 degrees, and perpendicular lines are lines that meet in a right angle. M the midpoint of JK means JM and MK have the same length, not merely that they add to JK.',
-    example: 'M is the midpoint of JK, so the pieces are called congruent ✗ → JM = MK. x = 4 is not this line.',
+    body: 'A midpoint is the point that divides a segment into two congruent segments, so the two pieces also have the same length. Until a line says the pieces are congruent, the midpoint itself is the reason they are equal. Congruent segments are segments with equal lengths: that meaning turns a congruence already written in the proof into equal lengths, or equal lengths into a congruence. A right angle measures 90 degrees, and perpendicular lines meet to form right angles. M the midpoint of JK means JM and MK match, not merely that they add to JK.',
+    example: 'M is the midpoint of JK. Next line: JM = MK because congruent segments have equal lengths ✗ → JM = MK because M is the midpoint of JK',
   },
   {
     id: UNIT2_RULE_IDS.postulates,
     title: 'Postulates about pieces',
     body: 'If a point lies between the endpoints of a segment, the two pieces add to the whole segment. If a ray lies inside an angle, the two pieces add to the whole angle. Two angles that sit side by side and make a straight line add to 180. Those facts come from the figure. They are not the move that adds the same number to both sides of an equation, and the pieces are not automatically the same length.',
-    example: 'J is between K and L, so JK = KL ✗ → JK + KL = JL. Angle 8 beside another angle on a straight line adds with it to 180, and 17 is not that sum.',
+    example: 'K is between J and L, so JK = KL ✗ → JK + KL = JL',
   },
   {
     id: UNIT2_RULE_IDS.theorems,
     title: 'Theorems you may quote',
     body: 'Opposite angles made by two crossing lines match each other. Two angles that are supplements of the same angle match each other, and the same idea works for complements. Every right angle matches every other right angle. Opposite angles are not the pair that makes a straight line.',
-    example: 'Angle 8 and the angle across the crossing are called a straight pair ✗ → those opposite angles match. 17 degrees is not the measure used here.',
+    example: 'Angle 8 and the angle across the crossing are called a straight pair ✗ → those opposite angles match',
   },
 ]

@@ -44,6 +44,11 @@ interface ProofRow {
   statement: string
   reason: ReasonId
   pick: 'reason' | 'statement'
+  /**
+   * Other reasons a textbook accepts for this row. Many books (Pearson among them) write substitution
+   * where others write transitive, so inside a proof both grade correct. A name-the-property item has none.
+   */
+  also?: ReasonId[]
   reasonNote?: string
   choices?: Choice[]
 }
@@ -189,15 +194,22 @@ const SKELETONS: readonly ((letters: Letters, salt: number) => Built)[] = [
   perpendicular,
 ]
 
+/**
+ * The two length givens share one row, so the textbook ending fits in eight rows: "12 = 2x" by moving
+ * the constant, "6 = x" by division, then "x = 6" by the symmetric property. When the x terms differ by
+ * one there is nothing to divide, and the row after the constant moves is already "6 = x".
+ */
 function midpointAlgebra(L: Letters, salt: number): Built {
   const p = MID[salt % MID.length]!
   const am = formatLin(lin(p.a, p.b))
   const mb = formatLin(lin(p.c, p.d))
   const gap = p.c - p.a
   if (p.a * p.x + p.b !== p.len || p.c * p.x + p.d !== p.len) throw new Error('midpoint parameters do not meet')
+  if (p.a <= 0 || gap <= 0) throw new Error('midpoint: the x term that moves must be positive, and the larger one must stay')
   if (p.b !== gap * p.x + p.d) throw new Error('midpoint subtraction is not the next line')
   if (p.b - p.d !== gap * p.x) throw new Error('midpoint shift is not the next line')
   const chosen = swapsFor('def-midpoint')[salt % 2]!
+  const divide = gap === 1 ? [] : [reason(`${p.x} = x`, 'eq-div')]
   return {
     id: 'midpoint-algebra',
     prompt: `M is the midpoint of ${L.a}${L.b}. ${L.a}M = ${am}. M${L.b} = ${mb}. Fill in each row of the proof.`,
@@ -205,15 +217,15 @@ function midpointAlgebra(L: Letters, salt: number): Built {
     lengths: [p.len, p.len],
     rows: [
       reason(`M is the midpoint of ${L.a}${L.b}`, 'given'),
-      reason(`${L.a}M = ${am}`, 'given'),
-      reason(`M${L.b} = ${mb}`, 'given'),
+      reason(`${L.a}M = ${am} and M${L.b} = ${mb}`, 'given'),
       reason(`${L.a}M = M${L.b}`, 'def-midpoint'),
       reason(`${am} = ${mb}`, 'eq-subst'),
       reason(`${showNum(p.b)} = ${term(gap, p.d)}`, 'eq-sub'),
-      reason(`${showNum(p.b - p.d)} = ${coeff(gap)}`, 'eq-sub'),
-      statementRow(`x = ${p.x}`, 'eq-div', 'Both sides of the previous line were divided by the same nonzero number.', xChoices(p.x, L)),
+      reason(`${showNum(p.b - p.d)} = ${coeff(gap)}`, moveConstant(p.d)),
+      ...divide,
+      statementRow(`x = ${p.x}`, 'eq-sym', 'The two sides of the previous line were swapped.', xChoices(p.x, L)),
     ],
-    trapIndex: 3,
+    trapIndex: 2,
     trap: chosen.mistake,
     trapAnswer: chosen.picked,
   }
@@ -236,7 +248,7 @@ function segOverlap(L: Letters, salt: number): Built {
       reason(`${ab} + ${bc} = ${ac}`, 'post-seg-add'),
       reason(`${cd} + ${bc} = ${bd}`, 'post-seg-add'),
       reason(`${ab} + ${bc} = ${bd}`, 'eq-subst'),
-      statementRow(`${ac} = ${bd}`, 'eq-trans', 'The two sums were each shown equal to the same total, so they equal each other.', [
+      statementRow(`${ac} = ${bd}`, 'eq-trans', 'The two totals were each shown equal to the same sum, so they equal each other.', [
         { id: 'right', text: `${ac} = ${bd}` },
         { id: 'ab-bd', text: `${ab} = ${bd}` },
         { id: 'ac-cd', text: `${ac} = ${cd}` },
@@ -340,8 +352,12 @@ function congComplements(L: Letters, _salt: number): Built {
   return samePartner(L, 'cong-complements', 'complementary', '90', 'def-comp')
 }
 
+/**
+ * The textbook-strict chain: the second sum is turned around first, so the two equalities share the
+ * total in the middle. Picking the reflexive property for that turn is the promised slip.
+ */
 function samePartner(L: Letters, id: string, word: string, total: string, definition: ReasonId): Built {
-  const chosen = swapsFor('eq-trans')[0]!
+  const chosen = swapsFor('eq-sym')[0]!
   return {
     id,
     prompt: `Angle 1 and angle 2 are ${word}, and angle 3 and angle 2 are ${word}. Fill in the proof.`,
@@ -351,7 +367,8 @@ function samePartner(L: Letters, id: string, word: string, total: string, defini
       reason(`Angle 3 and angle 2 are ${word}`, 'given'),
       reason(`The measures of angle 1 and angle 2 add to ${total}`, definition),
       reason(`The measures of angle 3 and angle 2 add to ${total}`, definition),
-      reason('The measure of angle 1 plus the measure of angle 2 equals the measure of angle 3 plus the measure of angle 2', 'eq-trans'),
+      reason(`${total} equals the measure of angle 3 plus the measure of angle 2`, 'eq-sym'),
+      transitive('The measure of angle 1 plus the measure of angle 2 equals the measure of angle 3 plus the measure of angle 2'),
       reason('Angle 1 and angle 3 have the same measure', 'eq-sub'),
       statementRow('Angle 1 is congruent to angle 3', 'def-cong-ang', 'Same measure is what this word about angles means.', [
         { id: 'right', text: 'Angle 1 is congruent to angle 3' },
@@ -366,8 +383,9 @@ function samePartner(L: Letters, id: string, word: string, total: string, defini
   }
 }
 
+/** The strict chain again: 90 = m∠2 is written out so the two equalities share 90 in the middle. */
 function rightAngles(L: Letters, _salt: number): Built {
-  const chosen = swapsFor('eq-trans')[0]!
+  const chosen = swapsFor('eq-sym')[0]!
   return {
     id: 'right-angles',
     prompt: 'Angle 1 is a right angle and angle 2 is a right angle. Fill in the proof.',
@@ -378,7 +396,8 @@ function rightAngles(L: Letters, _salt: number): Built {
       reason('Angle 2 is a right angle', 'given'),
       reason('The measure of angle 1 is 90 degrees', 'def-right'),
       reason('The measure of angle 2 is 90 degrees', 'def-right'),
-      reason('Angle 1 and angle 2 have the same measure', 'eq-trans'),
+      reason('90 degrees equals the measure of angle 2', 'eq-sym'),
+      transitive('Angle 1 and angle 2 have the same measure'),
       statementRow('Angle 1 is congruent to angle 2', 'def-cong-ang', 'Same measure is what this word about angles means.', [
         { id: 'right', text: 'Angle 1 is congruent to angle 2' },
         { id: 'sum', text: 'The measures of angle 1 and angle 2 add to 180' },
@@ -445,12 +464,11 @@ function segmentBisector(L: Letters, salt: number): Built {
   }
 }
 
-function transitiveSegments(L: Letters, salt: number): Built {
+/** Substitution is accepted on the chain row, so the promised slip is always the reflexive pick on the turn-around. */
+function transitiveSegments(L: Letters, _salt: number): Built {
   const ab = seg(L.a, L.b)
   const cd = seg(L.c, L.d)
   const ef = seg(L.e, L.f)
-  const subst = swapsFor('eq-trans')[0]!
-  const useReflexive = salt % 2 === 1
   return {
     id: 'transitive-segments',
     prompt: `${ab} = ${cd} and ${cd} = ${ef}. Fill in the proof.`,
@@ -458,7 +476,7 @@ function transitiveSegments(L: Letters, salt: number): Built {
     rows: [
       reason(`${ab} = ${cd}`, 'given'),
       reason(`${cd} = ${ef}`, 'given'),
-      reason(`${ab} = ${ef}`, 'eq-trans'),
+      transitive(`${ab} = ${ef}`),
       statementRow(`${ef} = ${ab}`, 'eq-sym', 'The previous equality can be written with the two sides the other way.', [
         { id: 'right', text: `${ef} = ${ab}` },
         {
@@ -471,9 +489,9 @@ function transitiveSegments(L: Letters, salt: number): Built {
         { id: 'ab', text: `${ab} = ${cd}` },
       ]),
     ],
-    trapIndex: useReflexive ? 3 : 2,
-    trap: useReflexive ? 'geo_reflexive_for_symmetric' : subst.mistake,
-    trapAnswer: useReflexive ? 'self' : subst.picked,
+    trapIndex: 3,
+    trap: 'geo_reflexive_for_symmetric',
+    trapAnswer: 'self',
   }
 }
 
@@ -544,6 +562,10 @@ function algebraDist(seed: number): Built {
   }
 }
 
+/**
+ * Both givens end in the same total. The second is turned around so the two equalities share the total
+ * in the middle, then they chain. Picking the reflexive property for that turn is the promised slip.
+ */
 function algebraChain(seed: number): Built {
   const k = [3, 5, 6, 7, 8, 9, 10, 11, 12][(seed - 1) % 9]!
   const a = 2 + (seed % 3)
@@ -552,28 +574,49 @@ function algebraChain(seed: number): Built {
   const total = a * k + b
   const d = total - c * k
   if (c * k + d !== total) throw new Error('chain totals disagree')
-  const chosen = swapsFor('eq-trans')[0]!
+  const chosen = swapsFor('eq-sym')[0]!
   const left = formatLin(lin(a, b))
   const right = formatLin(lin(c, d))
   const gap = c - a
-  const lines = [left + ' = ' + showNum(total), showNum(total) + ' = ' + right, `${left} = ${right}`, `${showNum(b)} = ${term(gap, d)}`, `${showNum(b - d)} = ${coeff(gap)}`]
-  const reasons: ReasonId[] = ['given', 'given', 'eq-trans', 'eq-sub', 'eq-sub']
+  if (gap <= 0) throw new Error('chain: the larger x term must stay')
   if (b !== gap * k + d) throw new Error('chain subtraction missed the solution')
   if (b - d !== gap * k) throw new Error('chain shift missed the solution')
+  const rows = [
+    reason(`${left} = ${showNum(total)}`, 'given'),
+    reason(`${right} = ${showNum(total)}`, 'given'),
+    reason(`${showNum(total)} = ${right}`, 'eq-sym'),
+    transitive(`${left} = ${right}`),
+    reason(`${showNum(b)} = ${term(gap, d)}`, 'eq-sub'),
+    reason(`${showNum(b - d)} = ${coeff(gap)}`, moveConstant(d)),
+  ]
   return {
     id: 'chain',
     prompt: 'The first two lines are starting equations. Pick the reason for each line.',
     figure: noFigure('No diagram. The lines of the proof are the problem.'),
-    lines,
-    rows: lines.map((line, index) => reason(line, reasons[index]!)),
+    lines: rows.map((row) => row.statement),
+    rows,
     trapIndex: 2,
     trap: chosen.mistake,
     trapAnswer: chosen.picked,
   }
 }
 
-function reason(statement: string, why: ReasonId): ProofRow {
-  return { pick: 'reason', statement, reason: why }
+function reason(statement: string, why: ReasonId, also?: ReasonId[]): ProofRow {
+  return also ? { pick: 'reason', statement, reason: why, also } : { pick: 'reason', statement, reason: why }
+}
+
+/** A chain of two equalities. Many books write substitution for this step, so a proof accepts both. */
+function transitive(statement: string): ProofRow {
+  return reason(statement, 'eq-trans', ['eq-subst'])
+}
+
+/**
+ * The reason for moving a constant off the x side. A negative constant leaves by adding its size to both
+ * sides; a positive one by subtracting it. A zero constant would leave the line unchanged, so it never ships.
+ */
+function moveConstant(constant: number): ReasonId {
+  if (constant === 0) throw new Error('a zero constant would repeat the line before it')
+  return constant < 0 ? 'eq-add' : 'eq-sub'
 }
 
 function statementRow(statement: string, why: ReasonId, reasonNote: string, choices: Choice[]): ProofRow {
@@ -596,15 +639,19 @@ function xChoices(x: number, L: Letters): Choice[] {
 
 function finish(question: GeometryAnswer['question'], title: string, instructions: string, built: Built, seed: number): GeoBuilt {
   if (built.rows.length === 0 || built.rows.length > 8) throw new Error(`${built.id}: ${built.rows.length} rows`)
+  for (const row of built.rows) checkAlso(question, built.id, row)
   const displays: string[] = []
   const stages = built.rows.map((row, index) => {
-    const reveal = [`Row ${index + 1} says “${row.statement}”, supported by ${reasonLabel(row.reason)}.`]
+    const reveal = [revealLine(index, row)]
     if (row.pick === 'reason') {
-      const traps = swapsFor(row.reason).map((swap) => ({
-        id: swap.mistake,
-        text: swap.picked,
-        witness: reasonWitness(swap.mistake, swap.picked),
-      }))
+      // A pick the row accepts is not a slip there, even when the swap table names it elsewhere.
+      const traps = swapsFor(row.reason)
+        .filter((swap) => !row.also?.includes(swap.picked))
+        .map((swap) => ({
+          id: swap.mistake,
+          text: swap.picked,
+          witness: reasonWitness(swap.mistake, swap.picked),
+        }))
       displays.push(reasonLabel(row.reason))
       return {
         id: stageIdAt(index),
@@ -614,6 +661,7 @@ function finish(question: GeometryAnswer['question'], title: string, instruction
         nudge: REASON_NUDGE,
         note: `Statement: ${row.statement}`,
         answerText: row.reason,
+        ...(row.also?.length ? { accept: [...row.also] } : {}),
         ruleCard: cardFor(row.reason),
         reveal,
         traps,
@@ -643,6 +691,7 @@ function finish(question: GeometryAnswer['question'], title: string, instruction
   const trapStage = stages[built.trapIndex]
   if (!trapStage) throw new Error(`${built.id}: trap row is missing`)
   if (trapStage.answerText === built.trapAnswer) throw new Error(`${built.id}: the trap is the right answer`)
+  if (built.rows[built.trapIndex]!.also?.includes(built.trapAnswer as ReasonId)) throw new Error(`${built.id}: the trap is an accepted answer`)
   const answer: GeometryAnswer = {
     type: 'geometry',
     question,
@@ -671,6 +720,30 @@ function finish(question: GeometryAnswer['question'], title: string, instruction
     title,
     instructions,
     params: { skeleton: built.id, question },
+  }
+}
+
+/** The worked line for a row. A row that accepts another reason says so, so the answer key never contradicts her pick. */
+function revealLine(index: number, row: ProofRow): string {
+  const line = `Row ${index + 1} says “${row.statement}”, supported by ${reasonLabel(row.reason)}.`
+  if (!row.also?.length) return line
+  const others = row.also.map((id) => reasonLabel(id)).join(' or ')
+  return `${line} Many books write ${others} for this step, so that is accepted too.`
+}
+
+/**
+ * Alternate reasons belong to proofs only. On "name the property" the answer key wants the one name
+ * (Transitive, with substitution the named slip). Inside a two-column or algebraic proof, every chain row
+ * also takes substitution.
+ */
+function checkAlso(question: GeometryAnswer['question'], id: string, row: ProofRow): void {
+  if (row.also?.length) {
+    if (question === 'reason') throw new Error(`${id}: a name-the-property item takes exactly one reason`)
+    if (row.pick !== 'reason') throw new Error(`${id}: only a row where she picks the reason can accept another reason`)
+    if (row.also.includes(row.reason)) throw new Error(`${id}: a row lists its own reason as an alternate`)
+  }
+  if (question !== 'reason' && row.pick === 'reason' && row.reason === 'eq-trans' && !row.also?.includes('eq-subst')) {
+    throw new Error(`${id}: a chain row in a proof must also accept substitution`)
   }
 }
 

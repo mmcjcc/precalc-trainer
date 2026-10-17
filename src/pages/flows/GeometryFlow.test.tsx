@@ -213,7 +213,7 @@ describe('a mistake card’s example is never this part’s answer', () => {
       expect(await screen.findByText(pattern.title, { exact: false })).toBeTruthy()
       // The example is shown, and nothing on the page states x = 6.
       expect(document.body.textContent).toContain('35/6')
-      expect(document.body.textContent).not.toMatch(/xs*=s*6(?![d/])/)
+      expect(document.body.textContent).not.toMatch(/x\s*=\s*6(?![\d/])/)
     },
     FLOW_TIMEOUT,
   )

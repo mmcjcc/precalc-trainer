@@ -218,3 +218,37 @@ describe('GeometryFlow unit 2 choices and reasons', () => {
     FLOW_TIMEOUT,
   )
 })
+
+describe('GeometryFlow unit 2 proof rows that accept two reasons', () => {
+  it(
+    'a chain row in a two-column proof takes substitution as correct, and the worked answer names both',
+    () => {
+      const { p, a, path } = load('geoProof', 'gp.twocolumn', 8)
+      expect(p.params.skeleton).toBe('right-angles')
+      const at = a.stages.findIndex((stage) => stage.kind === 'reason' && stage.answerText === 'eq-trans')
+      expect(at).toBeGreaterThan(0)
+      expect(a.stages[at]!.accept).toEqual(['eq-subst'])
+      renderAt(path)
+      const right = canonicalEntries(a)
+      for (let i = 0; i < a.stages.length; i++) {
+        const stage = a.stages[i]!
+        choose(stage, i === at ? 'eq-subst' : (right[GEO_KEYS[stage.id]] ?? ''))
+        click(`Check ${stage.label}`)
+        expect(screen.queryByRole('alert')).toBeNull()
+        expect(finals().at(-1)).toMatchObject({ correct: true, via: 'text' })
+        expect(finals().at(-1)?.pattern).toBeUndefined()
+      }
+      expect(finals()).toHaveLength(a.stages.length)
+      expect(doneEvent()).toMatchObject({ finalCorrect: true, revealed: 0 })
+      expect(screen.getByRole('heading', { name: /Problem complete/ })).toBeTruthy()
+      // Her own pick stays on the checked row, and the worked line says both names are fine.
+      const row = screen.getByRole('region', { name: `Part ${at + 1} of ${a.stages.length}: ${a.stages[at]!.label}` })
+      expect(within(row).getByText(reasonLabel('eq-subst'))).toBeTruthy()
+      const worked = a.stages[at]!.reveal[0]!
+      expect(worked).toContain(reasonLabel('eq-trans'))
+      expect(worked).toContain(reasonLabel('eq-subst'))
+      expect(screen.getByText(worked)).toBeTruthy()
+    },
+    FLOW_TIMEOUT,
+  )
+})

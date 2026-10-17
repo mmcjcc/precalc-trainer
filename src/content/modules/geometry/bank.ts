@@ -19,7 +19,17 @@ export interface Situation {
   q: boolean
 }
 
-export type LogicScene = 'vertical' | 'linear' | 'adjacent' | 'midpoint' | 'ray' | 'collinear' | 'angles' | 'lines' | 'life'
+export type LogicScene =
+  | 'vertical'
+  | 'linear'
+  | 'adjacent'
+  | 'midpoint'
+  | 'ray'
+  | 'collinear'
+  | 'angles'
+  | 'twoAngles'
+  | 'lines'
+  | 'life'
 
 export interface BankEntry {
   id: string
@@ -51,6 +61,13 @@ export interface LawChain {
   notP: string
   notQ: string
   notR: string
+  /**
+   * Another true opening with the same ending q ("If alt, then q"). Two if-thens that share an ending
+   * prove nothing, and "If p, then alt" is plainly false, so the tempting conclusion is not secretly true.
+   */
+  alt: string
+  /** The facts as a premise states them ("Angle 1 and angle 2 are vertical angles"), when not p, q, r themselves. */
+  facts?: { p: string; q: string; r: string; notP: string; notQ: string }
   scene: LogicScene
 }
 
@@ -124,7 +141,7 @@ export const STATEMENT_BANK: readonly BankEntry[] = [
       sit('right-tt', 'Angle 1 and angle 2 both measure 90 degrees.', true, true),
       sit('right-ff', 'Angle 1 measures 30 degrees and angle 2 measures 60 degrees.', false, false),
     ],
-    scene: 'angles',
+    scene: 'twoAngles',
   },
   {
     id: 'midpoint-equal-parts',
@@ -181,7 +198,7 @@ export const STATEMENT_BANK: readonly BankEntry[] = [
       sit('comp-tt', 'Angle 1 measures 30 degrees and angle 2 measures 60 degrees.', true, true),
       sit('comp-ff', 'Angle 1 measures 30 degrees and angle 2 measures 40 degrees.', false, false),
     ],
-    scene: 'angles',
+    scene: 'twoAngles',
   },
   {
     id: 'supplementary-sum',
@@ -199,7 +216,7 @@ export const STATEMENT_BANK: readonly BankEntry[] = [
       sit('supp-tt', 'Angle 1 measures 40 degrees and angle 2 measures 140 degrees.', true, true),
       sit('supp-ff', 'Angle 1 measures 40 degrees and angle 2 measures 50 degrees.', false, false),
     ],
-    scene: 'angles',
+    scene: 'twoAngles',
   },
   {
     id: 'right-measure',
@@ -253,7 +270,7 @@ export const STATEMENT_BANK: readonly BankEntry[] = [
       sit('ca-tt', 'Angle 1 and angle 2 are congruent, and both measure 40 degrees.', true, true),
       sit('ca-ff', 'Angle 1 measures 30 degrees and angle 2 measures 50 degrees.', false, false),
     ],
-    scene: 'angles',
+    scene: 'twoAngles',
   },
   {
     id: 'congruent-segments',
@@ -271,7 +288,7 @@ export const STATEMENT_BANK: readonly BankEntry[] = [
       sit('cs-tt', 'Segment AB is congruent to segment CD, and both are 5 units long.', true, true),
       sit('cs-ff', 'Segment AB is 5 units long and segment CD is 8 units long.', false, false),
     ],
-    scene: 'collinear',
+    scene: 'midpoint',
   },
   {
     id: 'acute-not-obtuse',
@@ -298,7 +315,7 @@ export const STATEMENT_BANK: readonly BankEntry[] = [
     id: 'complementary-acute',
     title: 'Complementary angles are acute',
     p: 'two angles are complementary',
-    q: 'each of the two angles is acute',
+    q: 'the two angles are both acute',
     notP: 'two angles are not complementary',
     notQ: 'the two angles are not both acute',
     conditional: true,
@@ -313,7 +330,7 @@ export const STATEMENT_BANK: readonly BankEntry[] = [
       sit('ca2-tt', 'Angle 1 measures 30 degrees and angle 2 measures 60 degrees.', true, true),
       sit('ca2-ff', 'Angle 1 measures 100 degrees and angle 2 measures 80 degrees.', false, false),
     ],
-    scene: 'angles',
+    scene: 'twoAngles',
   },
   {
     id: 'collinear-between',
@@ -337,9 +354,11 @@ export const STATEMENT_BANK: readonly BankEntry[] = [
     id: 'bisector-congruent',
     title: 'An angle bisector makes congruent angles',
     p: 'ray BD bisects angle ABC',
-    q: 'angle ABD is congruent to angle DBC',
+    // "Divides" puts BD inside the angle. "Angle ABD is congruent to angle DBC" alone has a false
+    // converse: BD can point straight out of the angle and still make two congruent angles.
+    q: 'ray BD divides angle ABC into two congruent angles',
     notP: 'ray BD does not bisect angle ABC',
-    notQ: 'angle ABD is not congruent to angle DBC',
+    notQ: 'ray BD does not divide angle ABC into two congruent angles',
     conditional: true,
     converse: true,
     inverse: true,
@@ -433,7 +452,7 @@ export const STATEMENT_BANK: readonly BankEntry[] = [
       sit('cmr-tt', 'Angle 1 and angle 2 both measure 90 degrees.', true, true),
       sit('cmr-ff', 'Angle 1 measures 30 degrees and angle 2 measures 50 degrees.', false, false),
     ],
-    scene: 'angles',
+    scene: 'twoAngles',
   },
   {
     id: 'complementary-means-supplementary',
@@ -455,7 +474,7 @@ export const STATEMENT_BANK: readonly BankEntry[] = [
     situations: [
       sit('cms-ff', 'Angle 1 measures 20 degrees and angle 2 measures 30 degrees.', false, false),
     ],
-    scene: 'angles',
+    scene: 'twoAngles',
   },
 ]
 
@@ -469,6 +488,14 @@ export const LAW_CHAINS: readonly LawChain[] = [
     notP: 'two angles are not vertical angles',
     notQ: 'the two angles are not congruent',
     notR: 'the two angles do not have the same measure',
+    alt: 'two angles are right angles',
+    facts: {
+      p: 'angle 1 and angle 2 are vertical angles',
+      q: 'angle 1 and angle 2 are congruent',
+      r: 'angle 1 and angle 2 have the same measure',
+      notP: 'angle 1 and angle 2 are not vertical angles',
+      notQ: 'angle 1 and angle 2 are not congruent',
+    },
     scene: 'vertical',
   },
   {
@@ -479,6 +506,14 @@ export const LAW_CHAINS: readonly LawChain[] = [
     notP: 'two angles do not form a linear pair',
     notQ: 'the two angles are not supplementary',
     notR: 'the measures of the two angles do not add to 180 degrees',
+    alt: 'two angles are right angles',
+    facts: {
+      p: 'angle 1 and angle 2 form a linear pair',
+      q: 'angle 1 and angle 2 are supplementary',
+      r: 'the measures of angle 1 and angle 2 add to 180 degrees',
+      notP: 'angle 1 and angle 2 do not form a linear pair',
+      notQ: 'angle 1 and angle 2 are not supplementary',
+    },
     scene: 'linear',
   },
   {
@@ -489,6 +524,7 @@ export const LAW_CHAINS: readonly LawChain[] = [
     notP: 'M is not the midpoint of AB',
     notQ: 'AM does not equal MB',
     notR: 'segment AM is not congruent to segment MB',
+    alt: 'AM and MB are each 5 units long',
     scene: 'midpoint',
   },
   {
@@ -499,6 +535,7 @@ export const LAW_CHAINS: readonly LawChain[] = [
     notP: 'ray BD does not bisect angle ABC',
     notQ: 'angle ABD is not congruent to angle DBC',
     notR: 'angle ABD and angle DBC do not have the same measure',
+    alt: 'angle ABD and angle DBC are both right angles',
     scene: 'ray',
   },
   {
@@ -509,6 +546,7 @@ export const LAW_CHAINS: readonly LawChain[] = [
     notP: 'it is not Saturday',
     notQ: 'there is school',
     notR: 'the school bell rings',
+    alt: 'it is Sunday',
     scene: 'life',
   },
   {
@@ -519,31 +557,71 @@ export const LAW_CHAINS: readonly LawChain[] = [
     notP: 'it is not raining',
     notQ: 'the ground is dry',
     notR: 'the sidewalk is not dark',
+    alt: 'the sprinkler is on',
     scene: 'life',
   },
 ]
 
+/** A premise's fact as the problem states it: about angle 1 and angle 2 when the chain has them. */
+export function factOf(chain: LawChain, key: 'p' | 'q' | 'r' | 'notP' | 'notQ'): string {
+  return chain.facts?.[key] ?? chain[key]
+}
+
+/**
+ * The shared subject of a statement, in the forms the bank writes it. A sentence names it once ("two
+ * angles") and then says "they", the way a textbook writes "If two angles are congruent, then they
+ * are vertical angles."
+ */
+const SUBJECTS: readonly { forms: readonly string[]; first: string; pronoun: string; noun: string; possessive?: [string, string] }[] = [
+  { forms: ['the two angles', 'two angles'], first: 'two angles', pronoun: 'they', noun: 'the angles', possessive: ['the measures of the two angles', 'their measures'] },
+  { forms: ['the two lines', 'two lines'], first: 'two lines', pronoun: 'they', noun: 'the lines' },
+  { forms: ['the two segments', 'two segments'], first: 'two segments', pronoun: 'they', noun: 'the segments' },
+  { forms: ['the angle', 'an angle'], first: 'an angle', pronoun: 'it', noun: 'the angle' },
+]
+
+/** "If hyp, then conc." with the subject named once and then referred back to. */
+export function ifThen(hyp: string, conc: string): string {
+  const [h, c] = sharedSubject(hyp, conc)
+  return `If ${h}, then ${c}.`
+}
+
+function sharedSubject(first: string, second: string): [string, string] {
+  for (const subject of SUBJECTS) {
+    const lead = subject.forms.find((form) => first.startsWith(`${form} `))
+    const inner = lead ? undefined : subject.forms.find((form) => form.startsWith('the ') && first.includes(` ${form} `))
+    if (!lead && !inner) continue
+    const opening = lead ? subject.first + first.slice(lead.length) : first.replace(` ${inner} `, ` ${subject.first} `)
+    const again = subject.forms.find((form) => second.startsWith(`${form} `))
+    if (again) return [opening, (lead ? subject.pronoun : subject.noun) + second.slice(again.length)]
+    if (lead && subject.possessive && second.startsWith(subject.possessive[0])) {
+      return [opening, subject.possessive[1] + second.slice(subject.possessive[0].length)]
+    }
+    return [opening, second]
+  }
+  return [first, second]
+}
+
 export function statementOf(entry: BankEntry, form: LogicForm): string {
   switch (form) {
     case 'conditional':
-      return `If ${entry.p}, then ${entry.q}.`
+      return ifThen(entry.p, entry.q)
     case 'converse':
-      return `If ${entry.q}, then ${entry.p}.`
+      return ifThen(entry.q, entry.p)
     case 'inverse':
-      return `If ${entry.notP}, then ${entry.notQ}.`
+      return ifThen(entry.notP, entry.notQ)
     case 'contrapositive':
-      return `If ${entry.notQ}, then ${entry.notP}.`
+      return ifThen(entry.notQ, entry.notP)
   }
 }
 
 export function biconditionalOf(entry: BankEntry): string {
-  const head = entry.p.charAt(0).toUpperCase() + entry.p.slice(1)
-  return `${head} if and only if ${entry.q}.`
+  const [p, q] = sharedSubject(entry.p, entry.q)
+  return `${p.charAt(0).toUpperCase() + p.slice(1)} if and only if ${q}.`
 }
 
 /** A contrapositive attempt that negates only one part. */
 export function halfNegation(entry: BankEntry, which: 0 | 1): string {
-  return which === 0 ? `If ${entry.notQ}, then ${entry.p}.` : `If ${entry.notP}, then ${entry.q}.`
+  return which === 0 ? ifThen(entry.notQ, entry.p) : ifThen(entry.notP, entry.q)
 }
 
 /** Hypothesis and conclusion of a related form, in terms of the original p and q. */
@@ -688,7 +766,7 @@ export function sceneFigure(scene: LogicScene, aria: string): GeoFigureSpec {
       ],
     }
   }
-  if (scene === 'midpoint' || scene === 'collinear') {
+  if (scene === 'midpoint') {
     return {
       ariaLabel: aria,
       points: [
@@ -702,14 +780,54 @@ export function sceneFigure(scene: LogicScene, aria: string): GeoFigureSpec {
       ],
     }
   }
+  if (scene === 'collinear') {
+    // B between A and C, the order the betweenness statements name.
+    return {
+      ariaLabel: aria,
+      points: [
+        pt('A', 0, 0, 'A', 'below'),
+        pt('B', 2.2, 0, 'B', 'below'),
+        pt('C', 5, 0, 'C', 'below'),
+      ],
+      segments: [
+        { from: 'A', to: 'B' },
+        { from: 'B', to: 'C' },
+      ],
+    }
+  }
+  if (scene === 'twoAngles') {
+    // Two separate angles, 1 and 2, for statements about a pair of angles.
+    return {
+      ariaLabel: aria,
+      points: [
+        pt('B', 0, 0, 'B', 'below-left'),
+        pt('A', 2.4, 0, 'A', 'right'),
+        pt('C', 1.1, 1.9, 'C', 'above'),
+        pt('E', 4, 0, 'E', 'below-left'),
+        pt('D', 6.4, 0, 'D', 'right'),
+        pt('F', 5.4, 1.7, 'F', 'above'),
+      ],
+      segments: [
+        { from: 'B', to: 'A' },
+        { from: 'B', to: 'C' },
+        { from: 'E', to: 'D' },
+        { from: 'E', to: 'F' },
+      ],
+      angles: [
+        { vertex: 'B', from: 'A', to: 'C', label: '1' },
+        { vertex: 'E', from: 'D', to: 'F', label: '2' },
+      ],
+    }
+  }
   if (scene === 'ray') {
+    // D on the bisector of angle ABC, with matching arcs.
     return {
       ariaLabel: aria,
       points: [
         pt('A', -2.4, 0.2, 'A', 'left'),
         pt('B', 0, 0, 'B', 'below'),
         pt('C', 2.6, 0.4, 'C', 'right'),
-        pt('D', 0.4, 2.4, 'D', 'above'),
+        pt('D', -0.08, 2.4, 'D', 'above'),
       ],
       rays: [
         { from: 'B', through: 'A' },
@@ -717,8 +835,8 @@ export function sceneFigure(scene: LogicScene, aria: string): GeoFigureSpec {
         { from: 'B', through: 'D' },
       ],
       angles: [
-        { vertex: 'B', from: 'A', to: 'D', label: '1' },
-        { vertex: 'B', from: 'D', to: 'C', label: '2', radius: 26 },
+        { vertex: 'B', from: 'A', to: 'D', label: '1', marks: 1 },
+        { vertex: 'B', from: 'D', to: 'C', label: '2', marks: 1 },
       ],
     }
   }
@@ -730,7 +848,7 @@ export function sceneFigure(scene: LogicScene, aria: string): GeoFigureSpec {
         pt('B', 2.6, 1.4, 'B', 'right'),
         pt('C', -2.2, 1.6, 'C', 'above'),
         pt('D', 2.2, -1.6, 'D', 'below'),
-        pt('E', 0, 0, 'E', 'below-right'),
+        pt('E', 0, 0, 'E', 'below'),
       ],
       lines: [
         { through: ['A', 'B'] },

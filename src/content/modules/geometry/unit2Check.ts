@@ -7,6 +7,8 @@ import { formatLin, lin, showNum } from './expr'
 import { REASONS } from './reasons'
 import {
   LAW_CHAINS,
+  factOf,
+  ifThen,
   STATEMENT_BANK,
   biconditionalOf,
   biconditionalTruth,
@@ -36,7 +38,8 @@ interface Row {
 
 function rowsOf(answer: GeometryAnswer): Row[] {
   return answer.stages.map((stage) => {
-    const support = /supported by (.+)\.$/.exec(stage.reveal[0] ?? '')?.[1] ?? ''
+    // The first sentence only: a row that accepts another reason says so in a second sentence.
+    const support = /supported by ([^.]+)\./.exec(stage.reveal[0] ?? '')?.[1] ?? ''
     if (stage.kind === 'reason') {
       return { statement: (stage.note ?? '').replace(/^Statement: /, ''), reasonId: stage.answerText, support }
     }
@@ -97,23 +100,38 @@ function checkMidpoint(prompt: string, rows: Row[], errors: string[]) {
   }
   if (x === 4 || at(left, x) <= 0 || at(left, x) !== at(right, x)) errors.push(`bad midpoint solution x = ${x}`)
   const gap = right.a - left.a
+  if (left.a <= 0 || gap <= 0) {
+    errors.push('midpoint: the smaller x term is not the one that moves')
+    return
+  }
+  if (right.b === 0 || left.b - right.b !== gap * x) {
+    errors.push('midpoint: moving the constant does not leave a multiple of x')
+    return
+  }
+  // Moving the x term subtracts it. Moving the constant adds its size when it is negative and subtracts
+  // it when positive. When the x terms differ by one, the row after that already reads "<x> = x".
   const wantStatements = [
     `M is the midpoint of ${whole}`,
-    `${a}M = ${leftText}`,
-    `M${b} = ${rightText}`,
+    `${a}M = ${leftText} and M${b} = ${rightText}`,
     `${a}M = M${b}`,
     `${leftText} = ${rightText}`,
     `${showNum(left.b)} = ${formatLin(lin(gap, right.b))}`,
-    `${showNum(left.b - right.b)} = ${gap === 1 ? 'x' : `${gap}x`}`,
+    `${showNum(left.b - right.b)} = ${coeff(gap)}`,
+    ...(gap === 1 ? [] : [`${x} = x`]),
     `x = ${x}`,
   ]
   same(rows.map((row) => row.statement), wantStatements, 'midpoint statements', errors)
   same(
     rows.map(reasonOf),
-    ['given', 'given', 'given', 'def-midpoint', 'eq-subst', 'eq-sub', 'eq-sub', 'eq-div'],
+    ['given', 'given', 'def-midpoint', 'eq-subst', 'eq-sub', constantMove(right.b), ...(gap === 1 ? [] : ['eq-div']), 'eq-sym'],
     'midpoint reasons',
     errors,
   )
+}
+
+/** Moving a constant across: a negative one leaves by addition, a positive one by subtraction. */
+function constantMove(constant: number): string {
+  return constant < 0 ? 'eq-add' : 'eq-sub'
 }
 
 function checkOverlap(prompt: string, rows: Row[], errors: string[]) {
@@ -210,6 +228,7 @@ function checkPartner(prompt: string, rows: Row[], errors: string[]) {
       `Angle 3 and angle 2 are ${word}`,
       `The measures of angle 1 and angle 2 add to ${total}`,
       `The measures of angle 3 and angle 2 add to ${total}`,
+      `${total} equals the measure of angle 3 plus the measure of angle 2`,
       'The measure of angle 1 plus the measure of angle 2 equals the measure of angle 3 plus the measure of angle 2',
       'Angle 1 and angle 3 have the same measure',
       'Angle 1 is congruent to angle 3',
@@ -217,7 +236,9 @@ function checkPartner(prompt: string, rows: Row[], errors: string[]) {
     'partner statements',
     errors,
   )
-  same(rows.map(reasonOf), ['given', 'given', definition, definition, 'eq-trans', 'eq-sub', 'def-cong-ang'], 'partner reasons', errors)
+  // The second sum is turned around (symmetric), so the chain shares the total in the middle (transitive),
+  // and taking the measure of angle 2 off both sides leaves angle 1 and angle 3 (subtraction).
+  same(rows.map(reasonOf), ['given', 'given', definition, definition, 'eq-sym', 'eq-trans', 'eq-sub', 'def-cong-ang'], 'partner reasons', errors)
 }
 
 function checkRight(rows: Row[], errors: string[]) {
@@ -228,13 +249,14 @@ function checkRight(rows: Row[], errors: string[]) {
       'Angle 2 is a right angle',
       'The measure of angle 1 is 90 degrees',
       'The measure of angle 2 is 90 degrees',
+      '90 degrees equals the measure of angle 2',
       'Angle 1 and angle 2 have the same measure',
       'Angle 1 is congruent to angle 2',
     ],
     'right-angle statements',
     errors,
   )
-  same(rows.map(reasonOf), ['given', 'given', 'def-right', 'def-right', 'eq-trans', 'def-cong-ang'], 'right-angle reasons', errors)
+  same(rows.map(reasonOf), ['given', 'given', 'def-right', 'def-right', 'eq-sym', 'eq-trans', 'def-cong-ang'], 'right-angle reasons', errors)
 }
 
 function checkAngleBisector(prompt: string, rows: Row[], errors: string[]) {
@@ -394,7 +416,7 @@ export function auditAlgebra(skeleton: string, lines: readonly string[], reasons
     return errors
   }
   if (skeleton === 'chain') {
-    if (lines.length !== 5) return [`unread chain: ${lines.join(' | ')}`]
+    if (lines.length !== 6) return [`unread chain: ${lines.join(' | ')}`]
     const first = splitEq(lines[0]!)
     const second = splitEq(lines[1]!)
     if (!first || !second) return [`unread chain equations: ${lines[0]} / ${lines[1]}`]
@@ -405,12 +427,17 @@ export function auditAlgebra(skeleton: string, lines: readonly string[], reasons
     const left = first[0].a !== 0 ? first[0] : first[1]
     const right = second[0].a !== 0 ? second[0] : second[1]
     const total = first[0].a === 0 ? first[0].b : first[1].b
+    const total2 = second[0].a === 0 ? second[0].b : second[1].b
+    if (total !== total2) errors.push('the two givens do not end in the same total')
     const gap = right.a - left.a
-    if (gap === 0) return ['chain expressions have the same coefficient']
+    if (left.a <= 0 || gap <= 0) return ['chain: the smaller x term is not the one that moves']
+    if (right.b === 0) return ['chain: a zero constant would repeat a line']
+    // Both givens end in the total, so the second is turned around before the two chain through it.
     same(
       [...lines],
       [
         `${formatLin(left)} = ${showNum(total)}`,
+        `${formatLin(right)} = ${showNum(total)}`,
         `${showNum(total)} = ${formatLin(right)}`,
         `${formatLin(left)} = ${formatLin(right)}`,
         `${showNum(left.b)} = ${formatLin(lin(gap, right.b))}`,
@@ -419,7 +446,7 @@ export function auditAlgebra(skeleton: string, lines: readonly string[], reasons
       'chain lines',
       errors,
     )
-    same([...reasons], ['given', 'given', 'eq-trans', 'eq-sub', 'eq-sub'], 'chain reasons', errors)
+    same([...reasons], ['given', 'given', 'eq-sym', 'eq-trans', 'eq-sub', constantMove(right.b)], 'chain reasons', errors)
     if (at(left, x) !== total || at(right, x) !== total) errors.push('chain solution misses a given')
     return errors
   }
@@ -513,7 +540,11 @@ export function auditLogic(question: string, prompt: string, answer: GeometryAns
   }
   if (question === 'truth') {
     const sentence = quoted(prompt)[0] ?? ''
-    const entry = STATEMENT_BANK.find((item) => (['conditional', 'converse', 'inverse', 'contrapositive'] as const).some((form) => statementOf(item, form) === sentence) || biconditionalOf(item) === sentence)
+    // Two bank rows can word one sentence the same way (one row's inverse is its mirror row's
+    // contrapositive), so take the row whose situations are the ones on offer.
+    const matches = STATEMENT_BANK.filter((item) => (['conditional', 'converse', 'inverse', 'contrapositive'] as const).some((form) => statementOf(item, form) === sentence) || biconditionalOf(item) === sentence)
+    const offered = (answer.stages[1]?.choices ?? []).map((choice) => choice.text).filter((text) => text !== 'No counterexample: the statement holds.')
+    const entry = matches.find((item) => offered.every((text) => findSituation(item, text))) ?? matches[0]
     if (!entry) return [`truth prompt is not a bank sentence: ${sentence}`]
     const iff = biconditionalOf(entry) === sentence
     const form = (['conditional', 'converse', 'inverse', 'contrapositive'] as const).find((item) => statementOf(entry, item) === sentence)
@@ -581,15 +612,17 @@ function lawAnswer(p1: string, p2: string): { text: string; trap: string; trapTe
 }
 
 function lawPattern(chain: LawChain, p1: string, p2: string): { text: string; trap: string; trapText: string } | null {
-  const ifpq = `If ${chain.p}, then ${chain.q}.`
-  const ifqr = `If ${chain.q}, then ${chain.r}.`
-  const ifpr = `If ${chain.p}, then ${chain.r}.`
-  const ifrq = `If ${chain.r}, then ${chain.q}.`
+  const ifpq = ifThen(chain.p, chain.q)
+  const ifqr = ifThen(chain.q, chain.r)
+  const ifpr = ifThen(chain.p, chain.r)
+  const ifAltQ = ifThen(chain.alt, chain.q)
+  const fact = (key: 'p' | 'q' | 'r' | 'notP' | 'notQ') => factOf(chain, key)
   const none = 'There is no valid conclusion.'
-  if (p1 === ifpq && p2 === cap(chain.q)) return { text: none, trap: 'geo_affirm_conclusion', trapText: cap(chain.p) }
-  if (p1 === ifpq && p2 === cap(chain.notP)) return { text: none, trap: 'geo_deny_hypothesis', trapText: cap(chain.notQ) }
-  if (p1 === ifpq && p2 === ifqr) return { text: ifpr, trap: 'geo_syllogism_order', trapText: `If ${chain.r}, then ${chain.p}.` }
-  if (p1 === ifpq && p2 === ifrq) return { text: none, trap: 'geo_syllogism_order', trapText: ifpr }
-  if (p1 === ifpq && p2 === cap(chain.p)) return { text: `So, ${chain.q}.`, trap: 'geo_missed_detachment', trapText: none }
+  if (p1 === ifpq && p2 === cap(fact('q'))) return { text: none, trap: 'geo_affirm_conclusion', trapText: cap(fact('p')) }
+  if (p1 === ifpq && p2 === cap(fact('notP'))) return { text: none, trap: 'geo_deny_hypothesis', trapText: cap(fact('notQ')) }
+  if (p1 === ifpq && p2 === ifqr) return { text: ifpr, trap: 'geo_syllogism_order', trapText: ifThen(chain.r, chain.p) }
+  // Two if-thens that share an ending: nothing follows, and chaining them gives a false sentence.
+  if (p1 === ifpq && p2 === ifAltQ) return { text: none, trap: 'geo_syllogism_order', trapText: ifThen(chain.p, chain.alt) }
+  if (p1 === ifpq && p2 === cap(fact('p'))) return { text: `So, ${fact('q')}.`, trap: 'geo_missed_detachment', trapText: none }
   return null
 }

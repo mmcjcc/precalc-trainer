@@ -125,7 +125,8 @@ function gradeReason(stage: GeometryAnswer['stages'][number], text: string): Geo
   const picked = text.trim()
   if (!picked) return { verdict: 'invalid', message: 'Pick a reason from the list before you check.' }
   if (!isReason(picked)) return { verdict: 'invalid', message: 'Pick a reason from the list.' }
-  if (picked === stage.answerText) return { verdict: 'correct', message: 'Correct.' }
+  // `accept` lists other names books give this same step (substitution for transitive, say).
+  if (picked === stage.answerText || stage.accept?.includes(picked)) return { verdict: 'correct', message: 'Correct.' }
   const mistake = reasonMistake(stage.answerText, picked)
   if (mistake && isGeoMistake(mistake)) {
     const listed = stage.traps.find((trap) => trap.id === mistake && trap.text === picked)
@@ -225,6 +226,13 @@ function assertPickAnswer(where: string, answer: GeometryAnswer): void {
       if (correct !== 1) throw new Error(`${where}: ${stage.id} has ${correct} correct choices`)
     } else if (!isReason(stage.answerText)) {
       throw new Error(`${where}: ${stage.id} reason ${stage.answerText} is not in the bank`)
+    }
+    if (stage.accept) {
+      if (stage.kind !== 'reason') throw new Error(`${where}: ${stage.id} lists other accepted answers on a part that is not a reason`)
+      for (const other of stage.accept) {
+        if (!isReason(other) || other === stage.answerText) throw new Error(`${where}: ${stage.id} accepts ${other}, which is not another reason in the bank`)
+        if (stage.traps.some((trap) => trap.text === other)) throw new Error(`${where}: ${stage.id} accepts ${other} and also names it a mistake`)
+      }
     }
     for (const trap of stage.traps) {
       const g = gradeGeoStage(answer, stage.id, trap.text)
