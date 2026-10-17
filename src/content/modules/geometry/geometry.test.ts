@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { generateProblem, getModule } from '@/content'
 import { ERROR_PATTERNS } from '@/engine'
 import type { ModuleId } from '@/shared/types'
-import { GEO_MISTAKE_IDS, GEO_RULE_FOR, gradeGeoStage, type GeoMistakeId } from '.'
+import { GEO_MISTAKE_IDS, GEO_UNIT1_MISTAKE_IDS, GEO_UNIT2_MISTAKE_IDS, GEO_RULE_FOR, gradeGeoStage, type GeoMistakeId } from '.'
 import { exposed } from './grade'
 import type { GeometryAnswer } from './build'
 
@@ -45,7 +45,7 @@ describe('geometry module registration', () => {
   })
 
   it('has a catalog entry for every geo_ id', () => {
-    for (const id of GEO_MISTAKE_IDS) {
+    for (const id of [...GEO_MISTAKE_IDS, ...GEO_UNIT2_MISTAKE_IDS]) {
       const info = ERROR_PATTERNS[id]
       expect(info.id).toBe(id)
       expect(info.title.length).toBeGreaterThan(0)
@@ -116,6 +116,6 @@ describe('geometry trap coverage', () => {
         for (const stage of a.stages) for (const trap of stage.traps) seen.add(trap.id)
       }
     }
-    expect([...seen].sort()).toEqual([...GEO_MISTAKE_IDS].sort())
+    expect([...seen].sort()).toEqual([...GEO_UNIT1_MISTAKE_IDS].sort())
   }, HEAVY)
 })

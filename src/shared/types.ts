@@ -15,7 +15,7 @@
 export type RelOp = '=' | '<' | '<=' | '>' | '>='
 /** `h` is the difference-quotient step; the parser accepts it only when the problem owns it (ctx.vars). */
 export type VarName = 'x' | 'y' | 'n' | 'h'
-export type ModuleId = 'numberLine' | 'inequalities' | 'evenOdd' | 'inverses' | 'propertiesDrill' | 'sigFigs' | 'atoms' | 'diffQuotient' | 'graphFeatures' | 'domainRange' | 'composition' | 'functionOps' | 'transformations' | 'piecewiseRate' | 'electrons' | 'quadratics' | 'polyDivision' | 'polyZeros' | 'rationalFns' | 'signCharts' | 'complexNums' | 'geoSegments' | 'geoAngles'
+export type ModuleId = 'numberLine' | 'inequalities' | 'evenOdd' | 'inverses' | 'propertiesDrill' | 'sigFigs' | 'atoms' | 'diffQuotient' | 'graphFeatures' | 'domainRange' | 'composition' | 'functionOps' | 'transformations' | 'piecewiseRate' | 'electrons' | 'quadratics' | 'polyDivision' | 'polyZeros' | 'rationalFns' | 'signCharts' | 'complexNums' | 'geoSegments' | 'geoAngles' | 'geoLogic' | 'geoProof'
 export type CalcId = 'ti84' | 'nspire'
 
 /** Fine-grained property tags. Canonical steps carry one; the engine's move detector reports one. */
@@ -394,6 +394,25 @@ export type ErrorPatternId =
   | 'geo_vertical_as_supplementary'
   | 'geo_linear_pair_equal'
   | 'geo_complement_reversed'
+  // honors geometry Unit 2 (content/modules/geometry). Detected from the choice she picked, not from a
+  // nearby value. A wrong choice that is none of these stays a plain wrong answer.
+  | 'geo_converse_inverse_swapped'
+  | 'geo_contrapositive_half'
+  | 'geo_contrapositive_unswitched'
+  | 'geo_false_converse'
+  | 'geo_counterexample_hypothesis'
+  | 'geo_affirm_conclusion'
+  | 'geo_deny_hypothesis'
+  | 'geo_syllogism_order'
+  | 'geo_missed_detachment'
+  | 'geo_midpoint_for_addition'
+  | 'geo_addition_for_midpoint'
+  | 'geo_substitution_for_transitive'
+  | 'geo_equality_for_postulate'
+  | 'geo_reflexive_for_symmetric'
+  | 'geo_congruent_for_midpoint'
+  | 'geo_linear_for_vertical'
+  | 'geo_vertical_for_linear'
   // behavioral (ui)
   | 'abandoned'
 

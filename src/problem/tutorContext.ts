@@ -434,7 +434,8 @@ function statementOf(instance: ProblemInstance): string {
         ? `f(x) = ${answer.f}. One zero is ${answer.givenZero}. ${answer.prompt}`
         : `${answer.expression}. ${answer.prompt}`
   } else if (answer.type === 'geometry') {
-    text = `${answer.prompt} Figure: ${answer.figure.ariaLabel}`
+    const lines = answer.lines?.length ? ` Lines: ${answer.lines.join(' | ')}` : ''
+    text = `${answer.prompt}${lines} Figure: ${answer.figure.ariaLabel}`
   }
   const clipped = clip(text, TUTOR_LIMITS.field)
   return clipped.trim() ? clipped : clip(instance.title, TUTOR_LIMITS.field)

@@ -112,7 +112,7 @@ export const COURSES: readonly CourseDef[] = [
         id: 'g2',
         label: 'Unit 2',
         title: 'Reasoning and proof',
-        moduleIds: [],
+        moduleIds: ['geoLogic', 'geoProof'],
       },
       {
         id: 'g3',

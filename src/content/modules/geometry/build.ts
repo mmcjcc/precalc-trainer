@@ -3,13 +3,26 @@
  * Units 2 and 3 should call this instead of copying a flow.
  */
 import { problemId } from '@/content/registry'
-import type { DifficultyKnobs, GeometryAnswer, ProblemInstance } from '@/content/types'
+import type { DifficultyKnobs, GeometryAnswer, GeometryStageId, ProblemInstance } from '@/content/types'
 import type { CalcPanels, ModuleId } from '@/shared/types'
 import { assertGeoAnswer } from './grade'
+import { reasonLabel } from './reasons'
 
 export type { GeometryAnswer }
 
-export const GEO_KEYS = { x: 'x', result: 'result' } as const
+/** Box key for every part. Unit 1 uses `x` and `result`; Unit 2 uses `a` through `h`. */
+export const GEO_KEYS: Record<GeometryStageId, string> = {
+  x: 'x',
+  result: 'result',
+  a: 'a',
+  b: 'b',
+  c: 'c',
+  d: 'd',
+  e: 'e',
+  f: 'f',
+  g: 'g',
+  h: 'h',
+}
 
 const NO_GRAPH = { kind: 'none' as const }
 const NO_CALC: CalcPanels = { ti84: [], nspire: [] }
@@ -64,7 +77,14 @@ export function geoWork(answer: GeometryAnswer, entries: Record<string, string> 
   const lines: string[] = []
   for (const stage of answer.stages) {
     const text = entries[GEO_KEYS[stage.id]]?.trim()
-    if (text) lines.push(`${stage.label}: ${text}`)
+    if (text) lines.push(`${stage.label}: ${shownEntry(stage, text)}`)
   }
   return lines
+}
+
+/** The words she picked. Choice and reason boxes store an id; the tutor should see the sentence or the reason name. */
+function shownEntry(stage: GeometryAnswer['stages'][number], text: string): string {
+  if (stage.kind === 'choice') return stage.choices?.find((choice) => choice.id === text)?.text ?? text
+  if (stage.kind === 'reason') return reasonLabel(text)
+  return text
 }

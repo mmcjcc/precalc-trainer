@@ -19,11 +19,27 @@ import type {
 
 export type ProblemKind = 'inequality' | 'numberLine' | 'evenOdd' | 'inverse' | 'drill' | 'sigFigs' | 'atoms' | 'diffQuotient' | 'graphFeatures' | 'domainRange' | 'composition' | 'functionOps' | 'transformations' | 'piecewiseRate' | 'electrons' | 'quadratics' | 'polyDivision' | 'polyZeros' | 'rationalFns' | 'signCharts' | 'complexNums' | 'geometry'
 
-/** Which geometry screen this problem is. */
-export type GeometryQuestion = 'addition' | 'midpoint' | 'coord' | 'angleAddition' | 'bisector' | 'pairs' | 'words'
+/** Which geometry screen this problem is. Unit 2 adds the logic and proof screens. */
+export type GeometryQuestion =
+  | 'addition'
+  | 'midpoint'
+  | 'coord'
+  | 'angleAddition'
+  | 'bisector'
+  | 'pairs'
+  | 'words'
+  | 'related'
+  | 'truth'
+  | 'laws'
+  | 'reason'
+  | 'algebraic'
+  | 'twocolumn'
 
-/** One checked part of a geometry problem. `x` is the variable; `result` is the length, measure, or point. */
-export type GeometryStageId = 'x' | 'result'
+/**
+ * One checked part of a geometry problem. `x` and `result` are the Unit 1 boxes.
+ * `a` through `h` are the Unit 2 parts (a related statement, a proof row, …).
+ */
+export type GeometryStageId = 'x' | 'result' | 'a' | 'b' | 'c' | 'd' | 'e' | 'f' | 'g' | 'h'
 
 /** Which complex-number screen this problem is. */
 export type ComplexNumsQuestion = 'arith' | 'divide' | 'powers' | 'quadratic' | 'zeros'
@@ -902,30 +918,44 @@ export type AnswerSpec =
     }
   | {
       /**
-       * Honors geometry. A figure (the problem) plus one or two parts checked one at a time.
-       * Grade a part with `gradeGeoStage`. Named mistakes are the `geo_` ids, each computed for this figure.
-       * An equal value that is not in simplest radical form is not an attempt.
+       * Honors geometry. Unit 1: a figure plus one or two number or point parts.
+       * Unit 2: choices or a reason from the bank, one part at a time. A figure is shown when it has points.
+       * Grade a part with `gradeGeoStage`. Named mistakes are the `geo_` ids.
+       * A number equal to the answer but not in simplest radical form is not an attempt.
+       * A Unit 2 mistake is whatever choice she picked, exactly.
        */
       type: 'geometry'
       question: GeometryQuestion
       /** What the problem is. No method and no trap. */
       prompt: string
       figure: GeoFigureSpec
+      /** Algebra lines printed above the parts. The lines are given; the reasons are the answers. */
+      lines?: string[]
       stages: {
         id: GeometryStageId
-        kind: 'number' | 'point'
+        kind: 'number' | 'point' | 'choice' | 'reason'
         /** An angle measure, where a degree sign is welcome. Anywhere else a degree sign is refused. */
         unit?: 'deg'
-        /** Box label, e.g. "x", "AB", "Midpoint". */
+        /** Box label, e.g. "x", "AB", "Reason for line 2". */
         label: string
-        /** Line under the box. */
+        /** Line under the box or the choices. Never this part's answer. */
         hint: string
-        /** What a correct answer looks like typed. */
+        /**
+         * Number or point: what a correct answer looks like typed.
+         * Choice or reason: the id of the correct choice (a statement id, or a reason id).
+         */
         answerText: string
+        /** Printed above a Unit 2 picker: the given half of a proof row. */
+        note?: string
+        /**
+         * Choice parts only. `trap` is set when that pick is a named mistake.
+         * Reason parts use the shared reason bank instead of a short list.
+         */
+        choices?: { id: string; text: string; trap?: ErrorPatternId; witness?: string }[]
         nudge: string
         ruleCard: RuleCardId
         reveal: string[]
-        /** Slips that produce a different value on this part, in detection order. */
+        /** Slips on this part, in detection order. `text` is the typed value or the choice id. */
         traps: { id: ErrorPatternId; text: string; witness: string }[]
       }[]
       /** Lengths that must stay positive, for the generator's own check. */

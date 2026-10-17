@@ -3,6 +3,7 @@ import type { DifficultyKnobs, ModuleDef, TemplateDef } from '@/content/types'
 import type { ModuleId } from '@/shared/types'
 import type { GeoBuilt } from './build'
 import { geoInstance } from './build'
+import { drawLaws, drawRelated, drawTruth } from './logicMake'
 import {
   drawAngleAddition,
   drawBisector,
@@ -12,13 +13,15 @@ import {
   drawSegmentAddition,
   drawWords,
 } from './make'
+import { drawAlgebraic, drawReason, drawTwoColumn } from './proofMake'
 import { ANGLE_RULES, SEGMENT_RULES } from './rules'
+import { LOGIC_RULES, PROOF_RULES } from './unit2Rules'
 
 export { readGeoAnswer, formatPoint, formatQty, formatValue, geoQty, sameGeoValue, sameQty, simplifyRadical } from './answer'
 export type { GeoQty, GeoRead, GeoReadOptions, GeoValue } from './answer'
 export { GEO_KEYS, canonicalEntries, geoWork } from './build'
 export type { GeometryAnswer } from './build'
-export { GEO_MISTAKE_IDS, exampleShowsAnswer, gradeGeoStage, isGeoMistake } from './grade'
+export { GEO_MISTAKE_IDS, GEO_UNIT1_MISTAKE_IDS, GEO_UNIT2_MISTAKE_IDS, exampleShowsAnswer, gradeGeoStage, isGeoMistake } from './grade'
 export type { GeoGrade, GeoMistakeId } from './grade'
 export { GEO_RULE_FOR, GEO_RULE_IDS } from './rules'
 
@@ -82,5 +85,77 @@ export const geoAnglesModule: ModuleDef = {
   nextStep: () => null,
 }
 
+/**
+ * Conditionals and logic (honors geometry Unit 2). Related statements, truth values and
+ * counterexamples, and what follows from two premises.
+ */
+export const geoLogicModule: ModuleDef = {
+  id: 'geoLogic',
+  subject: 'Geometry',
+  title: 'Conditionals and logic',
+  blurb: 'Build the related if-then statements, decide whether one holds, and say what follows from two premises.',
+  order: 11,
+  templates: [
+    geoTemplate(
+      'geoLogic',
+      'gl.related',
+      'Related conditionals',
+      'From one if-then, pick the swapped sentence, the negated sentence, and the sentence that does both, or name which of those a new sentence is.',
+      drawRelated,
+    ),
+    geoTemplate(
+      'geoLogic',
+      'gl.truth',
+      'True or false',
+      'Decide whether an if-then, a related sentence, or an if-and-only-if holds. When it fails, pick the situation that knocks it down.',
+      drawTruth,
+    ),
+    geoTemplate(
+      'geoLogic',
+      'gl.laws',
+      'Laws of logic',
+      'Two premises. Pick the conclusion they allow, or say that nothing follows.',
+      drawLaws,
+    ),
+  ],
+  ruleCards: LOGIC_RULES,
+  progress: PROGRESS,
+  nextStep: () => null,
+}
+
+/**
+ * Properties and proofs (honors geometry Unit 2). A reason from the shared bank, an algebraic
+ * proof, and a two-column proof. She never types a reason.
+ */
+export const geoProofModule: ModuleDef = {
+  id: 'geoProof',
+  subject: 'Geometry',
+  title: 'Properties and proofs',
+  blurb: 'Pick the reason a line is legal, finish an algebraic proof, and fill a two-column proof.',
+  order: 12,
+  templates: [
+    geoTemplate('geoProof', 'gp.reason', 'Name the reason', 'One line of a proof. Pick the reason that makes it legal.', drawReason),
+    geoTemplate(
+      'geoProof',
+      'gp.algebraic',
+      'Algebraic proof',
+      'An equation is solved in a few lines. Pick the reason for each line, in order.',
+      drawAlgebraic,
+    ),
+    geoTemplate(
+      'geoProof',
+      'gp.twocolumn',
+      'Two-column proof',
+      'A proof from Unit 1 or Unit 2. Most rows need a reason; one or two rows need the missing statement.',
+      drawTwoColumn,
+    ),
+  ],
+  ruleCards: PROOF_RULES,
+  progress: PROGRESS,
+  nextStep: () => null,
+}
+
 registerModule(geoSegmentsModule)
 registerModule(geoAnglesModule)
+registerModule(geoLogicModule)
+registerModule(geoProofModule)

@@ -1,9 +1,11 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent, type KeyboardEvent, type Ref } from 'react'
 import { GeoFigure } from '@/components/GeoFigure'
 import { SigFigCorrect, SigFigExplanation, SigFigRejection } from '@/components/SigFigFeedback'
 import { SymbolStrip } from '@/components/MathSymbolStrip'
 import { insertToken, type StripKey } from '@/components/symbolStrip'
 import { GEO_KEYS, GEO_RULE_FOR, exampleShowsAnswer, gradeGeoStage, type GeoGrade, type GeometryAnswer } from '@/content/modules/geometry'
+import { stageDisplay } from '@/content/modules/geometry/grade'
+import { REASON_GROUPS, reasonLabel, reasonsInGroup, type ReasonId } from '@/content/modules/geometry/reasons'
 import { getModule } from '@/content/registry'
 import type { RuleCard } from '@/content/types'
 import { patternHit } from '@/engine'
@@ -11,7 +13,7 @@ import { type ProgressLine } from '@/problem/stepEngine'
 import { verdictFromGeo } from '@/problem/tutorContext'
 import { useStore } from '@/store'
 import { HintLadder, NotAnAttemptNotice, useHintLadder } from './hintLadder'
-import { PolyTextBox, savePolyEntries } from './polyUi'
+import { PolyChoice, PolyTextBox, savePolyEntries } from './polyUi'
 import { recordGeoGrades } from './record'
 import { ProblemFrame } from './ProblemFrame'
 import type { FlowProps } from './types'
@@ -34,8 +36,130 @@ const GEO_KEYS_STRIP: readonly StripKey[] = [
 function Statement({ answer }: { answer: GeometryAnswer }) {
   return (
     <div className="space-y-3">
-      <GeoFigure spec={answer.figure} />
-      <p className="text-sm text-navy">{answer.prompt}</p>
+      {answer.figure.points.length > 0 && <GeoFigure spec={answer.figure} />}
+      {answer.lines && answer.lines.length > 0 && (
+        <ol className="list-decimal space-y-1 pl-5 text-sm text-navy">
+          {answer.lines.map((line, index) => (
+            <li key={`${index}-${line}`}>{line}</li>
+          ))}
+        </ol>
+      )}
+      <p className="whitespace-pre-line text-sm text-navy">{answer.prompt}</p>
+    </div>
+  )
+}
+
+function pickedText(stage: GeometryAnswer['stages'][number], id: string): string {
+  if (stage.kind === 'choice') return stage.choices?.find((choice) => choice.id === id)?.text ?? id
+  if (stage.kind === 'reason') return id ? reasonLabel(id) : ''
+  return id
+}
+
+/** The shared reason bank: a search box, then one 44 px radio per reason, grouped. Arrow keys move the pick. */
+function ReasonList({
+  stageId,
+  value,
+  disabled,
+  onChange,
+  searchRef,
+}: {
+  stageId: string
+  value: string
+  disabled: boolean
+  onChange: (id: string) => void
+  searchRef?: Ref<HTMLInputElement>
+}) {
+  const [query, setQuery] = useState('')
+  const groupRef = useRef<HTMLDivElement>(null)
+  const pending = useRef<string | null>(null)
+  const q = query.trim().toLowerCase()
+  const groups = REASON_GROUPS.map((group) => ({
+    ...group,
+    reasons: reasonsInGroup(group.id).filter((reason) => !q || reason.label.toLowerCase().includes(q)),
+  })).filter((group) => group.reasons.length > 0)
+  const visible = groups.flatMap((group) => group.reasons)
+  const firstId = visible[0]?.id ?? ''
+
+  useEffect(() => {
+    const id = pending.current
+    if (!id) return
+    pending.current = null
+    groupRef.current?.querySelector<HTMLButtonElement>(`[data-reason-id="${id}"]`)?.focus()
+  }, [value, query])
+
+  function move(fromId: ReasonId, dir: 1 | -1 | 'start' | 'end') {
+    const ids = visible.map((reason) => reason.id)
+    const index = ids.indexOf(fromId)
+    const next =
+      dir === 'start' ? ids[0] : dir === 'end' ? ids[ids.length - 1] : ids[Math.max(0, Math.min(ids.length - 1, (index < 0 ? 0 : index) + dir))]
+    if (!next) return
+    pending.current = next
+    onChange(next)
+  }
+
+  function onRadioKey(event: KeyboardEvent<HTMLButtonElement>, id: ReasonId) {
+    if (event.key === 'ArrowDown') move(id, 1)
+    else if (event.key === 'ArrowUp') move(id, -1)
+    else if (event.key === 'Home') move(id, 'start')
+    else if (event.key === 'End') move(id, 'end')
+    else return
+    event.preventDefault()
+  }
+
+  function onSearchKey(event: KeyboardEvent<HTMLInputElement>) {
+    if (event.key === 'Enter') event.preventDefault()
+    if (event.key === 'ArrowDown' && firstId) {
+      event.preventDefault()
+      pending.current = firstId
+      onChange(firstId)
+    }
+  }
+
+  return (
+    <div className="space-y-3">
+      <label className="block text-sm font-semibold text-navy">
+        Search reasons
+        <input
+          ref={searchRef}
+          type="search"
+          value={query}
+          disabled={disabled}
+          onChange={(event) => setQuery(event.target.value)}
+          onKeyDown={onSearchKey}
+          autoCapitalize="off"
+          autoCorrect="off"
+          autoComplete="off"
+          spellCheck={false}
+          className="mt-1 min-h-11 w-full rounded-xl border-2 border-navy-100 px-3 text-base text-navy outline-none focus:border-navy"
+        />
+      </label>
+      <div ref={groupRef} id={`geo-reasons-${stageId}`} role="radiogroup" aria-label="Reason" className="space-y-3">
+        {groups.map((group) => (
+          <fieldset key={group.id} className="space-y-1">
+            <legend className="text-xs font-semibold uppercase tracking-wide text-navy/60">{group.title}</legend>
+            {group.reasons.map((reason) => {
+              const selected = value === reason.id
+              return (
+                <button
+                  key={reason.id}
+                  type="button"
+                  role="radio"
+                  aria-checked={selected}
+                  data-reason-id={reason.id}
+                  disabled={disabled}
+                  tabIndex={selected || (!value && reason.id === firstId) ? 0 : -1}
+                  onClick={() => onChange(reason.id)}
+                  onKeyDown={(event) => onRadioKey(event, reason.id)}
+                  className={`flex min-h-11 w-full items-center rounded-xl border-2 px-3 text-left text-sm text-navy ${selected ? 'border-navy bg-gold-100' : 'border-navy-100 bg-white'} ${disabled ? 'opacity-60' : 'hover:border-navy'}`}
+                >
+                  {reason.label}
+                </button>
+              )
+            })}
+          </fieldset>
+        ))}
+        {visible.length === 0 && <p className="text-sm text-navy">No reason has those words. Clear the search to see the whole list.</p>}
+      </div>
     </div>
   )
 }
@@ -206,23 +330,56 @@ function Body({ instance, attempt, flags, templateTitle, completion, finish, ans
             </h2>
             {open ? (
               <form onSubmit={submit} noValidate className="space-y-4">
-                <PolyTextBox
-                  id={`geo-${s.id}`}
-                  label={s.label}
-                  hint={s.hint}
-                  placeholder=""
-                  value={entries[key] ?? ''}
-                  disabled={false}
-                  invalid={Boolean(invalid)}
-                  onChange={(v) => update(key, v)}
-                  inputRef={register(key)}
-                />
-                <SymbolStrip onInsert={insert} keys={GEO_KEYS_STRIP} disabled={false} />
+                {s.note && <p className="text-sm text-navy">{s.note}</p>}
+                {s.kind === 'choice' ? (
+                  <PolyChoice
+                    legend="Choices"
+                    name={`geo-choice-${s.id}`}
+                    options={(s.choices ?? []).map((choice) => ({ value: choice.id, label: choice.text }))}
+                    value={entries[key] ?? ''}
+                    disabled={false}
+                    onChange={(v) => update(key, v)}
+                    firstRef={register(key)}
+                  />
+                ) : s.kind === 'reason' ? (
+                  <ReasonList stageId={s.id} value={entries[key] ?? ''} disabled={false} onChange={(v) => update(key, v)} searchRef={register(key)} />
+                ) : (
+                  <>
+                    <PolyTextBox
+                      id={`geo-${s.id}`}
+                      label={s.label}
+                      hint={s.hint}
+                      placeholder=""
+                      value={entries[key] ?? ''}
+                      disabled={false}
+                      invalid={Boolean(invalid)}
+                      onChange={(v) => update(key, v)}
+                      inputRef={register(key)}
+                    />
+                    <SymbolStrip onInsert={insert} keys={GEO_KEYS_STRIP} disabled={false} />
+                  </>
+                )}
+                {(s.kind === 'choice' || s.kind === 'reason') && (
+                  <p id={`geo-${s.id}-hint`} className="text-xs text-navy/70">
+                    {s.hint}
+                  </p>
+                )}
                 <button type="submit" className="min-h-12 rounded-xl bg-navy px-4 font-semibold text-white hover:bg-navy-600">
                   {`Check ${s.label}`}
                 </button>
-                {shown && <GradeNote grade={shown.grade} answerText={s.answerText} />}
+                {shown && <GradeNote grade={shown.grade} answerText={stageDisplay(s)} />}
               </form>
+            ) : s.kind === 'choice' || s.kind === 'reason' ? (
+              <>
+                {s.note && <p className="text-sm text-navy">{s.note}</p>}
+                <p className="text-sm font-semibold text-navy">{pickedText(s, entries[key] ?? '')}</p>
+                {stages.length > 1 && (
+                  <p role="status" className="text-sm font-semibold text-navy">
+                    <span aria-hidden>✓ </span>
+                    Correct.
+                  </p>
+                )}
+              </>
             ) : (
               <>
                 <PolyTextBox

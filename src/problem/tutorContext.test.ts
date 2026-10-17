@@ -8,6 +8,7 @@ import { canonicalEntries as rfEntries, gradeRfStage, RF_KEYS, rfWork } from '@/
 import { canonicalEntries as scEntries, gradeScStage, SC_KEYS, scWork } from '@/content/modules/signCharts'
 import { canonicalEntries as cxEntries, gradeCxStage, CX_KEYS, cxWork } from '@/content/modules/complexNums'
 import { canonicalEntries as geoEntries, gradeGeoStage, GEO_KEYS, geoWork } from '@/content/modules/geometry'
+import { reasonLabel } from '@/content/modules/geometry/reasons'
 import { checkSquareLine, configurationMistakes, gradeAxisOfSymmetry, gradeConfiguration, gradeVertex, squareMistakes, syntheticMistakes, vertexMistakes } from '@/engine'
 import { ratToString } from '@/notation'
 import { gradeFinalAnswer } from '@/problem/inequality'
@@ -817,6 +818,46 @@ describe('buildTutorContext', () => {
     if (words.answer.type !== 'geometry') throw new Error('expected a word problem')
     expect(buildTutorContext(words, attempt('geo-4', { moduleId: 'geoAngles' }), null, true).statement).toContain(words.answer.figure.ariaLabel)
     expect(buildTutorContext(words, attempt('geo-4', { moduleId: 'geoAngles' }), null, true).subject).toBe('geometry')
+  })
+
+  it('describes a Unit 2 conditional, a picked reason, and an algebraic proof', () => {
+    const related = generateProblem('geoLogic', 'gl.related', 1)
+    if (related.answer.type !== 'geometry') throw new Error('expected a conditional')
+    const logic = related.answer
+    const logicCtx = buildTutorContext(related, attempt('geo-5', { moduleId: 'geoLogic' }), null, false)
+    expect(logicCtx.subject).toBe('geometry')
+    expect(logicCtx.kind).toBe('geometry')
+    expect(logicCtx.statement).toContain(logic.prompt)
+    expect(logicCtx.statement).toContain(logic.figure.ariaLabel)
+    const slip = gradeGeoStage(logic, logic.trapStage, logic.trapAnswer)
+    expect(slip.verdict).toBe('mistake')
+    if (slip.verdict !== 'mistake') return
+    expect(verdictFromGeo(slip)?.mistake?.id).toBe('geo_converse_inverse_swapped')
+
+    const everyday = generateProblem('geoLogic', 'gl.related', 17)
+    if (everyday.answer.type !== 'geometry') throw new Error('expected an everyday conditional')
+    expect(everyday.answer.figure.points).toEqual([])
+    expect(buildTutorContext(everyday, attempt('geo-6', { moduleId: 'geoLogic' }), null, false).statement).toContain(everyday.answer.prompt)
+
+    const named = generateProblem('geoProof', 'gp.reason', 1)
+    if (named.answer.type !== 'geometry') throw new Error('expected a reason problem')
+    const row = named.answer.stages[0]!
+    const picked = buildTutorContext(
+      named,
+      attempt('geo-7', { moduleId: 'geoProof', final: { polyEntries: { [GEO_KEYS[row.id]]: row.answerText } } }),
+      null,
+      false,
+    )
+    expect(picked.work).toEqual([`${row.label}: ${reasonLabel(row.answerText)}`])
+    expect(picked.statement).toContain(named.answer.prompt)
+
+    const algebra = generateProblem('geoProof', 'gp.algebraic', 1)
+    if (algebra.answer.type !== 'geometry') throw new Error('expected an algebraic proof')
+    const shown = buildTutorContext(algebra, attempt('geo-8', { moduleId: 'geoProof' }), null, false)
+    expect(algebra.answer.lines?.length).toBeGreaterThan(0)
+    expect(shown.statement).toContain('Lines:')
+    for (const line of algebra.answer.lines ?? []) expect(shown.statement).toContain(line)
+    expect(shown.canonical.length).toBe(algebra.answer.stages.length)
   })
 
   it('never adds a name, email, or account field', () => {

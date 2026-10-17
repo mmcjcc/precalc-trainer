@@ -1,5 +1,6 @@
 import type { RuleCard } from '@/content/types'
 import type { GeoMistakeId } from './grade'
+import { UNIT2_RULE_FOR } from './unit2Rules'
 
 export const GEO_RULE_IDS = {
   segment: 'geo-segment-add',
@@ -30,6 +31,7 @@ export const GEO_RULE_FOR: Partial<Record<GeoMistakeId, string>> = {
   geo_linear_pair_equal: GEO_RULE_IDS.linear,
   geo_complement_reversed: GEO_RULE_IDS.words,
   geo_answered_x: GEO_RULE_IDS.substitute,
+  ...UNIT2_RULE_FOR,
 }
 
 export const SEGMENT_RULES: RuleCard[] = [

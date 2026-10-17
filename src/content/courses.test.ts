@@ -85,12 +85,12 @@ describe('course registry', () => {
     const geometry = getCourse('geometry')
     expect(geometry?.units.map((u) => [u.id, u.label, u.title, u.moduleIds])).toEqual([
       ['g1', 'Unit 1', 'Tools of geometry', ['geoSegments', 'geoAngles']],
-      ['g2', 'Unit 2', 'Reasoning and proof', []],
+      ['g2', 'Unit 2', 'Reasoning and proof', ['geoLogic', 'geoProof']],
       ['g3', 'Unit 3', 'Parallel and perpendicular lines', []],
     ])
-    expect(unitsWithModules(geometry!).map((u) => u.id)).toEqual(['g1'])
+    expect(unitsWithModules(geometry!).map((u) => u.id)).toEqual(['g1', 'g2'])
     expect(modulesInUnit(geometry!.units[0]!).map((m) => m.id)).toEqual(['geoSegments', 'geoAngles'])
-    expect(modulesInUnit(geometry!.units[1]!)).toEqual([])
+    expect(modulesInUnit(geometry!.units[1]!).map((m) => m.id)).toEqual(['geoLogic', 'geoProof'])
     expect(modulesInUnit(geometry!.units[2]!)).toEqual([])
     expect(precalc!.units[0]!.reviewId).toBe('unit1')
     expect(precalc!.units[1]!.reviewId).toBeUndefined()
