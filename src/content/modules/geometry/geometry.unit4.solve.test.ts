@@ -387,11 +387,8 @@ function sideHit(sides: [string, string][], shared: string[], p: string, q: stri
 function angleHit(verts: [string, string][], named: [string, string][], rights: string[], u: string, v: string): boolean {
   if (rights.includes(u) && rights.includes(v)) return true
   if (verts.some(([a, b]) => (a === u && b === v) || (a === v && b === u))) return true
-  return named.some(([a, b]) => {
-    const va = a[1]!
-    const vb = b[1]!
-    return (va === u && vb === v) || (va === v && vb === u)
-  })
+  // The written pair runs from the first triangle to the second. The swap is another pair.
+  return named.some(([a, b]) => a[1] === u && b[1] === v)
 }
 function methodsOfScene(scene: MarkScene): string[] {
   const named = [...scene.vertical, ...scene.alt]
@@ -413,6 +410,77 @@ function choiceText(stage: GeometryAnswer['stages'][number]): string {
   return text
 }
 
+function corrVertex(t1: string, t2: string, v: string): string {
+  const i1 = t1.indexOf(v)
+  if (i1 >= 0) return t2[i1]!
+  const i2 = t2.indexOf(v)
+  if (i2 >= 0) return t1[i2]!
+  fail(`vertex ${v} is in neither ${t1} nor ${t2}`)
+}
+function vertexIndex(t1: string, t2: string, v: string): number {
+  const i1 = t1.indexOf(v)
+  return i1 >= 0 ? i1 : t2.indexOf(v)
+}
+function sideIndex(tri: string, name: string): number {
+  const want = undirected(name)
+  for (let i = 0; i < 3; i++) {
+    if (undirected(`${tri[i]!}${tri[(i + 1) % 3]!}`) === want) return i
+  }
+  return -1
+}
+function sideWritten(tri: string, i: number): string {
+  return i === 2 ? `${tri[0]!}${tri[2]!}` : `${tri[i]!}${tri[(i + 1) % 3]!}`
+}
+
+/** SSA as the figure shows it: two ticked sides and the angle that is not between them. */
+function isSsaScene(scene: MarkScene, methods: string[]): boolean {
+  if (methods.length || scene.rights.length || scene.shared.length || scene.vertical.length || scene.alt.length || scene.parallel.length) return false
+  if (scene.sides.length !== 2 || scene.angleVerts.length !== 1) return false
+  const ends = (name: string) => [name[0]!, name[1]!]
+  const common = ends(scene.sides[0]![0]!).filter((v) => ends(scene.sides[1]![0]!).includes(v))
+  return common.length === 1 && scene.angleVerts[0]![0] !== common[0]
+}
+
+/** AAA as the figure shows it: three arc pairs and nothing else. */
+function isAaaScene(scene: MarkScene, methods: string[]): boolean {
+  return (
+    methods.length === 0 &&
+    scene.angleVerts.length === 3 &&
+    scene.sides.length === 0 &&
+    scene.shared.length === 0 &&
+    scene.rights.length === 0 &&
+    scene.vertical.length === 0 &&
+    scene.alt.length === 0 &&
+    scene.parallel.length === 0
+  )
+}
+
+/** The named mistakes the marks support. A copy of the rule, not an import of the generator. */
+function trapFits(scene: MarkScene, answer: string): { choice: string; id: string }[] {
+  const methods = methodsOfScene(scene)
+  const out: { choice: string; id: string }[] = []
+  const add = (choice: string, id: string) => {
+    if (choice === answer || out.some((trap) => trap.choice === choice)) return
+    out.push({ choice, id })
+  }
+  if (isSsaScene(scene, methods)) {
+    add('SSA', 'geo_ssa_as_congruence')
+    add('SAS', 'geo_sas_not_included')
+    add('HL', 'geo_hl_no_right')
+  }
+  if (isAaaScene(scene, methods)) {
+    add('AAA', 'geo_aaa_as_congruence')
+    add('HL', 'geo_hl_no_right')
+  }
+  if (answer === 'ASA') add('AAS', 'geo_asa_aas_swapped')
+  if (answer === 'AAS') add('ASA', 'geo_asa_aas_swapped')
+  if (answer === 'HL') add('SAS', 'geo_sas_not_included')
+  if (scene.rights.length === 0 && answer !== 'HL') add('HL', 'geo_hl_no_right')
+  if (scene.shared.length > 0 && answer !== 'none') add('none', 'geo_shared_side_missed')
+  if (scene.vertical.length > 0 && answer !== 'none') add('none', 'geo_vertical_angles_missed')
+  return out
+}
+
 // --- algebra -------------------------------------------------------------------------------------------------
 
 function anglesClose(got: number[], expected: number[], where: string): void {
@@ -428,66 +496,96 @@ describe('unit 4, solved again from the wording', () => {
       const a = load('geoCongruence', 'gc.solve', seed)
       const where = `gc.solve/${seed}: ${a.prompt}`
       const fig = a.figure
-      check(fig.ariaLabel.includes('No matching marks.'), where)
+      check(fig.ariaLabel.includes('No congruence marks.'), where)
       check(!(fig.segments ?? []).some((seg) => seg.ticks), `${where}: a tick is not given`)
       check(!(fig.angles ?? []).some((mark) => mark.marks || mark.right), `${where}: an arc is not given`)
       check(!(fig.lines ?? []).some((line) => line.arrows), `${where}: arrows are not given`)
-      const angle = /△([A-Z]{3}) ≅ △([A-Z]{3})\. m∠([A-Z]) = (.+?), m∠([A-Z]) = (.+?), and m∠([A-Z]) = (.+?)\. Find x, then m∠([A-Z])\./.exec(a.prompt)
-      const side = /△([A-Z]{3}) ≅ △([A-Z]{3})\. ([A-Z]{2}) = (.+?), ([A-Z]{2}) = (.+?), and ([A-Z]{2}) = (.+?)\. Find x, then ([A-Z]{2})\./.exec(a.prompt)
-      check(Boolean(angle || side), where)
-      const t1 = (angle ?? side)![1]!
-      const t2 = (angle ?? side)![2]!
+      const head = /△([A-Z]{3}) ≅ △([A-Z]{3})\. (.+)\. Find x, then (?:m∠([A-Z])|([A-Z]{2}))\./.exec(a.prompt)
+      check(Boolean(head), where)
+      const t1 = head![1]!
+      const t2 = head![2]!
+      const bits = head![3]!.split(/, and |, /)
+      const askedVertex = head![4]
+      const askedSide = head![5]
+      check(bits.length === 3, `${where}: ${head![3]}`)
       const left = assertReal(fig, t1, where)
       const right = assertReal(fig, t2, where)
       anglesClose(right.angles, left.angles, `${where} copy`)
       lengthsOk(a.lengths, where)
-      if (angle) {
-        check(angle[3] === t1[0] && angle[5] === t2[0] && angle[7] === t2[1] && angle[9] === t1[0], `${where}: the named angles are not the corresponding pair`)
-        const [eA, eD, eE] = [lin(angle[4]!), lin(angle[6]!), lin(angle[8]!)]
-        const x = integerSolution(eA, eD, where)
-        const measure = at(eA, q(x))
-        const bait = at(eE, q(x))
-        check(measure.d === 1n && bait.d === 1n, `${where}: measures are not integers`)
+      if (askedVertex) {
+        const clauses = bits.map((bit) => {
+          const m = /^m∠([A-Z]) = (.+)$/.exec(bit.trim())
+          if (!m) fail(`${where}: ${bit}`)
+          return { vertex: m[1]!, expr: lin(m[2]!) }
+        })
+        const asked = clauses.find((clause) => clause.vertex === askedVertex)
+        const corr = clauses.find((clause) => clause.vertex === corrVertex(t1, t2, askedVertex))
+        const other = clauses.find((clause) => clause !== asked && clause !== corr)
+        check(Boolean(asked && corr && other && new Set(clauses.map((clause) => clause.vertex)).size === 3), `${where}: the three angles`)
+        const x = integerSolution(asked!.expr, corr!.expr, where)
+        const measure = at(asked!.expr, q(x))
+        const bait = at(other!.expr, q(x))
+        check(measure.d === 1n && bait.d === 1n && at(corr!.expr, q(x)).n === measure.n, `${where}: measures are not integers`)
         const A = Number(measure.n)
         const B = Number(bait.n)
         const C = 180 - A - B
         check(A > 0 && A < 180 && B > 0 && B < 180 && C > 0 && C < 180 && B !== A, `${where}: angles ${A}, ${B}, ${C}`)
+        const askedIndex = vertexIndex(t1, t2, askedVertex)
+        const otherIndex = vertexIndex(t1, t2, other!.vertex)
+        const stored = [0, 1, 2].map((i) => (i === askedIndex ? A : i === otherIndex ? B : C))
         check(a.stages[0]!.answerText === String(x) && a.stages[1]!.answerText === String(A), `${where}: stored ${a.stages.map((s) => s.answerText).join(',')}`)
-        check(a.angles.join(',') === [A, B, C].join(','), `${where}: stored angles ${a.angles.join(',')}`)
-        anglesClose(left.angles, [A, B, C], where)
-        const trapX = integerSolution(eA, eE, `${where} trap`)
-        check(trapX !== x && String(trapX) === a.trapAnswer && a.trapStage === 'x', `${where}: trap ${a.trapAnswer}`)
-      } else if (side) {
-        check(side[3] === `${t1[0]}${t1[1]}` && side[5] === `${t2[0]}${t2[1]}` && side[7] === `${t2[1]}${t2[2]}` && side[9] === side[3], `${where}: the named sides are not the corresponding pair`)
-        const [eAB, eDE, eEF] = [lin(side[4]!), lin(side[6]!), lin(side[8]!)]
-        const x = integerSolution(eAB, eDE, where)
-        const measure = at(eAB, q(x))
-        check(measure.d === 1n && Number(measure.n) > 0, where)
+        check(a.angles.join(',') === stored.join(','), `${where}: stored angles ${a.angles.join(',')}`)
+        anglesClose(left.angles, stored, where)
+        const trapX = integerSolution(asked!.expr, other!.expr, `${where} trap`)
+        check(trapX !== x && String(trapX) === a.trapAnswer && a.trapStage === 'x' && a.trap === 'geo_vertices_out_of_order', `${where}: trap ${a.trapAnswer}`)
+      } else if (askedSide) {
+        const clauses = bits.map((bit) => {
+          const m = /^([A-Z]{2}) = (.+)$/.exec(bit.trim())
+          if (!m) fail(`${where}: ${bit}`)
+          return { name: m[1]!, expr: lin(m[2]!) }
+        })
+        const asked = clauses.find((clause) => clause.name === askedSide)
+        if (!asked) fail(`${where}: the asked side is not one of the three`)
+        const onFirst = sideIndex(t1, asked.name) >= 0
+        const idx = sideIndex(onFirst ? t1 : t2, asked.name)
+        const corrTri = onFirst ? t2 : t1
+        const corr = clauses.find((clause) => clause !== asked && undirected(clause.name) === undirected(sideWritten(corrTri, idx)))
+        const other = clauses.find((clause) => clause !== asked && clause !== corr)
+        check(idx >= 0 && Boolean(corr && other), `${where}: the three sides`)
+        const x = integerSolution(asked.expr, corr!.expr, where)
+        const measure = at(asked.expr, q(x))
+        check(measure.d === 1n && at(corr!.expr, q(x)).n === measure.n && Number(measure.n) > 0, where)
         const result = Number(measure.n)
         check(a.stages[0]!.answerText === String(x) && a.stages[1]!.answerText === String(result), where)
         check(a.lengths.includes(result), `${where}: ${result} is not a stored length`)
         check(a.angles.every((n) => n > 0 && n < 180) && a.angles.reduce((s, n) => s + n, 0) === 180, `${where}: stored angles`)
         anglesClose(left.angles, a.angles, where)
-        const trapX = integerSolution(eAB, eEF, `${where} trap`)
-        check(trapX !== x && String(trapX) === a.trapAnswer && a.trapStage === 'x', `${where}: trap ${a.trapAnswer}`)
+        for (const tri of [t1, t2]) {
+          const mine = clauses.filter((clause) => sideIndex(tri, clause.name) >= 0)
+          if (mine.length === 3) lengthsOk(mine.map((clause) => Number(at(clause.expr, q(x)).n)), `${where} ${tri}`)
+        }
+        const trapX = integerSolution(asked.expr, other!.expr, `${where} trap`)
+        check(trapX !== x && String(trapX) === a.trapAnswer && a.trapStage === 'x' && a.trap === 'geo_vertices_out_of_order', `${where}: trap ${a.trapAnswer}`)
       }
       checkGrades(a, `gc.solve/${seed}`)
     }
   }, 120000)
 
-  it('isosceles and equilateral: the matching parts give one integer, and the triangle is the one the words describe', () => {
+  it('isosceles and equilateral: the congruent parts give one integer, and the triangle is the one the words describe', () => {
     for (let seed = 1; seed <= SEEDS; seed++) {
       const a = load('geoIsosceles', 'gi.solve', seed)
       const where = `gi.solve/${seed}: ${a.prompt}`
       const named = /^Triangle ([A-Z]{3})\./.exec(a.figure.ariaLabel)
       check(Boolean(named), where)
       const tri = assertReal(a.figure, named![1]!, where)
-      const eq = /([A-Z]{2}), ([A-Z]{2}), and ([A-Z]{2}) all match\. \1 = (.+?), \2 = (.+?), and \3 = (.+?)\. Find x, then \1\./.exec(a.prompt)
-      const conv = /∠([A-Z]) and ∠([A-Z]) match\. ([A-Z]{2}) = (.+?), ([A-Z]{2}) = (.+?), and ([A-Z]{2}) = (.+?)\. Find x, then ([A-Z]{2})\./.exec(a.prompt)
-      const thm = /([A-Z]{2}) and ([A-Z]{2}) match\. m∠([A-Z]) = (.+?), m∠([A-Z]) = (.+?), and m∠([A-Z]) = (.+?)\. Find x, then m∠([A-Z])\./.exec(a.prompt)
-      check(Boolean(eq || conv || thm), where)
+      const eq = /^△([A-Z]{3}) is equilateral\. ([A-Z]{2}) = (.+?), ([A-Z]{2}) = (.+?), and ([A-Z]{2}) = (.+?)\. Find x, then ([A-Z]{2})\.$/.exec(a.prompt)
+      const vertex = /^([A-Z]{2}) ≅ ([A-Z]{2}) and m∠([A-Z]) = (\d+)\. m∠([A-Z]) = (.+)\. Find x, then m∠([A-Z])\.$/.exec(a.prompt)
+      const conv = /^∠([A-Z]) ≅ ∠([A-Z])\. ([A-Z]{2}) = (.+?), ([A-Z]{2}) = (.+?), and ([A-Z]{2}) = (.+?)\. Find x, then ([A-Z]{2})\.$/.exec(a.prompt)
+      const thm = /^([A-Z]{2}) ≅ ([A-Z]{2})\. m∠([A-Z]) = (.+?), m∠([A-Z]) = (.+?), and m∠([A-Z]) = (.+?)\. Find x, then m∠([A-Z])\.$/.exec(a.prompt)
+      check(Boolean(eq || vertex || conv || thm), where)
       if (eq) {
-        const [e1, e2, e3] = [lin(eq[4]!), lin(eq[5]!), lin(eq[6]!)]
+        check(eq[1] === named![1] && eq[8] === eq[2], `${where}: asks for a side that is not the first one`)
+        const [e1, e2, e3] = [lin(eq[3]!), lin(eq[5]!), lin(eq[7]!)]
         const x12 = integerSolution(e1, e2, where)
         const x13 = integerSolution(e1, e3, where)
         const x23 = integerSolution(e2, e3, where)
@@ -505,6 +603,29 @@ describe('unit 4, solved again from the wording', () => {
         check(!(a.figure.angles ?? []).some((mark) => mark.marks || mark.right), `${where}: an equilateral arc`)
         check(Math.abs(tri.sides[0] - tri.sides[1]) < 0.05 && Math.abs(tri.sides[1] - tri.sides[2]) < 0.05, `${where}: drawn sides differ`)
         check(a.trap === 'geo_equilateral_angle_for_side' && a.trapStage === 'result' && a.trapAnswer === '60', where)
+        check(gradeGeoStage(a, 'x', '60').verdict === 'wrong', `${where}: 60 on x`)
+      } else if (vertex) {
+        const [s1, s2, apex, given, asked] = [vertex[1]!, vertex[2]!, vertex[3]!, vertex[5]!, vertex[7]!]
+        const shared = [...s1].filter((ch) => s2.includes(ch))
+        check(shared.length === 1 && shared[0] === apex, `${where}: the congruent sides do not meet at the vertex angle`)
+        const V = Number(vertex[4])
+        check((180 - V) % 2 === 0, `${where}: base is not an integer`)
+        const base = (180 - V) / 2
+        const expr = lin(vertex[6]!)
+        const x = integerSolution(expr, lin(String(base)), where)
+        const got = at(expr, q(x))
+        check(got.d === 1n && Number(got.n) === base && base > 0 && base < 180 && base !== V, where)
+        check(asked !== apex && asked !== given && named![1]!.includes(asked) && named![1]!.includes(given), where)
+        check(a.stages[0]!.answerText === String(x) && a.stages[1]!.answerText === String(base), where)
+        const order = [...named![1]!].map((v) => (v === apex ? V : base))
+        check(a.angles.join(',') === order.join(','), `${where}: stored ${a.angles.join(',')}`)
+        anglesClose(tri.angles, order, where)
+        const ticks = (a.figure.segments ?? []).filter((seg) => seg.ticks).map((seg) => undirected(`${seg.from}${seg.to}`)).sort()
+        check(ticks.join(',') === [undirected(s1), undirected(s2)].sort().join(','), `${where}: ticks ${ticks.join(',')}`)
+        check(!(a.figure.angles ?? []).some((mark) => mark.marks || mark.right), `${where}: a vertex-angle arc`)
+        lengthsOk(a.lengths, where)
+        const trapX = integerSolution(expr, lin(String(V)), `${where} trap`)
+        check(trapX !== x && String(trapX) === a.trapAnswer && a.trap === 'geo_base_angles_wrong_vertex' && a.trapStage === 'x', where)
       } else if (conv) {
         const [b, c] = [conv[1]!, conv[2]!]
         const sides = [conv[3]!, conv[5]!, conv[7]!]
@@ -543,7 +664,7 @@ describe('unit 4, solved again from the wording', () => {
       } else if (thm) {
         const [s1, s2] = [thm[1]!, thm[2]!]
         const shared = [...s1].filter((ch) => s2.includes(ch))
-        check(shared.length === 1, `${where}: the matching sides do not share one vertex`)
+        check(shared.length === 1, `${where}: the congruent sides do not share one vertex`)
         const apex = shared[0]!
         const bases = [s1, s2].map((name) => [...name].find((ch) => ch !== apex)!).sort()
         const letters = [thm[3]!, thm[5]!, thm[7]!]
@@ -586,14 +707,18 @@ describe('unit 4, solved again from the wording', () => {
       check(methods.length <= 1, `${where}: marks prove ${methods.join('+')}`)
       if (methods.includes('HL')) check(!methods.includes('SAS'), `${where}: HL was also read as SAS`)
       const text = choiceText(a.stages[0]!)
+      const answerId = methods.length === 0 ? 'none' : methods[0]!
       check(text === (methods.length === 0 ? 'Not enough information' : methods[0]), `${where}: answer ${text}, marks ${methods.join(',') || 'none'}`)
       const buttons = a.stages[0]!.choices ?? []
       check(buttons.some((choice) => choice.id === 'SSA') && buttons.some((choice) => choice.id === 'AAA'), where)
-      if (methods.length === 0 && scene.sides.length > 0) {
+      const fitted = trapFits(scene, answerId).map((trap) => `${trap.choice}=${trap.id}`).sort()
+      const got = a.stages[0]!.traps.map((trap) => `${trap.text}=${trap.id}`).sort()
+      check(got.join('|') === fitted.join('|'), `${where}: traps ${got.join('|')} vs ${fitted.join('|')}`)
+      if (isSsaScene(scene, methods)) {
         anglesClose(right.angles, left.angles, `${where} SSA shape`)
         check(left.sides.every((s, i) => Math.abs(s - right.sides[i]!) < 0.05), `${where}: SSA triangles are not the same size`)
       }
-      if (methods.length === 0 && scene.sides.length === 0) {
+      if (isAaaScene(scene, methods)) {
         anglesClose(right.angles, left.angles, `${where} AAA angles`)
         check(left.sides.some((s, i) => Math.abs(s - right.sides[i]!) > 0.5), `${where}: AAA triangles are the same size`)
       }
@@ -633,30 +758,61 @@ describe('unit 4, solved again from the wording', () => {
       figureMatches(a.figure, scene, where)
       assertReal(a.figure, scene.t1, where)
       assertReal(a.figure, scene.t2, where)
-      const named = /△([A-Z]{3}) ≅ △([A-Z]{3})\. Which (angle|side) matches (∠)?([A-Z]+)\?/.exec(a.prompt)
-      if (named) {
-        check(scene.sides.length === 0 && scene.angleVerts.length === 0 && scene.rights.length === 0 && scene.shared.length === 0, `${where}: a naming problem shows marks`)
-        const map = new Map<string, string>([...named[1]!].map((ch, i) => [ch, named[2]![i]!]))
-        const asked = named[5]!
-        const image = [...asked].map((ch) => map.get(ch) ?? '?').join('')
-        const expected = named[3] === 'angle' ? `∠${image}` : image
+      const angleAsk = /△([A-Z]{3}) ≅ △([A-Z]{3})\. Which angle of △([A-Z]{3}) corresponds to ∠([A-Z])\?/.exec(a.prompt)
+      const sideAsk = /△([A-Z]{3}) ≅ △([A-Z]{3})\. Which side of △([A-Z]{3}) corresponds to ([A-Z]{2})\?/.exec(a.prompt)
+      if (angleAsk || sideAsk) {
+        check(scene.sides.length === 0 && scene.angleVerts.length === 0 && scene.rights.length === 0 && scene.shared.length === 0 && scene.vertical.length === 0, `${where}: a naming problem shows marks`)
+        const head = (angleAsk ?? sideAsk)!
+        const t1 = head[1]!
+        const t2 = head[2]!
+        const asked = head[3]!
+        check(asked === t1 || asked === t2, `${where}: the question asks about a third triangle`)
+        const source = asked === t1 ? t2 : t1
+        let expected = ''
+        if (angleAsk) {
+          const idx = source.indexOf(angleAsk[4]!)
+          check(idx >= 0, where)
+          expected = `∠${asked[idx]}`
+        } else {
+          const idx = sideIndex(source, sideAsk![4]!)
+          check(idx >= 0, where)
+          expected = sideWritten(asked, idx)
+        }
         const hits = a.stages[0]!.choices?.filter((choice) => choice.text === expected) ?? []
-        check(hits.length === 1 && hits[0]!.text === choiceText(a.stages[0]!), `${where}: ${expected} is not the one matching choice`)
+        check(hits.length === 1 && hits[0]!.text === choiceText(a.stages[0]!), `${where}: ${expected} is not the one correct choice`)
+        const order = a.stages[0]!.choices?.find((choice) => choice.trap === 'geo_vertices_out_of_order')
+        check(Boolean(order) && order!.text !== expected, `${where}: the order trap is the right part`)
       } else {
-        check(a.prompt.includes('Which statement names the triangles'), where)
+        check(a.prompt === 'Which congruence statement do the marks support?', where)
         const methods = methodsOfScene(scene)
-        check(methods.join(',') === 'SSS', `${where}: statement marks prove ${methods.join(',') || 'nothing'}`)
+        check(methods.length === 1 && ['SSS', 'SAS', 'ASA'].includes(methods[0]!), `${where}: statement marks prove ${methods.join(',') || 'nothing'}`)
+        const ratio = (sides: number[]) => {
+          for (let i = 0; i < sides.length; i++) {
+            for (let j = i + 1; j < sides.length; j++) {
+              if (Math.abs(sides[i]! - sides[j]!) / Math.max(sides[i]!, sides[j]!) < 0.1) return false
+            }
+          }
+          return true
+        }
+        const left = assertReal(a.figure, scene.t1, where)
+        const rightTri = assertReal(a.figure, scene.t2, where)
+        check(ratio(left.sides) && ratio(rightTri.sides), `${where}: a side is within 10% of another`)
         const preserves = (text: string) => {
           const m = /△([A-Z]{3}) ≅ △([A-Z]{3})/.exec(text)
           if (!m) return false
           const map = new Map<string, string>([...m[1]!].map((ch, i) => [ch, m[2]![i]!]))
-          return scene.sides.every(([p, q]) => {
-            const image = undirected(`${map.get(p[0]!) ?? ''}${map.get(p[1]!) ?? ''}`)
-            return image === undirected(q)
-          })
+          const sidesOk = scene.sides.every(([p, q]) => undirected(`${map.get(p[0]!) ?? ''}${map.get(p[1]!) ?? ''}`) === undirected(q))
+          const anglesOk = scene.angleVerts.every(([u, v]) => map.get(u) === v)
+          return sidesOk && anglesOk
         }
         const hits = a.stages[0]!.choices?.filter((choice) => preserves(choice.text)) ?? []
         check(hits.length === 1 && hits[0]!.text === choiceText(a.stages[0]!), `${where}: ${hits.map((h) => h.text).join(' | ')}`)
+        const keys = (a.stages[0]!.choices ?? []).map((choice) => {
+          const m = /△([A-Z]{3}) ≅ △([A-Z]{3})/.exec(choice.text)
+          if (!m) return choice.text
+          return [...m[1]!].map((ch, i) => `${ch}${m[2]![i]}`).sort().join('-')
+        })
+        check(new Set(keys).size === keys.length, `${where}: two choices name one correspondence`)
       }
       checkGrades(a, `gc.parts/${seed}`)
     }
@@ -754,6 +910,9 @@ describe('unit 4 proofs, checked from the rows and the figure', () => {
       const built = problem('geoTriangleProofs', 'gt.twocolumn', seed)
       const a = built.answer as GeometryAnswer
       const where = `gt.twocolumn/${seed} ${built.params.skeleton}`
+      check(/^Given: .+\. Prove: .+\.$/.test(a.prompt), `${where}: ${a.prompt}`)
+      const proved = /\. Prove: (.+)\.$/.exec(a.prompt)?.[1] ?? ''
+      const givenClause = /^Given: (.+)\. Prove: /.exec(a.prompt)?.[1] ?? ''
       const scene = parseAria(a.figure.ariaLabel)
       figureMatches(a.figure, scene, where)
       assertReal(a.figure, scene.t1, where)
@@ -766,28 +925,34 @@ describe('unit 4 proofs, checked from the rows and the figure', () => {
       const givenPerpVerts = new Set<string>()
       const givenParallel: [string, string][] = []
       let cong: { t1: string; t2: string; map: Map<string, string> } | null = null
+      let proveHits = 0
 
       const rows: RowFact[] = a.stages.map((stage) => {
         const why = reasonOf(stage)
         return { statement: statementOf(stage), reason: why.id, accept: why.accept }
       })
 
-      for (const row of rows) {
+      rows.forEach((row, index) => {
         const line = `${where}: “${row.statement}” (${row.reason})`
+        if (row.statement.includes(' and ') && !row.statement.endsWith('are right triangles')) fail(`${line}: two facts in one row`)
+        if (row.reason === 'given') check(givenClause.includes(row.statement), `${line} is not in the Given list`)
+        if (row.statement === proved) {
+          proveHits += 1
+          check(a.stages[index]!.kind === 'reason', `${line}: the Prove line is a statement pick`)
+        }
         if (row.reason === 'thm-aas') check(row.accept.join(',') === 'post-aas', `${line} accept`)
         else if (row.reason === 'thm-hl') check(row.accept.join(',') === 'post-hl', `${line} accept`)
         else check(row.accept.length === 0, `${line} should not accept ${row.accept.join(',')}`)
 
         if (row.reason === 'thm-cpctc') {
-          check(cong !== null, `${line}: CPCTC before the triangles match`)
+          check(cong !== null, `${line}: CPCTC before the triangles are proved congruent`)
           const parts = row.statement.split(' ≅ ')
           check(parts.length === 2 && corresponds(cong!.map, parts[0]!, parts[1]!), `${line}: not the image under ${cong?.t1} ≅ ${cong?.t2}`)
-          continue
+          return
         }
         check(cong === null, `${line}: a row after the congruence is not corresponding parts`)
 
         if (row.reason === 'given') {
-          const two = /^([A-Z]{2}) ≅ ([A-Z]{2}) and ([A-Z]{2}) ≅ ([A-Z]{2})$/.exec(row.statement)
           const one = /^([A-Z]{2}) ≅ ([A-Z]{2})$/.exec(row.statement)
           const ang = /^∠([A-Z]{3}) ≅ ∠([A-Z]{3})$/.exec(row.statement)
           const right = /^∠([A-Z]{3}) is a right angle$/.exec(row.statement)
@@ -796,10 +961,7 @@ describe('unit 4 proofs, checked from the rows and the figure', () => {
           const mid = /^([A-Z]) is the midpoint of ([A-Z]{2})$/.exec(row.statement)
           const ray = /^Ray ([A-Z]{2}) bisects ∠([A-Z]{3})$/.exec(row.statement)
           const seg = /^Line ([A-Z]{2}) bisects ([A-Z]{2}) at ([A-Z])$/.exec(row.statement)
-          if (two) {
-            facts.sides.push([two[1]!, two[2]!], [two[3]!, two[4]!])
-            givenSides.push([two[1]!, two[2]!], [two[3]!, two[4]!])
-          } else if (one) {
+          if (one) {
             facts.sides.push([one[1]!, one[2]!])
             givenSides.push([one[1]!, one[2]!])
           } else if (ang) {
@@ -915,9 +1077,10 @@ describe('unit 4 proofs, checked from the rows and the figure', () => {
           check(methods.join(',') === CONG_FAMILY[row.reason], `${line}: the facts prove ${methods.join('+') || 'nothing'}, not ${CONG_FAMILY[row.reason]}`)
           cong = { t1: m[1]!, t2: m[2]!, map: new Map([...m[1]!].map((ch, i) => [ch, m[2]![i]!])) }
         } else fail(`${line}: no rule for this reason`)
-      }
+      })
 
-      check(cong !== null, `${where}: the triangles are never shown to match`)
+      check(proveHits === 1, `${where}: the Prove line is not exactly one reason row`)
+      check(cong !== null, `${where}: the triangles are never proved congruent`)
       sameKeys(keysOf(tickPairs(a.figure), 'seg'), keysOf(givenSides, 'seg'), `${where} ticks are not the given sides`)
       sameKeys(keysOf(arcPairs(a.figure), 'vert'), keysOf(givenAngles, 'vert'), `${where} arcs are not the given angles`)
       const squareExpected = [...new Set([...givenRights, ...givenPerpVerts])].sort()

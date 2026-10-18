@@ -79,6 +79,7 @@ export const GEO_UNIT4_MISTAKE_IDS = [
   'geo_shared_side_missed',
   'geo_base_angles_wrong_vertex',
   'geo_equilateral_angle_for_side',
+  'geo_vertical_angles_missed',
 ] as const
 
 export const GEO_UNIT1_MISTAKE_IDS = GEO_MISTAKE_IDS
@@ -319,7 +320,9 @@ function assertPickAnswer(where: string, answer: GeometryAnswer): void {
   const displays = answer.stages.map((stage) => stageDisplay(stage))
   for (const stage of answer.stages) {
     const display = stageDisplay(stage)
-    if (containsAnswer(sharedBlob, display)) throw new Error(`${where}: ${stage.id} answer is on screen before she finishes`)
+    // The Given list is the problem. A row whose answer is the reason "Given" repeats it on purpose.
+    const givenReason = stage.kind === 'reason' && stage.answerText === 'given'
+    if (!givenReason && containsAnswer(sharedBlob, display)) throw new Error(`${where}: ${stage.id} answer is on screen before she finishes`)
     for (const line of stage.reveal) {
       if (line && answer.prompt.includes(line)) throw new Error(`${where}: ${stage.id} worked line is in the prompt`)
     }

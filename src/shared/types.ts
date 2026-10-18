@@ -466,6 +466,7 @@ export type ErrorPatternId =
   | 'geo_shared_side_missed'
   | 'geo_base_angles_wrong_vertex'
   | 'geo_equilateral_angle_for_side'
+  | 'geo_vertical_angles_missed'
   // behavioral (ui)
   | 'abandoned'
 

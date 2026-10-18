@@ -208,35 +208,35 @@ export const geoPolygonAnglesModule: ModuleDef = {
 }
 
 /**
- * Congruent triangles (honors geometry Unit 4). Corresponding parts, the method the marks
- * actually support, and an equation from two matching parts.
+ * Congruent triangles (honors geometry Unit 4). Corresponding parts, the postulate or theorem
+ * the marks support, and an equation from two congruent parts.
  */
 export const geoCongruenceModule: ModuleDef = {
   id: 'geoCongruence',
   subject: 'Geometry',
   title: 'Congruent triangles',
-  blurb: 'Name a matching part, decide what the marks show, and solve for a part of two matching triangles.',
+  blurb: 'Name a corresponding part, decide which postulate or theorem the marks support, and solve for a part of two congruent triangles.',
   order: 15,
   templates: [
     geoTemplate(
       'geoCongruence',
       'gc.parts',
       'Corresponding parts',
-      'From a statement that two triangles match, name the matching part, or pick the statement the marks support.',
+      'From a congruence statement, name the corresponding part, or pick the statement the marks support.',
       drawParts,
     ),
     geoTemplate(
       'geoCongruence',
       'gc.which',
       'Which method',
-      'Two triangles with marks. Which method shows they match, or that the marks are not enough?',
+      'Two triangles with marks. Which postulate or theorem proves they are congruent, if any?',
       drawWhich,
     ),
     geoTemplate(
       'geoCongruence',
       'gc.solve',
-      'Matching parts',
-      'Two matching triangles. The matching parts are expressions in x. Find x, then the part asked for.',
+      'Corresponding parts',
+      'Two congruent triangles. Corresponding parts are expressions in x. Find x, then the part asked for.',
       drawSolve,
     ),
   ],
@@ -247,20 +247,20 @@ export const geoCongruenceModule: ModuleDef = {
 
 /**
  * Isosceles and equilateral triangles (honors geometry Unit 4). Base angles sit across from the
- * matching sides, and an equilateral triangle's angles are not its side lengths.
+ * congruent sides, and an equilateral triangle's angles are not its side lengths.
  */
 export const geoIsoscelesModule: ModuleDef = {
   id: 'geoIsosceles',
   subject: 'Geometry',
   title: 'Isosceles and equilateral triangles',
-  blurb: 'Use two matching sides, two matching angles, or three matching sides. Find x, then the part asked for.',
+  blurb: 'Use two congruent sides, two congruent angles, or three congruent sides. Find x, then the part asked for.',
   order: 16,
   templates: [
     geoTemplate(
       'geoIsosceles',
       'gi.solve',
       'Isosceles and equilateral',
-      'Two sides match, two angles match, or all three sides match. Find x, then the part asked for.',
+      'Two sides are congruent, two angles are congruent, or the triangle is equilateral. Find x, then the part asked for.',
       drawIsosceles,
     ),
   ],
@@ -277,14 +277,14 @@ export const geoTriangleProofsModule: ModuleDef = {
   id: 'geoTriangleProofs',
   subject: 'Geometry',
   title: 'Proving triangles congruent',
-  blurb: 'Fill a two-column proof that two triangles match, then a pair of matching parts.',
+  blurb: 'Fill a two-column proof that two triangles are congruent, then a pair of corresponding parts.',
   order: 17,
   templates: [
     geoTemplate(
       'geoTriangleProofs',
       'gt.twocolumn',
       'Two-column proof',
-      'A proof that two triangles match. Most rows need a reason; one or two rows need the missing statement.',
+      'A proof that two triangles are congruent. Most rows need a reason; some rows need the missing statement.',
       drawTriangleProof,
     ),
   ],

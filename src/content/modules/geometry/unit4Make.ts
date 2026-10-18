@@ -1,247 +1,104 @@
 /**
- * Honors geometry Unit 4, congruent triangles and isosceles triangles.
- * A figure shows only the marks that are given. A shared side or a pair of vertical angles
- * counts only when the figure actually draws them. The aria lists those marks in a fixed order
- * so a later test can decide the method without reading this file's answer.
+ * Honors geometry Unit 4. Every problem is drawn from its seed: letters, correspondence,
+ * orientation, and numbers. A figure shows only the marks that are given. The aria lists
+ * those marks in a fixed order so a later test can decide the method without this file's answer.
  *
- *   Triangles ABC and DEF. Side pairs: AB-DE tick 1; BC-EF tick 2. Angle pairs: B-E arc 1.
- *   Right angles: none. Shared sides: none. Vertical angles: none. Parallel lines: none.
- *   Alternate interior angles: none.
- *
- * "none" means that list is empty. Answers never use 4, 6, 11, 15, 17, 19, 23, 24, 26, 29, 37,
- * 41, 53, 60, 64, 90, 165, or 180, and the hints under the boxes use 11, 23, and 41.
+ * Answers never use 4, 6, 11, 15, 17, 19, 23, 24, 26, 29, 37, 41, 53, 60, 64, 90, 165, or 180.
  */
-import { makeRng, mixSeed } from '@/content/rng'
+import { ERROR_PATTERNS } from '@/engine'
+import { makeRng, mixSeed, type Rng } from '@/content/rng'
 import type { GeometryAnswer, GeometryStageId } from '@/content/types'
 import type { ErrorPatternId, GeoAngleMark, GeoFigureSpec, GeoLine, GeoPoint, GeoSegment } from '@/shared/types'
 import type { GeoBuilt } from './build'
 import { angleLabel, evalLin, formatLin, lin, solveEqual, type Lin } from './expr'
-import { exposed } from './grade'
+import { exampleShowsAnswer, exposed } from './grade'
+import {
+  PERMS,
+  SCALENE,
+  anglesAt,
+  applyPerm,
+  ariaOf,
+  byId,
+  dist,
+  emptyScene,
+  methodsOf,
+  pickLetters,
+  placePair,
+  placeRightPair,
+  placeScaledPair,
+  preservingCount,
+  pt,
+  sameCongruence,
+  sideName,
+  wedge,
+  type Method,
+  type Scene,
+  type Tick,
+} from './unit4Geom'
 import { UNIT4_RULE_IDS } from './unit4Rules'
 
 const X_HINT = 'A number, like 11 or x = 11.'
 const DEG_HINT = 'Degrees, like 23, 23°, or 23 deg.'
 const LEN_HINT = 'A length, like 41.'
 const BANNED = new Set([4, 6, 11, 15, 17, 19, 23, 24, 26, 29, 37, 41, 53, 60, 64, 90, 165, 180])
+const X_POOL = [2, 3, 5, 7, 8, 9, 10, 12, 13, 14, 16, 18]
+const ROTS = [70, 110, 160, 200, 250, 300]
+const WHICH_PROMPT = 'Which postulate or theorem, if any, proves the triangles congruent?'
 
-const ORDER_W = 'That order pairs vertices the marks do not pair. The first letter of one triangle has to name the matching vertex of the other.'
-const SSA_W = 'Those two sides and the angle that is not between them do not show the triangles match. Two sides need the angle between them.'
-const AAA_W = 'Three matching angles do not show the triangles match. The same angles can sit on triangles of different sizes.'
-const HL_W = 'That way needs a right angle in each triangle, and the side opposite it. These triangles do not have a right angle.'
-const SAS_W = 'That way needs the angle that sits between the two sides. The angle here is not between them.'
-const SWAP_W = 'That way puts the side in the other place relative to the two angles. Look at whether the side sits between the angles.'
-const BASE_W = 'That sets the angle between the matching sides equal to a base angle. The two base angles are the ones across from the matching sides.'
-const CONV_W = 'That sets a matching side equal to the side between the matching angles. The two matching sides are the ones across from the matching angles.'
-const EQ_W = 'That number is an angle of this triangle. The question asks for a side.'
-const VERT_W = 'That pairs a different vertex. The first letter lines up with the first letter, not the next one.'
+const ORDER_W = 'That order pairs vertices the marks do not pair. Read the correspondence, not the alphabet and not the picture.'
+const SSA_W = 'SSA is two sides and a non-included angle. It does not prove the triangles congruent. SAS needs the included angle.'
+const AAA_W = 'AAA is three pairs of angles. That shows the same shape, not the same size, so it does not prove the triangles congruent.'
+const HL_W = 'HL needs a right angle in each triangle and the hypotenuse. These triangles have no right angle, and SSA is a different pair of parts.'
+const SAS_W = 'SAS needs the included angle, the one between the two sides. The angle here is not between them, so the pair is SSA.'
+const SWAP_W = 'That choice puts the side on the wrong side of the two angles. One of them is the side between the angles, and the other is a side that is not.'
+const SHARED_W = 'A side that lies in both triangles is congruent to itself. Leaving that pair out drops a pair the figure already shows.'
+const VERT_MISSED_W = 'The two lines cross, so the opposite angles are congruent. That pair still counts toward proving the triangles congruent.'
+const BASE_W = 'That sets the vertex angle equal to a base angle. The base angles are the ones opposite the congruent sides.'
+const CONV_W = 'That sets a leg equal to the base. The congruent sides are the ones opposite the congruent angles.'
+const EQ_W = 'That number is an angle of an equilateral triangle. The question asks for a side.'
+const VERT_W = 'That pairs a part with one that does not correspond. Read the order of the vertices in the statement.'
 
-type Tick = 1 | 2 | 3
-type Method = 'SSS' | 'SAS' | 'ASA' | 'AAS' | 'HL'
-type Pair = [string, string]
+type Tri = [string, string, string]
 
-interface SideMark {
-  a: Pair
-  b: Pair
-  tick: Tick
-}
-interface AnglePair {
-  a: string
-  b: string
-  arc: Tick
-}
-interface Scene {
-  t1: [string, string, string]
-  t2: [string, string, string]
-  sides: SideMark[]
-  angles: AnglePair[]
-  rights: string[]
-  shared: Pair[]
-  vertical: string[]
-  parallel: { line: string; arrows: 1 | 2 }[]
-  alt: string[]
+interface ChoiceDraft {
+  id: string
+  text: string
+  trap?: ErrorPatternId
+  witness?: string
 }
 
-const SETS = [
-  ['A', 'B', 'C', 'D', 'E', 'F'],
-  ['P', 'Q', 'R', 'S', 'T', 'U'],
-  ['E', 'F', 'G', 'H', 'N', 'P'],
-  ['W', 'X', 'Y', 'Z', 'N', 'P'],
-] as const
-
-function letters(seed: number, period: number): readonly string[] {
-  return SETS[Math.floor((seed - 1) / period) % SETS.length]!
-}
-
-function triName(a: string, b: string, c: string): string {
-  return `△${a}${b}${c}`
+function triName(t: Tri): string {
+  return `△${t.join('')}`
 }
 
 function cong(left: string, right: string): string {
   return `${left} ≅ ${right}`
 }
 
-function sideName(a: string, b: string): string {
-  return `${a}${b}`
-}
-
-const PERMS: readonly (readonly [number, number, number])[] = [
-  [0, 1, 2],
-  [0, 2, 1],
-  [1, 0, 2],
-  [1, 2, 0],
-  [2, 0, 1],
-  [2, 1, 0],
-]
-
 function segKey(a: string, b: string): string {
   return a < b ? `${a}${b}` : `${b}${a}`
 }
 
-/** Which methods the marks actually prove. Empty means the marks are not enough. */
-function methodsOf(scene: Scene): Method[] {
-  const found = new Set<Method>()
-  const sideHit = (p: Pair, q: Pair) => {
-    const A = segKey(p[0], p[1])
-    const B = segKey(q[0], q[1])
-    if (scene.shared.some((s) => segKey(s[0], s[1]) === A && A === B)) return true
-    return scene.sides.some((s) => {
-      const x = segKey(s.a[0], s.a[1])
-      const y = segKey(s.b[0], s.b[1])
-      return (x === A && y === B) || (x === B && y === A)
-    })
-  }
-  const angleHit = (u: string, v: string) => {
-    if (scene.rights.includes(u) && scene.rights.includes(v)) return true
-    if (scene.angles.some((g) => (g.a === u && g.b === v) || (g.a === v && g.b === u))) return true
-    return namedAngles(scene.vertical, u, v) || namedAngles(scene.alt, u, v)
-  }
-  for (const perm of PERMS) {
-    const map = [scene.t2[perm[0]]!, scene.t2[perm[1]]!, scene.t2[perm[2]]!]
-    const matched = [0, 1, 2].filter((i) => sideHit([scene.t1[i]!, scene.t1[(i + 1) % 3]!], [map[i]!, map[(i + 1) % 3]!]))
-    const ang = [0, 1, 2].filter((i) => angleHit(scene.t1[i]!, map[i]!))
-    if (matched.length === 3) found.add('SSS')
-    for (const v of [0, 1, 2]) {
-      if (matched.includes((v + 2) % 3) && matched.includes(v) && ang.includes(v)) found.add('SAS')
-    }
-    for (const s of [0, 1, 2]) {
-      if (ang.includes(s) && ang.includes((s + 1) % 3) && matched.includes(s)) found.add('ASA')
-    }
-    if (ang.length >= 2) {
-      for (let i = 0; i < ang.length; i++) {
-        for (let j = i + 1; j < ang.length; j++) {
-          const included = includedSide(ang[i]!, ang[j]!)
-          if (matched.some((s) => s !== included)) found.add('AAS')
-        }
-      }
-    }
-    const rightAt = [0, 1, 2].filter((i) => scene.rights.includes(scene.t1[i]!))
-    if (rightAt.length === 1 && scene.rights.includes(map[rightAt[0]!]!)) {
-      const r = rightAt[0]!
-      const others = [0, 1, 2].filter((i) => scene.rights.includes(map[i]!))
-      if (others.length === 1 && others[0] === r) {
-        const hyp = (r + 1) % 3
-        if (matched.includes(hyp) && (matched.includes(r) || matched.includes((r + 2) % 3))) found.add('HL')
-      }
-    }
-  }
-  return [...found]
+/** Side i written with the earlier vertex of the name first, so the third side is AC rather than CA. */
+function sideLabel(t: Tri, i: number): string {
+  if (i === 2) return `${t[0]}${t[2]}`
+  return sideName(t.join(''), i)
 }
 
-/** Middle letter of ∠ABC, or the letter itself when the angle is named by its vertex. */
-function angleVertex(name: string): string {
-  if (name.length === 1 || name.length === 3) return name[name.length === 1 ? 0 : 1]!
-  throw new Error(`bad angle name ${name}`)
+function angLetter(t: Tri, i: number): string {
+  return `∠${t[i]}`
 }
 
-/**
- * A crossing or a pair of parallels is the given. The matching angles are not stored as arcs:
- * an arc would claim a mark the problem has not drawn.
- */
-function namedAngles(list: string[], u: string, v: string): boolean {
-  return list.some((spec) => {
-    const [left, right] = spec.split('-')
-    if (!left || !right) return false
-    const a = angleVertex(left)
-    const b = angleVertex(right)
-    return (a === u && b === v) || (a === v && b === u)
-  })
+function blobOf(id: ErrorPatternId, witness: string): string {
+  const info = ERROR_PATTERNS[id]
+  return `${info.title}\n${info.lesson}\n${info.example}\n${witness}`
 }
 
-function includedSide(va: number, vb: number): number {
-  const a = Math.min(va, vb)
-  const b = Math.max(va, vb)
-  if (a === 0 && b === 1) return 0
-  if (a === 1 && b === 2) return 1
-  return 2
-}
-
-function listOrNone(items: string[]): string {
-  return items.length ? items.join('; ') : 'none'
-}
-
-function ariaOf(scene: Scene): string {
-  const sides = scene.sides.map((s) => `${sideName(s.a[0], s.a[1])}-${sideName(s.b[0], s.b[1])} tick ${s.tick}`)
-  const angles = scene.angles.map((g) => `${g.a}-${g.b} arc ${g.arc}`)
-  const shared = scene.shared.map((s) => sideName(s[0], s[1]))
-  const parallel = scene.parallel.map((p) => `${p.line} arrows ${p.arrows}`)
-  return [
-    `Triangles ${scene.t1.join('')} and ${scene.t2.join('')}.`,
-    `Side pairs: ${listOrNone(sides)}.`,
-    `Angle pairs: ${listOrNone(angles)}.`,
-    `Right angles: ${listOrNone(scene.rights)}.`,
-    `Shared sides: ${listOrNone(shared)}.`,
-    `Vertical angles: ${listOrNone(scene.vertical)}.`,
-    `Parallel lines: ${listOrNone(parallel)}.`,
-    `Alternate interior angles: ${listOrNone(scene.alt)}.`,
-  ].join(' ')
-}
-
-function emptyScene(t1: [string, string, string], t2: [string, string, string]): Scene {
-  return { t1, t2, sides: [], angles: [], rights: [], shared: [], vertical: [], parallel: [], alt: [] }
-}
-
-function pt(id: string, x: number, y: number, side: NonNullable<GeoPoint['labelSide']>): GeoPoint {
-  return { id, x: Math.round(x * 100) / 100, y: Math.round(y * 100) / 100, label: id, labelSide: side }
-}
-
-function rad(deg: number): number {
-  return (deg * Math.PI) / 180
-}
-
-function wedge(v: GeoPoint, a: GeoPoint, b: GeoPoint): number {
-  const a1 = Math.atan2(a.y - v.y, a.x - v.x)
-  const a2 = Math.atan2(b.y - v.y, b.x - v.x)
-  let d = a2 - a1
-  while (d <= -Math.PI) d += 2 * Math.PI
-  while (d > Math.PI) d -= 2 * Math.PI
-  return (Math.abs(d) * 180) / Math.PI
-}
-
-function byId(points: GeoPoint[], id: string): GeoPoint {
-  const found = points.find((p) => p.id === id)
-  if (!found) throw new Error(`missing ${id}`)
-  return found
-}
-
-/** A triangle with the given angles at A, B, and C, base AB of length `scale`, A at x = ox. */
-function placeTri(ids: [string, string, string], ox: number, angA: number, angB: number, scale: number): GeoPoint[] {
-  const angC = 180 - angA - angB
-  const ac = (scale * Math.sin(rad(angB))) / Math.sin(rad(angC))
-  return [
-    pt(ids[0], ox, 0, 'below'),
-    pt(ids[1], ox + scale, 0, 'below'),
-    pt(ids[2], ox + ac * Math.cos(rad(angA)), ac * Math.sin(rad(angA)), 'above'),
-  ]
-}
-
-function assertAngles(points: GeoPoint[], ids: [string, string, string], angA: number, angB: number, where: string): void {
-  const [A, B, C] = ids.map((id) => byId(points, id)) as [GeoPoint, GeoPoint, GeoPoint]
-  const gotA = wedge(A, B, C)
-  const gotB = wedge(B, A, C)
-  const gotC = wedge(C, A, B)
-  if (Math.abs(gotA - angA) > 1.5 || Math.abs(gotB - angB) > 1.5 || Math.abs(gotC - (180 - angA - angB)) > 1.5) {
-    throw new Error(`${where}: drew ${gotA.toFixed(1)}, ${gotB.toFixed(1)}, ${gotC.toFixed(1)}`)
-  }
+/** The flow compares with a raw substring, so a short answer must not sit inside the lesson or the example. */
+function rawLeaks(id: ErrorPatternId, witness: string, display: string): boolean {
+  const info = ERROR_PATTERNS[id]
+  if (exampleShowsAnswer(info.example, display)) return true
+  return blobOf(id, witness).includes(display)
 }
 
 function hide(where: string, blob: string, answers: string[]): void {
@@ -251,11 +108,50 @@ function hide(where: string, blob: string, answers: string[]): void {
   }
 }
 
-interface ChoiceDraft {
-  id: string
-  text: string
-  trap?: ErrorPatternId
-  witness?: string
+function noRight(points: GeoPoint[], ids: Tri, tol = 2): boolean {
+  return anglesAt(points, ids).every((a) => Math.abs(a - 90) >= tol)
+}
+
+function drawnScalene(points: GeoPoint[], ids: Tri): boolean {
+  const lens = [0, 1, 2].map((i) => dist(points, ids[i], ids[(i + 1) % 3]!))
+  for (let i = 0; i < 3; i++) {
+    for (let j = i + 1; j < 3; j++) {
+      const mx = Math.max(lens[i]!, lens[j]!)
+      if (mx === 0 || Math.abs(lens[i]! - lens[j]!) / mx <= 0.1) return false
+    }
+  }
+  return true
+}
+
+function orient(rng: Rng): { rot: number; reflect: boolean; ang: readonly [number, number, number] } {
+  return { rot: rng.pick(ROTS), reflect: rng.chance(0.5), ang: rng.pick(SCALENE) }
+}
+
+function named(rng: Rng): { t1: Tri; t2: Tri; perm: number } {
+  const letters = pickLetters(rng, 6)
+  const perm = rng.int(0, 5)
+  const t1: Tri = [letters[0]!, letters[1]!, letters[2]!]
+  const t2 = applyPerm([letters[3]!, letters[4]!, letters[5]!], PERMS[perm]!)
+  return { t1, t2, perm }
+}
+
+function segsOf(ids: Tri, ticks: Map<string, Tick>): GeoSegment[] {
+  const out: GeoSegment[] = []
+  for (let i = 0; i < 3; i++) {
+    const a = ids[i]!
+    const b = ids[(i + 1) % 3]!
+    const n = ticks.get(segKey(a, b))
+    out.push(n ? { from: a, to: b, ticks: n } : { from: a, to: b })
+  }
+  return out
+}
+
+function arcAt(ids: Tri, i: number, n: Tick): GeoAngleMark {
+  return { vertex: ids[i]!, from: ids[(i + 1) % 3]!, to: ids[(i + 2) % 3]!, marks: n }
+}
+
+function squareAt(ids: Tri, i: number): GeoAngleMark {
+  return { vertex: ids[i]!, from: ids[(i + 1) % 3]!, to: ids[(i + 2) % 3]!, right: true }
 }
 
 function choiceAnswer(
@@ -263,6 +159,8 @@ function choiceAnswer(
   prompt: string,
   figure: GeoFigureSpec,
   label: string,
+  hint: string,
+  nudge: string,
   choices: ChoiceDraft[],
   answerId: string,
   trapId: ErrorPatternId,
@@ -270,12 +168,17 @@ function choiceAnswer(
   ruleCard: string,
   reveal: string[],
   title: string,
-  params: Record<string, string>,
+  params: Record<string, string | number | boolean>,
   seed: number,
 ): GeoBuilt {
   const shuffled = makeRng(mixSeed(seed, 4)).shuffle(choices)
   const answer = shuffled.find((c) => c.id === answerId)
   if (!answer) throw new Error('missing correct choice')
+  const display = answer.text
+  for (const choice of shuffled) {
+    if (!choice.trap || !choice.witness) continue
+    if (rawLeaks(choice.trap, choice.witness, display)) throw new Error(`${choice.trap} leaks ${display}`)
+  }
   const traps = shuffled
     .filter((c): c is ChoiceDraft & { trap: ErrorPatternId } => Boolean(c.trap))
     .map((c) => ({ id: c.trap, text: c.id, witness: c.witness ?? 'That choice does not answer this part.' }))
@@ -283,8 +186,8 @@ function choiceAnswer(
     id: 'a',
     kind: 'choice',
     label,
-    hint: 'Read the marks that are drawn, then the order of the letters.',
-    nudge: 'The first letter of one triangle names the first letter of the other. A side in both triangles counts, and so does an angle made by two lines that cross.',
+    hint,
+    nudge,
     answerText: answerId,
     choices: shuffled,
     ruleCard,
@@ -318,17 +221,15 @@ function numberStages(
   resultTrap: { id: ErrorPatternId; text: string; witness: string } | null,
   ruleCard: string,
 ): GeometryAnswer['stages'] {
-  const xReveal = [`The two matching parts give one equation, and x = ${x}.`]
-  const rReveal = [`Put ${x} into the part the question asks for.`]
   const xStage: GeometryAnswer['stages'][number] = {
     id: 'x',
     kind: 'number',
     label: 'x',
     hint: X_HINT,
     answerText: String(x),
-    nudge: 'Set the two matching parts equal, then solve for x.',
+    nudge: 'Set the two corresponding parts equal, then solve for x.',
     ruleCard,
-    reveal: xReveal,
+    reveal: [`The two corresponding parts give one equation, and x = ${x}.`],
     traps: xTrap ? [xTrap] : [],
   }
   const rStage: GeometryAnswer['stages'][number] = {
@@ -340,7 +241,7 @@ function numberStages(
     answerText: String(result),
     nudge: 'Put the value of x into the expression for this part.',
     ruleCard,
-    reveal: rReveal,
+    reveal: [`Put ${x} into the part the question asks for.`],
     traps: resultTrap ? [resultTrap] : [],
   }
   return [xStage, rStage]
@@ -357,7 +258,7 @@ function numberAnswer(
   trapStage: GeometryStageId,
   trapAnswer: string,
   title: string,
-  params: Record<string, string>,
+  params: Record<string, string | number | boolean>,
 ): GeoBuilt {
   const reveal = stages.flatMap((s) => s.reveal)
   const answer: GeometryAnswer = {
@@ -380,111 +281,212 @@ function numberAnswer(
 
 // --- corresponding parts -------------------------------------------------------
 
+function centroid(points: GeoPoint[], ids: string[]): { x: number; y: number } {
+  const pts = ids.map((id) => byId(points, id))
+  return { x: pts.reduce((s, p) => s + p.x, 0) / pts.length, y: pts.reduce((s, p) => s + p.y, 0) / pts.length }
+}
+
+function direction(c: { x: number; y: number }, p: GeoPoint): number {
+  return Math.atan2(p.y - c.y, p.x - c.x)
+}
+
+function closestId(points: GeoPoint[], ids: string[], target: number): string {
+  const c = centroid(points, ids)
+  let best = ids[0]!
+  let bestD = 99
+  for (const id of ids) {
+    let d = direction(c, byId(points, id)) - target
+    while (d > Math.PI) d -= 2 * Math.PI
+    while (d < -Math.PI) d += 2 * Math.PI
+    if (Math.abs(d) < bestD) {
+      bestD = Math.abs(d)
+      best = id
+    }
+  }
+  return best
+}
+
+function alphaImage(source: Tri, target: Tri, index: number): number {
+  const ranks = [...source].map((ch, i) => ({ ch, i })).sort((a, b) => (a.ch < b.ch ? -1 : 1))
+  const rank = ranks.findIndex((item) => item.i === index)
+  const ordered = [...target].map((ch, i) => ({ ch, i })).sort((a, b) => (a.ch < b.ch ? -1 : 1))
+  return ordered[rank]!.i
+}
+
+function sidePoint(points: GeoPoint[], a: string, b: string): GeoPoint {
+  const u = byId(points, a)
+  const v = byId(points, b)
+  return pt('_', (u.x + v.x) / 2, (u.y + v.y) / 2, 'above')
+}
+
 export function drawParts(seed: number): GeoBuilt {
-  const L = letters(seed, 4)
-  const [A, B, C, D, E, F] = L as unknown as [string, string, string, string, string, string]
-  const mode = (seed - 1) % 4
-  if (mode === 0 || mode === 2) return namePart(seed, A, B, C, D, E, F, mode === 0)
-  return statementPart(seed, A, B, C, D, E, F)
+  if ((seed - 1) % 2 === 0) return namePart(seed)
+  return statementPart(seed)
 }
 
-function plainTriangles(A: string, B: string, C: string, D: string, E: string, F: string): GeoPoint[] {
-  return [
-    ...placeTri([A, B, C], 0, 70, 55, 4),
-    ...placeTri([D, E, F], 8, 70, 55, 4),
-  ]
+function namePart(seed: number): GeoBuilt {
+  for (let attempt = 0; attempt < 40; attempt++) {
+    const rng = makeRng(mixSeed(seed, 20 + attempt))
+    const { t1, t2, perm } = named(rng)
+    const { rot, reflect, ang } = orient(rng)
+    const points = placePair(t1, t2, ang[0], ang[1], 4.2, rot, reflect, 2.6)
+    if (!drawnScalene(points, t1) || !noRight(points, t1)) continue
+    const angle = rng.chance(0.5)
+    const askSecond = rng.chance(0.5)
+    const index = rng.int(0, 2)
+    const asked = askSecond ? t2 : t1
+    const source = askSecond ? t1 : t2
+    const correct = index
+    const alpha = alphaImage(source, asked, index)
+    let positional = index
+    if (angle) {
+      const srcC = centroid(points, [...source])
+      const hit = closestId(points, [...asked], direction(srcC, byId(points, source[index]!)))
+      positional = asked.indexOf(hit)
+    } else {
+      const srcMid = sidePoint(points, source[index]!, source[(index + 1) % 3]!)
+      const srcC = centroid(points, [...source])
+      let best = 0
+      let bestD = 99
+      const askedC = centroid(points, [...asked])
+      const target = direction(srcC, srcMid)
+      for (let i = 0; i < 3; i++) {
+        const mid = sidePoint(points, asked[i]!, asked[(i + 1) % 3]!)
+        let d = direction(askedC, mid) - target
+        while (d > Math.PI) d -= 2 * Math.PI
+        while (d < -Math.PI) d += 2 * Math.PI
+        if (Math.abs(d) < bestD) {
+          bestD = Math.abs(d)
+          best = i
+        }
+      }
+      positional = best
+    }
+    const trapAt = alpha !== correct ? alpha : positional !== correct ? positional : -1
+    if (trapAt < 0) continue
+    const texts = angle
+      ? [0, 1, 2].map((i) => angLetter(asked, i))
+      : [0, 1, 2].map((i) => sideLabel(asked, i))
+    if (new Set(texts).size !== 3) continue
+    const extra = angle ? sideLabel(asked, (correct + 1) % 3) : angLetter(asked, (correct + 1) % 3)
+    if (texts.includes(extra)) continue
+    const choices: ChoiceDraft[] = [0, 1, 2].map((i) => {
+      const draft: ChoiceDraft = { id: i === correct ? 'right' : i === trapAt ? 'order' : `w${i}`, text: texts[i]! }
+      if (i === trapAt) {
+        draft.trap = 'geo_vertices_out_of_order'
+        draft.witness = ORDER_W
+      }
+      return draft
+    })
+    choices.push({ id: 'extra', text: extra })
+    if (new Set(choices.map((c) => c.text)).size !== 4) continue
+    if (!choices.some((c) => c.id === 'order' && c.trap)) continue
+    const prompt = angle
+      ? `${cong(triName(t1), triName(t2))}. Which angle of ${triName(asked)} corresponds to ${angLetter(source, index)}?`
+      : `${cong(triName(t1), triName(t2))}. Which side of ${triName(asked)} corresponds to ${sideLabel(source, index)}?`
+    const scene = emptyScene(t1, t2)
+    return choiceAnswer(
+      'congruentParts',
+      prompt,
+      {
+        ariaLabel: ariaOf(scene),
+        points,
+        segments: [...segsOf(t1, new Map()), ...segsOf(t2, new Map())],
+      },
+      angle ? 'Corresponding angle' : 'Corresponding side',
+      'Read the order of the vertices in the statement.',
+      'The first letter corresponds to the first letter. The picture and the alphabet do not decide it.',
+      choices,
+      'right',
+      'geo_vertices_out_of_order',
+      'order',
+      UNIT4_RULE_IDS.correspondence,
+      [angle ? `${angLetter(source, index)} corresponds to ${angLetter(asked, correct)}.` : `${sideLabel(source, index)} corresponds to ${sideLabel(asked, correct)}.`],
+      'Corresponding parts',
+      { mode: 'name', perm, case: angle ? 'angle' : 'side' },
+      seed,
+    )
+  }
+  throw new Error(`gc.parts/${seed}: no naming problem`)
 }
 
-function namePart(seed: number, A: string, B: string, C: string, D: string, E: string, F: string, angle: boolean): GeoBuilt {
-  const points = plainTriangles(A, B, C, D, E, F)
-  const scene = emptyScene([A, B, C], [D, E, F])
-  const prompt = angle
-    ? `${cong(triName(A, B, C), triName(D, E, F))}. Which angle matches ∠${A}?`
-    : `${cong(triName(A, B, C), triName(D, E, F))}. Which side matches ${sideName(A, B)}?`
-  // Cycle of the second triangle: D,E,F → E,F,D sends A to E and B to F.
-  const choices: ChoiceDraft[] = angle
-    ? [
-        { id: 'right', text: `∠${D}` },
-        { id: 'order', text: `∠${E}`, trap: 'geo_vertices_out_of_order', witness: ORDER_W },
-        { id: 'other', text: `∠${F}` },
-        { id: 'same', text: `∠${B}` },
-      ]
-    : [
-        { id: 'right', text: sideName(D, E) },
-        { id: 'order', text: sideName(E, F), trap: 'geo_vertices_out_of_order', witness: ORDER_W },
-        { id: 'other', text: sideName(D, F) },
-        { id: 'same', text: sideName(B, C) },
-      ]
-  const texts = new Set(choices.map((c) => c.text))
-  if (texts.size !== 4) throw new Error('parts choices collided')
-  return choiceAnswer(
-    'congruentParts',
-    prompt,
-    {
-      ariaLabel: ariaOf(scene),
-      points,
-      segments: [
-        { from: A, to: B },
-        { from: B, to: C },
-        { from: C, to: A },
-        { from: D, to: E },
-        { from: E, to: F },
-        { from: F, to: D },
-      ],
-    },
-    angle ? `Angle matching ∠${A}` : `Side matching ${sideName(A, B)}`,
-    choices,
-    'right',
-    'geo_vertices_out_of_order',
-    'order',
-    UNIT4_RULE_IDS.correspondence,
-    [angle ? `∠${A} matches ∠${D}, the first vertex of each triangle.` : `${sideName(A, B)} matches ${sideName(D, E)}.`],
-    'Corresponding parts',
-    { case: angle ? 'angle' : 'side' },
-    seed,
-  )
-}
-
-function statementPart(seed: number, A: string, B: string, C: string, D: string, E: string, F: string): GeoBuilt {
-  const points = plainTriangles(A, B, C, D, E, F)
-  const scene = emptyScene([A, B, C], [D, E, F])
-  scene.sides = [
-    { a: [A, B], b: [D, E], tick: 1 },
-    { a: [B, C], b: [E, F], tick: 2 },
-    { a: [C, A], b: [F, D], tick: 3 },
-  ]
-  const got = methodsOf(scene)
-  if (got.length !== 1 || got[0] !== 'SSS') throw new Error(`statement marks proved ${got.join(',')}`)
-  const choices: ChoiceDraft[] = [
-    { id: 'right', text: cong(triName(A, B, C), triName(D, E, F)) },
-    { id: 'order', text: cong(triName(A, B, C), triName(E, F, D)), trap: 'geo_vertices_out_of_order', witness: ORDER_W },
-    { id: 'swap', text: cong(triName(A, B, C), triName(D, F, E)) },
-    { id: 'flip', text: cong(triName(A, B, C), triName(F, E, D)) },
-  ]
-  if (new Set(choices.map((c) => c.text)).size !== 4) throw new Error('statement choices collided')
-  const segments: GeoSegment[] = [
-    { from: A, to: B, ticks: 1 },
-    { from: B, to: C, ticks: 2 },
-    { from: C, to: A, ticks: 3 },
-    { from: D, to: E, ticks: 1 },
-    { from: E, to: F, ticks: 2 },
-    { from: F, to: D, ticks: 3 },
-  ]
-  return choiceAnswer(
-    'congruentParts',
-    'The marks show which sides match. Which statement names the triangles in the same order?',
-    { ariaLabel: ariaOf(scene), points, segments },
-    'Statement',
-    choices,
-    'right',
-    'geo_vertices_out_of_order',
-    'order',
-    UNIT4_RULE_IDS.correspondence,
-    [`The tick marks pair ${A} with ${D}, ${B} with ${E}, and ${C} with ${F}.`],
-    'Congruence statement',
-    { case: 'statement' },
-    seed,
-  )
+function statementPart(seed: number): GeoBuilt {
+  for (let attempt = 0; attempt < 24; attempt++) {
+    const rng = makeRng(mixSeed(seed, 50 + attempt))
+    const { t1, t2, perm } = named(rng)
+    const { rot, reflect, ang } = orient(rng)
+    const kind = rng.pick(['SSS', 'SAS', 'ASA'] as const)
+    const shift = rng.int(0, 2)
+    const scene = emptyScene(t1, t2)
+    const ticks = new Map<string, Tick>()
+    const mark = (i: number, n: Tick) => {
+      ticks.set(segKey(t1[i]!, t1[(i + 1) % 3]!), n)
+      ticks.set(segKey(t2[i]!, t2[(i + 1) % 3]!), n)
+      scene.sides.push({ a: [t1[i]!, t1[(i + 1) % 3]!], b: [t2[i]!, t2[(i + 1) % 3]!], tick: n })
+    }
+    const angles: GeoAngleMark[] = []
+    if (kind === 'SSS') {
+      mark(0, 1)
+      mark(1, 2)
+      mark(2, 3)
+    } else if (kind === 'SAS') {
+      const v = shift
+      mark((v + 2) % 3, 1)
+      mark(v, 2)
+      scene.angles.push({ a: t1[v]!, b: t2[v]!, arc: 1 })
+      angles.push(arcAt(t1, v, 1), arcAt(t2, v, 1))
+    } else {
+      const s = shift
+      mark(s, 1)
+      scene.angles.push({ a: t1[s]!, b: t2[s]!, arc: 1 }, { a: t1[(s + 1) % 3]!, b: t2[(s + 1) % 3]!, arc: 2 })
+      angles.push(arcAt(t1, s, 1), arcAt(t2, s, 1), arcAt(t1, (s + 1) % 3, 2), arcAt(t2, (s + 1) % 3, 2))
+    }
+    const got = methodsOf(scene)
+    if (got.length !== 1 || got[0] !== kind || preservingCount(scene) !== 1) continue
+    const points = placePair(t1, t2, ang[0], ang[1], 4.2, rot, reflect, 2.6)
+    if (!drawnScalene(points, t1) || !drawnScalene(points, t2) || !noRight(points, t1)) continue
+    const correct = cong(triName(t1), triName(t2))
+    const alpha = cong(triName([...(t1 as string[])].sort() as unknown as Tri), triName([...(t2 as string[])].sort() as unknown as Tri))
+    const alphaSame = sameCongruence(alpha, correct)
+    const wrong: string[] = []
+    for (const p of PERMS) {
+      if (p[0] === 0 && p[1] === 1 && p[2] === 2) continue
+      const text = cong(triName(t1), triName(applyPerm([...t2], p)))
+      if (text !== correct && !sameCongruence(text, correct)) wrong.push(text)
+    }
+    if (new Set(wrong).size < 3) continue
+    const trapText = !alphaSame && !wrong.includes(alpha) ? alpha : !alphaSame ? alpha : wrong[0]!
+    if (sameCongruence(trapText, correct)) continue
+    const rest = [...new Set(wrong)].filter((text) => text !== trapText && !sameCongruence(text, trapText) && !sameCongruence(text, correct))
+    if (rest.length < 2) continue
+    const texts = [correct, trapText, rest[0]!, rest[1]!]
+    if (new Set(texts).size !== 4) continue
+    if (texts.some((text, i) => i > 0 && sameCongruence(text, correct))) continue
+    const choices: ChoiceDraft[] = [
+      { id: 'right', text: correct },
+      { id: 'order', text: trapText, trap: 'geo_vertices_out_of_order', witness: ORDER_W },
+      { id: 'other', text: rest[0]! },
+      { id: 'else', text: rest[1]! },
+    ]
+    return choiceAnswer(
+      'congruentParts',
+      'Which congruence statement do the marks support?',
+      { ariaLabel: ariaOf(scene), points, segments: [...segsOf(t1, ticks), ...segsOf(t2, ticks)], ...(angles.length ? { angles } : {}) },
+      'Statement',
+      'Read the marks, then the order of the vertices.',
+      'A different order pairs different vertices. The alphabet is not the correspondence.',
+      choices,
+      'right',
+      'geo_vertices_out_of_order',
+      'order',
+      UNIT4_RULE_IDS.correspondence,
+      [`The marks pair ${t1[0]} with ${t2[0]}, ${t1[1]} with ${t2[1]}, and ${t1[2]} with ${t2[2]}.`],
+      'Congruence statement',
+      { mode: 'marks', perm, alphaSame: alphaSame ? 1 : 0, case: kind },
+      seed,
+    )
+  }
+  throw new Error(`gc.parts/${seed}: no statement problem`)
 }
 
 // --- which method --------------------------------------------------------------
@@ -495,69 +497,51 @@ interface WhichTrap {
   witness: string
 }
 
-const WHICH: readonly {
-  id: string
-  method: Method | 'none'
-  traps: readonly WhichTrap[]
-}[] = [
-  { id: 'sss', method: 'SSS', traps: [{ id: 'geo_ssa_as_congruence', choice: 'SSA', witness: SSA_W }, { id: 'geo_hl_no_right', choice: 'HL', witness: HL_W }, { id: 'geo_aaa_as_congruence', choice: 'AAA', witness: AAA_W }] },
-  { id: 'sas', method: 'SAS', traps: [{ id: 'geo_ssa_as_congruence', choice: 'SSA', witness: SSA_W }, { id: 'geo_hl_no_right', choice: 'HL', witness: HL_W }] },
-  { id: 'asa', method: 'ASA', traps: [{ id: 'geo_asa_aas_swapped', choice: 'AAS', witness: SWAP_W }, { id: 'geo_hl_no_right', choice: 'HL', witness: HL_W }] },
-  { id: 'aas', method: 'AAS', traps: [{ id: 'geo_asa_aas_swapped', choice: 'ASA', witness: SWAP_W }, { id: 'geo_hl_no_right', choice: 'HL', witness: HL_W }] },
-  { id: 'hl', method: 'HL', traps: [{ id: 'geo_sas_not_included', choice: 'SAS', witness: SAS_W }, { id: 'geo_ssa_as_congruence', choice: 'SSA', witness: SSA_W }] },
-  { id: 'ssa', method: 'none', traps: [{ id: 'geo_ssa_as_congruence', choice: 'SSA', witness: SSA_W }, { id: 'geo_sas_not_included', choice: 'SAS', witness: SAS_W }, { id: 'geo_hl_no_right', choice: 'HL', witness: HL_W }] },
-  { id: 'aaa', method: 'none', traps: [{ id: 'geo_aaa_as_congruence', choice: 'AAA', witness: AAA_W }] },
-  { id: 'shared', method: 'SSS', traps: [{ id: 'geo_ssa_as_congruence', choice: 'SSA', witness: SSA_W }, { id: 'geo_hl_no_right', choice: 'HL', witness: HL_W }] },
-  { id: 'vertical', method: 'SAS', traps: [{ id: 'geo_ssa_as_congruence', choice: 'SSA', witness: SSA_W }, { id: 'geo_hl_no_right', choice: 'HL', witness: HL_W }] },
-  { id: 'parallel', method: 'ASA', traps: [{ id: 'geo_asa_aas_swapped', choice: 'AAS', witness: SWAP_W }] },
-]
+function isSsa(scene: Scene, methods: Method[]): boolean {
+  if (methods.length || scene.rights.length || scene.shared.length || scene.vertical.length || scene.alt.length) return false
+  if (scene.sides.length !== 2 || scene.angles.length !== 1) return false
+  const [s0, s1] = scene.sides
+  const common = [s0!.a[0], s0!.a[1]].filter((v) => v === s1!.a[0] || v === s1!.a[1])
+  return common.length === 1 && scene.angles[0]!.a !== common[0]
+}
 
-export function drawWhich(seed: number): GeoBuilt {
-  const index = (seed - 1) % WHICH.length
-  const spec = WHICH[index]!
-  const L = letters(seed, WHICH.length)
-  const [A, B, C, D, E, F] = L as unknown as [string, string, string, string, string, string]
-  const built = buildWhich(spec.id, A, B, C, D, E, F)
-  const got = methodsOf(built.scene)
-  if (spec.method === 'none') {
-    if (got.length !== 0) throw new Error(`${spec.id}: marks proved ${got.join(',')}`)
-  } else if (got.length !== 1 || got[0] !== spec.method) {
-    throw new Error(`${spec.id}: expected ${spec.method}, got ${got.join(',') || 'none'}`)
-  }
-  const promised = spec.traps[Math.floor((seed - 1) / WHICH.length) % spec.traps.length]!
-  const buttons: ChoiceDraft[] = [
-    { id: 'SSS', text: 'SSS' },
-    { id: 'SAS', text: 'SAS' },
-    { id: 'ASA', text: 'ASA' },
-    { id: 'AAS', text: 'AAS' },
-    { id: 'HL', text: 'HL' },
-    { id: 'SSA', text: 'SSA' },
-    { id: 'AAA', text: 'AAA' },
-    { id: 'none', text: 'Not enough information' },
-  ]
-  for (const trap of spec.traps) {
-    const button = buttons.find((b) => b.id === trap.choice)
-    if (!button || button.id === (spec.method === 'none' ? 'none' : spec.method)) throw new Error('trap is the answer')
-    button.trap = trap.id
-    button.witness = trap.witness
-  }
-  const answerId = spec.method === 'none' ? 'none' : spec.method
-  const reveal = [spec.method === 'none' ? 'The marks that are drawn do not show the triangles match.' : `The marks that are drawn are exactly what ${spec.method === 'HL' ? 'a right angle, the side opposite it, and one other side' : 'this picture'} uses.`]
-  return choiceAnswer(
-    'congruentWhich',
-    'Which of these shows that the triangles match?',
-    { ariaLabel: ariaOf(built.scene), points: built.points, segments: built.segments, lines: built.lines, angles: built.angles },
-    'Method',
-    buttons,
-    answerId,
-    promised.id,
-    promised.choice,
-    UNIT4_RULE_IDS.methods,
-    reveal,
-    'Which method',
-    { case: spec.id },
-    seed,
+function isAaa(scene: Scene, methods: Method[]): boolean {
+  return (
+    methods.length === 0 &&
+    scene.angles.length === 3 &&
+    scene.sides.length === 0 &&
+    scene.shared.length === 0 &&
+    scene.rights.length === 0 &&
+    scene.vertical.length === 0 &&
+    scene.alt.length === 0
   )
+}
+
+function trapsFor(scene: Scene, answer: Method | 'none'): WhichTrap[] {
+  const out: WhichTrap[] = []
+  const add = (choice: string, id: ErrorPatternId, witness: string) => {
+    if (choice === answer) return
+    if (out.some((trap) => trap.choice === choice)) return
+    out.push({ choice, id, witness })
+  }
+  const methods = methodsOf(scene)
+  if (isSsa(scene, methods)) {
+    add('SSA', 'geo_ssa_as_congruence', SSA_W)
+    add('SAS', 'geo_sas_not_included', SAS_W)
+    add('HL', 'geo_hl_no_right', HL_W)
+  }
+  if (isAaa(scene, methods)) {
+    add('AAA', 'geo_aaa_as_congruence', AAA_W)
+    add('HL', 'geo_hl_no_right', HL_W)
+  }
+  if (answer === 'ASA') add('AAS', 'geo_asa_aas_swapped', SWAP_W)
+  if (answer === 'AAS') add('ASA', 'geo_asa_aas_swapped', SWAP_W)
+  if (answer === 'HL') add('SAS', 'geo_sas_not_included', SAS_W)
+  const right = scene.rights.length > 0
+  if (!right && answer !== 'HL') add('HL', 'geo_hl_no_right', HL_W)
+  if (scene.shared.length > 0 && answer !== 'none') add('none', 'geo_shared_side_missed', SHARED_W)
+  if (scene.vertical.length > 0 && answer !== 'none') add('none', 'geo_vertical_angles_missed', VERT_MISSED_W)
+  return out
 }
 
 interface WhichFigure {
@@ -568,136 +552,126 @@ interface WhichFigure {
   angles: GeoAngleMark[]
 }
 
-function buildWhich(id: string, A: string, B: string, C: string, D: string, E: string, F: string): WhichFigure {
-  if (id === 'shared') return sharedFigure(A, B, C, D)
-  if (id === 'vertical') return verticalFigure(A, B, C, D, E)
-  if (id === 'parallel') return parallelFigure(A, B, C, D)
-  if (id === 'hl') return hlFigure(A, B, C, D, E, F)
-  return pairFigure(id, A, B, C, D, E, F)
-}
-
-function pairFigure(id: string, A: string, B: string, C: string, D: string, E: string, F: string): WhichFigure {
-  const left = placeTri([A, B, C], 0, id === 'hl' ? 40 : 62, id === 'aaa' ? 48 : 58, 4)
-  const scale = id === 'aaa' ? 1.6 : 1
-  const right = placeTri([D, E, F], 8, id === 'hl' ? 40 : 62, id === 'aaa' ? 48 : 58, 4 * scale)
-  const scene = emptyScene([A, B, C], [D, E, F])
-  const segments: GeoSegment[] = [
-    { from: A, to: B },
-    { from: B, to: C },
-    { from: C, to: A },
-    { from: D, to: E },
-    { from: E, to: F },
-    { from: F, to: D },
-  ]
+function separateWhich(salt: number, kind: 'SSS' | 'SAS' | 'ASA' | 'AAS' | 'SSA' | 'AAA' | 'sides'): WhichFigure {
+  const rng = makeRng(mixSeed(salt + 1, 80))
+  const letters = pickLetters(rng, 6)
+  const perm = PERMS[salt % 6]!
+  const t1: Tri = [letters[0]!, letters[1]!, letters[2]!]
+  const t2 = applyPerm([letters[3]!, letters[4]!, letters[5]!], perm)
+  const rot = ROTS[salt % ROTS.length]!
+  const reflect = salt % 2 === 1
+  const shift = salt % 3
+  const scene = emptyScene(t1, t2)
+  const ticks = new Map<string, Tick>()
+  const mark = (i: number, n: Tick) => {
+    ticks.set(segKey(t1[i]!, t1[(i + 1) % 3]!), n)
+    ticks.set(segKey(t2[i]!, t2[(i + 1) % 3]!), n)
+    scene.sides.push({ a: [t1[i]!, t1[(i + 1) % 3]!], b: [t2[i]!, t2[(i + 1) % 3]!], tick: n })
+  }
   const angles: GeoAngleMark[] = []
-  const tick = (from: string, to: string, n: Tick) => {
-    const seg = segments.find((s) => s.from === from && s.to === to)
-    if (!seg) throw new Error(`no segment ${from}${to}`)
-    seg.ticks = n
+  const arc = (i: number, n: Tick) => {
+    scene.angles.push({ a: t1[i]!, b: t2[i]!, arc: n })
+    angles.push(arcAt(t1, i, n), arcAt(t2, i, n))
   }
-  const arc = (v: string, from: string, to: string, n: Tick) => {
-    angles.push({ vertex: v, from, to, marks: n })
+  if (kind === 'SSS') {
+    mark(0, 1)
+    mark(1, 2)
+    mark(2, 3)
+  } else if (kind === 'SAS') {
+    mark((shift + 2) % 3, 1)
+    mark(shift, 2)
+    arc(shift, 1)
+  } else if (kind === 'ASA') {
+    mark(shift, 1)
+    arc(shift, 1)
+    arc((shift + 1) % 3, 2)
+  } else if (kind === 'AAS') {
+    mark((shift + 1) % 3, 1)
+    arc(shift, 1)
+    arc((shift + 1) % 3, 2)
+  } else if (kind === 'SSA') {
+    mark(shift, 1)
+    mark((shift + 1) % 3, 2)
+    arc((shift + 2) % 3, 1)
+  } else if (kind === 'AAA') {
+    arc(0, 1)
+    arc(1, 2)
+    arc(2, 3)
+  } else {
+    mark(shift, 1)
+    mark((shift + 1) % 3, 2)
   }
-  if (id === 'sss') {
-    scene.sides = [
-      { a: [A, B], b: [D, E], tick: 1 },
-      { a: [B, C], b: [E, F], tick: 2 },
-      { a: [C, A], b: [F, D], tick: 3 },
-    ]
-  } else if (id === 'sas') {
-    scene.sides = [
-      { a: [A, B], b: [D, E], tick: 1 },
-      { a: [B, C], b: [E, F], tick: 2 },
-    ]
-    scene.angles = [{ a: B, b: E, arc: 1 }]
-  } else if (id === 'asa') {
-    scene.sides = [{ a: [A, B], b: [D, E], tick: 1 }]
-    scene.angles = [
-      { a: A, b: D, arc: 1 },
-      { a: B, b: E, arc: 2 },
-    ]
-  } else if (id === 'aas') {
-    scene.sides = [{ a: [B, C], b: [E, F], tick: 1 }]
-    scene.angles = [
-      { a: A, b: D, arc: 1 },
-      { a: B, b: E, arc: 2 },
-    ]
-  } else if (id === 'ssa') {
-    scene.sides = [
-      { a: [A, B], b: [D, E], tick: 1 },
-      { a: [B, C], b: [E, F], tick: 2 },
-    ]
-    scene.angles = [{ a: A, b: D, arc: 1 }]
-  } else if (id === 'aaa') {
-    scene.angles = [
-      { a: A, b: D, arc: 1 },
-      { a: B, b: E, arc: 2 },
-      { a: C, b: F, arc: 3 },
-    ]
-  } else throw new Error(`unknown pair ${id}`)
-  for (const s of scene.sides) {
-    tick(s.a[0], s.a[1], s.tick)
-    tick(s.b[0], s.b[1], s.tick)
+  let points: GeoPoint[] | null = null
+  for (let extra = 0; extra < SCALENE.length; extra++) {
+    const ang = SCALENE[(salt + extra) % SCALENE.length]!
+    const placed =
+      kind === 'AAA'
+        ? placeScaledPair(t1, t2, ang[0], ang[1], 3.6, 5.8, rot, reflect, 2.4)
+        : placePair(t1, t2, ang[0], ang[1], 4.2, rot, reflect, 2.6)
+    if (!noRight(placed, t1) || !noRight(placed, t2)) continue
+    points = placed
+    break
   }
-  for (const g of scene.angles) {
-    arc(g.a, g.a === A ? B : g.a === B ? A : A, g.a === C ? B : C, g.arc)
-    arc(g.b, g.b === D ? E : g.b === E ? D : D, g.b === F ? E : F, g.arc)
-  }
-  return { scene, points: [...left, ...right], segments, angles }
+  if (!points) throw new Error(`${kind}: near a right angle`)
+  return { scene, points, segments: [...segsOf(t1, ticks), ...segsOf(t2, ticks)], angles }
 }
 
-function hlFigure(A: string, B: string, C: string, D: string, E: string, F: string): WhichFigure {
-  // Right angle at C and at F. Hypotenuse AB-DE, leg BC-EF (they meet at B, not at the right angle).
-  const points = [
-    pt(A, 0, 3, 'above'),
-    pt(B, 4, 0, 'below'),
-    pt(C, 0, 0, 'below'),
-    pt(D, 8, 3, 'above'),
-    pt(E, 12, 0, 'below'),
-    pt(F, 8, 0, 'below'),
+function rightWhich(salt: number, kind: 'HL' | 'ASA' | 'AAS'): WhichFigure {
+  const rng = makeRng(mixSeed(salt + 1, 90))
+  const letters = pickLetters(rng, 6)
+  const perm = PERMS[salt % 6]!
+  const t1: Tri = [letters[0]!, letters[1]!, letters[2]!]
+  const t2 = applyPerm([letters[3]!, letters[4]!, letters[5]!], perm)
+  const legs: readonly [number, number][] = [
+    [3.2, 4.8],
+    [2.8, 4.4],
+    [3.5, 5.1],
+    [2.6, 4.2],
   ]
-  const scene = emptyScene([A, B, C], [D, E, F])
-  scene.sides = [
-    { a: [A, B], b: [D, E], tick: 1 },
-    { a: [B, C], b: [E, F], tick: 2 },
-  ]
-  scene.rights = [C, F]
-  const dot = (u: GeoPoint, v: GeoPoint, w: GeoPoint) => (v.x - u.x) * (w.x - u.x) + (v.y - u.y) * (w.y - u.y)
-  if (Math.abs(dot(byId(points, C), byId(points, A), byId(points, B))) > 1e-6) throw new Error('HL left angle is not right')
-  if (Math.abs(dot(byId(points, F), byId(points, D), byId(points, E))) > 1e-6) throw new Error('HL right angle is not right')
-  return {
-    scene,
-    points,
-    segments: [
-      { from: A, to: B, ticks: 1 },
-      { from: B, to: C, ticks: 2 },
-      { from: C, to: A },
-      { from: D, to: E, ticks: 1 },
-      { from: E, to: F, ticks: 2 },
-      { from: F, to: D },
-    ],
-    angles: [
-      { vertex: C, from: A, to: B, right: true },
-      { vertex: F, from: D, to: E, right: true },
-    ],
+  const [rise, run] = legs[salt % legs.length]!
+  const rot = ROTS[salt % ROTS.length]!
+  const reflect = salt % 2 === 1
+  const scene = emptyScene(t1, t2)
+  scene.rights = [t1[2]!, t2[2]!]
+  const ticks = new Map<string, Tick>()
+  const mark = (i: number, n: Tick) => {
+    ticks.set(segKey(t1[i]!, t1[(i + 1) % 3]!), n)
+    ticks.set(segKey(t2[i]!, t2[(i + 1) % 3]!), n)
+    scene.sides.push({ a: [t1[i]!, t1[(i + 1) % 3]!], b: [t2[i]!, t2[(i + 1) % 3]!], tick: n })
   }
+  const angles: GeoAngleMark[] = [squareAt(t1, 2), squareAt(t2, 2)]
+  if (kind === 'HL') {
+    mark(0, 1)
+    mark(salt % 2 === 0 ? 1 : 2, 2)
+  } else if (kind === 'ASA') {
+    mark(1, 1)
+    scene.angles.push({ a: t1[1]!, b: t2[1]!, arc: 1 })
+    angles.push(arcAt(t1, 1, 1), arcAt(t2, 1, 1))
+  } else {
+    mark(0, 1)
+    scene.angles.push({ a: t1[0]!, b: t2[0]!, arc: 1 })
+    angles.push(arcAt(t1, 0, 1), arcAt(t2, 0, 1))
+  }
+  const points = placeRightPair(t1, t2, rise, run, rot, reflect, 2.4)
+  for (const ids of [t1, t2]) {
+    const got = wedge(byId(points, ids[2]!), byId(points, ids[0]!), byId(points, ids[1]!))
+    if (Math.abs(got - 90) > 0.8) throw new Error(`right angle drifted to ${got.toFixed(2)}`)
+  }
+  return { scene, points, segments: [...segsOf(t1, ticks), ...segsOf(t2, ticks)], angles }
 }
 
-function sharedFigure(A: string, B: string, C: string, D: string): WhichFigure {
-  // Kite: AB = AD, CB = CD, shared AC. Ticks only. No angles.
+function kiteWhich(salt: number): WhichFigure {
+  const [A, B, C, D] = pickLetters(makeRng(mixSeed(salt + 1, 91)), 4) as [string, string, string, string]
+  const t1: Tri = [A, B, C]
+  const t2: Tri = [A, D, C]
   const points = [pt(A, 0, 0, 'left'), pt(C, 6, 0, 'right'), pt(B, 2, 3, 'above'), pt(D, 2, -3, 'below')]
-  const scene = emptyScene([A, B, C], [A, D, C])
+  const scene = emptyScene(t1, t2)
   scene.sides = [
     { a: [A, B], b: [A, D], tick: 1 },
     { a: [C, B], b: [C, D], tick: 2 },
   ]
   scene.shared = [[A, C]]
-  const d = (p: string, q: string) => {
-    const u = byId(points, p)
-    const v = byId(points, q)
-    return Math.hypot(u.x - v.x, u.y - v.y)
-  }
-  if (Math.abs(d(A, B) - d(A, D)) > 0.02 || Math.abs(d(C, B) - d(C, D)) > 0.02) throw new Error('shared sides are not equal')
+  if (!noRight(points, t1) || !noRight(points, t2)) throw new Error('kite is right')
   return {
     scene,
     points,
@@ -712,328 +686,575 @@ function sharedFigure(A: string, B: string, C: string, D: string): WhichFigure {
   }
 }
 
-function verticalFigure(A: string, B: string, C: string, D: string, E: string): WhichFigure {
-  // A-E-C and B-E-D are straight. Vertical angles at E are the included pair. No arcs.
-  const points = [pt(A, 0, 2, 'above'), pt(E, 3, 0, 'above'), pt(C, 6, -2, 'below'), pt(B, 0, -1.2, 'below'), pt(D, 6, 1.2, 'above')]
-  const scene = emptyScene([A, E, B], [C, E, D])
-  scene.sides = [
-    { a: [A, E], b: [C, E], tick: 1 },
-    { a: [B, E], b: [D, E], tick: 2 },
-  ]
-  scene.vertical = [`${A}${E}${B}-${C}${E}${D}`]
-  const opp = (p: string, q: string, r: string) => {
-    const u = byId(points, p)
-    const m = byId(points, q)
-    const v = byId(points, r)
-    const d1 = { x: u.x - m.x, y: u.y - m.y }
-    const d2 = { x: v.x - m.x, y: v.y - m.y }
-    const cross = d1.x * d2.y - d1.y * d2.x
-    const dot = d1.x * d2.x + d1.y * d2.y
-    if (Math.abs(cross) > 1e-6 || dot >= 0) throw new Error(`${p}${q}${r} is not a straight line`)
-  }
-  opp(A, E, C)
-  opp(B, E, D)
+function legLegWhich(salt: number): WhichFigure {
+  const [A, B, C, D] = pickLetters(makeRng(mixSeed(salt + 1, 92)), 4) as [string, string, string, string]
+  const t1: Tri = [A, B, C]
+  const t2: Tri = [D, B, C]
+  const points = [pt(A, 0, 3.2, 'above'), pt(B, 4.6, 0, 'right'), pt(C, 0, 0, 'left'), pt(D, 0, -3.2, 'below')]
+  const scene = emptyScene(t1, t2)
+  scene.sides = [{ a: [C, A], b: [C, D], tick: 1 }]
+  scene.shared = [[C, B]]
+  scene.rights = [C, C]
+  const upper = wedge(byId(points, C), byId(points, A), byId(points, B))
+  const lower = wedge(byId(points, C), byId(points, D), byId(points, B))
+  if (Math.abs(upper - 90) > 0.2 || Math.abs(lower - 90) > 0.2) throw new Error('shared leg is not right')
   return {
     scene,
     points,
     segments: [
-      { from: A, to: E, ticks: 1 },
-      { from: E, to: C, ticks: 1 },
-      { from: B, to: E, ticks: 2 },
-      { from: E, to: D, ticks: 2 },
       { from: A, to: B },
-      { from: C, to: D },
+      { from: B, to: C },
+      { from: C, to: A, ticks: 1 },
+      { from: D, to: B },
+      { from: C, to: D, ticks: 1 },
     ],
-    angles: [],
+    angles: [
+      { vertex: C, from: A, to: B, right: true },
+      { vertex: C, from: D, to: B, right: true },
+    ],
   }
 }
 
-function parallelFigure(A: string, B: string, C: string, D: string): WhichFigure {
-  // Non-rectangular parallelogram. Diagonal AC is the included side of the two alternate-interior pairs.
-  const points = [pt(A, 0, 0, 'below'), pt(B, 4, 0, 'below'), pt(C, 5.2, 2.2, 'above'), pt(D, 1.2, 2.2, 'above')]
-  const scene = emptyScene([A, B, C], [C, D, A])
-  scene.shared = [[A, C]]
-  scene.parallel = [
-    { line: `${A}${B}||${D}${C}`, arrows: 1 },
-    { line: `${A}${D}||${B}${C}`, arrows: 2 },
+function verticalWhich(salt: number, oneSide: boolean): WhichFigure {
+  const [A, B, C, D, E] = pickLetters(makeRng(mixSeed(salt + 1, 93)), 5) as [string, string, string, string, string]
+  const t1: Tri = [A, E, B]
+  const t2: Tri = [C, E, D]
+  const points = [pt(A, 0, 2, 'above'), pt(E, 3, 0, 'above'), pt(C, 6, -2, 'below'), pt(B, 0, -1.2, 'below'), pt(D, 6, 1.2, 'above')]
+  const scene = emptyScene(t1, t2)
+  scene.sides = oneSide
+    ? [{ a: [A, E], b: [C, E], tick: 1 }]
+    : [
+        { a: [A, E], b: [C, E], tick: 1 },
+        { a: [B, E], b: [D, E], tick: 2 },
+      ]
+  scene.vertical = [`${A}${E}${B}-${C}${E}${D}`]
+  if (!noRight(points, t1) || !noRight(points, t2)) throw new Error('vertical is right')
+  const segments: GeoSegment[] = [
+    { from: A, to: E, ticks: 1 },
+    { from: E, to: C, ticks: 1 },
+    { from: B, to: E, ticks: oneSide ? undefined : 2 },
+    { from: E, to: D, ticks: oneSide ? undefined : 2 },
+    { from: A, to: B },
+    { from: C, to: D },
   ]
-  scene.alt = [`${B}${A}${C}-${D}${C}${A}`, `${B}${C}${A}-${D}${A}${C}`]
-  const dir = (p: string, q: string) => {
-    const u = byId(points, p)
-    const v = byId(points, q)
-    return { x: v.x - u.x, y: v.y - u.y }
+  return { scene, points, segments: segments.map((seg) => (seg.ticks ? seg : { from: seg.from, to: seg.to })), angles: [] }
+}
+
+function parallelWhich(salt: number, both: boolean): WhichFigure {
+  const [A, B, C, D] = pickLetters(makeRng(mixSeed(salt + 1, 94)), 4) as [string, string, string, string]
+  const t1: Tri = [A, B, C]
+  const t2: Tri = [C, D, A]
+  const points = [pt(A, 0, 0, 'below'), pt(B, 4.4, 0, 'below'), pt(C, 5.6, 2.5, 'above'), pt(D, 1.2, 2.5, 'above')]
+  const scene = emptyScene(t1, t2)
+  scene.shared = [[A, C]]
+  scene.parallel = both
+    ? [
+        { line: `${A}${B}||${D}${C}`, arrows: 1 },
+        { line: `${A}${D}||${B}${C}`, arrows: 2 },
+      ]
+    : [{ line: `${A}${B}||${D}${C}`, arrows: 1 }]
+  scene.alt = both ? [`${B}${A}${C}-${D}${C}${A}`, `${B}${C}${A}-${D}${A}${C}`] : [`${B}${A}${C}-${D}${C}${A}`]
+  if (!noRight(points, t1) || !noRight(points, t2)) throw new Error('parallelogram is a rectangle')
+  const lines: GeoLine[] = both
+    ? [
+        { through: [A, B], arrows: 1 },
+        { through: [D, C], arrows: 1 },
+        { through: [A, D], arrows: 2 },
+        { through: [B, C], arrows: 2 },
+      ]
+    : [
+        { through: [A, B], arrows: 1 },
+        { through: [D, C], arrows: 1 },
+      ]
+  const segments: GeoSegment[] = both ? [{ from: A, to: C }] : [{ from: A, to: C }, { from: A, to: D }, { from: B, to: C }]
+  return { scene, points, segments, lines, angles: [] }
+}
+
+function buildWhich(seed: number): { figure: WhichFigure; answer: Method | 'none'; family: string } {
+  const slot = (seed - 1) % 6
+  const salt = Math.floor((seed - 1) / 6)
+  if (slot === 0) {
+    return salt % 2 === 0
+      ? { figure: separateWhich(salt, 'SSS'), answer: 'SSS', family: 'separate-sss' }
+      : { figure: kiteWhich(salt), answer: 'SSS', family: 'kite' }
   }
-  const ab = dir(A, B)
-  const dc = dir(D, C)
-  const ad = dir(A, D)
-  const bc = dir(B, C)
-  if (Math.abs(ab.x * dc.y - ab.y * dc.x) > 1e-6) throw new Error('AB is not parallel to DC')
-  if (Math.abs(ad.x * bc.y - ad.y * bc.x) > 1e-6) throw new Error('AD is not parallel to BC')
-  const ang = wedge(byId(points, A), byId(points, B), byId(points, D))
-  if (Math.abs(ang - 90) < 2) throw new Error('parallelogram is a rectangle')
-  return {
-    scene,
-    points,
-    segments: [{ from: A, to: C }],
-    lines: [
-      { through: [A, B], arrows: 1 },
-      { through: [D, C], arrows: 1 },
-      { through: [A, D], arrows: 2 },
-      { through: [B, C], arrows: 2 },
-    ],
-    angles: [],
+  if (slot === 1) {
+    const kind = salt % 3
+    if (kind === 0) return { figure: separateWhich(salt, 'SAS'), answer: 'SAS', family: 'separate-sas' }
+    if (kind === 1) return { figure: verticalWhich(salt, false), answer: 'SAS', family: 'vertical' }
+    return { figure: legLegWhich(salt), answer: 'SAS', family: 'leg-leg' }
   }
+  if (slot === 2) {
+    const kind = salt % 3
+    if (kind === 0) return { figure: separateWhich(salt, 'ASA'), answer: 'ASA', family: 'separate-asa' }
+    if (kind === 1) return { figure: parallelWhich(salt, true), answer: 'ASA', family: 'parallel' }
+    return { figure: rightWhich(salt, 'ASA'), answer: 'ASA', family: 'right-asa' }
+  }
+  if (slot === 3) {
+    return salt % 2 === 0
+      ? { figure: separateWhich(salt, 'AAS'), answer: 'AAS', family: 'separate-aas' }
+      : { figure: rightWhich(salt, 'AAS'), answer: 'AAS', family: 'right-aas' }
+  }
+  if (slot === 4) return { figure: rightWhich(salt, 'HL'), answer: 'HL', family: 'hl' }
+  const kind = salt % 4
+  if (kind === 0) return { figure: separateWhich(salt, 'SSA'), answer: 'none', family: 'ssa' }
+  if (kind === 1) return { figure: separateWhich(salt, 'AAA'), answer: 'none', family: 'aaa' }
+  if (kind === 2) return { figure: verticalWhich(salt, true), answer: 'none', family: 'vertical-one' }
+  return { figure: parallelWhich(salt, false), answer: 'none', family: 'parallel-one' }
 }
 
-// --- algebra with matching parts ----------------------------------------------
-
-interface AngJob {
-  a: Lin
-  d: Lin
-  e: Lin
-  x: number
-  measure: number
-  trapX: number
-  b: number
-  c: number
+export function drawWhich(seed: number): GeoBuilt {
+  const built = buildWhich(seed)
+  const methods = methodsOf(built.figure.scene)
+  const expect = built.answer === 'none' ? [] : [built.answer]
+  if (methods.join(',') !== expect.join(',')) {
+    throw new Error(`${built.family}: expected ${expect.join(',') || 'none'}, got ${methods.join(',') || 'none'}`)
+  }
+  if (built.answer !== 'HL' && built.figure.scene.rights.length === 0) {
+    const [t1, t2] = [built.figure.scene.t1, built.figure.scene.t2]
+    if (!noRight(built.figure.points, t1) || !noRight(built.figure.points, t2)) {
+      throw new Error(`${built.family}: near a right angle`)
+    }
+  }
+  const traps = trapsFor(built.figure.scene, built.answer)
+  if (traps.length === 0) throw new Error(`${built.family}: no trap`)
+  const buttons: ChoiceDraft[] = [
+    { id: 'SSS', text: 'SSS' },
+    { id: 'SAS', text: 'SAS' },
+    { id: 'ASA', text: 'ASA' },
+    { id: 'AAS', text: 'AAS' },
+    { id: 'HL', text: 'HL' },
+    { id: 'SSA', text: 'SSA' },
+    { id: 'AAA', text: 'AAA' },
+    { id: 'none', text: 'Not enough information' },
+  ]
+  for (const trap of traps) {
+    const button = buttons.find((b) => b.id === trap.choice)
+    if (!button || button.id === (built.answer === 'none' ? 'none' : built.answer)) throw new Error('trap is the answer')
+    button.trap = trap.id
+    button.witness = trap.witness
+  }
+  const salt = Math.floor((seed - 1) / 6)
+  const promised = traps[salt % traps.length]!
+  const answerId = built.answer === 'none' ? 'none' : built.answer
+  return choiceAnswer(
+    'congruentWhich',
+    WHICH_PROMPT,
+    {
+      ariaLabel: ariaOf(built.figure.scene),
+      points: built.figure.points,
+      segments: built.figure.segments,
+      ...(built.figure.lines ? { lines: built.figure.lines } : {}),
+      ...(built.figure.angles.length ? { angles: built.figure.angles } : {}),
+    },
+    'Method',
+    'Read the marks that are drawn.',
+    'Count the pairs that are marked. A side in both triangles counts, and so do vertical angles and alternate interior angles.',
+    buttons,
+    answerId,
+    promised.id,
+    promised.choice,
+    UNIT4_RULE_IDS.methods,
+    [built.answer === 'none' ? 'The marks that are drawn do not prove the triangles congruent.' : 'The marks that are drawn are exactly the pairs this reason uses.'],
+    'Which method',
+    { case: built.family, perm: salt % 6 },
+    seed,
+  )
 }
-interface SideJob {
-  ab: Lin
-  de: Lin
-  ef: Lin
-  x: number
-  measure: number
-  trapX: number
-  sides: [number, number, number]
+
+// --- algebra with corresponding parts ------------------------------------------
+
+function fitExprs(mAsked: number, mOther: number, x: number, rng: Rng): { asked: Lin; corr: Lin; other: Lin; trapX: number } | null {
+  const coeffs = rng.shuffle([1, 2, 3, 4])
+  for (const a1 of coeffs) {
+    for (const a3 of coeffs) {
+      if (a1 === a3) continue
+      if ((mOther - mAsked) % (a1 - a3) !== 0) continue
+      const trapX = x + (mOther - mAsked) / (a1 - a3)
+      if (!Number.isInteger(trapX) || trapX <= 0 || trapX === x || trapX > 80) continue
+      const b1 = mAsked - a1 * x
+      const b3 = mOther - a3 * x
+      for (const a2 of coeffs) {
+        if (a2 === a1) continue
+        const b2 = mAsked - a2 * x
+        const asked = lin(a1, b1)
+        const corr = lin(a2, b2)
+        const other = lin(a3, b3)
+        const texts = [formatLin(asked), formatLin(corr), formatLin(other)]
+        if (new Set(texts).size !== 3) continue
+        if (evalLin(asked, x) !== mAsked || evalLin(corr, x) !== mAsked || evalLin(other, x) !== mOther) continue
+        const solved = solveEqual(asked, corr)
+        const trap = solveEqual(asked, other)
+        if (!solved || solved.d !== 1 || solved.n !== x) continue
+        if (!trap || trap.d !== 1 || trap.n !== trapX) continue
+        return { asked, corr, other, trapX }
+      }
+    }
+  }
+  return null
 }
 
-const ANGLES: readonly AngJob[] = [
-  { a: lin(2, 20), d: lin(4, 4), e: lin(1, 62), x: 8, measure: 36, trapX: 42, b: 70, c: 74 },
-  { a: lin(3, 6), d: lin(5, -10), e: lin(2, 40), x: 8, measure: 30, trapX: 34, b: 56, c: 94 },
-  { a: lin(4, 4), d: lin(2, 22), e: lin(3, 14), x: 9, measure: 40, trapX: 10, b: 41, c: 99 },
-  { a: lin(5, 5), d: lin(3, 25), e: lin(4, 8), x: 10, measure: 55, trapX: 3, b: 48, c: 77 },
-]
-
-const SIDES: readonly SideJob[] = [
-  { ab: lin(2, 9), de: lin(4, -7), ef: lin(1, 22), x: 8, measure: 25, trapX: 13, sides: [25, 18, 20] },
-  { ab: lin(3, 3), de: lin(5, -13), ef: lin(4, 1), x: 8, measure: 27, trapX: 2, sides: [27, 20, 14] },
-  { ab: lin(2, 14), de: lin(5, -10), ef: lin(1, 28), x: 8, measure: 30, trapX: 14, sides: [30, 16, 20] },
-  { ab: lin(4, 6), de: lin(6, -12), ef: lin(2, 20), x: 9, measure: 42, trapX: 7, sides: [42, 15, 30] },
-]
-
-function checkJob(where: string, left: Lin, right: Lin, x: number, measure: number, trapLeft: Lin, trapX: number): void {
-  const solved = solveEqual(left, right)
-  if (!solved || solved.d !== 1 || solved.n !== x) throw new Error(`${where}: x is not ${x}`)
-  if (evalLin(left, x) !== measure || evalLin(right, x) !== measure) throw new Error(`${where}: measure is not ${measure}`)
-  const trap = solveEqual(left, trapLeft)
-  if (!trap || trap.d !== 1 || trap.n !== trapX || trapX === x) throw new Error(`${where}: trap x is not ${trapX}`)
+function clause(angle: boolean, name: string, expr: Lin): string {
+  return angle ? `m${name} = ${formatLin(expr)}` : `${name} = ${formatLin(expr)}`
 }
 
 export function drawSolve(seed: number): GeoBuilt {
-  const n = (seed - 1) % (ANGLES.length + SIDES.length)
-  const L = letters(seed, ANGLES.length + SIDES.length)
-  const [A, B, C, D, E, F] = L as unknown as [string, string, string, string, string, string]
-  if (n < ANGLES.length) return angleSolve(ANGLES[n]!, A, B, C, D, E, F)
-  return sideSolve(SIDES[n - ANGLES.length]!, A, B, C, D, E, F)
-}
-
-function angleSolve(job: AngJob, A: string, B: string, C: string, D: string, E: string, F: string): GeoBuilt {
-  checkJob('angle', job.a, job.d, job.x, job.measure, job.e, job.trapX)
-  if (job.measure + job.b + job.c !== 180) throw new Error('angles do not add to 180')
-  const prompt = `${cong(triName(A, B, C), triName(D, E, F))}. m∠${A} = ${formatLin(job.a)}, m∠${D} = ${formatLin(job.d)}, and m∠${E} = ${formatLin(job.e)}. Find x, then m∠${A}.`
-  const points = [...placeTri([A, B, C], 0, job.measure, job.b, 4.5), ...placeTri([D, E, F], 9, job.measure, job.b, 4.5)]
-  assertAngles(points, [A, B, C], job.measure, job.b, 'solve angle')
-  assertAngles(points, [D, E, F], job.measure, job.b, 'solve angle copy')
-  const labels = [
-    { vertex: A, from: B, to: C, label: angleLabel(job.a), radius: 22 },
-    { vertex: D, from: E, to: F, label: angleLabel(job.d), radius: 22 },
-    { vertex: E, from: D, to: F, label: angleLabel(job.e), radius: 26 },
-  ]
-  const figure: GeoFigureSpec = {
-    ariaLabel: `Triangles ${A}${B}${C} and ${D}${E}${F}. Angle ${A} is labeled ${angleLabel(job.a)}, angle ${D} is labeled ${angleLabel(job.d)}, and angle ${E} is labeled ${angleLabel(job.e)}. No matching marks.`,
-    points,
-    segments: [
-      { from: A, to: B },
-      { from: B, to: C },
-      { from: C, to: A },
-      { from: D, to: E },
-      { from: E, to: F },
-      { from: F, to: D },
-    ],
-    angles: labels,
+  for (let attempt = 0; attempt < 50; attempt++) {
+    const rng = makeRng(mixSeed(seed, 120 + attempt))
+    const { t1, t2, perm } = named(rng)
+    const { rot, reflect } = orient(rng)
+    const angle = rng.chance(0.5)
+    const x = rng.pick(X_POOL)
+    const askedOnSecond = rng.chance(0.5)
+    const askedIndex = rng.int(0, 2)
+    const otherIndex = rng.intExcept(0, 2, [askedIndex])
+    if (angle) {
+      const m1 = rng.int(32, 72)
+      const m2 = rng.int(32, 78)
+      const m3 = 180 - m1 - m2
+      if (m2 === m1 || m3 < 28 || m3 >= 150) continue
+      const measures = [0, 0, 0]
+      measures[askedIndex] = m1
+      measures[otherIndex] = m2
+      measures[3 - askedIndex - otherIndex] = m3
+      if (measures.some((m) => m <= 0 || m >= 180 || Math.abs(m - 90) < 3 || BANNED.has(m))) continue
+      const fit = fitExprs(m1, m2, x, rng)
+      if (!fit) continue
+      if (rawLeaks('geo_vertices_out_of_order', VERT_W, String(x))) continue
+      const askedTri = askedOnSecond ? t2 : t1
+      const otherTri = rng.chance(0.5) ? t1 : t2
+      const corrTri = askedOnSecond ? t1 : t2
+      const askedName = angLetter(askedTri, askedIndex)
+      const corrName = angLetter(corrTri, askedIndex)
+      const otherName = angLetter(otherTri, otherIndex)
+      const parts = rng.shuffle([
+        { name: askedName, expr: fit.asked, role: 'asked' },
+        { name: corrName, expr: fit.corr, role: 'corr' },
+        { name: otherName, expr: fit.other, role: 'other' },
+      ])
+      if (new Set(parts.map((p) => p.name)).size !== 3) continue
+      const prompt = `${cong(triName(t1), triName(t2))}. ${clause(true, parts[0]!.name, parts[0]!.expr)}, ${clause(true, parts[1]!.name, parts[1]!.expr)}, and ${clause(true, parts[2]!.name, parts[2]!.expr)}. Find x, then m${askedName}.`
+      const points = placePair(t1, t2, measures[0]!, measures[1]!, 4.4, rot, reflect, 2.8)
+      const drawn = anglesAt(points, t1)
+      if (drawn.some((a, i) => Math.abs(a - measures[i]!) > 1.2)) continue
+      const labels: GeoAngleMark[] = []
+      let anglesLabeled = true
+      for (const p of parts) {
+        const vertex = p.name.slice(1)
+        const tri = t1.includes(vertex) ? t1 : t2.includes(vertex) ? t2 : null
+        if (!tri) {
+          anglesLabeled = false
+          break
+        }
+        const i = tri.indexOf(vertex)
+        labels.push({ vertex, from: tri[(i + 1) % 3]!, to: tri[(i + 2) % 3]!, label: angleLabel(p.expr), radius: 18 })
+      }
+      if (!anglesLabeled || labels.length !== 3) continue
+      const figure: GeoFigureSpec = {
+        ariaLabel: `Triangles ${t1.join('')} and ${t2.join('')}. ${parts.map((p) => `Angle ${p.name.slice(1)} is labeled ${angleLabel(p.expr)}`).join(', ')}. No congruence marks.`,
+        points,
+        segments: [...segsOf(t1, new Map()), ...segsOf(t2, new Map())],
+        angles: labels,
+      }
+      const visible = `${prompt}\n${figure.ariaLabel}\n${labels.map((g) => g.label).join(' ')}`
+      if ([String(x), String(m1), String(fit.trapX)].some((secret) => exposed(visible, secret))) continue
+      hide('solve angle', visible, [String(x), String(m1)])
+      const stages = numberStages(x, { id: 'geo_vertices_out_of_order', text: String(fit.trapX), witness: VERT_W }, `m${askedName}`, m1, 'deg', null, UNIT4_RULE_IDS.parts)
+      return numberAnswer('congruentSolve', prompt, figure, stages, [8, 9, 10], measures, 'geo_vertices_out_of_order', 'x', String(fit.trapX), 'Corresponding parts', { case: 'angle', perm })
+    }
+    const lens = [rng.int(8, 26), rng.int(8, 26), rng.int(8, 26)]
+    const sorted = [...lens].sort((a, b) => a - b)
+    if (sorted[0]! + sorted[1]! <= sorted[2]!) continue
+    if (lens[askedIndex] === lens[otherIndex]) continue
+    if (lens.some((n) => BANNED.has(n))) continue
+    const fit = fitExprs(lens[askedIndex]!, lens[otherIndex]!, x, rng)
+    if (!fit) continue
+    if (rawLeaks('geo_vertices_out_of_order', VERT_W, String(x))) continue
+    const cosAt = (i: number) => {
+      const opp = lens[(i + 1) % 3]!
+      const left = lens[(i + 2) % 3]!
+      const right = lens[i]!
+      return (left * left + right * right - opp * opp) / (2 * left * right)
+    }
+    const c0 = cosAt(0)
+    const c1 = cosAt(1)
+    if (c0 <= -1 || c0 >= 1 || c1 <= -1 || c1 >= 1) continue
+    const a0 = (Math.acos(c0) * 180) / Math.PI
+    const a1 = (Math.acos(c1) * 180) / Math.PI
+    const a2 = 180 - a0 - a1
+    if (a2 <= 8 || a0 <= 8 || a1 <= 8) continue
+    const askedTri = askedOnSecond ? t2 : t1
+    const corrTri = askedOnSecond ? t1 : t2
+    const otherTri = rng.chance(0.5) ? t1 : t2
+    const askedName = sideLabel(askedTri, askedIndex)
+    const corrName = sideLabel(corrTri, askedIndex)
+    const otherName = sideLabel(otherTri, otherIndex)
+    const parts = rng.shuffle([
+      { name: askedName, expr: fit.asked, tri: askedTri, index: askedIndex },
+      { name: corrName, expr: fit.corr, tri: corrTri, index: askedIndex },
+      { name: otherName, expr: fit.other, tri: otherTri, index: otherIndex },
+    ])
+    if (new Set(parts.map((p) => p.name)).size !== 3) continue
+    const prompt = `${cong(triName(t1), triName(t2))}. ${clause(false, parts[0]!.name, parts[0]!.expr)}, ${clause(false, parts[1]!.name, parts[1]!.expr)}, and ${clause(false, parts[2]!.name, parts[2]!.expr)}. Find x, then ${askedName}.`
+    const points = placePair(t1, t2, a0, a1, 4.4, rot, reflect, 2.8)
+    const drawn = anglesAt(points, t1)
+    const stored = [Math.round(a0), Math.round(a1), 180 - Math.round(a0) - Math.round(a1)]
+    if (stored.some((n) => n <= 0 || n >= 180)) continue
+    if (drawn.some((a, i) => Math.abs(a - stored[i]!) > 1.4)) continue
+    const segments = [...segsOf(t1, new Map()), ...segsOf(t2, new Map())]
+    let labeled = 0
+    for (const part of parts) {
+      const a = part.tri[part.index]!
+      const b = part.index === 2 ? part.tri[0]! : part.tri[(part.index + 1) % 3]!
+      const seg = segments.find((s) => (s.from === a && s.to === b) || (s.from === b && s.to === a))
+      if (!seg) continue
+      seg.label = formatLin(part.expr)
+      seg.labelSide = 'above'
+      labeled += 1
+    }
+    if (labeled !== 3) continue
+    const figure: GeoFigureSpec = {
+      ariaLabel: `Triangles ${t1.join('')} and ${t2.join('')}. ${parts.map((p) => `Side ${p.name} is labeled ${formatLin(p.expr)}`).join(', ')}. No congruence marks.`,
+      points,
+      segments,
+    }
+    const visible = `${prompt}\n${figure.ariaLabel}`
+    if ([String(x), String(lens[askedIndex]), String(fit.trapX)].some((secret) => exposed(visible, secret))) continue
+    hide('solve side', visible, [String(x), String(lens[askedIndex]!)])
+    const stages = numberStages(x, { id: 'geo_vertices_out_of_order', text: String(fit.trapX), witness: VERT_W }, askedName, lens[askedIndex]!, 'len', null, UNIT4_RULE_IDS.parts)
+    return numberAnswer('congruentSolve', prompt, figure, stages, lens, stored, 'geo_vertices_out_of_order', 'x', String(fit.trapX), 'Corresponding parts', { case: 'side', perm })
   }
-  hide('solve angle', `${prompt}\n${figure.ariaLabel}\n${labels.map((g) => g.label).join(' ')}`, [String(job.x), String(job.measure)])
-  const stages = numberStages(job.x, { id: 'geo_vertices_out_of_order', text: String(job.trapX), witness: VERT_W }, `m∠${A}`, job.measure, 'deg', null, UNIT4_RULE_IDS.parts)
-  return numberAnswer('congruentSolve', prompt, figure, stages, [5, 6, 7], [job.measure, job.b, job.c], 'geo_vertices_out_of_order', 'x', String(job.trapX), 'Corresponding parts', { case: 'angle' })
-}
-
-function sideSolve(job: SideJob, A: string, B: string, C: string, D: string, E: string, F: string): GeoBuilt {
-  checkJob('side', job.ab, job.de, job.x, job.measure, job.ef, job.trapX)
-  const [c, a, b] = job.sides
-  if (a + b <= c || a + c <= b || b + c <= a) throw new Error('sides are not a triangle')
-  const angA = Math.round((Math.acos((b * b + c * c - a * a) / (2 * b * c)) * 180) / Math.PI)
-  const angB = Math.round((Math.acos((a * a + c * c - b * b) / (2 * a * c)) * 180) / Math.PI)
-  const angC = 180 - angA - angB
-  if (angA <= 0 || angB <= 0 || angC <= 0) throw new Error('side angles failed')
-  const prompt = `${cong(triName(A, B, C), triName(D, E, F))}. ${sideName(A, B)} = ${formatLin(job.ab)}, ${sideName(D, E)} = ${formatLin(job.de)}, and ${sideName(E, F)} = ${formatLin(job.ef)}. Find x, then ${sideName(A, B)}.`
-  const points = [...placeTri([A, B, C], 0, angA, angB, 4.5), ...placeTri([D, E, F], 9, angA, angB, 4.5)]
-  const figure: GeoFigureSpec = {
-    ariaLabel: `Triangles ${A}${B}${C} and ${D}${E}${F}. Side ${A}${B} is labeled ${formatLin(job.ab)}, side ${D}${E} is labeled ${formatLin(job.de)}, and side ${E}${F} is labeled ${formatLin(job.ef)}. No matching marks.`,
-    points,
-    segments: [
-      { from: A, to: B, label: formatLin(job.ab), labelSide: 'below' },
-      { from: B, to: C },
-      { from: C, to: A },
-      { from: D, to: E, label: formatLin(job.de), labelSide: 'below' },
-      { from: E, to: F, label: formatLin(job.ef), labelSide: 'below' },
-      { from: F, to: D },
-    ],
-  }
-  hide('solve side', `${prompt}\n${figure.ariaLabel}`, [String(job.x), String(job.measure)])
-  const stages = numberStages(job.x, { id: 'geo_vertices_out_of_order', text: String(job.trapX), witness: VERT_W }, sideName(A, B), job.measure, 'len', null, UNIT4_RULE_IDS.parts)
-  return numberAnswer('congruentSolve', prompt, figure, stages, [...job.sides], [angA, angB, angC], 'geo_vertices_out_of_order', 'x', String(job.trapX), 'Corresponding parts', { case: 'side' })
+  throw new Error(`gc.solve/${seed}: no numbers`)
 }
 
 // --- isosceles and equilateral -------------------------------------------------
 
-interface ThmJob {
-  b: Lin
-  c: Lin
-  vertex: Lin
-  x: number
-  base: number
-  trapX: number
-  sides: [number, number, number]
-}
-interface ConvJob {
-  ab: Lin
-  ac: Lin
-  bc: Lin
-  x: number
-  side: number
-  trapX: number
-}
-interface EqJob {
-  ab: Lin
-  bc: Lin
-  ac: Lin
-  x: number
-  side: number
+function placeApex(ids: Tri, apex: number, vertex: number): GeoPoint[] {
+  const base = [0, 1, 2].filter((i) => i !== apex) as [number, number]
+  const half = 2.3
+  const height = half / Math.tan(((vertex / 2) * Math.PI) / 180)
+  const pos = new Map<number, GeoPoint>()
+  pos.set(base[0]!, pt(ids[base[0]!]!, 0, 0, 'below'))
+  pos.set(base[1]!, pt(ids[base[1]!]!, half * 2, 0, 'below'))
+  pos.set(apex, pt(ids[apex]!, half, height, 'above'))
+  return [0, 1, 2].map((i) => pos.get(i)!)
 }
 
-const THEOREM: readonly ThmJob[] = [
-  { b: lin(5, 0), c: lin(7, -16), vertex: lin(17, -36), x: 8, base: 40, trapX: 3, sides: [10, 10, 8] },
-  { b: lin(3, 9), c: lin(5, -7), vertex: lin(30, -126), x: 8, base: 33, trapX: 5, sides: [9, 9, 6] },
-  { b: lin(2, 16), c: lin(4, 0), vertex: lin(16, -12), x: 8, base: 32, trapX: 2, sides: [8, 8, 7] },
-  { b: lin(6, -6), c: lin(4, 10), vertex: lin(24, -96), x: 8, base: 42, trapX: 5, sides: [11, 11, 8] },
-]
-
-const CONVERSE: readonly ConvJob[] = [
-  { ab: lin(4, 2), ac: lin(6, -14), bc: lin(3, 4), x: 8, side: 34, trapX: 2 },
-  { ab: lin(3, 6), ac: lin(5, -10), bc: lin(1, 16), x: 8, side: 30, trapX: 5 },
-  { ab: lin(5, -5), ac: lin(3, 13), bc: lin(2, 16), x: 9, side: 40, trapX: 7 },
-  { ab: lin(2, 18), ac: lin(4, 2), bc: lin(3, 6), x: 8, side: 34, trapX: 12 },
-]
-
-const EQUILATERAL: readonly EqJob[] = [
-  { ab: lin(2, 6), bc: lin(3, -2), ac: lin(4, -10), x: 8, side: 22 },
-  { ab: lin(3, 3), bc: lin(5, -13), ac: lin(4, -5), x: 8, side: 27 },
-  { ab: lin(2, 14), bc: lin(4, -4), ac: lin(3, 5), x: 9, side: 32 },
-  { ab: lin(4, 4), bc: lin(6, -12), ac: lin(5, -4), x: 8, side: 36 },
-]
+function angleMark(ids: Tri, i: number, label: string, radius: number): GeoAngleMark {
+  return { vertex: ids[i]!, from: ids[(i + 1) % 3]!, to: ids[(i + 2) % 3]!, label, radius }
+}
 
 export function drawIsosceles(seed: number): GeoBuilt {
-  const family = (seed - 1) % 3
-  const n = Math.floor((seed - 1) / 3) % 4
-  const [A, B, C] = letters(seed, 12)
-  if (!A || !B || !C) throw new Error('letters')
-  if (family === 0) return drawTheorem(THEOREM[n]!, A, B, C)
-  if (family === 1) return drawConverse(CONVERSE[n]!, A, B, C)
-  return drawEquilateral(EQUILATERAL[n]!, A, B, C)
-}
-
-function apexPoints(A: string, B: string, C: string, apex: number): GeoPoint[] {
-  const base = 4
-  const height = base / 2 / Math.tan(rad(apex / 2))
-  return [pt(B, 0, 0, 'below'), pt(C, base, 0, 'below'), pt(A, base / 2, height, 'above')]
-}
-
-function drawTheorem(job: ThmJob, A: string, B: string, C: string): GeoBuilt {
-  checkJob('theorem', job.b, job.c, job.x, job.base, job.vertex, job.trapX)
-  const vertex = 180 - 2 * job.base
-  if (evalLin(job.vertex, job.x) !== vertex) throw new Error('vertex expression missed')
-  if (job.sides[0] !== job.sides[1] || job.sides[0] + job.sides[1] <= job.sides[2]) throw new Error('theorem sides')
-  const prompt = `${sideName(A, B)} and ${sideName(A, C)} match. m∠${A} = ${formatLin(job.vertex)}, m∠${B} = ${formatLin(job.b)}, and m∠${C} = ${formatLin(job.c)}. Find x, then m∠${B}.`
-  const points = apexPoints(A, B, C, vertex)
-  assertAngles(points, [A, B, C], vertex, job.base, 'theorem')
-  const labels = [
-    { vertex: A, from: B, to: C, label: angleLabel(job.vertex), radius: 20 },
-    { vertex: B, from: A, to: C, label: angleLabel(job.b), radius: 22 },
-    { vertex: C, from: B, to: A, label: angleLabel(job.c), radius: 22 },
-  ]
-  const figure: GeoFigureSpec = {
-    ariaLabel: `Triangle ${A}${B}${C}. Sides ${A}${B} and ${A}${C} have 1 tick. Angle ${A} is labeled ${angleLabel(job.vertex)}, angle ${B} is labeled ${angleLabel(job.b)}, and angle ${C} is labeled ${angleLabel(job.c)}.`,
-    points,
-    segments: [
-      { from: A, to: B, ticks: 1 },
-      { from: A, to: C, ticks: 1 },
-      { from: B, to: C },
-    ],
-    angles: labels,
+  const family = (seed - 1) % 4
+  for (let attempt = 0; attempt < 60; attempt++) {
+    const rng = makeRng(mixSeed(seed, 160 + attempt))
+    const letters = pickLetters(rng, 3)
+    const ids: Tri = [letters[0]!, letters[1]!, letters[2]!]
+    const name = ids.join('')
+    if (family === 2) {
+      const x = rng.pick(X_POOL)
+      const side = rng.int(10, 32)
+      if (BANNED.has(side) || BANNED.has(x)) continue
+      const exprs: Lin[] = []
+      const used: number[] = []
+      let ok = true
+      for (let k = 0; k < 3; k++) {
+        let placed = false
+        for (const a of rng.shuffle([1, 2, 3, 4])) {
+          if (used.includes(a)) continue
+          const b = side - a * x
+          const e = lin(a, b)
+          const text = formatLin(e)
+          if (exprs.some((old) => formatLin(old) === text)) continue
+          if (exposed(text, String(x)) || exposed(text, String(side))) continue
+          if (evalLin(e, x) !== side) continue
+          exprs.push(e)
+          used.push(a)
+          placed = true
+          break
+        }
+        if (!placed) ok = false
+      }
+      if (!ok || exprs.length !== 3) continue
+      const e0 = solveEqual(exprs[0]!, exprs[1]!)
+      const e1 = solveEqual(exprs[0]!, exprs[2]!)
+      if (!e0 || !e1 || e0.n !== x || e0.d !== 1 || e1.n !== x || e1.d !== 1) continue
+      if (rawLeaks('geo_equilateral_angle_for_side', EQ_W, String(side))) continue
+      const s0 = sideLabel(ids, 0)
+      const s1 = sideLabel(ids, 1)
+      const s2 = sideLabel(ids, 2)
+      const prompt = `${triName(ids)} is equilateral. ${s0} = ${formatLin(exprs[0]!)}, ${s1} = ${formatLin(exprs[1]!)}, and ${s2} = ${formatLin(exprs[2]!)}. Find x, then ${s0}.`
+      const points = placeApex(ids, 0, 60)
+      const figure: GeoFigureSpec = {
+        ariaLabel: `Triangle ${name}. All three sides have 1 tick. Side ${s0} is labeled ${formatLin(exprs[0]!)}, side ${s1} is labeled ${formatLin(exprs[1]!)}, and side ${s2} is labeled ${formatLin(exprs[2]!)}.`,
+        points,
+        segments: [
+          { from: ids[0], to: ids[1], ticks: 1, label: formatLin(exprs[0]!), labelSide: 'above' },
+          { from: ids[1], to: ids[2], ticks: 1, label: formatLin(exprs[1]!), labelSide: 'below' },
+          { from: ids[2], to: ids[0], ticks: 1, label: formatLin(exprs[2]!), labelSide: 'above' },
+        ],
+      }
+      const visible = `${prompt}\n${figure.ariaLabel}`
+      if (exposed(visible, String(x)) || exposed(visible, String(side))) continue
+      hide('equilateral', visible, [String(x), String(side)])
+      const stages = numberStages(x, null, s0, side, 'len', { id: 'geo_equilateral_angle_for_side', text: '60', witness: EQ_W }, UNIT4_RULE_IDS.equilateral)
+      return numberAnswer('isoscelesSolve', prompt, figure, stages, [side, side, side], [60, 60, 60], 'geo_equilateral_angle_for_side', 'result', '60', 'Equilateral triangle', { case: 'equilateral' })
+    }
+    if (family === 3) {
+      const apex = rng.int(0, 2)
+      const bases = [0, 1, 2].filter((i) => i !== apex)
+      const V = rng.pick([36, 40, 44, 48, 52, 56, 64, 70, 72, 76, 80, 84, 88, 96, 100, 104, 108])
+      const base = (180 - V) / 2
+      if (!Number.isInteger(base) || base < 24 || base >= 80 || BANNED.has(base) || base === V) continue
+      const x = rng.pick(X_POOL)
+      if (rawLeaks('geo_base_angles_wrong_vertex', BASE_W, String(x))) continue
+      let expr: Lin | null = null
+      for (const a of rng.shuffle([1, 2, 3, 4])) {
+        const b = base - a * x
+        const e = lin(a, b)
+        const text = formatLin(e)
+        if (exposed(text, String(x)) || exposed(text, String(base)) || exposed(text, String(V))) continue
+        if (evalLin(e, x) !== base) continue
+        const trap = solveEqual(e, lin(0, V))
+        if (!trap || trap.d !== 1 || trap.n === x || trap.n <= 0 || trap.n > 80) continue
+        expr = e
+        break
+      }
+      if (!expr) continue
+      const trap = solveEqual(expr, lin(0, V))!
+      const sideA = apex === 0 ? sideLabel(ids, 0) : apex === 1 ? sideLabel(ids, 0) : sideLabel(ids, 1)
+      const sideB = apex === 0 ? `${ids[0]}${ids[2]}` : apex === 1 ? sideLabel(ids, 1) : `${ids[0]}${ids[2]}`
+      if (sideA === sideB) continue
+      const givenBase = bases[0]!
+      const askedBase = bases[1]!
+      const prompt = `${sideA} ≅ ${sideB} and m${angLetter(ids, apex)} = ${V}. m${angLetter(ids, givenBase)} = ${formatLin(expr)}. Find x, then m${angLetter(ids, askedBase)}.`
+      const points = placeApex(ids, apex, V)
+      const drawn = anglesAt(points, ids)
+      const stored = [0, 1, 2].map((i) => (i === apex ? V : base))
+      if (drawn.some((a, i) => Math.abs(a - stored[i]!) > 1.2)) continue
+      const tickSegs: GeoSegment[] = [0, 1, 2].map((i) => {
+        const from = ids[i]!
+        const to = ids[(i + 1) % 3]!
+        const touches = from === ids[apex] || to === ids[apex]
+        return touches ? { from, to, ticks: 1 as Tick } : { from, to }
+      })
+      const figure: GeoFigureSpec = {
+        ariaLabel: `Triangle ${name}. ${sideA} and ${sideB} have 1 tick. Angle ${ids[apex]} is labeled ${V}°. Angle ${ids[givenBase]} is labeled ${formatLin(expr)}.`,
+        points,
+        segments: tickSegs,
+        angles: [angleMark(ids, apex, `${V}°`, 18), angleMark(ids, givenBase, angleLabel(expr), 20)],
+      }
+      const visible = `${prompt}\n${figure.ariaLabel}`
+      if ([String(x), String(base), String(trap.n)].some((secret) => exposed(visible, secret))) continue
+      hide('vertex', visible, [String(x), String(base)])
+      const stages = numberStages(x, { id: 'geo_base_angles_wrong_vertex', text: String(trap.n), witness: BASE_W }, `m${angLetter(ids, askedBase)}`, base, 'deg', null, UNIT4_RULE_IDS.base)
+      return numberAnswer('isoscelesSolve', prompt, figure, stages, [9, 9, 8], stored, 'geo_base_angles_wrong_vertex', 'x', String(trap.n), 'Isosceles triangle', { case: 'vertex' })
+    }
+    if (family === 0) {
+      const apex = rng.int(0, 2)
+      const bases = [0, 1, 2].filter((i) => i !== apex)
+      const base = rng.int(28, 70)
+      const vertex = 180 - 2 * base
+      if (vertex < 24 || vertex >= 150 || BANNED.has(base) || BANNED.has(vertex) || Math.abs(vertex - 90) < 2) continue
+      const x = rng.pick(X_POOL)
+      if (rawLeaks('geo_base_angles_wrong_vertex', BASE_W, String(x))) continue
+      const fit = fitExprs(base, vertex, x, rng)
+      if (!fit) continue
+      const asked = rng.pick(bases)
+      const measures = [0, 1, 2].map((i) => (i === apex ? vertex : base))
+      const baseExpr = fit.asked
+      const baseExpr2 = fit.corr
+      const vertexExpr = fit.other
+      if (evalLin(baseExpr, x) !== base || evalLin(baseExpr2, x) !== base || evalLin(vertexExpr, x) !== vertex) continue
+      const byIndex = [lin(0, 0), lin(0, 0), lin(0, 0)]
+      byIndex[bases[0]!] = bases[0] === asked ? baseExpr : baseExpr2
+      byIndex[bases[1]!] = bases[1] === asked ? baseExpr : baseExpr2
+      byIndex[apex] = vertexExpr
+      // fitExprs sets asked and corr equal to mAsked (base) and other equal to mOther (vertex). Good.
+      if (bases[0] !== asked && bases[1] !== asked) continue
+      const sideA = apex === 1 ? sideLabel(ids, 0) : apex === 0 ? sideLabel(ids, 0) : sideLabel(ids, 1)
+      const sideB = apex === 1 ? sideLabel(ids, 1) : apex === 0 ? `${ids[0]}${ids[2]}` : `${ids[0]}${ids[2]}`
+      const prompt = `${sideA} ≅ ${sideB}. m${angLetter(ids, 0)} = ${formatLin(byIndex[0]!)}, m${angLetter(ids, 1)} = ${formatLin(byIndex[1]!)}, and m${angLetter(ids, 2)} = ${formatLin(byIndex[2]!)}. Find x, then m${angLetter(ids, asked)}.`
+      const points = placeApex(ids, apex, vertex)
+      const drawn = anglesAt(points, ids)
+      if (drawn.some((a, i) => Math.abs(a - measures[i]!) > 1.2)) continue
+      const tickSegs: GeoSegment[] = [0, 1, 2].map((i) => {
+        const from = ids[i]!
+        const to = ids[(i + 1) % 3]!
+        const touches = from === ids[apex] || to === ids[apex]
+        return touches ? { from, to, ticks: 1 as Tick } : { from, to }
+      })
+      const figure: GeoFigureSpec = {
+        ariaLabel: `Triangle ${name}. ${sideA} and ${sideB} have 1 tick. Angle ${ids[0]} is labeled ${formatLin(byIndex[0]!)}, angle ${ids[1]} is labeled ${formatLin(byIndex[1]!)}, and angle ${ids[2]} is labeled ${formatLin(byIndex[2]!)}.`,
+        points,
+        segments: tickSegs,
+        angles: [0, 1, 2].map((i) => angleMark(ids, i, angleLabel(byIndex[i]!), 18)),
+      }
+      const visible = `${prompt}\n${figure.ariaLabel}`
+      if ([String(x), String(base), String(fit.trapX)].some((secret) => exposed(visible, secret))) continue
+      hide('theorem', visible, [String(x), String(base)])
+      const stages = numberStages(x, { id: 'geo_base_angles_wrong_vertex', text: String(fit.trapX), witness: BASE_W }, `m${angLetter(ids, asked)}`, base, 'deg', null, UNIT4_RULE_IDS.base)
+      const leg = rng.int(8, 16)
+      const baseSide = rng.int(6, leg + leg - 1)
+      return numberAnswer('isoscelesSolve', prompt, figure, stages, [leg, leg, baseSide], measures, 'geo_base_angles_wrong_vertex', 'x', String(fit.trapX), 'Isosceles triangle', { case: 'theorem' })
+    }
+    // Converse: congruent angles, so the sides opposite them are congruent.
+    const a = rng.int(0, 2)
+    const b = rng.intExcept(0, 2, [a])
+    const apex = [0, 1, 2].find((i) => i !== a && i !== b)!
+    const leg = rng.int(10, 28)
+    const baseSide = rng.int(8, leg + leg - 2)
+    if (leg + leg <= baseSide || BANNED.has(leg) || BANNED.has(baseSide) || leg === baseSide) continue
+    const x = rng.pick(X_POOL)
+    if (rawLeaks('geo_base_angles_wrong_vertex', CONV_W, String(x))) continue
+    const fit = fitExprs(leg, baseSide, x, rng)
+    if (!fit) continue
+    const asked = rng.chance(0.5) ? a : b
+    // Side opposite vertex v starts at the next vertex.
+    const across = (v: number) => (v + 1) % 3
+    const bySide: Lin[] = [lin(0, 0), lin(0, 0), lin(0, 0)]
+    bySide[across(a)] = asked === a ? fit.asked : fit.corr
+    bySide[across(b)] = asked === b ? fit.asked : fit.corr
+    bySide[across(apex)] = fit.other
+    if (evalLin(bySide[across(a)]!, x) !== leg || evalLin(bySide[across(b)]!, x) !== leg || evalLin(bySide[across(apex)]!, x) !== baseSide) continue
+    const askedName = sideLabel(ids, across(asked))
+    const s0 = sideLabel(ids, 0)
+    const s1 = sideLabel(ids, 1)
+    const s2 = sideLabel(ids, 2)
+    const prompt = `${angLetter(ids, a)} ≅ ${angLetter(ids, b)}. ${s0} = ${formatLin(bySide[0]!)}, ${s1} = ${formatLin(bySide[1]!)}, and ${s2} = ${formatLin(bySide[2]!)}. Find x, then ${askedName}.`
+    const cosApex = (leg * leg + leg * leg - baseSide * baseSide) / (2 * leg * leg)
+    if (cosApex <= -1 || cosApex >= 1) continue
+    const apexAng = (Math.acos(cosApex) * 180) / Math.PI
+    const baseAng = (180 - apexAng) / 2
+    if (baseAng < 18 || apexAng < 18) continue
+    const points = placeApex(ids, apex, apexAng)
+    const stored = [0, 1, 2].map((i) => (i === apex ? Math.round(apexAng) : Math.round(baseAng)))
+    stored[apex] = 180 - stored[a]! - stored[b]!
+    if (stored.some((n) => n <= 0 || n >= 180)) continue
+    const drawn = anglesAt(points, ids)
+    if (drawn.some((g, i) => Math.abs(g - (i === apex ? apexAng : baseAng)) > 1.2)) continue
+    if (drawn.some((g, i) => Math.abs(g - stored[i]!) > 1.4)) continue
+    const segments: GeoSegment[] = [0, 1, 2].map((i) => ({
+      from: i === 2 ? ids[2]! : ids[i]!,
+      to: i === 2 ? ids[0]! : ids[(i + 1) % 3]!,
+      label: formatLin(bySide[i]!),
+      labelSide: i === 1 ? ('below' as const) : ('above' as const),
+    }))
+    const figure: GeoFigureSpec = {
+      ariaLabel: `Triangle ${name}. Angles at ${ids[a]} and ${ids[b]} have 1 arc. Side ${s0} is labeled ${formatLin(bySide[0]!)}, side ${s1} is labeled ${formatLin(bySide[1]!)}, and side ${s2} is labeled ${formatLin(bySide[2]!)}.`,
+      points,
+      segments,
+      angles: [
+        { vertex: ids[a]!, from: ids[(a + 1) % 3]!, to: ids[(a + 2) % 3]!, marks: 1 },
+        { vertex: ids[b]!, from: ids[(b + 1) % 3]!, to: ids[(b + 2) % 3]!, marks: 1 },
+      ],
+    }
+    const visible = `${prompt}\n${figure.ariaLabel}`
+    if ([String(x), String(leg), String(fit.trapX)].some((secret) => exposed(visible, secret))) continue
+    hide('converse', visible, [String(x), String(leg)])
+    const stages = numberStages(x, { id: 'geo_base_angles_wrong_vertex', text: String(fit.trapX), witness: CONV_W }, askedName, leg, 'len', null, UNIT4_RULE_IDS.base)
+    const sideLens = [0, 1, 2].map((i) => ((i + 2) % 3 === a || (i + 2) % 3 === b ? leg : baseSide))
+    return numberAnswer('isoscelesSolve', prompt, figure, stages, sideLens, stored, 'geo_base_angles_wrong_vertex', 'x', String(fit.trapX), 'Isosceles triangle', { case: 'converse' })
   }
-  hide('theorem', `${prompt}\n${figure.ariaLabel}`, [String(job.x), String(job.base)])
-  const stages = numberStages(job.x, { id: 'geo_base_angles_wrong_vertex', text: String(job.trapX), witness: BASE_W }, `m∠${B}`, job.base, 'deg', null, UNIT4_RULE_IDS.base)
-  return numberAnswer('isoscelesSolve', prompt, figure, stages, [...job.sides], [vertex, job.base, job.base], 'geo_base_angles_wrong_vertex', 'x', String(job.trapX), 'Isosceles triangle', { case: 'theorem' })
-}
-
-function drawConverse(job: ConvJob, A: string, B: string, C: string): GeoBuilt {
-  checkJob('converse', job.ab, job.ac, job.x, job.side, job.bc, job.trapX)
-  const bc = evalLin(job.bc, job.x)
-  if (job.side + job.side <= bc) throw new Error('converse sides')
-  const angB = Math.round((Math.acos((job.side * job.side + bc * bc - job.side * job.side) / (2 * job.side * bc)) * 180) / Math.PI)
-  const angA = 180 - 2 * angB
-  if (angA <= 0 || angB <= 0) throw new Error('converse angles')
-  const prompt = `∠${B} and ∠${C} match. ${sideName(A, B)} = ${formatLin(job.ab)}, ${sideName(A, C)} = ${formatLin(job.ac)}, and ${sideName(B, C)} = ${formatLin(job.bc)}. Find x, then ${sideName(A, B)}.`
-  const points = apexPoints(A, B, C, angA)
-  assertAngles(points, [A, B, C], angA, angB, 'converse')
-  const figure: GeoFigureSpec = {
-    ariaLabel: `Triangle ${A}${B}${C}. Angles at ${B} and ${C} have 1 arc. Side ${A}${B} is labeled ${formatLin(job.ab)}, side ${A}${C} is labeled ${formatLin(job.ac)}, and side ${B}${C} is labeled ${formatLin(job.bc)}.`,
-    points,
-    segments: [
-      { from: A, to: B, label: formatLin(job.ab), labelSide: 'above' },
-      { from: A, to: C, label: formatLin(job.ac), labelSide: 'above' },
-      { from: B, to: C, label: formatLin(job.bc), labelSide: 'below' },
-    ],
-    angles: [
-      { vertex: B, from: A, to: C, marks: 1 },
-      { vertex: C, from: B, to: A, marks: 1 },
-    ],
-  }
-  hide('converse', `${prompt}\n${figure.ariaLabel}`, [String(job.x), String(job.side)])
-  const stages = numberStages(job.x, { id: 'geo_base_angles_wrong_vertex', text: String(job.trapX), witness: CONV_W }, sideName(A, B), job.side, 'len', null, UNIT4_RULE_IDS.base)
-  return numberAnswer('isoscelesSolve', prompt, figure, stages, [job.side, job.side, bc], [angA, angB, angB], 'geo_base_angles_wrong_vertex', 'x', String(job.trapX), 'Isosceles triangle', { case: 'converse' })
-}
-
-function drawEquilateral(job: EqJob, A: string, B: string, C: string): GeoBuilt {
-  const ab = solveEqual(job.ab, job.bc)
-  const ac = solveEqual(job.ab, job.ac)
-  if (!ab || !ac || ab.d !== 1 || ac.d !== 1 || ab.n !== job.x || ac.n !== job.x) throw new Error('equilateral x')
-  if (evalLin(job.ab, job.x) !== job.side || evalLin(job.bc, job.x) !== job.side || evalLin(job.ac, job.x) !== job.side) {
-    throw new Error('equilateral side')
-  }
-  const prompt = `${sideName(A, B)}, ${sideName(B, C)}, and ${sideName(A, C)} all match. ${sideName(A, B)} = ${formatLin(job.ab)}, ${sideName(B, C)} = ${formatLin(job.bc)}, and ${sideName(A, C)} = ${formatLin(job.ac)}. Find x, then ${sideName(A, B)}.`
-  const points = apexPoints(A, B, C, 60)
-  assertAngles(points, [A, B, C], 60, 60, 'equilateral')
-  const figure: GeoFigureSpec = {
-    ariaLabel: `Triangle ${A}${B}${C}. All three sides have 1 tick. Side ${A}${B} is labeled ${formatLin(job.ab)}, side ${B}${C} is labeled ${formatLin(job.bc)}, and side ${A}${C} is labeled ${formatLin(job.ac)}.`,
-    points,
-    segments: [
-      { from: A, to: B, ticks: 1, label: formatLin(job.ab), labelSide: 'above' },
-      { from: B, to: C, ticks: 1, label: formatLin(job.bc), labelSide: 'below' },
-      { from: C, to: A, ticks: 1, label: formatLin(job.ac), labelSide: 'above' },
-    ],
-  }
-  hide('equilateral', `${prompt}\n${figure.ariaLabel}`, [String(job.x), String(job.side)])
-  const stages = numberStages(job.x, null, sideName(A, B), job.side, 'len', { id: 'geo_equilateral_angle_for_side', text: '60', witness: EQ_W }, UNIT4_RULE_IDS.equilateral)
-  return numberAnswer('isoscelesSolve', prompt, figure, stages, [job.side, job.side, job.side], [60, 60, 60], 'geo_equilateral_angle_for_side', 'result', '60', 'Equilateral triangle', { case: 'equilateral' })
+  throw new Error(`gi.solve/${seed}: no ${family}`)
 }

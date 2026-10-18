@@ -103,7 +103,6 @@ const SWAPS: readonly { correct: ReasonId; picked: ReasonId; mistake: ErrorPatte
   { correct: 'post-asa', picked: 'post-hl', mistake: 'geo_hl_no_right' },
   { correct: 'post-asa', picked: 'thm-cpctc', mistake: 'geo_cpctc_too_soon' },
   { correct: 'thm-aas', picked: 'post-asa', mistake: 'geo_asa_aas_swapped' },
-  { correct: 'thm-aas', picked: 'post-sas', mistake: 'geo_sas_not_included' },
   { correct: 'thm-aas', picked: 'thm-hl', mistake: 'geo_hl_no_right' },
   { correct: 'thm-aas', picked: 'post-hl', mistake: 'geo_hl_no_right' },
   { correct: 'thm-aas', picked: 'thm-cpctc', mistake: 'geo_cpctc_too_soon' },
@@ -148,15 +147,17 @@ export function reasonWitness(mistake: ErrorPatternId, picked: string): string {
     case 'geo_vertical_for_linear':
       return `${name} is about the opposite angles made by two crossing lines. These two angles sit next to each other and form a straight line.`
     case 'geo_hl_no_right':
-      return 'That reason needs a right angle in each triangle. These triangles do not have one.'
+      return 'That reason needs a right angle in each triangle and the side opposite it. These triangles do not have a right angle.'
     case 'geo_cpctc_too_soon':
-      return 'That reason is about matching parts of triangles that have already been shown to match. This row is still showing that the triangles match. The parts come on a later row.'
+      return 'That reason is about corresponding parts of triangles that are already congruent. This row is still proving the triangles congruent. The parts come on a later row.'
     case 'geo_asa_aas_swapped':
       return 'That reason puts the side on the wrong side of the two angles. Check whether the side sits between the angles or not.'
     case 'geo_sas_not_included':
-      return 'That reason needs the angle that sits between the two sides. The angle here is not between them.'
+      return 'That reason needs the included angle, the one between the two sides. The angle here is not between them.'
     case 'geo_shared_side_missed':
-      return 'That reason treats the side as one of the facts handed to you at the start. The side lies in both triangles, so it matches itself, and that fact still has to be named.'
+      return 'That reason treats the side as one of the facts at the start. A side in both triangles is congruent to itself, and that still has to be written.'
+    case 'geo_vertical_angles_missed':
+      return 'The two lines cross, so the opposite angles are congruent. That pair still counts toward proving the triangles congruent.'
     default:
       return `${name} does not justify this line.`
   }

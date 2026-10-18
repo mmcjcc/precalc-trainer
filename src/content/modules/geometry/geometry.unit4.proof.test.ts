@@ -28,7 +28,7 @@ const SKELETONS = [
 
 interface Row {
   pick: 'reason' | 'statement'
-  statement: string
+  statement: RegExp
   reason: ReasonId
   accept?: ReasonId[]
 }
@@ -68,168 +68,259 @@ function reasonOf(stage: GeometryAnswer['stages'][number]): { id: string; accept
   return { id, accept }
 }
 
+const SIDE = /^[A-Z]{2} ≅ [A-Z]{2}$/
+const ANG = /^∠[A-Z]{3} ≅ ∠[A-Z]{3}$/
+const CONG = /^△[A-Z]{3} ≅ △[A-Z]{3}$/
+const RIGHT = /^∠[A-Z]{3} is a right angle$/
+const BOTH = /^△[A-Z]{3} and △[A-Z]{3} are right triangles$/
+const PARA = /^[A-Z]{2} ∥ [A-Z]{2}$/
+const PERP = /^[A-Z]{2} ⊥ [A-Z]{2}$/
+const MID = /^M is the midpoint of [A-Z]{2}$/
+const RAY = /^Ray [A-Z]M bisects ∠[A-Z]{3}$/
+const LINE = /^Line [A-Z]{2} bisects [A-Z]{2} at M$/
+
+/** Sorted vertex pairs. Two writings of one correspondence share a key. */
+function congKey(text: string): string | null {
+  const m = /△([A-Z]{3}) ≅ △([A-Z]{3})/.exec(text)
+  if (!m) return null
+  return [...m[1]!]
+    .map((ch, i) => `${ch}${m[2]![i]!}`)
+    .sort()
+    .join('-')
+}
+
+function undirected(name: string): string {
+  const [a, b] = [name[0]!, name[1]!]
+  return a < b ? `${a}${b}` : `${b}${a}`
+}
+
+function triSides(tri: string): Set<string> {
+  const sides = new Set<string>()
+  for (let i = 0; i < 3; i++) sides.add(undirected(`${tri[i]!}${tri[(i + 1) % 3]!}`))
+  return sides
+}
+
 function expectRows(seed: number, skeleton: string, rows: Row[]) {
   const built = proof(seed)
   expect(built.skeleton, `seed ${seed}`).toBe(skeleton)
   expect(built.answer.stages, skeleton).toHaveLength(rows.length)
+  expect(built.answer.prompt, skeleton).toMatch(/^Given: .+\. Prove: .+\.$/)
+  const proved = /\. Prove: (.+)\.$/.exec(built.answer.prompt)?.[1]
+  const given = /^Given: (.+)\. Prove: /.exec(built.answer.prompt)?.[1] ?? ''
+  let proveHits = 0
   rows.forEach((row, index) => {
     const stage = built.answer.stages[index]!
     const where = `${skeleton} row ${index + 1}`
+    const text = statementOf(stage)
     expect(stage.kind, where).toBe(row.pick === 'statement' ? 'choice' : 'reason')
-    expect(statementOf(stage), where).toBe(row.statement)
+    expect(text, where).toMatch(row.statement)
     expect(reasonOf(stage).id, where).toBe(row.reason)
     expect(reasonOf(stage).accept, where).toEqual(row.accept ?? [])
-    expect(stage.reveal[0], where).toContain(row.statement)
+    expect(stage.reveal[0], where).toContain(text)
     expect(gradeGeoStage(built.answer, stage.id, stage.answerText).verdict, where).toBe('correct')
     for (const alt of row.accept ?? []) {
       expect(gradeGeoStage(built.answer, stage.id, alt).verdict, `${where} ${alt}`).toBe('correct')
     }
+    if (text.includes(' and ') && !text.endsWith('are right triangles')) throw new Error(`${where} states two facts`)
+    if (row.reason === 'given') expect(given.includes(text), where).toBe(true)
+    if (text === proved) {
+      proveHits += 1
+      expect(stage.kind, where).toBe('reason')
+    }
   })
+  expect(proveHits, `${skeleton} prove line`).toBe(1)
 }
 
 describe('two-column triangle skeletons, each row written out', () => {
   it('sss-three: three given sides, then SSS, then a pair of corresponding angles', () => {
     expectRows(1, 'sss-three', [
-      { pick: 'reason', statement: 'AB ≅ DE', reason: 'given' },
-      { pick: 'reason', statement: 'BC ≅ EF', reason: 'given' },
-      { pick: 'reason', statement: 'CA ≅ FD', reason: 'given' },
-      { pick: 'reason', statement: '△ABC ≅ △DEF', reason: 'post-sss' },
-      { pick: 'statement', statement: '∠BAC ≅ ∠EDF', reason: 'thm-cpctc' },
+      { pick: 'reason', statement: SIDE, reason: 'given' },
+      { pick: 'reason', statement: SIDE, reason: 'given' },
+      { pick: 'reason', statement: SIDE, reason: 'given' },
+      { pick: 'reason', statement: CONG, reason: 'post-sss' },
+      { pick: 'reason', statement: ANG, reason: 'thm-cpctc' },
     ])
   })
 
   it('sas-included: two sides and the angle between them', () => {
     expectRows(2, 'sas-included', [
-      { pick: 'reason', statement: 'AB ≅ DE', reason: 'given' },
-      { pick: 'reason', statement: '∠ABC ≅ ∠DEF', reason: 'given' },
-      { pick: 'reason', statement: 'BC ≅ EF', reason: 'given' },
-      { pick: 'reason', statement: '△ABC ≅ △DEF', reason: 'post-sas' },
-      { pick: 'statement', statement: 'AC ≅ DF', reason: 'thm-cpctc' },
+      { pick: 'reason', statement: SIDE, reason: 'given' },
+      { pick: 'reason', statement: ANG, reason: 'given' },
+      { pick: 'reason', statement: SIDE, reason: 'given' },
+      { pick: 'reason', statement: CONG, reason: 'post-sas' },
+      { pick: 'reason', statement: SIDE, reason: 'thm-cpctc' },
     ])
   })
 
   it('asa-included: two angles and the included side', () => {
     expectRows(3, 'asa-included', [
-      { pick: 'reason', statement: '∠BAC ≅ ∠EDF', reason: 'given' },
-      { pick: 'reason', statement: 'AB ≅ DE', reason: 'given' },
-      { pick: 'reason', statement: '∠ABC ≅ ∠DEF', reason: 'given' },
-      { pick: 'reason', statement: '△ABC ≅ △DEF', reason: 'post-asa' },
-      { pick: 'statement', statement: 'AC ≅ DF', reason: 'thm-cpctc' },
+      { pick: 'reason', statement: ANG, reason: 'given' },
+      { pick: 'reason', statement: SIDE, reason: 'given' },
+      { pick: 'reason', statement: ANG, reason: 'given' },
+      { pick: 'reason', statement: CONG, reason: 'post-asa' },
+      { pick: 'reason', statement: SIDE, reason: 'thm-cpctc' },
     ])
   })
 
   it('aas-nonincluded: two angles and a side that is not between them, under either name', () => {
     expectRows(4, 'aas-nonincluded', [
-      { pick: 'reason', statement: '∠BAC ≅ ∠EDF', reason: 'given' },
-      { pick: 'reason', statement: '∠ABC ≅ ∠DEF', reason: 'given' },
-      { pick: 'reason', statement: 'BC ≅ EF', reason: 'given' },
-      { pick: 'reason', statement: '△ABC ≅ △DEF', reason: 'thm-aas', accept: ['post-aas'] },
-      { pick: 'statement', statement: 'AB ≅ DE', reason: 'thm-cpctc' },
+      { pick: 'reason', statement: ANG, reason: 'given' },
+      { pick: 'reason', statement: ANG, reason: 'given' },
+      { pick: 'reason', statement: SIDE, reason: 'given' },
+      { pick: 'reason', statement: CONG, reason: 'thm-aas', accept: ['post-aas'] },
+      { pick: 'reason', statement: SIDE, reason: 'thm-cpctc' },
     ])
   })
 
   it('hl-right: two right angles, the hypotenuse, and one leg, under either name', () => {
     expectRows(5, 'hl-right', [
-      { pick: 'reason', statement: '∠ACB is a right angle', reason: 'given' },
-      { pick: 'reason', statement: '∠DFE is a right angle', reason: 'given' },
-      { pick: 'reason', statement: '△ABC and △DEF are right triangles', reason: 'def-right-triangle' },
-      { pick: 'reason', statement: 'AB ≅ DE', reason: 'given' },
-      { pick: 'reason', statement: 'BC ≅ EF', reason: 'given' },
-      { pick: 'reason', statement: '△ABC ≅ △DEF', reason: 'thm-hl', accept: ['post-hl'] },
-      { pick: 'statement', statement: 'AC ≅ DF', reason: 'thm-cpctc' },
+      { pick: 'reason', statement: RIGHT, reason: 'given' },
+      { pick: 'reason', statement: RIGHT, reason: 'given' },
+      { pick: 'reason', statement: BOTH, reason: 'def-right-triangle' },
+      { pick: 'reason', statement: SIDE, reason: 'given' },
+      { pick: 'reason', statement: SIDE, reason: 'given' },
+      { pick: 'reason', statement: CONG, reason: 'thm-hl', accept: ['post-hl'] },
+      { pick: 'reason', statement: SIDE, reason: 'thm-cpctc' },
     ])
   })
 
-  it('sss-shared: the shared side matches itself', () => {
+  it('sss-shared: the shared side is congruent to itself', () => {
     expectRows(6, 'sss-shared', [
-      { pick: 'reason', statement: 'AB ≅ AD', reason: 'given' },
-      { pick: 'reason', statement: 'CB ≅ CD', reason: 'given' },
-      { pick: 'reason', statement: 'AC ≅ AC', reason: 'cong-refl' },
-      { pick: 'reason', statement: '△ABC ≅ △ADC', reason: 'post-sss' },
-      { pick: 'statement', statement: '∠BAC ≅ ∠DAC', reason: 'thm-cpctc' },
+      { pick: 'reason', statement: SIDE, reason: 'given' },
+      { pick: 'reason', statement: SIDE, reason: 'given' },
+      { pick: 'reason', statement: SIDE, reason: 'cong-refl' },
+      { pick: 'reason', statement: CONG, reason: 'post-sss' },
+      { pick: 'reason', statement: ANG, reason: 'thm-cpctc' },
     ])
   })
 
   it('sas-vertical: the included angle is a pair of vertical angles', () => {
     expectRows(7, 'sas-vertical', [
-      { pick: 'reason', statement: 'AE ≅ CE', reason: 'given' },
-      { pick: 'reason', statement: 'BE ≅ DE', reason: 'given' },
-      { pick: 'reason', statement: '∠AEB ≅ ∠CED', reason: 'thm-vertical' },
-      { pick: 'reason', statement: '△AEB ≅ △CED', reason: 'post-sas' },
-      { pick: 'statement', statement: 'AB ≅ CD', reason: 'thm-cpctc' },
+      { pick: 'reason', statement: SIDE, reason: 'given' },
+      { pick: 'reason', statement: SIDE, reason: 'given' },
+      { pick: 'reason', statement: ANG, reason: 'thm-vertical' },
+      { pick: 'reason', statement: CONG, reason: 'post-sas' },
+      { pick: 'reason', statement: SIDE, reason: 'thm-cpctc' },
     ])
   })
 
   it('asa-parallel: alternate interior angles, then the shared diagonal', () => {
     expectRows(8, 'asa-parallel', [
-      { pick: 'reason', statement: 'AB ∥ DC', reason: 'given' },
-      { pick: 'reason', statement: 'AD ∥ BC', reason: 'given' },
-      { pick: 'reason', statement: '∠BAC ≅ ∠DCA', reason: 'thm-alt-int' },
-      { pick: 'reason', statement: '∠BCA ≅ ∠DAC', reason: 'thm-alt-int' },
-      { pick: 'reason', statement: 'AC ≅ AC', reason: 'cong-refl' },
-      { pick: 'reason', statement: '△ABC ≅ △CDA', reason: 'post-asa' },
-      { pick: 'statement', statement: 'AB ≅ CD', reason: 'thm-cpctc' },
+      { pick: 'reason', statement: PARA, reason: 'given' },
+      { pick: 'reason', statement: PARA, reason: 'given' },
+      { pick: 'reason', statement: ANG, reason: 'thm-alt-int' },
+      { pick: 'reason', statement: ANG, reason: 'thm-alt-int' },
+      { pick: 'reason', statement: SIDE, reason: 'cong-refl' },
+      { pick: 'reason', statement: CONG, reason: 'post-asa' },
+      { pick: 'reason', statement: SIDE, reason: 'thm-cpctc' },
     ])
   })
 
   it('hl-perp: perpendicular lines give the right angles, then HL', () => {
     expectRows(9, 'hl-perp', [
-      { pick: 'reason', statement: 'AC ⊥ BC', reason: 'given' },
-      { pick: 'reason', statement: 'DF ⊥ EF', reason: 'given' },
-      { pick: 'statement', statement: '∠ACB is a right angle', reason: 'def-perp' },
-      { pick: 'reason', statement: '∠DFE is a right angle', reason: 'def-perp' },
-      { pick: 'reason', statement: '△ABC and △DEF are right triangles', reason: 'def-right-triangle' },
-      { pick: 'reason', statement: 'AB ≅ DE and AC ≅ DF', reason: 'given' },
-      { pick: 'reason', statement: '△ABC ≅ △DEF', reason: 'thm-hl', accept: ['post-hl'] },
+      { pick: 'reason', statement: PERP, reason: 'given' },
+      { pick: 'reason', statement: PERP, reason: 'given' },
+      { pick: 'statement', statement: RIGHT, reason: 'def-perp' },
+      { pick: 'reason', statement: RIGHT, reason: 'def-perp' },
+      { pick: 'reason', statement: BOTH, reason: 'def-right-triangle' },
+      { pick: 'reason', statement: SIDE, reason: 'given' },
+      { pick: 'reason', statement: SIDE, reason: 'given' },
+      { pick: 'reason', statement: CONG, reason: 'thm-hl', accept: ['post-hl'] },
     ])
   })
 
   it('sas-midpoint: the midpoint makes the two halves, which are a side of SAS', () => {
     expectRows(10, 'sas-midpoint', [
-      { pick: 'reason', statement: 'M is the midpoint of BC', reason: 'given' },
-      { pick: 'reason', statement: 'BM ≅ MC', reason: 'def-midpoint' },
-      { pick: 'reason', statement: 'AB ≅ DC', reason: 'given' },
-      { pick: 'reason', statement: '∠ABM ≅ ∠DCM', reason: 'given' },
-      { pick: 'reason', statement: '△ABM ≅ △DCM', reason: 'post-sas' },
-      { pick: 'statement', statement: 'AM ≅ DM', reason: 'thm-cpctc' },
+      { pick: 'reason', statement: MID, reason: 'given' },
+      { pick: 'reason', statement: SIDE, reason: 'def-midpoint' },
+      { pick: 'reason', statement: SIDE, reason: 'given' },
+      { pick: 'reason', statement: ANG, reason: 'given' },
+      { pick: 'reason', statement: CONG, reason: 'post-sas' },
+      { pick: 'statement', statement: SIDE, reason: 'thm-cpctc' },
     ])
   })
 
   it('asa-bisector: the bisector makes the two halves of the angle', () => {
     expectRows(11, 'asa-bisector', [
-      { pick: 'reason', statement: 'Ray BM bisects ∠ABC', reason: 'given' },
-      { pick: 'reason', statement: '∠ABM ≅ ∠CBM', reason: 'def-ang-bisector' },
-      { pick: 'reason', statement: '∠BAM ≅ ∠BCM', reason: 'given' },
-      { pick: 'reason', statement: 'AB ≅ CB', reason: 'given' },
-      { pick: 'reason', statement: '△ABM ≅ △CBM', reason: 'post-asa' },
-      { pick: 'statement', statement: 'AM ≅ CM', reason: 'thm-cpctc' },
+      { pick: 'reason', statement: RAY, reason: 'given' },
+      { pick: 'reason', statement: ANG, reason: 'def-ang-bisector' },
+      { pick: 'reason', statement: ANG, reason: 'given' },
+      { pick: 'reason', statement: SIDE, reason: 'given' },
+      { pick: 'reason', statement: CONG, reason: 'post-asa' },
+      { pick: 'reason', statement: SIDE, reason: 'thm-cpctc' },
     ])
   })
 
   it('seg-bisector: a bisector makes a midpoint, then vertical angles', () => {
     expectRows(12, 'seg-bisector', [
-      { pick: 'reason', statement: 'Line CD bisects AB at M', reason: 'given' },
-      { pick: 'reason', statement: 'M is the midpoint of AB', reason: 'def-seg-bisector' },
-      { pick: 'reason', statement: 'AM ≅ MB', reason: 'def-midpoint' },
-      { pick: 'reason', statement: 'CM ≅ DM', reason: 'given' },
-      { pick: 'reason', statement: '∠AMC ≅ ∠BMD', reason: 'thm-vertical' },
-      { pick: 'reason', statement: '△AMC ≅ △BMD', reason: 'post-sas' },
-      { pick: 'statement', statement: 'AC ≅ BD', reason: 'thm-cpctc' },
+      { pick: 'reason', statement: LINE, reason: 'given' },
+      { pick: 'reason', statement: MID, reason: 'def-seg-bisector' },
+      { pick: 'reason', statement: SIDE, reason: 'def-midpoint' },
+      { pick: 'reason', statement: SIDE, reason: 'given' },
+      { pick: 'reason', statement: ANG, reason: 'thm-vertical' },
+      { pick: 'reason', statement: CONG, reason: 'post-sas' },
+      { pick: 'reason', statement: SIDE, reason: 'thm-cpctc' },
     ])
   })
 
   it('cpctc-pick: she picks the congruence statement, then the reason for a part', () => {
     expectRows(13, 'cpctc-pick', [
-      { pick: 'reason', statement: 'AB ≅ DE', reason: 'given' },
-      { pick: 'reason', statement: '∠ABC ≅ ∠DEF', reason: 'given' },
-      { pick: 'reason', statement: 'BC ≅ EF', reason: 'given' },
-      { pick: 'statement', statement: '△ABC ≅ △DEF', reason: 'post-sas' },
-      { pick: 'reason', statement: '∠BAC ≅ ∠EDF', reason: 'thm-cpctc' },
+      { pick: 'reason', statement: SIDE, reason: 'given' },
+      { pick: 'reason', statement: ANG, reason: 'given' },
+      { pick: 'reason', statement: SIDE, reason: 'given' },
+      { pick: 'statement', statement: CONG, reason: 'post-sas' },
+      { pick: 'reason', statement: ANG, reason: 'thm-cpctc' },
     ])
-    const built = proof(13)
-    const stage = built.answer.stages[3]!
-    expect(stage.choices?.find((choice) => choice.id === 'order')?.text).toBe('△ABC ≅ △EFD')
-    expect(gradeGeoStage(built.answer, stage.id, 'order')).toMatchObject({ verdict: 'mistake', mistake: 'geo_vertices_out_of_order' })
+  })
+
+  it('a congruence written in another order of the same correspondence is not a distractor', () => {
+    for (let step = 0; step < 20; step++) {
+      const seed = 13 + step * SKELETONS.length
+      const built = proof(seed)
+      const stage = built.answer.stages[3]!
+      const right = statementOf(stage)
+      const key = congKey(right)
+      expect(key, `seed ${seed}`).toBeTruthy()
+      const same = (stage.choices ?? []).filter((choice) => congKey(choice.text) === key)
+      expect(same, `seed ${seed}`).toHaveLength(1)
+      expect(same[0]!.text).toBe(right)
+      const order = stage.choices?.find((choice) => choice.id === 'order')
+      expect(congKey(order?.text ?? ''), `seed ${seed}`).not.toBe(key)
+      expect(order?.trap).toBe('geo_vertices_out_of_order')
+      expect(gradeGeoStage(built.answer, stage.id, 'order')).toMatchObject({
+        verdict: 'mistake',
+        mistake: 'geo_vertices_out_of_order',
+      })
+    }
+  })
+
+  it('the midpoint CPCTC trap pairs two real sides, and a side that is not a side of either triangle is plain wrong', () => {
+    for (let step = 0; step < 20; step++) {
+      const seed = 10 + step * SKELETONS.length
+      const built = proof(seed)
+      const stage = built.answer.stages[5]!
+      const right = statementOf(stage)
+      const names = /^Triangles ([A-Z]{3}) and ([A-Z]{3})\./.exec(built.answer.figure.ariaLabel)
+      expect(names, `seed ${seed}`).toBeTruthy()
+      const sides = new Set<string>([...triSides(names![1]!), ...triSides(names![2]!)])
+      const order = stage.choices?.find((choice) => choice.id === 'order')
+      const halves = /^([A-Z]{2}) ≅ ([A-Z]{2})$/.exec(order?.text ?? '')
+      expect(halves, `seed ${seed} ${order?.text}`).toBeTruthy()
+      expect(sides.has(undirected(halves![1]!)) && sides.has(undirected(halves![2]!)), order?.text).toBe(true)
+      expect(order?.text).not.toBe(right)
+      expect(order?.trap).toBe('geo_vertices_out_of_order')
+      expect(gradeGeoStage(built.answer, stage.id, 'order')).toMatchObject({
+        verdict: 'mistake',
+        mistake: 'geo_vertices_out_of_order',
+      })
+      for (const choice of stage.choices ?? []) {
+        const parts = /^([A-Z]{2}) ≅ ([A-Z]{2})$/.exec(choice.text)
+        if (!parts) continue
+        if (!sides.has(undirected(parts[1]!)) || !sides.has(undirected(parts[2]!))) {
+          expect(choice.trap, `${seed} ${choice.text}`).toBeUndefined()
+        }
+      }
+    }
   })
 
   it('every skeleton appears once in the first pass, and a missing one fails this list', () => {
@@ -264,6 +355,8 @@ describe('a textbook name is accepted, and the classic swaps stay named', () => 
           expect(why.accept, where).toEqual(['post-aas'])
           expect(gradeGeoStage(answer, stage.id, 'post-aas').verdict, where).toBe('correct')
           expect(gradeGeoStage(answer, stage.id, 'post-asa'), where).toMatchObject({ verdict: 'mistake', mistake: 'geo_asa_aas_swapped' })
+          // One pair of sides is not "the angle is not between the two sides."
+          expect(gradeGeoStage(answer, stage.id, 'post-sas').verdict, where).toBe('wrong')
         } else if (why.id === 'thm-hl') {
           expect(why.accept, where).toEqual(['post-hl'])
           expect(gradeGeoStage(answer, stage.id, 'post-hl').verdict, where).toBe('correct')

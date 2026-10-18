@@ -28,8 +28,8 @@ function answerOf(module: ModuleId, template: string, seed: number): GeometryAns
   return p.answer
 }
 
-function choiceText(stage: GeometryAnswer['stages'][number], id: string): string {
-  return stage.choices?.find((choice) => choice.id === id)?.text ?? ''
+function choiceById(stage: GeometryAnswer['stages'][number], id: string) {
+  return stage.choices?.find((choice) => choice.id === id)
 }
 
 describe('geometry unit 4 registration', () => {
@@ -57,7 +57,10 @@ describe('geometry unit 4 registration', () => {
 
   it('seed 1 of each template shows the trap named for that problem', () => {
     expect(answerOf('geoCongruence', 'gc.parts', 1).trap).toBe('geo_vertices_out_of_order')
-    expect(answerOf('geoCongruence', 'gc.which', 1).trap).toBe('geo_ssa_as_congruence')
+    const which = answerOf('geoCongruence', 'gc.which', 1)
+    expect(which.stages[0]!.answerText).toBe('SSS')
+    expect(which.trap).toBe('geo_hl_no_right')
+    expect(which.trapAnswer).toBe('HL')
     expect(answerOf('geoCongruence', 'gc.solve', 1).trap).toBe('geo_vertices_out_of_order')
     expect(answerOf('geoIsosceles', 'gi.solve', 1).trap).toBe('geo_base_angles_wrong_vertex')
     expect(answerOf('geoTriangleProofs', 'gt.twocolumn', 1).trap).toBe('geo_cpctc_too_soon')
@@ -92,7 +95,9 @@ describe.each(TEMPLATES)('$module/$template over 300 seeds', ({ module, template
           expect(gradeGeoStage(a, stage.id, alt).verdict, `${p.id} accept ${alt}`).toBe('correct')
         }
         const display = stageDisplay(stage)
-        expect(containsAnswer(blob, display), `${p.id} shows “${display}”`).toBe(false)
+        // The Given list is the problem. A row whose answer is the reason "Given" repeats it on purpose.
+        const givenReason = stage.kind === 'reason' && stage.answerText === 'given'
+        if (!givenReason) expect(containsAnswer(blob, display), `${p.id} shows “${display}”`).toBe(false)
         expect(RESERVED.includes(display), `${p.id} reserved ${display}`).toBe(false)
         expect(RESERVED.includes(stage.answerText), `${p.id} reserved ${stage.answerText}`).toBe(false)
         for (const line of stage.reveal) expect(blob.includes(line), `${p.id} reveal`).toBe(false)
@@ -107,6 +112,18 @@ describe.each(TEMPLATES)('$module/$template over 300 seeds', ({ module, template
       if (template === 'gc.solve') expect(a.trapStage).toBe('x')
       if (template === 'gi.solve' && a.trap === 'geo_base_angles_wrong_vertex') expect(a.trapStage).toBe('x')
       if (a.trap === 'geo_equilateral_angle_for_side') expect(a.trapStage).toBe('result')
+      expect(`${a.prompt}\n${a.figure.ariaLabel}`, p.id).not.toMatch(/\bmatch(?:es|ing)?\b/i)
+      if (template === 'gc.which') {
+        expect(a.prompt).toBe('Which postulate or theorem, if any, proves the triangles congruent?')
+      }
+      if (template === 'gc.parts') {
+        const name = /^△[A-Z]{3} ≅ △[A-Z]{3}\. Which (angle of △[A-Z]{3} corresponds to ∠[A-Z]|side of △[A-Z]{3} corresponds to [A-Z]{2})\?$/
+        expect(name.test(a.prompt) || a.prompt === 'Which congruence statement do the marks support?', a.prompt).toBe(true)
+      }
+      if (template === 'gc.solve') {
+        expect(a.prompt).toMatch(/^△[A-Z]{3} ≅ △[A-Z]{3}\. .+\. Find x, then (m∠[A-Z]|[A-Z]{2})\.$/)
+      }
+      if (template === 'gt.twocolumn') expect(a.prompt).toMatch(/^Given: .+\. Prove: .+\.$/)
     }
   }, HEAVY)
 })
@@ -127,24 +144,30 @@ describe('geometry unit 4 trap coverage', () => {
     }
   }, HEAVY)
 
-  it('rule cards and catalog examples use the reserved story, not a generated answer, over 2000 seeds', () => {
+  it('examples, witnesses, hints, nudges, and notes do not show a generated answer, over 2000 seeds', () => {
+    // Titles, lessons, and rule-card bodies may name the methods. A card that lists every method
+    // singles out none. The example, the witness, and the lines still on screen may not.
     const clashes: string[] = []
     for (const { module, template, cards } of TEMPLATES) {
       for (let seed = 1; seed <= 2000; seed++) {
         const a = answerOf(module, template, seed)
         for (const stage of a.stages) {
           const display = stageDisplay(stage)
+          const shown = [stage.hint, stage.nudge, stage.note ?? ''].join('\n')
+          if (containsAnswer(shown, display)) clashes.push(`${template}/${seed} ${display}: hint`)
           for (const trap of stage.traps) {
             const info = ERROR_PATTERNS[trap.id]
-            const blob = `${info.title}\n${info.lesson}\n${info.example}`
-            if (containsAnswer(blob, display) || exampleShowsAnswer(info.example, display)) {
+            if (
+              containsAnswer(info.example, display) ||
+              exampleShowsAnswer(info.example, display) ||
+              containsAnswer(trap.witness, display)
+            ) {
               clashes.push(`${template}/${seed} ${display}: ${trap.id}`)
             }
           }
           for (const card of cards) {
-            const blob = `${card.title}\n${card.body}\n${card.example ?? ''}`
-            const result = (card.example ?? '').split(/=|→/).pop()?.trim() ?? ''
-            if (containsAnswer(blob, display) || (result && exampleShowsAnswer(result, display))) {
+            const example = card.example ?? ''
+            if (containsAnswer(example, display) || exampleShowsAnswer(example, display)) {
               clashes.push(`${template}/${seed} ${display}: rule ${card.id}`)
             }
           }
@@ -155,201 +178,88 @@ describe('geometry unit 4 trap coverage', () => {
   }, HEAVY)
 })
 
-describe('hand-worked unit 4', () => {
-  it('parts: ∠A corresponds to ∠D, and the next letter is the order trap', () => {
-    const a = answerOf('geoCongruence', 'gc.parts', 1)
-    const stage = a.stages[0]!
-    expect(a.prompt).toBe('△ABC ≅ △DEF. Which angle matches ∠A?')
-    expect(choiceText(stage, 'right')).toBe('∠D')
-    expect(a.trap).toBe('geo_vertices_out_of_order')
-    expect(choiceText(stage, a.trapAnswer)).toBe('∠E')
-    expect(a.figure.segments?.some((seg) => seg.ticks)).toBe(false)
-    expect(a.figure.angles ?? []).toEqual([])
-    expect(gradeGeoStage(a, 'a', 'order')).toMatchObject({ verdict: 'mistake', mistake: 'geo_vertices_out_of_order' })
-  })
+describe('unit 4 variety and the which-method traps', () => {
+  it('letters, correspondences, x, and the six which-answers all show up over 300 seeds', () => {
+    const perms = {
+      parts: new Set<number>(),
+      solve: new Set<number>(),
+      which: new Set<number>(),
+      proof: new Set<number>(),
+    }
+    const xs = { solve: new Set<string>(), iso: new Set<string>() }
+    const whichAnswers = new Map<string, number>()
+    let statement = 0
+    let alpha = 0
+    for (const seed of SEEDS) {
+      const parts = generateProblem('geoCongruence', 'gc.parts', seed)
+      perms.parts.add(Number(parts.params.perm))
+      if ((seed - 1) % 2 === 1) {
+        statement += 1
+        if (parts.params.alphaSame === 1) alpha += 1
+      }
+      const which = generateProblem('geoCongruence', 'gc.which', seed)
+      perms.which.add(Number(which.params.perm))
+      if (which.answer.type !== 'geometry') throw new Error('which')
+      const ans = which.answer.stages[0]!.answerText
+      whichAnswers.set(ans, (whichAnswers.get(ans) ?? 0) + 1)
+      const solve = generateProblem('geoCongruence', 'gc.solve', seed)
+      perms.solve.add(Number(solve.params.perm))
+      if (solve.answer.type !== 'geometry') throw new Error('solve')
+      xs.solve.add(solve.answer.stages[0]!.answerText)
+      const iso = generateProblem('geoIsosceles', 'gi.solve', seed)
+      if (iso.answer.type !== 'geometry') throw new Error('iso')
+      xs.iso.add(iso.answer.stages[0]!.answerText)
+      const proof = generateProblem('geoTriangleProofs', 'gt.twocolumn', seed)
+      if (proof.params.perm !== undefined) perms.proof.add(Number(proof.params.perm))
+      for (const built of [parts, which, solve, iso, proof]) {
+        if (built.answer.type !== 'geometry') continue
+        const letters = built.answer.figure.points.map((point) => point.id).join('')
+        expect(letters.replace(/M/g, ''), built.id).not.toMatch(/[IOJKLX]/)
+      }
+    }
+    for (const [name, set] of Object.entries(perms)) expect([...set].sort((a, b) => a - b), name).toEqual([0, 1, 2, 3, 4, 5])
+    expect(xs.solve.size).toBeGreaterThanOrEqual(10)
+    expect(xs.iso.size).toBeGreaterThanOrEqual(10)
+    for (const id of ['SSS', 'SAS', 'ASA', 'AAS', 'HL', 'none']) {
+      const n = whichAnswers.get(id) ?? 0
+      expect(n / SEEDS.length, id).toBeGreaterThanOrEqual(0.12)
+      expect(n / SEEDS.length, id).toBeLessThanOrEqual(0.22)
+    }
+    expect(statement).toBe(150)
+    expect(alpha / statement).toBeLessThanOrEqual(0.25)
+  }, HEAVY)
 
-  it('parts: the tick marks support △ABC ≅ △DEF, not the cycled order', () => {
-    const a = answerOf('geoCongruence', 'gc.parts', 2)
-    const stage = a.stages[0]!
-    expect(a.prompt).toContain('Which statement names the triangles in the same order?')
-    expect(choiceText(stage, 'right')).toBe('△ABC ≅ △DEF')
-    expect(choiceText(stage, 'order')).toBe('△ABC ≅ △EFD')
-    expect(a.figure.ariaLabel).toContain('AB-DE tick 1')
-    expect(a.figure.ariaLabel).toContain('BC-EF tick 2')
-    expect(a.figure.ariaLabel).toContain('CA-FD tick 3')
-    expect(a.figure.segments?.filter((seg) => seg.ticks).length).toBe(6)
-    expect(gradeGeoStage(a, 'a', 'order')).toMatchObject({ verdict: 'mistake', mistake: 'geo_vertices_out_of_order' })
-  })
-
-  it('parts: side AB corresponds to DE, and EF is the order trap', () => {
-    const a = answerOf('geoCongruence', 'gc.parts', 3)
-    const stage = a.stages[0]!
-    expect(a.prompt).toBe('△ABC ≅ △DEF. Which side matches AB?')
-    expect(choiceText(stage, 'right')).toBe('DE')
-    expect(choiceText(stage, 'order')).toBe('EF')
-    expect(gradeGeoStage(a, 'a', 'right').verdict).toBe('correct')
-  })
-
-  it('parts: the next letter set still lines up the first vertices', () => {
-    const a = answerOf('geoCongruence', 'gc.parts', 5)
-    const stage = a.stages[0]!
-    expect(a.prompt).toBe('△PQR ≅ △STU. Which angle matches ∠P?')
-    expect(choiceText(stage, 'right')).toBe('∠S')
-    expect(choiceText(stage, 'order')).toBe('∠T')
-  })
-
-  it('which: three pairs of sides are SSS, and SSA is the trap', () => {
-    const a = answerOf('geoCongruence', 'gc.which', 1)
-    expect(a.stages[0]!.answerText).toBe('SSS')
-    expect(a.trapAnswer).toBe('SSA')
-    expect(a.trap).toBe('geo_ssa_as_congruence')
-    expect(a.figure.ariaLabel).toContain('AB-DE tick 1')
-    expect(a.figure.ariaLabel).toContain('BC-EF tick 2')
-    expect(a.figure.ariaLabel).toContain('CA-FD tick 3')
-    expect(a.figure.ariaLabel).toContain('Angle pairs: none')
-    expect(gradeGeoStage(a, 'a', 'SSA')).toMatchObject({ verdict: 'mistake', mistake: 'geo_ssa_as_congruence' })
-    expect(gradeGeoStage(a, 'a', 'none').verdict).toBe('wrong')
-  })
-
-  it('which: two sides and the angle between them are SAS', () => {
-    const a = answerOf('geoCongruence', 'gc.which', 2)
-    expect(a.stages[0]!.answerText).toBe('SAS')
-    expect(a.figure.ariaLabel).toContain('B-E arc 1')
-    expect(a.figure.ariaLabel).not.toContain('A-D arc')
-    expect(a.trap).toBe('geo_ssa_as_congruence')
-  })
-
-  it('which: two angles and the side between them are ASA, and AAS is the swap', () => {
-    const a = answerOf('geoCongruence', 'gc.which', 3)
-    expect(a.stages[0]!.answerText).toBe('ASA')
-    expect(a.trapAnswer).toBe('AAS')
-    expect(a.trap).toBe('geo_asa_aas_swapped')
-    expect(a.figure.ariaLabel).toContain('AB-DE tick 1')
-    expect(a.figure.ariaLabel).toContain('A-D arc 1')
-    expect(a.figure.ariaLabel).toContain('B-E arc 2')
-  })
-
-  it('which: two angles and a side that is not between them are AAS', () => {
-    const a = answerOf('geoCongruence', 'gc.which', 4)
-    expect(a.stages[0]!.answerText).toBe('AAS')
-    expect(a.trapAnswer).toBe('ASA')
-    expect(a.figure.ariaLabel).toContain('BC-EF tick 1')
-    expect(a.figure.ariaLabel).not.toContain('AB-DE')
-  })
-
-  it('which: a right angle, the hypotenuse, and one leg are HL, and SAS is the trap', () => {
-    const a = answerOf('geoCongruence', 'gc.which', 5)
-    expect(a.stages[0]!.answerText).toBe('HL')
-    expect(a.trap).toBe('geo_sas_not_included')
-    expect(a.trapAnswer).toBe('SAS')
-    expect(a.figure.ariaLabel).toContain('Right angles: C; F')
-    expect(a.figure.ariaLabel).toContain('Angle pairs: none')
-    expect(a.figure.angles?.filter((mark) => mark.right).map((mark) => mark.vertex).sort()).toEqual(['C', 'F'])
-  })
-
-  it('which: two sides and the angle that is not between them are not enough', () => {
-    const a = answerOf('geoCongruence', 'gc.which', 6)
-    expect(a.stages[0]!.answerText).toBe('none')
-    expect(choiceText(a.stages[0]!, 'none')).toBe('Not enough information')
-    expect(a.trap).toBe('geo_ssa_as_congruence')
-    expect(a.trapAnswer).toBe('SSA')
-    expect(a.figure.ariaLabel).toContain('A-D arc 1')
-    expect(a.figure.ariaLabel).not.toContain('B-E arc')
-    expect(gradeGeoStage(a, 'a', 'SSA')).toMatchObject({ verdict: 'mistake', mistake: 'geo_ssa_as_congruence' })
-  })
-
-  it('which: three angles are not enough, even on triangles of different sizes', () => {
-    const a = answerOf('geoCongruence', 'gc.which', 7)
-    expect(a.stages[0]!.answerText).toBe('none')
-    expect(a.trap).toBe('geo_aaa_as_congruence')
-    expect(a.trapAnswer).toBe('AAA')
-    expect(a.figure.ariaLabel).toContain('Side pairs: none')
-    expect(a.figure.ariaLabel).toContain('A-D arc 1')
-    expect(a.figure.ariaLabel).toContain('C-F arc 3')
-    expect(a.figure.segments?.some((seg) => seg.ticks)).toBe(false)
-  })
-
-  it('which: a shared side plus two pairs of ticks is SSS, and the shared side is not ticked', () => {
-    const a = answerOf('geoCongruence', 'gc.which', 8)
-    expect(a.stages[0]!.answerText).toBe('SSS')
-    expect(a.figure.ariaLabel).toContain('Triangles ABC and ADC')
-    expect(a.figure.ariaLabel).toContain('Shared sides: AC')
-    expect(a.figure.ariaLabel).toContain('Angle pairs: none')
-    const shared = a.figure.segments?.find((seg) => seg.from === 'A' && seg.to === 'C')
-    expect(shared?.ticks).toBeUndefined()
-  })
-
-  it('which: vertical angles at a crossing are the included pair, and they are not drawn as arcs', () => {
-    const a = answerOf('geoCongruence', 'gc.which', 9)
-    expect(a.stages[0]!.answerText).toBe('SAS')
-    expect(a.figure.ariaLabel).toContain('Triangles AEB and CED')
-    expect(a.figure.ariaLabel).toContain('Vertical angles: AEB-CED')
-    expect(a.figure.ariaLabel).toContain('Angle pairs: none')
-    expect(a.figure.angles ?? []).toEqual([])
-  })
-
-  it('which: alternate interior angles and the included diagonal are ASA, with no arcs', () => {
-    const a = answerOf('geoCongruence', 'gc.which', 10)
-    expect(a.stages[0]!.answerText).toBe('ASA')
-    expect(a.trap).toBe('geo_asa_aas_swapped')
-    expect(a.figure.ariaLabel).toContain('Triangles ABC and CDA')
-    expect(a.figure.ariaLabel).toContain('Alternate interior angles:')
-    expect(a.figure.ariaLabel).toContain('Angle pairs: none')
-    expect(a.figure.lines?.filter((line) => line.arrows).length).toBe(4)
-    expect(a.figure.angles ?? []).toEqual([])
-  })
-
-  it('solve: corresponding angles (2x + 20) and (4x + 4) give x = 8 and m∠A = 36, not 42', () => {
-    const a = answerOf('geoCongruence', 'gc.solve', 1)
-    expect(a.prompt).toBe('△ABC ≅ △DEF. m∠A = 2x + 20, m∠D = 4x + 4, and m∠E = x + 62. Find x, then m∠A.')
-    expect(a.stages.map((stage) => stage.answerText)).toEqual(['8', '36'])
-    expect(a.trapStage).toBe('x')
-    expect(a.trapAnswer).toBe('42')
-    expect(a.angles).toEqual([36, 70, 74])
-    expect(gradeGeoStage(a, 'x', '42')).toMatchObject({ verdict: 'mistake', mistake: 'geo_vertices_out_of_order' })
-    expect(gradeGeoStage(a, 'result', '36°').verdict).toBe('correct')
-  })
-
-  it('solve: corresponding sides (2x + 9) and (4x − 7) give x = 8 and AB = 25, not 13', () => {
-    const a = answerOf('geoCongruence', 'gc.solve', 5)
-    expect(a.prompt).toBe('△ABC ≅ △DEF. AB = 2x + 9, DE = 4x − 7, and EF = x + 22. Find x, then AB.')
-    expect(a.stages.map((stage) => stage.answerText)).toEqual(['8', '25'])
-    expect(a.trapAnswer).toBe('13')
-    expect(a.lengths).toEqual([25, 18, 20])
-    expect(gradeGeoStage(a, 'result', '25°').verdict).toBe('invalid')
-  })
-
-  it('isosceles: base angles 5x and (7x − 16) give x = 8 and 40°, not the vertex set equal to a base', () => {
-    const a = answerOf('geoIsosceles', 'gi.solve', 1)
-    expect(a.prompt).toBe('AB and AC match. m∠A = 17x − 36, m∠B = 5x, and m∠C = 7x − 16. Find x, then m∠B.')
-    expect(a.stages.map((stage) => stage.answerText)).toEqual(['8', '40'])
-    expect(a.trapAnswer).toBe('3')
-    expect(a.trap).toBe('geo_base_angles_wrong_vertex')
-    expect(a.angles).toEqual([100, 40, 40])
-    expect(a.figure.segments?.filter((seg) => seg.ticks === 1).map((seg) => `${seg.from}${seg.to}`).sort()).toEqual(['AB', 'AC'])
-  })
-
-  it('converse: sides across from the matching angles give x = 8 and AB = 34, not 2', () => {
-    const a = answerOf('geoIsosceles', 'gi.solve', 2)
-    expect(a.prompt).toBe('∠B and ∠C match. AB = 4x + 2, AC = 6x − 14, and BC = 3x + 4. Find x, then AB.')
-    expect(a.stages.map((stage) => stage.answerText)).toEqual(['8', '34'])
-    expect(a.trapAnswer).toBe('2')
-    expect(a.lengths).toEqual([34, 34, 28])
-    expect(a.figure.segments?.some((seg) => seg.ticks)).toBe(false)
-    expect(a.figure.angles?.map((mark) => mark.vertex).sort()).toEqual(['B', 'C'])
-  })
-
-  it('equilateral: the three sides meet at x = 8 and the side is 22, while 60 is the angle', () => {
-    const a = answerOf('geoIsosceles', 'gi.solve', 3)
-    expect(a.prompt).toBe('AB, BC, and AC all match. AB = 2x + 6, BC = 3x − 2, and AC = 4x − 10. Find x, then AB.')
-    expect(a.stages.map((stage) => stage.answerText)).toEqual(['8', '22'])
-    expect(a.trap).toBe('geo_equilateral_angle_for_side')
-    expect(a.trapStage).toBe('result')
-    expect(a.trapAnswer).toBe('60')
-    expect(a.angles).toEqual([60, 60, 60])
-    expect(gradeGeoStage(a, 'x', '60').verdict).toBe('wrong')
-    expect(gradeGeoStage(a, 'result', '60')).toMatchObject({ verdict: 'mistake', mistake: 'geo_equilateral_angle_for_side' })
-  })
+  it('HL treats SSA as a plain wrong pick, and a figure with no angle does not call SSA or AAA', () => {
+    for (const seed of SEEDS) {
+      const built = generateProblem('geoCongruence', 'gc.which', seed)
+      if (built.answer.type !== 'geometry') throw new Error('which')
+      const a = built.answer
+      const stage = a.stages[0]!
+      const answer = stage.answerText
+      const family = String(built.params.case)
+      const where = `gc.which/${seed} ${family} ${answer}`
+      const ssa = choiceById(stage, 'SSA')
+      const aaa = choiceById(stage, 'AAA')
+      if (answer === 'HL') {
+        expect(ssa?.trap, where).toBeUndefined()
+        expect(gradeGeoStage(a, 'a', 'SSA').verdict, where).toBe('wrong')
+        expect(choiceById(stage, 'SAS')?.trap, where).toBe('geo_sas_not_included')
+      }
+      if (answer === 'SSS' && a.figure.ariaLabel.includes('Angle pairs: none')) {
+        expect(ssa?.trap, where).toBeUndefined()
+        expect(aaa?.trap, where).toBeUndefined()
+        expect(gradeGeoStage(a, 'a', 'SSA').verdict, where).toBe('wrong')
+        expect(gradeGeoStage(a, 'a', 'AAA').verdict, where).toBe('wrong')
+      }
+      if (family === 'kite' || family === 'vertical' || family === 'vertical-one') {
+        expect(ssa?.trap, where).toBeUndefined()
+        expect(gradeGeoStage(a, 'a', 'SSA').verdict, where).toBe('wrong')
+      }
+      if (a.figure.ariaLabel.includes('Right angles: none')) {
+        expect(choiceById(stage, 'HL')?.trap, where).toBe('geo_hl_no_right')
+      }
+    }
+  }, HEAVY)
 
   it('proof: the SSS row is too soon for corresponding parts, and a shared side is not given', () => {
     const first = generateProblem('geoTriangleProofs', 'gt.twocolumn', 1)

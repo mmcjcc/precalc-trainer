@@ -1,9 +1,8 @@
 /**
- * Honors geometry Unit 4, two-column proofs that triangles are congruent.
- * Thirteen skeletons. Jurgensen writes AAS and HL as theorems; books that call them postulates
- * are accepted too. A figure shows only the given marks: a shared side, a crossing, or a pair of
- * parallels is drawn, and the matching angles those create are not given a second arc.
- * Letters vary by seed. J, K, and L are reserved by an older example, and so is angle 8.
+ * Honors geometry Unit 4, two-column proofs. Thirteen skeletons. Letters, and for two
+ * separate triangles the correspondence and the turn of the second triangle, come from
+ * the seed. A figure shows only the given marks. Jurgensen writes AAS and HL as theorems;
+ * a book that calls them postulates is accepted too.
  */
 import { makeRng, mixSeed } from '@/content/rng'
 import type { GeometryAnswer } from '@/content/types'
@@ -11,33 +10,31 @@ import type { ErrorPatternId, GeoAngleMark, GeoFigureSpec, GeoLine, GeoPoint, Ge
 import type { GeoBuilt } from './build'
 import { containsAnswer, stageDisplay, stageIdAt } from './grade'
 import { reasonLabel, reasonWitness, swapsFor, type ReasonId } from './reasons'
+import {
+  LETTERS,
+  PERMS,
+  SCALENE,
+  applyPerm,
+  pickLetters,
+  placePair,
+  placeRightPair,
+  sameCongruence,
+} from './unit4Geom'
 import { UNIT4_RULE_IDS } from './unit4Rules'
 
 const REASON_HINT = 'Pick the reason that makes this line legal.'
 const REASON_NUDGE =
-  'Name the fact that makes this line legal. A fact about matching parts comes after the triangles are shown to match, and a side that lies in both triangles is not one of the starting facts.'
+  'Name the fact that makes this line legal. A fact about corresponding parts comes after the triangles are proved congruent, and a side that lies in both triangles is not one of the starting facts.'
 const CHOICE_HINT = 'Pick the statement this row needs.'
 const CHOICE_NUDGE = 'A sentence can be true of the figure and still belong on a different row.'
-const NOTE_PART = 'The triangles were shown to match on an earlier row. This row names one pair of matching parts.'
-const NOTE_TRI = 'The rows above are the pair of facts this step needs. Which sentence do they support?'
+const NOTE_PART = 'The triangles were proved congruent on an earlier row. This row names one pair of corresponding parts.'
+const NOTE_TRI = 'The rows above are the facts this step needs. Which sentence do they support?'
 const NOTE_RIGHT = 'The two lines meet at this vertex. Which sentence names the angle there?'
-const ORDER_W = 'That lists a vertex in the wrong place. The first letter of one triangle has to name the first letter of the other.'
+const ORDER_W = 'That order pairs vertices the marks do not pair. Read the correspondence, not a different order of the letters.'
+const ROTS = [70, 110, 160, 200, 250, 300]
 
-interface Letters {
-  A: string
-  B: string
-  C: string
-  D: string
-  E: string
-  F: string
-}
-
-const SETS: readonly Letters[] = [
-  { A: 'A', B: 'B', C: 'C', D: 'D', E: 'E', F: 'F' },
-  { A: 'P', B: 'Q', C: 'R', D: 'S', E: 'T', F: 'U' },
-  { A: 'E', B: 'F', C: 'G', D: 'H', E: 'N', F: 'P' },
-  { A: 'W', B: 'X', C: 'Y', D: 'Z', E: 'N', F: 'P' },
-]
+type Tri = [string, string, string]
+type Tick = 1 | 2 | 3
 
 interface Choice {
   id: string
@@ -63,6 +60,7 @@ interface Built {
   trapIndex: number
   trap: ErrorPatternId
   trapAnswer: string
+  perm?: number
 }
 
 interface TrapOpt {
@@ -70,8 +68,6 @@ interface TrapOpt {
   trap: ErrorPatternId
   answer: string
 }
-
-type Tick = 1 | 2 | 3
 
 interface Figure {
   points: GeoPoint[]
@@ -83,8 +79,23 @@ interface Figure {
   alt?: string[]
 }
 
-function lettersOf(seed: number, count: number): Letters {
-  return SETS[Math.floor((seed - 1) / count) % SETS.length]!
+interface Named {
+  t1: Tri
+  t2: Tri
+  perm: number
+}
+
+function names6(salt: number, key: number): Named {
+  const rng = makeRng(mixSeed(salt + 1, key))
+  const letters = pickLetters(rng, 6)
+  const perm = rng.int(0, 5)
+  const t1: Tri = [letters[0]!, letters[1]!, letters[2]!]
+  const t2 = applyPerm([letters[3]!, letters[4]!, letters[5]!], PERMS[perm]!)
+  return { t1, t2, perm }
+}
+
+function namesN(salt: number, key: number, n: number): string[] {
+  return pickLetters(makeRng(mixSeed(salt + 1, key)), n)
 }
 
 function trapOf(salt: number, options: readonly TrapOpt[]): TrapOpt {
@@ -103,20 +114,30 @@ function eq(a: string, b: string): string {
   return `${a} ≅ ${b}`
 }
 
-function tri(a: string, b: string, c: string): string {
-  return `△${a}${b}${c}`
+function tri(t: Tri): string {
+  return `△${t.join('')}`
 }
 
-function ang(a: string, b: string, c: string): string {
-  return `∠${a}${b}${c}`
+function sideOf(t: Tri, i: number): string {
+  if (i === 2) return `${t[0]}${t[2]}`
+  return `${t[i]}${t[(i + 1) % 3]}`
 }
 
-function partChoices(right: string, order: string, a: string, b: string): Choice[] {
+function angOf(t: Tri, i: number): string {
+  return `∠${t[(i + 2) % 3]}${t[i]}${t[(i + 1) % 3]}`
+}
+
+function ask(givens: string[], prove: string): string {
+  return `Given: ${givens.join(', ')}. Prove: ${prove}.`
+}
+
+function congChoices(t1: Tri, t2: Tri): Choice[] {
+  const text = (perm: readonly [number, number, number]) => eq(tri(t1), tri(applyPerm([...t2], perm)))
   return [
-    { id: 'right', text: right },
-    { id: 'order', text: order, trap: 'geo_vertices_out_of_order', witness: ORDER_W },
-    { id: 'other', text: a },
-    { id: 'else', text: b },
+    { id: 'right', text: eq(tri(t1), tri(t2)) },
+    { id: 'order', text: text([1, 2, 0]), trap: 'geo_vertices_out_of_order', witness: ORDER_W },
+    { id: 'other', text: text([0, 2, 1]) },
+    { id: 'else', text: text([2, 0, 1]) },
   ]
 }
 
@@ -142,7 +163,6 @@ function dir(points: GeoPoint[], a: string, b: string): { x: number; y: number }
   return { x: v.x - u.x, y: v.y - u.y }
 }
 
-/** Angle at v between points a and b, in degrees. */
 function wedge(points: GeoPoint[], v: string, a: string, b: string): number {
   const V = byId(points, v)
   const A = byId(points, a)
@@ -161,25 +181,17 @@ function assertArea(points: GeoPoint[], a: string, b: string, c: string, where: 
   const C = byId(points, c)
   const area = Math.abs((B.x - A.x) * (C.y - A.y) - (C.x - A.x) * (B.y - A.y)) / 2
   if (area < 0.4) throw new Error(`${where}: triangle ${a}${b}${c} is flat`)
-  const ab = dist(points, a, b)
-  const bc = dist(points, b, c)
-  const ca = dist(points, c, a)
-  if (ab + bc <= ca + 0.05 || ab + ca <= bc + 0.05 || bc + ca <= ab + 0.05) throw new Error(`${where}: not a triangle`)
 }
 
-function assertNoRight(points: GeoPoint[], a: string, b: string, c: string, where: string): void {
-  for (const [v, p, q] of [
-    [a, b, c],
-    [b, a, c],
-    [c, a, b],
-  ] as const) {
-    const got = wedge(points, v, p, q)
-    if (Math.abs(got - 90) < 2) throw new Error(`${where}: angle at ${v} is right`)
+function assertNoRight(points: GeoPoint[], ids: Tri, where: string): void {
+  for (let i = 0; i < 3; i++) {
+    const got = wedge(points, ids[i]!, ids[(i + 1) % 3]!, ids[(i + 2) % 3]!)
+    if (Math.abs(got - 90) < 2) throw new Error(`${where}: angle at ${ids[i]} is right`)
   }
 }
 
-function assertSame(where: string, left: number, right: number): void {
-  if (Math.abs(left - right) > 0.05) throw new Error(`${where}: ${left.toFixed(2)} vs ${right.toFixed(2)}`)
+function assertSame(where: string, left: number, right: number, tol = 0.05): void {
+  if (Math.abs(left - right) > tol) throw new Error(`${where}: ${left.toFixed(2)} vs ${right.toFixed(2)}`)
 }
 
 function assertStraight(points: GeoPoint[], a: string, m: string, b: string, where: string): void {
@@ -196,17 +208,6 @@ function assertParallel(points: GeoPoint[], a: string, b: string, c: string, d: 
   if (Math.abs(ab.x * cd.y - ab.y * cd.x) > 1e-6) throw new Error(`${where}: not parallel`)
 }
 
-function placeTri(ids: [string, string, string], ox: number, angA: number, angB: number, scale: number): GeoPoint[] {
-  const angC = 180 - angA - angB
-  const rad = (d: number) => (d * Math.PI) / 180
-  const ac = (scale * Math.sin(rad(angB))) / Math.sin(rad(angC))
-  return [
-    pt(ids[0], ox, 0, 'below'),
-    pt(ids[1], ox + scale, 0, 'below'),
-    pt(ids[2], ox + ac * Math.cos(rad(angA)), ac * Math.sin(rad(angA)), 'above'),
-  ]
-}
-
 function listOrNone(items: string[]): string {
   return items.length ? items.join('; ') : 'none'
 }
@@ -215,7 +216,6 @@ function sideKey(a: string, b: string): string {
   return a < b ? `${a}${b}` : `${b}${a}`
 }
 
-/** The aria is read off the marks that are actually drawn, plus the crossings and parallels the figure shows. */
 function describe(t1: string, t2: string, fig: Figure): string {
   const byTick = new Map<number, string[]>()
   for (const seg of fig.segments) {
@@ -276,9 +276,9 @@ function describe(t1: string, t2: string, fig: Figure): string {
   ].join(' ')
 }
 
-function figureOf(t1: string, t2: string, fig: Figure): GeoFigureSpec {
+function figureOf(t1: Tri, t2: Tri, fig: Figure): GeoFigureSpec {
   return {
-    ariaLabel: describe(t1, t2, fig),
+    ariaLabel: describe(t1.join(''), t2.join(''), fig),
     points: fig.points,
     segments: fig.segments,
     ...(fig.lines ? { lines: fig.lines } : {}),
@@ -286,60 +286,79 @@ function figureOf(t1: string, t2: string, fig: Figure): GeoFigureSpec {
   }
 }
 
-/** Two separate copies. Side 0 is AB/DE, 1 is BC/EF, 2 is CA/FD. Angle 0 is at A/D. */
-function pairFigure(L: Letters, marked: { i: 0 | 1 | 2; n: Tick }[], arcs: { i: 0 | 1 | 2; n: Tick }[]): Figure {
-  const { A, B, C, D, E, F } = L
-  const points = [...placeTri([A, B, C], 0, 62, 58, 4), ...placeTri([D, E, F], 8.5, 62, 58, 4)]
-  assertArea(points, A, B, C, 'pair')
-  assertArea(points, D, E, F, 'pair')
-  assertNoRight(points, A, B, C, 'pair')
-  assertNoRight(points, D, E, F, 'pair')
-  const left: [string, string][] = [
-    [A, B],
-    [B, C],
-    [C, A],
-  ]
-  const right: [string, string][] = [
-    [D, E],
-    [E, F],
-    [F, D],
-  ]
+function pairFigure(t1: Tri, t2: Tri, salt: number, marked: { i: number; n: Tick }[], arcs: { i: number; n: Tick }[]): Figure {
+  let points: GeoPoint[] | null = null
+  let last = 'pair: no placement'
+  for (let extra = 0; extra < SCALENE.length; extra++) {
+    const ang = SCALENE[(salt + extra) % SCALENE.length]!
+    const placed = placePair(t1, t2, ang[0], ang[1], 4.2, ROTS[salt % ROTS.length]!, salt % 2 === 1, 2.6)
+    try {
+      assertArea(placed, t1[0], t1[1], t1[2], 'pair')
+      assertArea(placed, t2[0], t2[1], t2[2], 'pair')
+      assertNoRight(placed, t1, 'pair')
+      assertNoRight(placed, t2, 'pair')
+      for (let i = 0; i < 3; i++) {
+        assertSame('pair sides', dist(placed, t1[i]!, t1[(i + 1) % 3]!), dist(placed, t2[i]!, t2[(i + 1) % 3]!))
+        assertSame('pair angles', wedge(placed, t1[i]!, t1[(i + 1) % 3]!, t1[(i + 2) % 3]!), wedge(placed, t2[i]!, t2[(i + 1) % 3]!, t2[(i + 2) % 3]!), 0.4)
+      }
+      points = placed
+      break
+    } catch (err) {
+      last = err instanceof Error ? err.message : last
+    }
+  }
+  if (!points) throw new Error(last)
   const ticks = new Map<string, Tick>()
   for (const mark of marked) {
-    const [p, q] = left[mark.i]!
-    const [r, s] = right[mark.i]!
-    ticks.set(sideKey(p, q), mark.n)
-    ticks.set(sideKey(r, s), mark.n)
-    assertSame('pair sides', dist(points, p, q), dist(points, r, s))
+    ticks.set(sideKey(t1[mark.i]!, t1[(mark.i + 1) % 3]!), mark.n)
+    ticks.set(sideKey(t2[mark.i]!, t2[(mark.i + 1) % 3]!), mark.n)
   }
   const seg = (p: string, q: string): GeoSegment => {
     const n = ticks.get(sideKey(p, q))
     return n ? { from: p, to: q, ticks: n } : { from: p, to: q }
   }
-  const fromL: [string, string][] = [
-    [B, C],
-    [A, C],
-    [A, B],
-  ]
-  const fromR: [string, string][] = [
-    [E, F],
-    [D, F],
-    [D, E],
-  ]
-  const verts = [A, B, C]
-  const verts2 = [D, E, F]
   const angles: GeoAngleMark[] = []
   for (const arc of arcs) {
-    const [p, q] = fromL[arc.i]!
-    const [r, s] = fromR[arc.i]!
-    angles.push({ vertex: verts[arc.i]!, from: p, to: q, marks: arc.n })
-    angles.push({ vertex: verts2[arc.i]!, from: r, to: s, marks: arc.n })
-    assertSame('pair angles', wedge(points, verts[arc.i]!, p, q), wedge(points, verts2[arc.i]!, r, s))
+    angles.push({ vertex: t1[arc.i]!, from: t1[(arc.i + 1) % 3]!, to: t1[(arc.i + 2) % 3]!, marks: arc.n })
+    angles.push({ vertex: t2[arc.i]!, from: t2[(arc.i + 1) % 3]!, to: t2[(arc.i + 2) % 3]!, marks: arc.n })
+  }
+  const segments = [0, 1, 2].flatMap((i) => [seg(t1[i]!, t1[(i + 1) % 3]!), seg(t2[i]!, t2[(i + 1) % 3]!)])
+  return { points, segments, ...(angles.length ? { angles } : {}) }
+}
+
+function rightPair(t1: Tri, t2: Tri, salt: number, leg: 1 | 2): Figure {
+  const legs: readonly [number, number][] = [
+    [3.2, 4.8],
+    [2.8, 4.4],
+    [3.5, 5.1],
+    [2.6, 4.2],
+  ]
+  const [rise, run] = legs[salt % legs.length]!
+  const points = placeRightPair(t1, t2, rise, run, ROTS[salt % ROTS.length]!, salt % 2 === 1, 2.4)
+  for (const ids of [t1, t2]) {
+    const got = wedge(points, ids[2]!, ids[0]!, ids[1]!)
+    if (Math.abs(got - 90) > 0.8) throw new Error(`right angle drifted to ${got.toFixed(2)}`)
+    assertArea(points, ids[0], ids[1], ids[2], 'hl')
+  }
+  assertSame('hyp', dist(points, t1[0]!, t1[1]!), dist(points, t2[0]!, t2[1]!))
+  assertSame('leg', dist(points, t1[leg]!, t1[(leg + 1) % 3]!), dist(points, t2[leg]!, t2[(leg + 1) % 3]!))
+  const ticks = new Map<string, Tick>()
+  const mark = (ids: Tri, i: number, n: Tick) => ticks.set(sideKey(ids[i]!, ids[(i + 1) % 3]!), n)
+  mark(t1, 0, 1)
+  mark(t2, 0, 1)
+  mark(t1, leg, 2)
+  mark(t2, leg, 2)
+  const seg = (ids: Tri, i: number): GeoSegment => {
+    const n = ticks.get(sideKey(ids[i]!, ids[(i + 1) % 3]!))
+    return n ? { from: ids[i]!, to: ids[(i + 1) % 3]!, ticks: n } : { from: ids[i]!, to: ids[(i + 1) % 3]! }
   }
   return {
     points,
-    segments: [seg(A, B), seg(B, C), seg(C, A), seg(D, E), seg(E, F), seg(F, D)],
-    angles,
+    segments: [0, 1, 2].flatMap((i) => [seg(t1, i), seg(t2, i)]),
+    angles: [
+      { vertex: t1[2]!, from: t1[0]!, to: t1[1]!, right: true },
+      { vertex: t2[2]!, from: t2[0]!, to: t2[1]!, right: true },
+    ],
   }
 }
 
@@ -362,10 +381,26 @@ function cardFor(why: ReasonId): string {
 
 function finish(built: Built, seed: number): GeoBuilt {
   if (built.rows.length === 0 || built.rows.length > 8) throw new Error(`${built.id}: ${built.rows.length} rows`)
+  const proved = /\. Prove: (.+)\.$/.exec(built.prompt)?.[1]
+  if (!built.prompt.startsWith('Given: ') || !proved) throw new Error(`${built.id}: prompt is not Given/Prove`)
+  const goal = built.rows.find((row) => row.statement === proved)
+  if (!goal || goal.pick !== 'reason') throw new Error(`${built.id}: the prove line is not a reason row`)
+  for (const row of built.rows) {
+    if (row.statement.includes(' and ') && !row.statement.endsWith('are right triangles')) {
+      throw new Error(`${built.id}: “${row.statement}” states two facts`)
+    }
+    if (row.pick === 'statement') {
+      for (const choice of row.choices ?? []) {
+        if (choice.text !== row.statement && sameCongruence(choice.text, row.statement)) {
+          throw new Error(`${built.id}: an equivalent congruence is offered as a distractor`)
+        }
+      }
+    }
+  }
   const squares = (built.figure.angles ?? []).filter((mark) => mark.right)
   if (squares.length && built.id !== 'hl-right' && built.id !== 'hl-perp') throw new Error(`${built.id}: a right angle is not given`)
   for (const point of built.figure.points) {
-    if ('JKL'.includes(point.id)) throw new Error(`${built.id}: ${point.id} is reserved`)
+    if (point.id !== 'M' && !LETTERS.includes(point.id)) throw new Error(`${built.id}: ${point.id} is not in the letter pool`)
   }
   const displays: string[] = []
   const stages = built.rows.map((row, index) => {
@@ -443,14 +478,15 @@ function finish(built: Built, seed: number): GeoBuilt {
     trapAnswer: built.trapAnswer,
   }
   const shared = [answer.prompt, answer.figure.ariaLabel, ...stages.flatMap((stage) => [stage.hint, stage.nudge, stage.note ?? ''])].join('\n')
-  for (const display of displays) {
-    if (containsAnswer(shared, display)) throw new Error(`${built.id}: “${display}” is on screen`)
-  }
+  stages.forEach((stage, index) => {
+    const givenReason = stage.kind === 'reason' && stage.answerText === 'given'
+    if (!givenReason && containsAnswer(shared, displays[index]!)) throw new Error(`${built.id}: “${displays[index]}” is on screen`)
+  })
   return {
     answer,
     title: 'Two-column proof',
     instructions: 'Each row is missing its statement or its reason. Pick the missing piece.',
-    params: { skeleton: built.id },
+    params: built.perm === undefined ? { skeleton: built.id } : { skeleton: built.id, perm: built.perm },
   }
 }
 
@@ -459,26 +495,22 @@ function done(built: Omit<Built, 'trapIndex' | 'trap' | 'trapAnswer'>, salt: num
   return { ...built, trapIndex: picked.row, trap: picked.trap, trapAnswer: picked.answer }
 }
 
-// --- skeletons -----------------------------------------------------------------
-
-function sssThree(L: Letters, salt: number): Built {
-  const { A, B, C, D, E, F } = L
-  const fig = pairFigure(L, [
-    { i: 0, n: 1 },
-    { i: 1, n: 2 },
-    { i: 2, n: 3 },
-  ], [])
+function sssThree(_unused: undefined, salt: number): Built {
+  const { t1, t2, perm } = names6(salt, 11)
+  const prove = eq(angOf(t1, 0), angOf(t2, 0))
+  const givens = [0, 1, 2].map((i) => eq(sideOf(t1, i), sideOf(t2, i)))
   return done(
     {
       id: 'sss-three',
-      prompt: `Triangles ${A}${B}${C} and ${D}${E}${F}. ${A}${B} matches ${D}${E}, ${B}${C} matches ${E}${F}, and ${C}${A} matches ${F}${D}. Fill in each row.`,
-      figure: figureOf(`${A}${B}${C}`, `${D}${E}${F}`, fig),
+      perm,
+      prompt: ask(givens, prove),
+      figure: figureOf(t1, t2, pairFigure(t1, t2, salt, [{ i: 0, n: 1 }, { i: 1, n: 2 }, { i: 2, n: 3 }], [])),
       rows: [
-        reason(eq(`${A}${B}`, `${D}${E}`), 'given'),
-        reason(eq(`${B}${C}`, `${E}${F}`), 'given'),
-        reason(eq(`${C}${A}`, `${F}${D}`), 'given'),
-        reason(eq(tri(A, B, C), tri(D, E, F)), 'post-sss'),
-        statementRow(eq(ang(B, A, C), ang(E, D, F)), 'thm-cpctc', NOTE_PART, partChoices(eq(ang(B, A, C), ang(E, D, F)), eq(ang(B, A, C), ang(D, E, F)), eq(ang(A, B, C), ang(E, D, F)), eq(`${A}${C}`, `${E}${F}`))),
+        reason(givens[0]!, 'given'),
+        reason(givens[1]!, 'given'),
+        reason(givens[2]!, 'given'),
+        reason(eq(tri(t1), tri(t2)), 'post-sss'),
+        reason(prove, 'thm-cpctc'),
       ],
     },
     salt,
@@ -489,24 +521,17 @@ function sssThree(L: Letters, salt: number): Built {
   )
 }
 
-function sasIncluded(L: Letters, salt: number): Built {
-  const { A, B, C, D, E, F } = L
-  const fig = pairFigure(L, [
-    { i: 0, n: 1 },
-    { i: 1, n: 2 },
-  ], [{ i: 1, n: 1 }])
+function sasIncluded(_unused: undefined, salt: number): Built {
+  const { t1, t2, perm } = names6(salt, 12)
+  const givens = [eq(sideOf(t1, 0), sideOf(t2, 0)), eq(angOf(t1, 1), angOf(t2, 1)), eq(sideOf(t1, 1), sideOf(t2, 1))]
+  const prove = eq(sideOf(t1, 2), sideOf(t2, 2))
   return done(
     {
       id: 'sas-included',
-      prompt: `Triangles ${A}${B}${C} and ${D}${E}${F}. ${A}${B} matches ${D}${E}, the angle at ${B} matches the angle at ${E}, and ${B}${C} matches ${E}${F}. Fill in each row.`,
-      figure: figureOf(`${A}${B}${C}`, `${D}${E}${F}`, fig),
-      rows: [
-        reason(eq(`${A}${B}`, `${D}${E}`), 'given'),
-        reason(eq(ang(A, B, C), ang(D, E, F)), 'given'),
-        reason(eq(`${B}${C}`, `${E}${F}`), 'given'),
-        reason(eq(tri(A, B, C), tri(D, E, F)), 'post-sas'),
-        statementRow(eq(`${A}${C}`, `${D}${F}`), 'thm-cpctc', NOTE_PART, partChoices(eq(`${A}${C}`, `${D}${F}`), eq(`${A}${C}`, `${E}${F}`), eq(ang(B, A, C), ang(D, E, F)), eq(`${A}${B}`, `${E}${F}`))),
-      ],
+      perm,
+      prompt: ask(givens, prove),
+      figure: figureOf(t1, t2, pairFigure(t1, t2, salt, [{ i: 0, n: 1 }, { i: 1, n: 2 }], [{ i: 1, n: 1 }])),
+      rows: [...givens.map((line) => reason(line, 'given')), reason(eq(tri(t1), tri(t2)), 'post-sas'), reason(prove, 'thm-cpctc')],
     },
     salt,
     [
@@ -516,24 +541,17 @@ function sasIncluded(L: Letters, salt: number): Built {
   )
 }
 
-function asaIncluded(L: Letters, salt: number): Built {
-  const { A, B, C, D, E, F } = L
-  const fig = pairFigure(L, [{ i: 0, n: 1 }], [
-    { i: 0, n: 1 },
-    { i: 1, n: 2 },
-  ])
+function asaIncluded(_unused: undefined, salt: number): Built {
+  const { t1, t2, perm } = names6(salt, 13)
+  const givens = [eq(angOf(t1, 0), angOf(t2, 0)), eq(sideOf(t1, 0), sideOf(t2, 0)), eq(angOf(t1, 1), angOf(t2, 1))]
+  const prove = eq(sideOf(t1, 2), sideOf(t2, 2))
   return done(
     {
       id: 'asa-included',
-      prompt: `Triangles ${A}${B}${C} and ${D}${E}${F}. The angle at ${A} matches the angle at ${D}, ${A}${B} matches ${D}${E}, and the angle at ${B} matches the angle at ${E}. Fill in each row.`,
-      figure: figureOf(`${A}${B}${C}`, `${D}${E}${F}`, fig),
-      rows: [
-        reason(eq(ang(B, A, C), ang(E, D, F)), 'given'),
-        reason(eq(`${A}${B}`, `${D}${E}`), 'given'),
-        reason(eq(ang(A, B, C), ang(D, E, F)), 'given'),
-        reason(eq(tri(A, B, C), tri(D, E, F)), 'post-asa'),
-        statementRow(eq(`${A}${C}`, `${D}${F}`), 'thm-cpctc', NOTE_PART, partChoices(eq(`${A}${C}`, `${D}${F}`), eq(`${A}${C}`, `${D}${E}`), eq(ang(A, C, B), ang(E, D, F)), eq(`${B}${C}`, `${D}${F}`))),
-      ],
+      perm,
+      prompt: ask(givens, prove),
+      figure: figureOf(t1, t2, pairFigure(t1, t2, salt, [{ i: 0, n: 1 }], [{ i: 0, n: 1 }, { i: 1, n: 2 }])),
+      rows: [...givens.map((line) => reason(line, 'given')), reason(eq(tri(t1), tri(t2)), 'post-asa'), reason(prove, 'thm-cpctc')],
     },
     salt,
     [
@@ -544,82 +562,57 @@ function asaIncluded(L: Letters, salt: number): Built {
   )
 }
 
-function aasNonincluded(L: Letters, salt: number): Built {
-  const { A, B, C, D, E, F } = L
-  const fig = pairFigure(L, [{ i: 1, n: 1 }], [
-    { i: 0, n: 1 },
-    { i: 1, n: 2 },
-  ])
+function aasNonincluded(_unused: undefined, salt: number): Built {
+  const { t1, t2, perm } = names6(salt, 14)
+  const givens = [eq(angOf(t1, 0), angOf(t2, 0)), eq(angOf(t1, 1), angOf(t2, 1)), eq(sideOf(t1, 1), sideOf(t2, 1))]
+  const prove = eq(sideOf(t1, 0), sideOf(t2, 0))
   return done(
     {
       id: 'aas-nonincluded',
-      prompt: `Triangles ${A}${B}${C} and ${D}${E}${F}. The angle at ${A} matches the angle at ${D}, the angle at ${B} matches the angle at ${E}, and ${B}${C} matches ${E}${F}. Fill in each row.`,
-      figure: figureOf(`${A}${B}${C}`, `${D}${E}${F}`, fig),
+      perm,
+      prompt: ask(givens, prove),
+      figure: figureOf(t1, t2, pairFigure(t1, t2, salt, [{ i: 1, n: 1 }], [{ i: 0, n: 1 }, { i: 1, n: 2 }])),
       rows: [
-        reason(eq(ang(B, A, C), ang(E, D, F)), 'given'),
-        reason(eq(ang(A, B, C), ang(D, E, F)), 'given'),
-        reason(eq(`${B}${C}`, `${E}${F}`), 'given'),
-        reason(eq(tri(A, B, C), tri(D, E, F)), 'thm-aas', ['post-aas']),
-        statementRow(eq(`${A}${B}`, `${D}${E}`), 'thm-cpctc', NOTE_PART, partChoices(eq(`${A}${B}`, `${D}${E}`), eq(`${A}${B}`, `${E}${F}`), eq(`${A}${C}`, `${D}${E}`), eq(ang(A, C, B), ang(D, E, F)))),
+        reason(givens[0]!, 'given'),
+        reason(givens[1]!, 'given'),
+        reason(givens[2]!, 'given'),
+        reason(eq(tri(t1), tri(t2)), 'thm-aas', ['post-aas']),
+        reason(prove, 'thm-cpctc'),
       ],
     },
     salt,
     [
       { row: 3, trap: 'geo_asa_aas_swapped', answer: 'post-asa' },
-      { row: 3, trap: 'geo_sas_not_included', answer: 'post-sas' },
       { row: 3, trap: 'geo_cpctc_too_soon', answer: 'thm-cpctc' },
+      { row: 3, trap: 'geo_hl_no_right', answer: 'thm-hl' },
     ],
   )
 }
 
-function rightPair(L: Letters, leg: 'bc' | 'ac'): Figure {
-  const { A, B, C, D, E, F } = L
-  const points = [pt(A, 0, 3, 'above'), pt(B, 4, 0, 'below'), pt(C, 0, 0, 'left'), pt(D, 8.5, 3, 'above'), pt(E, 12.5, 0, 'below'), pt(F, 8.5, 0, 'left')]
-  assertArea(points, A, B, C, 'hl')
-  assertArea(points, D, E, F, 'hl')
-  const dot = (v: string, p: string, q: string) => {
-    const d1 = dir(points, v, p)
-    const d2 = dir(points, v, q)
-    return d1.x * d2.x + d1.y * d2.y
-  }
-  if (Math.abs(dot(C, A, B)) > 1e-6 || Math.abs(dot(F, D, E)) > 1e-6) throw new Error('hl angle is not right')
-  assertSame('hyp', dist(points, A, B), dist(points, D, E))
-  const legL: [string, string] = leg === 'bc' ? [B, C] : [A, C]
-  const legR: [string, string] = leg === 'bc' ? [E, F] : [D, F]
-  assertSame('leg', dist(points, legL[0], legL[1]), dist(points, legR[0], legR[1]))
-  const tick = (p: string, q: string, n: Tick | undefined): GeoSegment => (n ? { from: p, to: q, ticks: n } : { from: p, to: q })
-  return {
-    points,
-    segments: [
-      tick(A, B, 1),
-      tick(B, C, leg === 'bc' ? 2 : undefined),
-      tick(C, A, leg === 'ac' ? 2 : undefined),
-      tick(D, E, 1),
-      tick(E, F, leg === 'bc' ? 2 : undefined),
-      tick(F, D, leg === 'ac' ? 2 : undefined),
-    ],
-    angles: [
-      { vertex: C, from: A, to: B, right: true },
-      { vertex: F, from: D, to: E, right: true },
-    ],
-  }
-}
-
-function hlRight(L: Letters, salt: number): Built {
-  const { A, B, C, D, E, F } = L
+function hlRight(_unused: undefined, salt: number): Built {
+  const { t1, t2, perm } = names6(salt, 15)
+  const leg: 1 | 2 = salt % 2 === 0 ? 1 : 2
+  const givens = [
+    `${angOf(t1, 2)} is a right angle`,
+    `${angOf(t2, 2)} is a right angle`,
+    eq(sideOf(t1, 0), sideOf(t2, 0)),
+    eq(sideOf(t1, leg), sideOf(t2, leg)),
+  ]
+  const prove = eq(sideOf(t1, leg === 1 ? 2 : 1), sideOf(t2, leg === 1 ? 2 : 1))
   return done(
     {
       id: 'hl-right',
-      prompt: `Triangles ${A}${B}${C} and ${D}${E}${F}. The angle at ${C} is a right angle and the angle at ${F} is a right angle. ${A}${B} matches ${D}${E}, and ${B}${C} matches ${E}${F}. Fill in each row.`,
-      figure: figureOf(`${A}${B}${C}`, `${D}${E}${F}`, rightPair(L, 'bc')),
+      perm,
+      prompt: ask(givens, prove),
+      figure: figureOf(t1, t2, rightPair(t1, t2, salt, leg)),
       rows: [
-        reason(`${ang(A, C, B)} is a right angle`, 'given'),
-        reason(`${ang(D, F, E)} is a right angle`, 'given'),
-        reason(`${tri(A, B, C)} and ${tri(D, E, F)} are right triangles`, 'def-right-triangle'),
-        reason(eq(`${A}${B}`, `${D}${E}`), 'given'),
-        reason(eq(`${B}${C}`, `${E}${F}`), 'given'),
-        reason(eq(tri(A, B, C), tri(D, E, F)), 'thm-hl', ['post-hl']),
-        statementRow(eq(`${A}${C}`, `${D}${F}`), 'thm-cpctc', NOTE_PART, partChoices(eq(`${A}${C}`, `${D}${F}`), eq(`${A}${C}`, `${E}${F}`), eq(`${A}${B}`, `${D}${F}`), eq(ang(A, B, C), ang(D, F, E)))),
+        reason(givens[0]!, 'given'),
+        reason(givens[1]!, 'given'),
+        reason(`${tri(t1)} and ${tri(t2)} are right triangles`, 'def-right-triangle'),
+        reason(givens[2]!, 'given'),
+        reason(givens[3]!, 'given'),
+        reason(eq(tri(t1), tri(t2)), 'thm-hl', ['post-hl']),
+        reason(prove, 'thm-cpctc'),
       ],
     },
     salt,
@@ -630,37 +623,40 @@ function hlRight(L: Letters, salt: number): Built {
   )
 }
 
-function sssShared(L: Letters, salt: number): Built {
-  const { A, B, C, D } = L
+function sssShared(_unused: undefined, salt: number): Built {
+  const [A, B, C, D] = namesN(salt, 21, 4) as [string, string, string, string]
+  const t1: Tri = [A, B, C]
+  const t2: Tri = [A, D, C]
   const points = [pt(A, 0, 0, 'left'), pt(C, 6, 0, 'right'), pt(B, 2, 3.2, 'above'), pt(D, 2, -3.2, 'below')]
   assertArea(points, A, B, C, 'shared')
   assertArea(points, A, D, C, 'shared')
-  assertNoRight(points, A, B, C, 'shared')
-  assertNoRight(points, A, D, C, 'shared')
+  assertNoRight(points, t1, 'shared')
+  assertNoRight(points, t2, 'shared')
   assertSame('kite', dist(points, A, B), dist(points, A, D))
   assertSame('kite', dist(points, C, B), dist(points, C, D))
-  const fig: Figure = {
-    points,
-    segments: [
-      { from: A, to: B, ticks: 1 },
-      { from: B, to: C, ticks: 2 },
-      { from: C, to: A },
-      { from: A, to: D, ticks: 1 },
-      { from: D, to: C, ticks: 2 },
-    ],
-    shared: [`${A}${C}`],
-  }
+  const prove = eq(angOf(t1, 0), angOf(t2, 0))
+  const givens = [eq(`${A}${B}`, `${A}${D}`), eq(`${C}${B}`, `${C}${D}`)]
   return done(
     {
       id: 'sss-shared',
-      prompt: `Triangles ${A}${B}${C} and ${A}${D}${C} share ${A}${C}. ${A}${B} matches ${A}${D}, and ${C}${B} matches ${C}${D}. Fill in each row.`,
-      figure: figureOf(`${A}${B}${C}`, `${A}${D}${C}`, fig),
+      prompt: ask(givens, prove),
+      figure: figureOf(t1, t2, {
+        points,
+        segments: [
+          { from: A, to: B, ticks: 1 },
+          { from: B, to: C, ticks: 2 },
+          { from: C, to: A },
+          { from: A, to: D, ticks: 1 },
+          { from: D, to: C, ticks: 2 },
+        ],
+        shared: [`${A}${C}`],
+      }),
       rows: [
-        reason(eq(`${A}${B}`, `${A}${D}`), 'given'),
-        reason(eq(`${C}${B}`, `${C}${D}`), 'given'),
+        reason(givens[0]!, 'given'),
+        reason(givens[1]!, 'given'),
         reason(eq(`${A}${C}`, `${A}${C}`), 'cong-refl'),
-        reason(eq(tri(A, B, C), tri(A, D, C)), 'post-sss'),
-        statementRow(eq(ang(B, A, C), ang(D, A, C)), 'thm-cpctc', NOTE_PART, partChoices(eq(ang(B, A, C), ang(D, A, C)), eq(ang(B, A, C), ang(A, D, C)), eq(ang(A, B, C), ang(D, A, C)), eq(`${A}${B}`, `${C}${D}`))),
+        reason(eq(tri(t1), tri(t2)), 'post-sss'),
+        reason(prove, 'thm-cpctc'),
       ],
     },
     salt,
@@ -671,41 +667,43 @@ function sssShared(L: Letters, salt: number): Built {
   )
 }
 
-function sasVertical(L: Letters, salt: number): Built {
-  const { A, B, C, D, E } = L
-  // The same crossing as the "which method" figure. A steeper X puts E's letter on a ray.
+function sasVertical(_unused: undefined, salt: number): Built {
+  const [A, E, C, B, D] = namesN(salt, 22, 5) as [string, string, string, string, string]
+  const t1: Tri = [A, E, B]
+  const t2: Tri = [C, E, D]
   const points = [pt(A, 0, 2, 'above'), pt(E, 3, 0, 'above'), pt(C, 6, -2, 'below'), pt(B, 0, -1.2, 'below'), pt(D, 6, 1.2, 'above')]
   assertStraight(points, A, E, C, 'vertical')
   assertStraight(points, B, E, D, 'vertical')
   assertArea(points, A, E, B, 'vertical')
   assertArea(points, C, E, D, 'vertical')
-  assertNoRight(points, A, E, B, 'vertical')
-  assertNoRight(points, C, E, D, 'vertical')
+  assertNoRight(points, t1, 'vertical')
+  assertNoRight(points, t2, 'vertical')
   assertSame('vertical', dist(points, A, E), dist(points, C, E))
   assertSame('vertical', dist(points, B, E), dist(points, D, E))
-  const fig: Figure = {
-    points,
-    segments: [
-      { from: A, to: E, ticks: 1 },
-      { from: E, to: C, ticks: 1 },
-      { from: B, to: E, ticks: 2 },
-      { from: E, to: D, ticks: 2 },
-      { from: A, to: B },
-      { from: C, to: D },
-    ],
-    vertical: [`${A}${E}${B}-${C}${E}${D}`],
-  }
+  const givens = [eq(`${A}${E}`, `${C}${E}`), eq(`${B}${E}`, `${D}${E}`)]
+  const prove = eq(sideOf(t1, 2), sideOf(t2, 2))
   return done(
     {
       id: 'sas-vertical',
-      prompt: `Triangles ${A}${E}${B} and ${C}${E}${D}. ${A}${E} matches ${C}${E}, and ${B}${E} matches ${D}${E}. The lines cross at ${E}. Fill in each row.`,
-      figure: figureOf(`${A}${E}${B}`, `${C}${E}${D}`, fig),
+      prompt: ask(givens, prove),
+      figure: figureOf(t1, t2, {
+        points,
+        segments: [
+          { from: A, to: E, ticks: 1 },
+          { from: E, to: C, ticks: 1 },
+          { from: B, to: E, ticks: 2 },
+          { from: E, to: D, ticks: 2 },
+          { from: A, to: B },
+          { from: C, to: D },
+        ],
+        vertical: [`${A}${E}${B}-${C}${E}${D}`],
+      }),
       rows: [
-        reason(eq(`${A}${E}`, `${C}${E}`), 'given'),
-        reason(eq(`${B}${E}`, `${D}${E}`), 'given'),
-        reason(eq(ang(A, E, B), ang(C, E, D)), 'thm-vertical'),
-        reason(eq(tri(A, E, B), tri(C, E, D)), 'post-sas'),
-        statementRow(eq(`${A}${B}`, `${C}${D}`), 'thm-cpctc', NOTE_PART, partChoices(eq(`${A}${B}`, `${C}${D}`), eq(`${A}${B}`, `${E}${D}`), eq(`${A}${E}`, `${C}${D}`), eq(ang(E, A, B), ang(C, E, D)))),
+        reason(givens[0]!, 'given'),
+        reason(givens[1]!, 'given'),
+        reason(eq(angOf(t1, 1), angOf(t2, 1)), 'thm-vertical'),
+        reason(eq(tri(t1), tri(t2)), 'post-sas'),
+        reason(prove, 'thm-cpctc'),
       ],
     },
     salt,
@@ -716,42 +714,45 @@ function sasVertical(L: Letters, salt: number): Built {
   )
 }
 
-function asaParallel(L: Letters, salt: number): Built {
-  const { A, B, C, D } = L
+function asaParallel(_unused: undefined, salt: number): Built {
+  const [A, B, C, D] = namesN(salt, 23, 4) as [string, string, string, string]
+  const t1: Tri = [A, B, C]
+  const t2: Tri = [C, D, A]
   const points = [pt(A, 0, 0, 'below'), pt(B, 4.4, 0, 'below'), pt(C, 5.6, 2.5, 'above'), pt(D, 1.2, 2.5, 'above')]
   assertParallel(points, A, B, D, C, 'parallel')
   assertParallel(points, A, D, B, C, 'parallel')
   assertArea(points, A, B, C, 'parallel')
   assertArea(points, C, D, A, 'parallel')
-  assertNoRight(points, A, B, C, 'parallel')
-  assertNoRight(points, C, D, A, 'parallel')
+  assertNoRight(points, t1, 'parallel')
+  assertNoRight(points, t2, 'parallel')
   assertSame('alt', wedge(points, A, B, C), wedge(points, C, D, A))
   assertSame('alt', wedge(points, C, B, A), wedge(points, A, D, C))
-  const fig: Figure = {
-    points,
-    segments: [{ from: A, to: C }],
-    lines: [
-      { through: [A, B], arrows: 1 },
-      { through: [D, C], arrows: 1 },
-      { through: [A, D], arrows: 2 },
-      { through: [B, C], arrows: 2 },
-    ],
-    shared: [`${A}${C}`],
-    alt: [`${B}${A}${C}-${D}${C}${A}`, `${B}${C}${A}-${D}${A}${C}`],
-  }
+  const givens = [`${A}${B} ∥ ${D}${C}`, `${A}${D} ∥ ${B}${C}`]
+  const prove = eq(sideOf(t1, 0), sideOf(t2, 0))
   return done(
     {
       id: 'asa-parallel',
-      prompt: `Triangles ${A}${B}${C} and ${C}${D}${A}. ${A}${B} is parallel to ${D}${C}, and ${A}${D} is parallel to ${B}${C}. The triangles share ${A}${C}. Fill in each row.`,
-      figure: figureOf(`${A}${B}${C}`, `${C}${D}${A}`, fig),
+      prompt: ask(givens, prove),
+      figure: figureOf(t1, t2, {
+        points,
+        segments: [{ from: A, to: C }],
+        lines: [
+          { through: [A, B], arrows: 1 },
+          { through: [D, C], arrows: 1 },
+          { through: [A, D], arrows: 2 },
+          { through: [B, C], arrows: 2 },
+        ],
+        shared: [`${A}${C}`],
+        alt: [`${B}${A}${C}-${D}${C}${A}`, `${B}${C}${A}-${D}${A}${C}`],
+      }),
       rows: [
-        reason(`${A}${B} ∥ ${D}${C}`, 'given'),
-        reason(`${A}${D} ∥ ${B}${C}`, 'given'),
-        reason(eq(ang(B, A, C), ang(D, C, A)), 'thm-alt-int'),
-        reason(eq(ang(B, C, A), ang(D, A, C)), 'thm-alt-int'),
+        reason(givens[0]!, 'given'),
+        reason(givens[1]!, 'given'),
+        reason(eq(angOf(t1, 0), angOf(t2, 0)), 'thm-alt-int'),
+        reason(eq(angOf(t1, 2), angOf(t2, 2)), 'thm-alt-int'),
         reason(eq(`${A}${C}`, `${A}${C}`), 'cong-refl'),
-        reason(eq(tri(A, B, C), tri(C, D, A)), 'post-asa'),
-        statementRow(eq(`${A}${B}`, `${C}${D}`), 'thm-cpctc', NOTE_PART, partChoices(eq(`${A}${B}`, `${C}${D}`), eq(`${A}${B}`, `${D}${A}`), eq(ang(A, B, C), ang(D, C, A)), eq(`${B}${C}`, `${A}${C}`))),
+        reason(eq(tri(t1), tri(t2)), 'post-asa'),
+        reason(prove, 'thm-cpctc'),
       ],
     },
     salt,
@@ -762,74 +763,88 @@ function asaParallel(L: Letters, salt: number): Built {
   )
 }
 
-function hlPerp(L: Letters, salt: number): Built {
-  const { A, B, C, D, E, F } = L
-  const right = `${ang(A, C, B)} is a right angle`
+function hlPerp(_unused: undefined, salt: number): Built {
+  const { t1, t2, perm } = names6(salt, 17)
+  const leg: 1 | 2 = 2
+  const right = `${angOf(t1, 2)} is a right angle`
+  const givens = [`${sideOf(t1, leg)} ⊥ ${sideOf(t1, 1)}`, `${sideOf(t2, leg)} ⊥ ${sideOf(t2, 1)}`, eq(sideOf(t1, 0), sideOf(t2, 0)), eq(sideOf(t1, leg), sideOf(t2, leg))]
+  const prove = eq(tri(t1), tri(t2))
   return done(
     {
       id: 'hl-perp',
-      prompt: `${A}${C} is perpendicular to ${B}${C}, and ${D}${F} is perpendicular to ${E}${F}. ${A}${B} matches ${D}${E}, and ${A}${C} matches ${D}${F}. Fill in each row.`,
-      figure: figureOf(`${A}${B}${C}`, `${D}${E}${F}`, rightPair(L, 'ac')),
+      perm,
+      prompt: ask(givens, prove),
+      figure: figureOf(t1, t2, rightPair(t1, t2, salt, leg)),
       rows: [
-        reason(`${A}${C} ⊥ ${B}${C}`, 'given'),
-        reason(`${D}${F} ⊥ ${E}${F}`, 'given'),
+        reason(givens[0]!, 'given'),
+        reason(givens[1]!, 'given'),
         statementRow(right, 'def-perp', NOTE_RIGHT, [
           { id: 'right', text: right },
-          { id: 'b', text: `${ang(A, B, C)} is a right angle` },
-          { id: 'a', text: `${ang(B, A, C)} is a right angle` },
-          { id: 'side', text: eq(`${A}${C}`, `${D}${F}`) },
+          { id: 'b', text: `${angOf(t1, 1)} is a right angle` },
+          { id: 'a', text: `${angOf(t1, 0)} is a right angle` },
+          { id: 'side', text: givens[2]! },
         ]),
-        reason(`${ang(D, F, E)} is a right angle`, 'def-perp'),
-        reason(`${tri(A, B, C)} and ${tri(D, E, F)} are right triangles`, 'def-right-triangle'),
-        reason(`${eq(`${A}${B}`, `${D}${E}`)} and ${eq(`${A}${C}`, `${D}${F}`)}`, 'given'),
-        reason(eq(tri(A, B, C), tri(D, E, F)), 'thm-hl', ['post-hl']),
+        reason(`${angOf(t2, 2)} is a right angle`, 'def-perp'),
+        reason(`${tri(t1)} and ${tri(t2)} are right triangles`, 'def-right-triangle'),
+        reason(givens[2]!, 'given'),
+        reason(givens[3]!, 'given'),
+        reason(prove, 'thm-hl', ['post-hl']),
       ],
     },
     salt,
     [
-      { row: 6, trap: 'geo_sas_not_included', answer: 'post-sas' },
-      { row: 6, trap: 'geo_cpctc_too_soon', answer: 'thm-cpctc' },
+      { row: 7, trap: 'geo_sas_not_included', answer: 'post-sas' },
+      { row: 7, trap: 'geo_cpctc_too_soon', answer: 'thm-cpctc' },
     ],
   )
 }
 
-function sasMidpoint(L: Letters, salt: number): Built {
-  const { A, B, C, D } = L
+function sasMidpoint(_unused: undefined, salt: number): Built {
+  const [A, B, C, D] = namesN(salt, 24, 4) as [string, string, string, string]
+  const t1: Tri = [A, B, 'M']
+  const t2: Tri = [D, C, 'M']
   const points = [pt(B, 0, 0, 'below'), pt('M', 3.2, 0, 'below'), pt(C, 6.4, 0, 'below'), pt(A, 1.3, 2.6, 'above'), pt(D, 5.1, 2.6, 'above')]
   assertArea(points, A, B, 'M', 'midpoint')
   assertArea(points, D, C, 'M', 'midpoint')
-  assertNoRight(points, A, B, 'M', 'midpoint')
-  assertNoRight(points, D, C, 'M', 'midpoint')
+  assertNoRight(points, t1, 'midpoint')
+  assertNoRight(points, t2, 'midpoint')
   assertSame('mid halves', dist(points, B, 'M'), dist(points, 'M', C))
   assertSame('mid sides', dist(points, A, B), dist(points, D, C))
-  assertSame('mid angles', wedge(points, B, A, 'M'), wedge(points, C, D, 'M'))
-  const fig: Figure = {
-    points,
-    segments: [
-      { from: A, to: B, ticks: 1 },
-      { from: B, to: 'M' },
-      { from: 'M', to: C },
-      { from: D, to: C, ticks: 1 },
-      { from: D, to: 'M' },
-      { from: A, to: 'M' },
-    ],
-    angles: [
-      { vertex: B, from: A, to: 'M', marks: 1 },
-      { vertex: C, from: D, to: 'M', marks: 1 },
-    ],
-  }
+  assertSame('mid angles', wedge(points, B, A, 'M'), wedge(points, C, D, 'M'), 0.4)
+  const givens = [`M is the midpoint of ${B}${C}`, eq(`${A}${B}`, `${D}${C}`), eq(angOf(t1, 1), angOf(t2, 1))]
+  const prove = eq(tri(t1), tri(t2))
+  const part = eq(`${A}M`, `${D}M`)
   return done(
     {
       id: 'sas-midpoint',
-      prompt: `M is the midpoint of ${B}${C}. Triangles ${A}${B}M and ${D}${C}M. ${A}${B} matches ${D}${C}, and the angle at ${B} matches the angle at ${C}. Fill in each row.`,
-      figure: figureOf(`${A}${B}M`, `${D}${C}M`, fig),
+      prompt: ask(givens, prove),
+      figure: figureOf(t1, t2, {
+        points,
+        segments: [
+          { from: A, to: B, ticks: 1 },
+          { from: B, to: 'M' },
+          { from: 'M', to: C },
+          { from: D, to: C, ticks: 1 },
+          { from: D, to: 'M' },
+          { from: A, to: 'M' },
+        ],
+        angles: [
+          { vertex: B, from: A, to: 'M', marks: 1 },
+          { vertex: C, from: D, to: 'M', marks: 1 },
+        ],
+      }),
       rows: [
-        reason(`M is the midpoint of ${B}${C}`, 'given'),
-        reason(eq(`${B}M`, `M${C}`), 'def-midpoint'),
-        reason(eq(`${A}${B}`, `${D}${C}`), 'given'),
-        reason(eq(ang(A, B, 'M'), ang(D, C, 'M')), 'given'),
-        reason(eq(tri(A, B, 'M'), tri(D, C, 'M')), 'post-sas'),
-        statementRow(eq(`${A}M`, `${D}M`), 'thm-cpctc', NOTE_PART, partChoices(eq(`${A}M`, `${D}M`), eq(`${A}M`, `${B}${C}`), eq(`${A}${B}`, `${D}M`), eq(ang(B, A, 'M'), ang(D, C, 'M')))),
+        reason(givens[0]!, 'given'),
+        reason(eq(`${B}M`, `${C}M`), 'def-midpoint'),
+        reason(givens[1]!, 'given'),
+        reason(givens[2]!, 'given'),
+        reason(prove, 'post-sas'),
+        statementRow(part, 'thm-cpctc', NOTE_PART, [
+          { id: 'right', text: part },
+          { id: 'order', text: eq(`${A}M`, `${C}M`), trap: 'geo_vertices_out_of_order', witness: ORDER_W },
+          { id: 'other', text: eq(`${A}M`, `${B}${C}`) },
+          { id: 'else', text: eq(`${A}${B}`, `${D}${C}`) },
+        ]),
       ],
     },
     salt,
@@ -840,43 +855,46 @@ function sasMidpoint(L: Letters, salt: number): Built {
   )
 }
 
-function asaBisector(L: Letters, salt: number): Built {
-  const { A, B, C } = L
+function asaBisector(_unused: undefined, salt: number): Built {
+  const [A, B, C] = namesN(salt, 25, 3) as [string, string, string]
+  const t1: Tri = [A, B, 'M']
+  const t2: Tri = [C, B, 'M']
   const points = [pt(B, 3, 0, 'below'), pt(A, 0, 2.6, 'left'), pt(C, 6, 2.6, 'right'), pt('M', 3, 3.6, 'above')]
   assertArea(points, A, B, 'M', 'bisector')
   assertArea(points, C, B, 'M', 'bisector')
-  assertNoRight(points, A, B, 'M', 'bisector')
-  assertNoRight(points, C, B, 'M', 'bisector')
+  assertNoRight(points, t1, 'bisector')
+  assertNoRight(points, t2, 'bisector')
   assertSame('bis sides', dist(points, A, B), dist(points, C, B))
-  assertSame('bis angles', wedge(points, A, B, 'M'), wedge(points, C, B, 'M'))
-  assertSame('bis halves', wedge(points, B, A, 'M'), wedge(points, B, C, 'M'))
-  const fig: Figure = {
-    points,
-    segments: [
-      { from: A, to: B, ticks: 1 },
-      { from: B, to: C, ticks: 1 },
-      { from: B, to: 'M' },
-      { from: A, to: 'M' },
-      { from: C, to: 'M' },
-    ],
-    angles: [
-      { vertex: A, from: B, to: 'M', marks: 1 },
-      { vertex: C, from: B, to: 'M', marks: 1 },
-    ],
-    shared: [`${B}M`],
-  }
+  assertSame('bis angles', wedge(points, A, B, 'M'), wedge(points, C, B, 'M'), 0.4)
+  assertSame('bis halves', wedge(points, B, A, 'M'), wedge(points, B, C, 'M'), 0.4)
+  const givens = [`Ray ${B}M bisects ${angOf([A, B, C], 1)}`, eq(angOf(t1, 0), angOf(t2, 0)), eq(`${A}${B}`, `${C}${B}`)]
+  const prove = eq(`${A}M`, `${C}M`)
   return done(
     {
       id: 'asa-bisector',
-      prompt: `Ray ${B}M bisects angle ${A}${B}${C}. ${A}${B} matches ${C}${B}, and the angle at ${A} matches the angle at ${C}. Fill in each row.`,
-      figure: figureOf(`${A}${B}M`, `${C}${B}M`, fig),
+      prompt: ask(givens, prove),
+      figure: figureOf(t1, t2, {
+        points,
+        segments: [
+          { from: A, to: B, ticks: 1 },
+          { from: B, to: C, ticks: 1 },
+          { from: B, to: 'M' },
+          { from: A, to: 'M' },
+          { from: C, to: 'M' },
+        ],
+        angles: [
+          { vertex: A, from: B, to: 'M', marks: 1 },
+          { vertex: C, from: B, to: 'M', marks: 1 },
+        ],
+        shared: [`${B}M`],
+      }),
       rows: [
-        reason(`Ray ${B}M bisects ${ang(A, B, C)}`, 'given'),
-        reason(eq(ang(A, B, 'M'), ang(C, B, 'M')), 'def-ang-bisector'),
-        reason(eq(ang(B, A, 'M'), ang(B, C, 'M')), 'given'),
-        reason(eq(`${A}${B}`, `${C}${B}`), 'given'),
-        reason(eq(tri(A, B, 'M'), tri(C, B, 'M')), 'post-asa'),
-        statementRow(eq(`${A}M`, `${C}M`), 'thm-cpctc', NOTE_PART, partChoices(eq(`${A}M`, `${C}M`), eq(`${A}M`, `${B}M`), eq(`${A}${B}`, `${C}M`), eq(ang(A, B, 'M'), ang(B, C, 'M')))),
+        reason(givens[0]!, 'given'),
+        reason(eq(angOf(t1, 1), angOf(t2, 1)), 'def-ang-bisector'),
+        reason(givens[1]!, 'given'),
+        reason(givens[2]!, 'given'),
+        reason(eq(tri(t1), tri(t2)), 'post-asa'),
+        reason(prove, 'thm-cpctc'),
       ],
     },
     salt,
@@ -887,42 +905,45 @@ function asaBisector(L: Letters, salt: number): Built {
   )
 }
 
-function segBisector(L: Letters, salt: number): Built {
-  const { A, B, C, D } = L
+function segBisector(_unused: undefined, salt: number): Built {
+  const [A, B, C, D] = namesN(salt, 26, 4) as [string, string, string, string]
+  const t1: Tri = [A, 'M', C]
+  const t2: Tri = [B, 'M', D]
   const points = [pt(A, 0, 0, 'below'), pt('M', 3.2, 0, 'below'), pt(B, 6.4, 0, 'below'), pt(C, 4.6, 2.8, 'above'), pt(D, 1.8, -2.8, 'below')]
   assertStraight(points, A, 'M', B, 'seg')
   assertStraight(points, C, 'M', D, 'seg')
   assertArea(points, A, 'M', C, 'seg')
   assertArea(points, B, 'M', D, 'seg')
-  assertNoRight(points, A, 'M', C, 'seg')
-  assertNoRight(points, B, 'M', D, 'seg')
+  assertNoRight(points, t1, 'seg')
+  assertNoRight(points, t2, 'seg')
   assertSame('seg halves', dist(points, A, 'M'), dist(points, 'M', B))
   assertSame('seg arms', dist(points, 'M', C), dist(points, 'M', D))
-  const fig: Figure = {
-    points,
-    segments: [
-      { from: A, to: 'M' },
-      { from: 'M', to: B },
-      { from: C, to: 'M', ticks: 1 },
-      { from: 'M', to: D, ticks: 1 },
-      { from: A, to: C },
-      { from: B, to: D },
-    ],
-    vertical: [`${A}M${C}-${B}M${D}`],
-  }
+  const givens = [`Line ${C}${D} bisects ${A}${B} at M`, eq(`${C}M`, `${D}M`)]
+  const prove = eq(sideOf(t1, 2), sideOf(t2, 2))
   return done(
     {
       id: 'seg-bisector',
-      prompt: `Line ${C}${D} bisects ${A}${B} at M. ${C}M matches ${D}M. Triangles ${A}M${C} and ${B}M${D}. Fill in each row.`,
-      figure: figureOf(`${A}M${C}`, `${B}M${D}`, fig),
+      prompt: ask(givens, prove),
+      figure: figureOf(t1, t2, {
+        points,
+        segments: [
+          { from: A, to: 'M' },
+          { from: 'M', to: B },
+          { from: C, to: 'M', ticks: 1 },
+          { from: 'M', to: D, ticks: 1 },
+          { from: A, to: C },
+          { from: B, to: D },
+        ],
+        vertical: [`${A}M${C}-${B}M${D}`],
+      }),
       rows: [
-        reason(`Line ${C}${D} bisects ${A}${B} at M`, 'given'),
+        reason(givens[0]!, 'given'),
         reason(`M is the midpoint of ${A}${B}`, 'def-seg-bisector'),
-        reason(eq(`${A}M`, `M${B}`), 'def-midpoint'),
-        reason(eq(`${C}M`, `${D}M`), 'given'),
-        reason(eq(ang(A, 'M', C), ang(B, 'M', D)), 'thm-vertical'),
-        reason(eq(tri(A, 'M', C), tri(B, 'M', D)), 'post-sas'),
-        statementRow(eq(`${A}${C}`, `${B}${D}`), 'thm-cpctc', NOTE_PART, partChoices(eq(`${A}${C}`, `${B}${D}`), eq(`${A}${C}`, `${B}M`), eq(`${A}M`, `${B}${D}`), eq(`${C}M`, `${A}${B}`))),
+        reason(eq(`${A}M`, `${B}M`), 'def-midpoint'),
+        reason(givens[1]!, 'given'),
+        reason(eq(angOf(t1, 1), angOf(t2, 1)), 'thm-vertical'),
+        reason(eq(tri(t1), tri(t2)), 'post-sas'),
+        reason(prove, 'thm-cpctc'),
       ],
     },
     salt,
@@ -933,24 +954,23 @@ function segBisector(L: Letters, salt: number): Built {
   )
 }
 
-function cpctcPick(L: Letters, salt: number): Built {
-  const { A, B, C, D, E, F } = L
-  const fig = pairFigure(L, [
-    { i: 0, n: 1 },
-    { i: 1, n: 2 },
-  ], [{ i: 1, n: 1 }])
-  const right = eq(tri(A, B, C), tri(D, E, F))
+function cpctcPick(_unused: undefined, salt: number): Built {
+  const { t1, t2, perm } = names6(salt, 16)
+  const givens = [eq(sideOf(t1, 0), sideOf(t2, 0)), eq(angOf(t1, 1), angOf(t2, 1)), eq(sideOf(t1, 1), sideOf(t2, 1))]
+  const prove = eq(angOf(t1, 0), angOf(t2, 0))
+  const right = eq(tri(t1), tri(t2))
   return done(
     {
       id: 'cpctc-pick',
-      prompt: `Triangles ${A}${B}${C} and ${D}${E}${F}. ${A}${B} matches ${D}${E}, the angle at ${B} matches the angle at ${E}, and ${B}${C} matches ${E}${F}. Fill in each row.`,
-      figure: figureOf(`${A}${B}${C}`, `${D}${E}${F}`, fig),
+      perm,
+      prompt: ask(givens, prove),
+      figure: figureOf(t1, t2, pairFigure(t1, t2, salt, [{ i: 0, n: 1 }, { i: 1, n: 2 }], [{ i: 1, n: 1 }])),
       rows: [
-        reason(eq(`${A}${B}`, `${D}${E}`), 'given'),
-        reason(eq(ang(A, B, C), ang(D, E, F)), 'given'),
-        reason(eq(`${B}${C}`, `${E}${F}`), 'given'),
-        statementRow(right, 'post-sas', NOTE_TRI, partChoices(right, eq(tri(A, B, C), tri(E, F, D)), eq(tri(A, B, C), tri(D, F, E)), eq(tri(A, C, B), tri(D, F, E)))),
-        reason(eq(ang(B, A, C), ang(E, D, F)), 'thm-cpctc'),
+        reason(givens[0]!, 'given'),
+        reason(givens[1]!, 'given'),
+        reason(givens[2]!, 'given'),
+        statementRow(right, 'post-sas', NOTE_TRI, congChoices(t1, t2)),
+        reason(prove, 'thm-cpctc'),
       ],
     },
     salt,
@@ -958,7 +978,7 @@ function cpctcPick(L: Letters, salt: number): Built {
   )
 }
 
-const SKELETONS: readonly ((letters: Letters, salt: number) => Built)[] = [
+const SKELETONS: readonly ((unused: undefined, salt: number) => Built)[] = [
   sssThree,
   sasIncluded,
   asaIncluded,
@@ -976,6 +996,6 @@ const SKELETONS: readonly ((letters: Letters, salt: number) => Built)[] = [
 
 export function drawTriangleProof(seed: number): GeoBuilt {
   const count = SKELETONS.length
-  const built = SKELETONS[(seed - 1) % count]!(lettersOf(seed, count), Math.floor((seed - 1) / count))
+  const built = SKELETONS[(seed - 1) % count]!(undefined, Math.floor((seed - 1) / count))
   return finish(built, seed)
 }
