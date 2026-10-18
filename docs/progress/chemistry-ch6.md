@@ -19,3 +19,11 @@ Rankings are sorted from the table, and only kept when that order is also the or
 Named slips are the `pt_` ids in the catalog. A group-1 or group-2 valence question has no named slip, because the answer is the column itself and no element is named. Every other generated problem promises a trap, and that trap grades to its id.
 
 The module registry lists `periodic` after `electrons` and before the geometry modules (twenty-six modules).
+
+## Review (2026-10-17)
+
+An independent check (`periodic.solve.test.ts`) anchors the trend table to known values from its three cited sources (Cordero radii, NIST ionization energies, Allred electronegativities, about 25 elements each, plus the four ionization exceptions) and answers every template again over 2000 seeds from a separate classification of the table. Gemini 4's adversarial review found nothing; the check found two things, fixed:
+
+- **Trend rankings use main-group elements only.** With transition metals, metallic character was ranked by position alone, and the data disagree (V is easier to ionize than Ti); the course's trend worksheets keep to groups 1, 2 and 13-18.
+- **"Why" down a group accepts both textbook reasons**, a new shell and the inner electrons' shielding (only one was accepted, so a right answer was marked wrong). "Inner electrons shield the outer electrons" replaces "block the nucleus".
+

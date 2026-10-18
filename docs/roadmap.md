@@ -68,7 +68,7 @@ or the textbook) is one more entry in that file.
 | done | 3 Significant figures, 4 Atomic structure | - | periodic-table data (Grok) |
 | done (Sep 27) | 5 Electrons: light (c = λν, E = hν) | - | done: light templates on the sig-fig engine; Claude cross-check of 900 answers |
 | done (Oct 1) | 5 Electrons: electron configurations | done: src/engine/econfig (17 mistakes; API in docs/progress/econfig-core.md) | done: six templates on the 'electrons' module; Claude cross-check of 1,800 problems |
-| Oct 26 | 6 Periodic table and trends | - | ranking templates from the element data |
+| done (Oct 17) | 6 Periodic table and trends | - (trend data with an independent anchor test; Claude re-solve of 10,000 problems) | done: module periodic (locate, valence, trends, ions, why), built by Grok |
 | Nov 16 | 7 Nomenclature | charge balance, formula to name and back | polyatomic-ion and acid tables (with Claude's test), templates |
 | Dec | 8-9 Ions, bonding | low fit for step checking; drills only | Grok |
 | Jan | 10 The mole | **conversion-chain engine** (units cancel, factor orientation, sig figs at the end); reused through ch 16 | molar mass and particle templates |
