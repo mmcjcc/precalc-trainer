@@ -19,7 +19,7 @@ import type {
 
 export type ProblemKind = 'inequality' | 'numberLine' | 'evenOdd' | 'inverse' | 'drill' | 'sigFigs' | 'atoms' | 'diffQuotient' | 'graphFeatures' | 'domainRange' | 'composition' | 'functionOps' | 'transformations' | 'piecewiseRate' | 'electrons' | 'periodic' | 'quadratics' | 'polyDivision' | 'polyZeros' | 'rationalFns' | 'signCharts' | 'complexNums' | 'geometry'
 
-/** Which geometry screen this problem is. Unit 2 adds logic and proof; Unit 3 adds parallels and polygons. */
+/** Which geometry screen this problem is. Unit 2 adds logic and proof; Unit 3 adds parallels and polygons; Unit 4 adds congruent triangles. */
 export type GeometryQuestion =
   | 'addition'
   | 'midpoint'
@@ -40,6 +40,11 @@ export type GeometryQuestion =
   | 'lineSlopes'
   | 'triangleAngles'
   | 'polygonAngles'
+  | 'congruentParts'
+  | 'congruentWhich'
+  | 'congruentSolve'
+  | 'isoscelesSolve'
+  | 'triangleProof'
 
 /**
  * One checked part of a geometry problem. `x` and `result` are the Unit 1 boxes.

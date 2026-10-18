@@ -15,6 +15,7 @@ import { ratToString } from '@/notation'
 import { gradeFinalAnswer } from '@/problem/inequality'
 import { encodeSlotStep } from '@/problem/evenOdd'
 import {
+  assertGeometryQuestion,
   buildTutorContext,
   verdictFromSigFig,
   verdictFromFunction,
@@ -936,6 +937,55 @@ describe('buildTutorContext', () => {
     if (line.answer.type !== 'geometry') throw new Error('expected a line')
     expect(line.answer.stages[0]!.kind).toBe('line')
     expect(buildTutorContext(line, attempt('geo-12', { moduleId: 'geoParallel' }), null, false).statement).toContain('y = 2x + 3')
+  })
+
+  it('describes a Unit 4 congruence, an isosceles triangle, and a proof without changing the geometry kind', () => {
+    const cases = [
+      ['geoCongruence', 'gc.parts', 1],
+      ['geoCongruence', 'gc.which', 1],
+      ['geoCongruence', 'gc.solve', 1],
+      ['geoIsosceles', 'gi.solve', 1],
+      ['geoTriangleProofs', 'gt.twocolumn', 1],
+    ] as const
+    for (const [moduleId, templateId, seed] of cases) {
+      const instance = generateProblem(moduleId, templateId, seed)
+      if (instance.answer.type !== 'geometry') throw new Error(`${templateId} is not geometry`)
+      const a = instance.answer
+      assertGeometryQuestion(a.question)
+      const ctx = buildTutorContext(instance, attempt(`u4-${templateId}`, { moduleId }), null, false)
+      expect(ctx.kind).toBe('geometry')
+      expect(ctx.subject).toBe('geometry')
+      expect(ctx.statement).toBe(`${a.prompt} Figure: ${a.figure.ariaLabel}`)
+      expect(ctx.canonical[0]).toBe(a.reveal[0])
+      const slip = gradeGeoStage(a, a.trapStage, a.trapAnswer)
+      expect(slip.verdict).toBe('mistake')
+      if (slip.verdict !== 'mistake') continue
+      expect(verdictFromGeo(slip)?.mistake?.id).toBe(a.trap)
+      expect(verdictFromGeo(slip)?.status).toBe('wrong')
+    }
+
+    const proof = generateProblem('geoTriangleProofs', 'gt.twocolumn', 1)
+    if (proof.answer.type !== 'geometry') throw new Error('expected a proof')
+    const row = proof.answer.stages[0]!
+    const picked = buildTutorContext(
+      proof,
+      attempt('u4-proof', { moduleId: 'geoTriangleProofs', final: { polyEntries: { [GEO_KEYS[row.id]]: row.answerText } } }),
+      null,
+      false,
+    )
+    expect(picked.work).toEqual([`${row.label}: ${reasonLabel(row.answerText)}`])
+
+    const solve = generateProblem('geoCongruence', 'gc.solve', 1)
+    if (solve.answer.type !== 'geometry') throw new Error('expected a solve')
+    const filled = buildTutorContext(
+      solve,
+      attempt('u4-solve', { moduleId: 'geoCongruence', final: { polyEntries: geoEntries(solve.answer) } }),
+      null,
+      false,
+    )
+    expect(filled.work).toEqual(geoWork(solve.answer, geoEntries(solve.answer)))
+    expect(filled.answer).toBe(solve.answer.expectedDisplay)
+    expect(filled.statement).not.toContain(solve.answer.stages[1]!.answerText)
   })
 
   it('never adds a name, email, or account field', () => {

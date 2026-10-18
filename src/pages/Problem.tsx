@@ -18,6 +18,7 @@ import { RationalFnsFlow } from './flows/RationalFnsFlow'
 import { SignChartsFlow } from './flows/SignChartsFlow'
 import { ComplexNumsFlow } from './flows/ComplexNumsFlow'
 import { GeometryFlow } from './flows/GeometryFlow'
+import { assertGeometryQuestion } from '@/problem/tutorContext'
 import { PeriodicFlow } from './flows/PeriodicFlow'
 import { QuadraticsFlow } from './flows/QuadraticsFlow'
 import { TransformationFlow } from './flows/TransformationFlow'
@@ -131,6 +132,7 @@ function ProblemBody({ instance, flags, templateTitle }: { instance: ProblemInst
     case 'complexNums':
       return <ComplexNumsFlow {...props} />
     case 'geometry':
+      if (instance.answer.type === 'geometry') assertGeometryQuestion(instance.answer.question)
       return <GeometryFlow {...props} />
     case 'periodic':
       return <PeriodicFlow {...props} />

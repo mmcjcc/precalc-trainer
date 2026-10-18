@@ -67,12 +67,27 @@ export const GEO_UNIT3_MISTAKE_IDS = [
   'geo_lines_relation_swapped',
 ] as const
 
+/** Unit 4 mistakes. A pick is named only when it is exactly what that slip produces here. */
+export const GEO_UNIT4_MISTAKE_IDS = [
+  'geo_ssa_as_congruence',
+  'geo_aaa_as_congruence',
+  'geo_sas_not_included',
+  'geo_asa_aas_swapped',
+  'geo_hl_no_right',
+  'geo_vertices_out_of_order',
+  'geo_cpctc_too_soon',
+  'geo_shared_side_missed',
+  'geo_base_angles_wrong_vertex',
+  'geo_equilateral_angle_for_side',
+] as const
+
 export const GEO_UNIT1_MISTAKE_IDS = GEO_MISTAKE_IDS
 
 export type GeoMistakeId =
   | (typeof GEO_MISTAKE_IDS)[number]
   | (typeof GEO_UNIT2_MISTAKE_IDS)[number]
   | (typeof GEO_UNIT3_MISTAKE_IDS)[number]
+  | (typeof GEO_UNIT4_MISTAKE_IDS)[number]
 
 export type GeoGrade =
   | { verdict: 'correct'; message: string }
@@ -195,7 +210,8 @@ export function isGeoMistake(id: ErrorPatternId): id is GeoMistakeId {
   return (
     (GEO_MISTAKE_IDS as readonly string[]).includes(id) ||
     (GEO_UNIT2_MISTAKE_IDS as readonly string[]).includes(id) ||
-    (GEO_UNIT3_MISTAKE_IDS as readonly string[]).includes(id)
+    (GEO_UNIT3_MISTAKE_IDS as readonly string[]).includes(id) ||
+    (GEO_UNIT4_MISTAKE_IDS as readonly string[]).includes(id)
   )
 }
 

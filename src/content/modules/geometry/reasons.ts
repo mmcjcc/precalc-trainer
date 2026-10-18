@@ -45,6 +45,16 @@ export const REASONS = [
   { id: 'thm-cong-supp', label: 'Congruent supplements theorem', group: 'theorem' },
   { id: 'thm-cong-comp', label: 'Congruent complements theorem', group: 'theorem' },
   { id: 'thm-right-cong', label: 'All right angles are congruent', group: 'theorem' },
+  { id: 'def-right-triangle', label: 'Definition of a right triangle', group: 'definition' },
+  { id: 'post-sss', label: 'SSS congruence postulate', group: 'postulate' },
+  { id: 'post-sas', label: 'SAS congruence postulate', group: 'postulate' },
+  { id: 'post-asa', label: 'ASA congruence postulate', group: 'postulate' },
+  { id: 'post-aas', label: 'AAS congruence postulate', group: 'postulate' },
+  { id: 'post-hl', label: 'HL postulate', group: 'postulate' },
+  { id: 'thm-aas', label: 'AAS theorem', group: 'theorem' },
+  { id: 'thm-hl', label: 'HL theorem', group: 'theorem' },
+  { id: 'thm-cpctc', label: 'Corresponding parts of congruent triangles are congruent', group: 'theorem' },
+  { id: 'thm-alt-int', label: 'Alternate interior angles theorem', group: 'theorem' },
 ] as const
 
 export type ReasonId = (typeof REASONS)[number]['id']
@@ -79,6 +89,29 @@ const SWAPS: readonly { correct: ReasonId; picked: ReasonId; mistake: ErrorPatte
   { correct: 'cong-sym', picked: 'cong-refl', mistake: 'geo_reflexive_for_symmetric' },
   { correct: 'thm-vertical', picked: 'post-linear-pair', mistake: 'geo_linear_for_vertical' },
   { correct: 'post-linear-pair', picked: 'thm-vertical', mistake: 'geo_vertical_for_linear' },
+  // Unit 4. A book that says "postulate" where another says "theorem" is listed on the row as
+  // `accept`, not here. These are the picks that name a different fact.
+  { correct: 'post-sss', picked: 'thm-hl', mistake: 'geo_hl_no_right' },
+  { correct: 'post-sss', picked: 'post-hl', mistake: 'geo_hl_no_right' },
+  { correct: 'post-sss', picked: 'thm-cpctc', mistake: 'geo_cpctc_too_soon' },
+  { correct: 'post-sas', picked: 'thm-hl', mistake: 'geo_hl_no_right' },
+  { correct: 'post-sas', picked: 'post-hl', mistake: 'geo_hl_no_right' },
+  { correct: 'post-sas', picked: 'thm-cpctc', mistake: 'geo_cpctc_too_soon' },
+  { correct: 'post-asa', picked: 'thm-aas', mistake: 'geo_asa_aas_swapped' },
+  { correct: 'post-asa', picked: 'post-aas', mistake: 'geo_asa_aas_swapped' },
+  { correct: 'post-asa', picked: 'thm-hl', mistake: 'geo_hl_no_right' },
+  { correct: 'post-asa', picked: 'post-hl', mistake: 'geo_hl_no_right' },
+  { correct: 'post-asa', picked: 'thm-cpctc', mistake: 'geo_cpctc_too_soon' },
+  { correct: 'thm-aas', picked: 'post-asa', mistake: 'geo_asa_aas_swapped' },
+  { correct: 'thm-aas', picked: 'post-sas', mistake: 'geo_sas_not_included' },
+  { correct: 'thm-aas', picked: 'thm-hl', mistake: 'geo_hl_no_right' },
+  { correct: 'thm-aas', picked: 'post-hl', mistake: 'geo_hl_no_right' },
+  { correct: 'thm-aas', picked: 'thm-cpctc', mistake: 'geo_cpctc_too_soon' },
+  { correct: 'thm-hl', picked: 'post-sas', mistake: 'geo_sas_not_included' },
+  { correct: 'thm-hl', picked: 'thm-cpctc', mistake: 'geo_cpctc_too_soon' },
+  { correct: 'post-hl', picked: 'post-sas', mistake: 'geo_sas_not_included' },
+  { correct: 'post-hl', picked: 'thm-cpctc', mistake: 'geo_cpctc_too_soon' },
+  { correct: 'cong-refl', picked: 'given', mistake: 'geo_shared_side_missed' },
 ]
 
 /** The named mistake for this pick, or null when the pick is merely wrong. */
@@ -114,6 +147,16 @@ export function reasonWitness(mistake: ErrorPatternId, picked: string): string {
       return `${name} is about two angles that form a straight line. These two angles are the opposite pair made by two crossing lines.`
     case 'geo_vertical_for_linear':
       return `${name} is about the opposite angles made by two crossing lines. These two angles sit next to each other and form a straight line.`
+    case 'geo_hl_no_right':
+      return 'That reason needs a right angle in each triangle. These triangles do not have one.'
+    case 'geo_cpctc_too_soon':
+      return 'That reason is about matching parts of triangles that have already been shown to match. This row is still showing that the triangles match. The parts come on a later row.'
+    case 'geo_asa_aas_swapped':
+      return 'That reason puts the side on the wrong side of the two angles. Check whether the side sits between the angles or not.'
+    case 'geo_sas_not_included':
+      return 'That reason needs the angle that sits between the two sides. The angle here is not between them.'
+    case 'geo_shared_side_missed':
+      return 'That reason treats the side as one of the facts handed to you at the start. The side lies in both triangles, so it matches itself, and that fact still has to be named.'
     default:
       return `${name} does not justify this line.`
   }

@@ -1769,6 +1769,69 @@ export const ERROR_PATTERNS: Record<ErrorPatternId, ErrorPatternInfo> = {
     lesson: 'Lines that rise the same way share a slope. Lines that meet at a right angle have slopes that multiply to −1, unless one of them is vertical. Anything else is a third relationship.',
     example: 'a right angle ✗ → the lines rise the same way',
   },
+  // --- honors geometry Unit 4. Examples use 11, 23, and 41.
+  // No template generates those as an answer. Button names (SSS, SAS, ASA, AAS, HL, SSA, AAA,
+  // Not enough information) and reason labels stay out of these lines.
+  geo_ssa_as_congruence: {
+    id: 'geo_ssa_as_congruence',
+    title: 'Two sides and a stray angle do not match the triangles',
+    lesson: 'Two sides and an angle that is not between them do not show that the triangles match. The angle has to sit between the two sides, or the picture can be finished in two different ways.',
+    example: 'two sides and the angle opposite one of them ✗ → two sides and the angle between them',
+  },
+  geo_aaa_as_congruence: {
+    id: 'geo_aaa_as_congruence',
+    title: 'Three matching angles can sit on different sizes',
+    lesson: 'Three matching angles show that the triangles have the same shape, not that they have the same size. A larger copy has the same angles and is not the same triangle.',
+    example: 'three matching angles ✗ → three matching sides, or two sides with the angle between them',
+  },
+  geo_sas_not_included: {
+    id: 'geo_sas_not_included',
+    title: 'The angle has to sit between the two sides',
+    lesson: 'Two sides match the triangles only when the angle between those sides matches too. An angle at one end, or a right angle that is not between them, is a different pair of facts.',
+    example: 'the angle across from one side ✗ → the angle between the two sides',
+  },
+  geo_asa_aas_swapped: {
+    id: 'geo_asa_aas_swapped',
+    title: 'Check whether the side sits between the angles',
+    lesson: 'Two angles and a side match the triangles either way, but the side is either the one between the angles or a side that is not. Those are different reasons, and the figure shows which side it is.',
+    example: 'the side that is not between the angles ✗ → the side between the two angles',
+  },
+  geo_hl_no_right: {
+    id: 'geo_hl_no_right',
+    title: 'That way is only for right triangles',
+    lesson: 'The hypotenuse and a leg match two triangles only when each triangle has a right angle. Without a right angle there is no hypotenuse, and that reason does not apply.',
+    example: 'the long side and another side, with no right angle ✗ → the side opposite the right angle, and one side that touches it',
+  },
+  geo_vertices_out_of_order: {
+    id: 'geo_vertices_out_of_order',
+    title: 'The letters have to name the matching vertices',
+    lesson: 'The order of the letters is the matching. The first vertex of one triangle names the first vertex of the other, and the same for the second and the third. A different order pairs vertices that do not match.',
+    example: 'the second vertex named where the first one belongs ✗ → the first vertex with the first vertex',
+  },
+  geo_cpctc_too_soon: {
+    id: 'geo_cpctc_too_soon',
+    title: 'The triangles have to match before their parts do',
+    lesson: 'Matching parts of matching triangles is the step after the triangles themselves have been shown to match. Using it on the row that is still showing the triangles match puts that reason a row too early.',
+    example: 'the parts, on the row that shows the triangles match ✗ → the parts, on the next row',
+  },
+  geo_shared_side_missed: {
+    id: 'geo_shared_side_missed',
+    title: 'A side in both triangles still has to be named',
+    lesson: 'A side that lies in both triangles matches itself. That is not one of the facts written at the start, so the proof still has to say that the side matches itself.',
+    example: 'the side was handed over at the start ✗ → the side matches itself',
+  },
+  geo_base_angles_wrong_vertex: {
+    id: 'geo_base_angles_wrong_vertex',
+    title: 'The matching angles sit across from the matching sides',
+    lesson: 'In a triangle with two matching sides, the matching angles are the ones across from those sides. The angle between the matching sides is the third one, and setting it equal to a base angle uses the wrong vertex.',
+    example: 'x = 11 ✗ → x = 23',
+  },
+  geo_equilateral_angle_for_side: {
+    id: 'geo_equilateral_angle_for_side',
+    title: 'That number is an angle, and the question asks for a side',
+    lesson: 'When all three sides match, each angle is a straight angle split into three equal parts. That number is an angle. A side is what the expression equals after x is known.',
+    example: '11 ✗ → 41',
+  },
   // --- behavioral (ui) ---
   abandoned: {
     id: 'abandoned',
