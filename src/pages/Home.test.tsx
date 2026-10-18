@@ -31,6 +31,7 @@ function moduleTitles(): string[] {
 const precalc = getCourse('precalc')!
 const unit1Titles = modulesInUnit(precalc.units[0]!).map((module) => module.title)
 const unit2Titles = modulesInUnit(precalc.units[1]!).map((module) => module.title)
+const unit3Titles = modulesInUnit(precalc.units[2]!).map((module) => module.title)
 
 function done(at: number, moduleId: string, skill: string): Ev {
   return {
@@ -90,8 +91,8 @@ describe('Home: classes and units', () => {
 
     fireEvent.keyDown(tablist, { key: 'Home' })
     expect(screen.getByRole('tab', { name: 'Honors Precalculus', selected: true })).toBeTruthy()
-    // A first visit lands on the last unit that has modules: Unit 2, now that it has some.
-    expect(moduleTitles()).toEqual(unit2Titles)
+    // A first visit lands on the last unit that has modules: Unit 3.
+    expect(moduleTitles()).toEqual(unit3Titles)
 
     fireEvent.keyDown(tablist, { key: 'ArrowLeft' })
     expect(screen.getByRole('tab', { name: 'Honors Precalculus', selected: true })).toBeTruthy()
@@ -127,8 +128,8 @@ describe('Home: classes and units', () => {
 
   it('shows only the selected unit, with the review card on precalc Unit 1 only', () => {
     renderHome()
-    // A first visit lands on the last unit that has modules (Unit 2). Unit 1 is one press away.
-    expect(moduleTitles()).toEqual(unit2Titles)
+    // A first visit lands on the last unit that has modules (Unit 3). Unit 1 is one press away.
+    expect(moduleTitles()).toEqual(unit3Titles)
     expect(screen.queryByRole('heading', { name: 'Unit 1 review' })).toBeNull()
     fireEvent.click(screen.getByRole('button', { name: /Unit 1/ }))
     expect(moduleTitles()).toEqual(unit1Titles)
@@ -164,6 +165,17 @@ describe('Home: classes and units', () => {
     expect(screen.queryByRole('heading', { name: 'Unit 1 review' })).toBeNull()
     expect(screen.queryByRole('heading', { name: 'Difference quotient' })).toBeNull()
     expect(screen.getByRole('button', { name: /Unit 2/, pressed: true }).textContent).not.toMatch(/Coming soon/)
+
+    fireEvent.click(screen.getByRole('button', { name: /Unit 3/ }))
+    expect(moduleTitles()).toEqual(unit3Titles)
+    expect(moduleTitles()).toEqual([
+      'Logarithms and exponential form',
+      'Properties of logarithms',
+      'Exponential and logarithmic equations',
+    ])
+    expect(screen.getAllByRole('link', { name: /Choose a type/ }).map((link) => link.getAttribute('href'))).toContain('/m/logForms')
+    expect(screen.getByRole('button', { name: /Unit 3/, pressed: true }).textContent).not.toMatch(/Coming soon/)
+    expect(screen.queryByRole('heading', { name: 'Unit 1 review' })).toBeNull()
   })
 
   it('keeps the choice in the store across a remount and a reload of saved settings', async () => {

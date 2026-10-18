@@ -75,6 +75,27 @@ export const SET_ANSWER_KEYS: readonly StripKey[] = [
   stripKey('or'),
 ]
 
+/**
+ * Logarithms. `log_` lands in the subscript base (`log_|()`), `e^` and `log`/`ln` land inside
+ * the parentheses, and `logBASE` lands on the argument (`logBASE(|,)`), the TI-84 order.
+ */
+export const LOG_KEYS: readonly StripKey[] = [
+  { label: 'x', insert: 'x', caret: 0, name: 'x' },
+  { label: 'y', insert: 'y', caret: 0, name: 'y' },
+  { label: 'n', insert: 'n', caret: 0, name: 'n' },
+  { label: '^', insert: '^', caret: 0, name: 'power' },
+  { label: '(', insert: '(', caret: 0, name: 'open parenthesis' },
+  { label: ')', insert: ')', caret: 0, name: 'close parenthesis' },
+  { label: '/', insert: '/', caret: 0, name: 'divide' },
+  { label: '=', insert: ' = ', caret: 0, name: 'equals' },
+  { label: 'or', insert: ' or ', caret: 0, name: 'or' },
+  { label: 'log', insert: 'log()', caret: -1, name: 'log base 10' },
+  { label: 'ln', insert: 'ln()', caret: -1, name: 'natural log' },
+  { label: 'log_', insert: 'log_()', caret: -2, name: 'log with a subscript base' },
+  { label: 'e^', insert: 'e^()', caret: -1, name: 'e to a power' },
+  { label: 'logBASE', insert: 'logBASE(,)', caret: -2, name: 'logBASE, argument then base' },
+]
+
 /** Formulas for f, g, and (f ∘ g)(x): the keys a function actually uses. */
 export const FUNCTION_KEYS: readonly StripKey[] = [
   stripKey('x'),

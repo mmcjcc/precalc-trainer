@@ -74,8 +74,10 @@ describe('course registry', () => {
       'signCharts',
       'complexNums',
     ])
-    expect(unitsWithModules(precalc!).map((u) => u.id)).toEqual(['unit1', 'unit2'])
-    expect(precalc!.units.map((u) => u.id)).toEqual(['unit1', 'unit2'])
+    expect(modulesInUnit(precalc!.units[2]!).map((m) => m.id)).toEqual(['logForms', 'logProperties', 'expLogEquations'])
+    expect(precalc!.units[2]).toMatchObject({ id: 'unit3', label: 'Unit 3', title: 'Exponential and logarithmic functions' })
+    expect(unitsWithModules(precalc!).map((u) => u.id)).toEqual(['unit1', 'unit2', 'unit3'])
+    expect(precalc!.units.map((u) => u.id)).toEqual(['unit1', 'unit2', 'unit3'])
     expect(unitsWithModules(chemistry!).map((u) => u.id)).toEqual(['ch3', 'ch4', 'ch5', 'ch6'])
     expect(chemistry!.units.map((u) => [u.id, u.moduleIds])).toEqual([
       ['ch3', ['sigFigs']],
@@ -95,5 +97,6 @@ describe('course registry', () => {
     expect(modulesInUnit(geometry!.units[2]!).map((m) => m.id)).toEqual(['geoParallel', 'geoPolygonAngles'])
     expect(precalc!.units[0]!.reviewId).toBe('unit1')
     expect(precalc!.units[1]!.reviewId).toBeUndefined()
+    expect(precalc!.units[2]!.reviewId).toBeUndefined()
   })
 })

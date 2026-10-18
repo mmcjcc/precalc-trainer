@@ -70,6 +70,12 @@ export const COURSES: readonly CourseDef[] = [
         title: 'Polynomial and rational functions',
         moduleIds: ['quadratics', 'polyDivision', 'polyZeros', 'rationalFns', 'signCharts', 'complexNums'],
       },
+      {
+        id: 'unit3',
+        label: 'Unit 3',
+        title: 'Exponential and logarithmic functions',
+        moduleIds: ['logForms', 'logProperties', 'expLogEquations'],
+      },
     ],
   },
   {

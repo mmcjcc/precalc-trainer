@@ -17,6 +17,8 @@ import { PolyZerosFlow } from './flows/PolyZerosFlow'
 import { RationalFnsFlow } from './flows/RationalFnsFlow'
 import { SignChartsFlow } from './flows/SignChartsFlow'
 import { ComplexNumsFlow } from './flows/ComplexNumsFlow'
+import { ExpLogEquationsFlow, LogPropertiesFlow } from './flows/LogLineFlow'
+import { LogFormsFlow } from './flows/LogFormsFlow'
 import { GeometryFlow } from './flows/GeometryFlow'
 import { PeriodicFlow } from './flows/PeriodicFlow'
 import { QuadraticsFlow } from './flows/QuadraticsFlow'
@@ -130,6 +132,12 @@ function ProblemBody({ instance, flags, templateTitle }: { instance: ProblemInst
       return <SignChartsFlow {...props} />
     case 'complexNums':
       return <ComplexNumsFlow {...props} />
+    case 'logForms':
+      return <LogFormsFlow {...props} />
+    case 'logProperties':
+      return <LogPropertiesFlow {...props} />
+    case 'expLogEquations':
+      return <ExpLogEquationsFlow {...props} />
     case 'geometry':
       return <GeometryFlow {...props} />
     case 'periodic':

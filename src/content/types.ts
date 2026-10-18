@@ -17,7 +17,16 @@ import type {
   VarName,
 } from '@/shared/types'
 
-export type ProblemKind = 'inequality' | 'numberLine' | 'evenOdd' | 'inverse' | 'drill' | 'sigFigs' | 'atoms' | 'diffQuotient' | 'graphFeatures' | 'domainRange' | 'composition' | 'functionOps' | 'transformations' | 'piecewiseRate' | 'electrons' | 'periodic' | 'quadratics' | 'polyDivision' | 'polyZeros' | 'rationalFns' | 'signCharts' | 'complexNums' | 'geometry'
+export type ProblemKind = 'inequality' | 'numberLine' | 'evenOdd' | 'inverse' | 'drill' | 'sigFigs' | 'atoms' | 'diffQuotient' | 'graphFeatures' | 'domainRange' | 'composition' | 'functionOps' | 'transformations' | 'piecewiseRate' | 'electrons' | 'periodic' | 'quadratics' | 'polyDivision' | 'polyZeros' | 'rationalFns' | 'signCharts' | 'complexNums' | 'logForms' | 'logProperties' | 'expLogEquations' | 'geometry'
+
+/** Precalculus Unit 3. Evaluate, rewrite the form, or round a change-of-base value. */
+export type LogFormsQuestion = 'value' | 'convert' | 'decimal'
+
+/** Precalculus Unit 3. Expand or condense one logarithm, one checked line at a time. */
+export type LogPropertiesQuestion = 'expand' | 'condense'
+
+/** Precalculus Unit 3. An exponential, logarithmic, or quadratic-in-form equation. */
+export type ExpLogQuestion = 'exponential' | 'logarithmic' | 'quadratic'
 
 /** Which geometry screen this problem is. Unit 2 adds logic and proof; Unit 3 adds parallels and polygons. */
 export type GeometryQuestion =
@@ -1059,6 +1068,93 @@ export type AnswerSpec =
       trapStage?: PtStageId
       /** What that slip produces. Never the right answer. */
       trapAnswer?: string
+    }
+  | {
+      /**
+       * Logarithms and exponential form (precalculus Unit 3). One number, or one rewritten equation.
+       * Grade with `gradeLogValue` or `gradeConvertForm`. Named mistakes are the `log_` ids.
+       */
+      type: 'logForms'
+      question: LogFormsQuestion
+      /** The expression or equation, app syntax. */
+      problem: string
+      /** What to find. No method and no trap. */
+      prompt: string
+      /** Exact text, or the rounded decimal when `places` is set. */
+      answerText: string
+      /** Set only when the problem asks for a rounded decimal. */
+      places?: number
+      /** Under the box. No number this template can generate. */
+      formatHint: string
+      stages: {
+        id: 'answer'
+        nudge: string
+        ruleCard: RuleCardId
+        reveal: string[]
+      }[]
+      expectedDisplay: string
+      nudge: string
+      ruleCard: RuleCardId
+      ruleCards: RuleCardId[]
+      /** Hint rung 3 and the worked solution. May state the answer. */
+      reveal: string[]
+      trap: ErrorPatternId
+      /** What that slip produces. Never the right answer. */
+      trapAnswer: string
+    }
+  | {
+      /**
+       * Properties of logarithms (precalculus Unit 3). One checked line at a time.
+       * Grade a line with `checkLogRewrite` (`assumePositive`). Finished when the line is expanded
+       * or a single log and still equal to the start. Named mistakes are the `log_` ids.
+       */
+      type: 'logProperties'
+      question: LogPropertiesQuestion
+      /** The starting expression, app syntax. */
+      expr: string
+      vars: VarName[]
+      prompt: string
+      /** Lines after the start, ending at the finished form. */
+      path: string[]
+      answerText: string
+      formatHint: string
+      expectedDisplay: string
+      nudge: string
+      ruleCard: RuleCardId
+      ruleCards: RuleCardId[]
+      reveal: string[]
+      trap: ErrorPatternId
+      /** A wrong next line from the start. */
+      trapAnswer: string
+    }
+  | {
+      /**
+       * Exponential and logarithmic equations (precalculus Unit 3). One checked line at a time
+       * (`checkLogStep`, with the original equation), then a final answer (`gradeLogEquation`).
+       * Named mistakes are the `log_` ids. `log_check_answers` is a note, not a mistake.
+       */
+      type: 'expLogEquations'
+      question: ExpLogQuestion
+      equation: string
+      /** Set when the final answer is a rounded decimal. */
+      places?: number
+      prompt: string
+      /** Lines after the equation, the textbook path. */
+      path: string[]
+      answerText: string
+      /** Spellings `gradeLogEquation` accepts for this problem, including `answerText`. */
+      accept: string[]
+      formatHint: string
+      expectedDisplay: string
+      nudge: string
+      ruleCard: RuleCardId
+      ruleCards: RuleCardId[]
+      /** `analyzeLogEquation(...).explanation`, shown after she finishes or on hint rung 3. */
+      reveal: string[]
+      trap: ErrorPatternId
+      /** The wrong final answer that slip produces. */
+      trapAnswer: string
+      explanation: string[]
     }
   | {
       type: 'drill'

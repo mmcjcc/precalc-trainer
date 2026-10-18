@@ -41,7 +41,7 @@ describe('App routes', () => {
     expect(screen.getByRole('heading', { level: 1, name: 'Math & Science Trainer' })).toBeTruthy()
     expect(screen.getByRole('link', { name: 'Math & Science Trainer' })).toBeTruthy()
     expect(screen.getByRole('button', { name: 'Practice weak spots' })).toBeTruthy()
-    // A first visit lands on the last unit that has modules (Unit 2 since it got its first module).
+    // A first visit lands on the last unit that has modules (Unit 3).
     const landing = [...getCourse('precalc')!.units].reverse().find((unit) => modulesInUnit(unit).length > 0)!
     expect(screen.getAllByRole('button', { name: 'Random problem' })).toHaveLength(modulesInUnit(landing).length)
     const nav = screen.getByRole('navigation', { name: 'Main' })
