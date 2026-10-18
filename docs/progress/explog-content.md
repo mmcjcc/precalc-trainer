@@ -40,3 +40,45 @@ Seed-1 URLs (each shows the named trap):
 - `#/p/expLogEquations/ee.exponential/1` — `log_one_side` on `3^x = 13`
 - `#/p/expLogEquations/ee.logarithmic/1` — `log_sum_split` on `log_6(x) + log_6(x - 5) = 2`
 - `#/p/expLogEquations/ee.quadratic/1` — `log_exp_coefficient_base` on `4^x - 9 * 2^x + 8 = 0`
+
+## Review (Claude, 2026-10-18)
+
+Independent re-solve: `src/content/modules/explog.crosscheck.test.ts` solves every problem again without the
+core's solver (values with `Math.log`, equations by a sign-change scan and bisection inside the domain,
+expansions by evaluating both forms at random positive points) and checks every accepted spelling, the
+promised trap, and that one of two roots alone is never named as a slip. 300 seeds per template, all green.
+A Gemini 4 adversarial review of the line screen and the two generators gave five findings; four were real
+(the fifth, "a new problem keeps the old state", is not: `ProblemBody` is keyed by the instance id).
+
+Fixed in the core (`src/engine/logs/solve.ts`, `relslips.ts`; tests in `logs.review.test.ts`):
+- An answer with SOME of the solutions and nothing else was named as whichever slip also had that root
+  (x = 1 alone for 4^x − 3·2^x + 2 = 0 read as `log_exp_coefficient_base`). It is now "1 of the 2 solutions",
+  unless the slip IS a valid negative root thrown out of a log equation (`log_valid_rejected`).
+- A slip within 0.2% of a real root (x = 5.001 for 5) is no longer a named candidate.
+- "Take the log of both sides" is not offered when a side is 0 or negative (the witness read log(0)).
+- `log_valid_rejected` only for log equations; on an exponential equation "no solution" is plain wrong
+  (its witness printed an empty "()").
+- New candidate: the values of u reported as the solutions (2^x = 8 written x = 8) is `log_convert_dropped`.
+- Quadratics in an exponential with two bases (4^x − 9·2^x + 8 = 0) now get the textbook explanation
+  ("Write 4^x as (2^x)^2. Let u = 2^x: …") instead of a bare "Solution: x = 0 or x = 3".
+
+Fixed in the content:
+- Textbook sizes: exact values up to 2^10, 3^6, 5^4, 10^6 (it had log_81(177147) = 11/4 and log_(1/5)(3125));
+  conversions up to 4096; 6·3^x = 1458 rather than 6·3^x = 354294; u = b^x roots up to 81 rather than
+  4^x − 288·2^x + 8192 = 0; x(x − d) = P with P ≤ 1000 and d ≤ 40. Sums of logs combine to a power
+  (log_6(4) + log_6(9) = 2, log_2(40) − log_2(5) = 3). `lf.value` may repeat an answer up to 15% of
+  seeds: the exact values she can find by hand cluster on small numbers.
+- Promised traps have the answer's shape: a two-root "slip" of a one-root equation is not promised. The
+  quadratic-in-form problems promise the u-values slip.
+- The log-quadratic family had two distinct problems (log_3(x^2 − 6x) = 3 and log_5(x^2 − 20x) = 3); it now
+  draws from bases 2, 3, 5, 6, 10 and m = 1 (the textbook log_3(x^2 − 8x) = 2).
+- Prompts say which form is wanted ("Solve. Give the exact answer." / "Solve exactly. Check every answer…").
+- `x = e^1` reads `x = e`.
+- Same-base problems (2^x = 4^(x − 3)) hint the exponent line instead of jumping to the answer.
+- Screen: each root of a two-root answer is redacted from notes too; a kept line that is already the
+  solution goes into the answer box; one answer counts once per attempt (a trailing space or a reload no
+  longer records it twice); a new attempt at the same problem starts clean; Undo also restores the saved
+  draft. Flow test: "fixes from the review".
+
+Not changed (noted): expand hints show the whole expansion as the next line (the core has no partial
+expansion path yet), and the condense hint skips the "2 = log_2(4)" rewrite.

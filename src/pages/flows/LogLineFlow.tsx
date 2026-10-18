@@ -34,7 +34,12 @@ const squash = (text: string) => text.replace(/\s+/g, '')
 function answerForms(instance: ProblemInstance): string[] {
   const answer = instance.answer
   if (answer.type === 'logProperties') return [answer.answerText]
-  if (answer.type === 'expLogEquations') return [answer.answerText, ...answer.accept]
+  if (answer.type === 'expLogEquations') {
+    // Each root on its own as well: a note that names one of two roots gives half the answer away.
+    const parts = answer.answerText.split(/\s+or\s+/)
+    const roots = parts.length > 1 ? parts.flatMap((part) => [part, part.replace(/^\s*x\s*=\s*/, '')]) : []
+    return [...new Set([answer.answerText, ...answer.accept, ...roots])]
+  }
   return []
 }
 
@@ -137,7 +142,18 @@ function Body({ instance, attempt, flags, templateTitle, completion, finish, mod
   const restoredFor = useRef<string | null>(null)
   useEffect(() => {
     if (!attempt || restoredFor.current === attempt.id) return
+    const fresh = restoredFor.current !== null
     restoredFor.current = attempt.id
+    if (fresh) {
+      // A new attempt at the same problem starts clean: no verdict or remembered entry from the last one.
+      setFeedback(null)
+      setBoxGrade(null)
+      lastBox.current = null
+      lastRejected.current = null
+      setDraftState(attempt.draft ?? '')
+      setBox(attempt.final?.polyEntries?.[EE_KEYS.answer] ?? '')
+      return
+    }
     if (attempt.draft) setDraftState(attempt.draft)
     const saved = attempt.final?.polyEntries?.[EE_KEYS.answer]
     if (saved) setBox(saved)
@@ -219,6 +235,14 @@ function Body({ instance, attempt, flags, templateTitle, completion, finish, mod
     acceptLine(text, false)
     const note = caveat ? safeWitness(result.pattern?.witness ?? ERROR_PATTERNS.log_check_answers.lesson, forms) : ''
     setFeedback({ kind: 'kept', caveat, note })
+    // A line that already is the solution (ln(x) = 3 → x = e^3) goes into the answer box for her to check.
+    if (equation && !box.trim() && /^\s*x\s*=/.test(text)) {
+      const g = gradeLogEquation(equation.equation, text, { vars: ['x'], ...(equation.places ? { decimal: { places: equation.places } } : {}) })
+      if (g.verdict === 'correct') {
+        storeBox(text)
+        answerRef.current?.focus({ preventScroll: true })
+      }
+    }
   }
 
   function useRevealedLine() {
@@ -252,8 +276,13 @@ function Body({ instance, attempt, flags, templateTitle, completion, finish, mod
       answerRef.current?.focus({ preventScroll: true })
       return
     }
-    if (lastBox.current === box) return
-    lastBox.current = box
+    // One record per attempt and answer: a trailing space or a reload does not count it twice.
+    const sig = `${attempt?.id ?? ''} ${squash(box)}`
+    if (lastBox.current === sig) {
+      if (grade.verdict === 'correct') finish()
+      return
+    }
+    lastBox.current = sig
     recordLogGrade(grade)
     if (grade.verdict !== 'correct') {
       useStore.getState().setFinal({ firstCorrect: false })
@@ -269,7 +298,9 @@ function Body({ instance, attempt, flags, templateTitle, completion, finish, mod
     if (!last) return
     lastRejected.current = null
     setFeedback(null)
+    setBoxGrade(null)
     setDraftState(last.text)
+    useStore.getState().setDraft(last.text)
     inputRef.current?.focus({ preventScroll: true })
   }, [canUndo])
 

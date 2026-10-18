@@ -134,7 +134,11 @@ function pickTrap(eq: string, forms: readonly string[], places: number | undefin
   const slips = mistakes(eq)
   const shown = staticTexts(EE_RULES, EQUATION_HINT, EQUATION_NUDGE)
   if (anyShows(shown, forms)) throw new LogSkip('a card shows an answer')
+  const count = analysis(eq)?.solutions.length ?? 0
   const ok = slips.filter((c) => {
+    // A slip a student makes on her way to one answer gives one answer: a two-root "slip" of a
+    // one-root equation is a curiosity, not a trap. Keeping or dropping a root changes the count.
+    if (c.id !== 'log_extraneous_kept' && c.id !== 'log_valid_rejected' && (c.values?.length ?? 0) !== count) return false
     if (anyShows([catalogExample(c.id), c.text], forms)) return false
     const g = grade(eq, c.text, places)
     return g.verdict === 'mistake' && (g.mistake === c.id || c.shadows.includes(g.mistake))
@@ -220,7 +224,9 @@ function drawExponential(rng: Rng): Drawn {
       kind: 'exponential',
       count: 1,
       exact: true,
-      paths: [[rewritten, equated, expanded], [rewritten, equated], [rewritten]],
+      // The common-base rewrite is the same line to the checker, so the hints may skip it and start at
+      // the exponents (x = 2(x − 3)); without that path every hint jumped straight to the answer.
+      paths: [[rewritten, equated, expanded], [rewritten, equated], [equated, expanded], [equated], [rewritten]],
       prefer: ['log_one_side', 'log_convert_multiplied', 'log_change_base_inverted'],
     })
   }
@@ -240,11 +246,12 @@ function drawExponential(rng: Rng): Drawn {
     })
   }
   if (family === 2) {
-    const A = rng.pick([2, 4, 5, 6] as const)
+    const A = rng.pick([2, 3, 4, 5, 6] as const)
     const b = rng.pick([2, 3, 5, 7] as const)
-    const k = rng.pick([6, 7, 8, 9, 10, 11, 12, 13, 14, 15] as const)
+    const k = rng.pick([2, 3, 4, 5, 6, 7, 8] as const)
+    if (A === b) throw new LogSkip()
     const right = A * ipow(b, k)
-    if (right > 2_000_000) throw new LogSkip()
+    if (ipow(b, k) > 1024) throw new LogSkip()
     const eq = `${A} * ${b}^x = ${right}`
     return take(eq, 'exponential', {
       kind: 'exponential',
@@ -256,10 +263,10 @@ function drawExponential(rng: Rng): Drawn {
   }
   if (family === 3) {
     const b = rng.pick([2, 3, 5] as const)
-    const k = rng.pick([6, 7, 8, 9, 10, 11, 12] as const)
-    const c = rng.int(2, 8)
+    const k = rng.pick([2, 3, 4, 5, 6, 7, 8] as const)
+    const c = rng.int(2, 12)
     const power = ipow(b, k)
-    if (power > 1_000_000) throw new LogSkip()
+    if (power > 1024) throw new LogSkip()
     const eq = `${b}^x + ${c} = ${power + c}`
     return take(eq, 'exponential', {
       kind: 'exponential',
@@ -332,7 +339,8 @@ function drawLogarithmic(rng: Rng): Drawn {
     const k = rng.pick(ks)
     const r = P / k
     const d = r - k
-    if (d <= 0 || r === 5) throw new LogSkip()
+    // x(x − d) = P has to factor by hand: log(x) + log(x − 609) = 4 does not.
+    if (d <= 0 || r === 5 || P > 1000 || d > 40) throw new LogSkip()
     const eq = b === 10 ? `log(x) + log(x - ${d}) = ${c}` : `log_${b}(x) + log_${b}(x - ${d}) = ${c}`
     const log = b === 10 ? 'log' : `log_${b}`
     return take(eq, 'logarithmic', {
@@ -348,23 +356,26 @@ function drawLogarithmic(rng: Rng): Drawn {
     })
   }
   if (family === 1) {
-    const b = rng.pick([2, 3, 5] as const)
-    const c = rng.pick([2, 3] as const)
+    // x^2 − kx = b^c with roots r and −m (r·m = b^c, r − m = k): both keep x^2 − kx positive.
+    const b = rng.pick([2, 3, 5, 6, 10] as const)
+    const c = rng.pick([1, 2, 3, 4] as const)
     const P = ipow(b, c)
-    const ms = divisors(P).filter((d) => d < P / d && d !== 2)
+    if (P < 6 || P > 1000) throw new LogSkip()
+    const ms = [1, ...divisors(P)].filter((d) => d < P / d)
     if (!ms.length) throw new LogSkip()
     const m = rng.pick(ms)
     const r = P / m
     const k = r - m
-    if (k <= 0) throw new LogSkip()
-    const eq = `log_${b}(x^2 - ${k}x) = ${c}`
+    if (k <= 0 || k > 40) throw new LogSkip()
+    const kx = k === 1 ? 'x' : `${k}x`
+    const eq = b === 10 ? `log(x^2 - ${kx}) = ${c}` : `log_${b}(x^2 - ${kx}) = ${c}`
     return take(eq, 'logarithmic', {
       kind: 'logarithmic',
       count: 2,
       exact: true,
       negative: true,
       bare: false,
-      paths: [[`x^2 - ${k}x = ${P}`, `x = -${m} or x = ${r}`], [`x^2 - ${k}x = ${P}`]],
+      paths: [[`x^2 - ${kx} = ${P}`, `x = -${m} or x = ${r}`], [`x^2 - ${kx} = ${P}`]],
       prefer: ['log_valid_rejected'],
     })
   }
@@ -390,13 +401,14 @@ function drawLogarithmic(rng: Rng): Drawn {
     const k = rng.pick([1, 2, 3, 4] as const)
     const inside = a === 0 ? 'x' : `x + ${a}`
     const eq = `ln(${inside}) = ${k}`
-    const constructed = a === 0 ? `x = e^${k}` : `x = e^${k} - ${a}`
+    const power = k === 1 ? 'e' : `e^${k}`
+    const constructed = a === 0 ? `x = ${power}` : `x = ${power} - ${a}`
     return take(eq, 'logarithmic', {
       kind: 'logarithmic',
       count: 1,
       exact: true,
       constructed,
-      paths: a === 0 ? [[`x = e^${k}`]] : [[`${inside} = e^${k}`, constructed], [constructed]],
+      paths: a === 0 ? [[`x = ${power}`]] : [[`${inside} = ${power}`, constructed], [constructed]],
       prefer: ['log_convert_dropped', 'log_convert_swapped'],
     })
   }
@@ -441,16 +453,18 @@ function drawQuadratic(rng: Rng): Drawn {
         [`(e^x - ${p})(e^x - ${q}) = 0`, `e^x = ${p} or e^x = ${q}`, answer],
         [`e^x = ${p} or e^x = ${q}`, answer],
       ],
-      prefer: ['log_exp_sum_split', 'log_exp_negative_exponent', 'log_convert_dropped'],
+      // Reporting the values of u as the answers is the slip this problem is known for.
+      prefer: ['log_convert_dropped', 'log_exp_sum_split', 'log_exp_negative_exponent'],
     })
   }
   if (family === 1) {
     const b = rng.pick([2, 3, 5] as const)
-    const m = rng.int(0, 5)
-    const n = rng.int(m + 1, m + 4)
+    const m = rng.int(0, 3)
+    const n = rng.int(m + 1, m + 3)
     const coef = ipow(b, m) + ipow(b, n)
     const constant = ipow(b, m + n)
-    if (constant > 1_000_000) throw new LogSkip()
+    // u = b^m and u = b^n stay small enough to spot: 4^x − 9·2^x + 8 = 0, not 4^x − 288·2^x + 8192 = 0.
+    if (ipow(b, n) > 81) throw new LogSkip()
     const eq = `${b * b}^x - ${coef} * ${b}^x + ${constant} = 0`
     const answer = `x = ${m} or x = ${n}`
     return take(eq, 'quadratic', {
@@ -463,16 +477,16 @@ function drawQuadratic(rng: Rng): Drawn {
         [`(${b}^x - ${ipow(b, m)})(${b}^x - ${ipow(b, n)}) = 0`, `${b}^x = ${ipow(b, m)} or ${b}^x = ${ipow(b, n)}`, answer],
         [`${b}^x = ${ipow(b, m)} or ${b}^x = ${ipow(b, n)}`, answer],
       ],
-      prefer: ['log_exp_coefficient_base', 'log_exp_power_added', 'log_sum_split'],
+      prefer: ['log_convert_dropped', 'log_exp_coefficient_base', 'log_exp_power_added', 'log_sum_split'],
     })
   }
   const b = rng.pick([2, 3, 5] as const)
-  const m = rng.int(2, 9)
-  const k = rng.pick([1, 2, 3] as const)
+  const m = rng.int(1, 6)
+  const k = rng.pick([1, 2, 3, 4] as const)
   const mid = ipow(b, m) - k
   const constant = k * ipow(b, m)
-  if (mid <= 0 || constant > 1_000_000) throw new LogSkip()
-  const eq = `${b * b}^x - ${mid} * ${b}^x - ${constant} = 0`
+  if (mid <= 0 || ipow(b, m) > 81) throw new LogSkip()
+  const eq = `${b * b}^x - ${mid === 1 ? '' : `${mid} * `}${b}^x - ${constant} = 0`
   return take(eq, 'quadratic', {
     kind: 'exponential',
     count: 1,
@@ -481,7 +495,7 @@ function drawQuadratic(rng: Rng): Drawn {
       [`(${b}^x - ${ipow(b, m)})(${b}^x + ${k}) = 0`, `${b}^x = ${ipow(b, m)}`, `x = ${m}`],
       [`${b}^x = ${ipow(b, m)}`, `x = ${m}`],
     ],
-    prefer: ['log_exp_negative_exponent', 'log_exp_coefficient_base', 'log_convert_multiplied'],
+    prefer: ['log_convert_dropped', 'log_exp_negative_exponent', 'log_exp_coefficient_base', 'log_convert_multiplied'],
   })
 }
 
@@ -494,11 +508,12 @@ function assemble(templateId: string, version: number, seed: number, knobs: Diff
     ruleCard: card,
     stage: `line-${i + 1}`,
   }))
+  // Say which form is wanted: an exact problem with a decimal rate (1.05)^x would otherwise read as "round it".
   const prompt = drawn.places
     ? `Solve. Round to ${placesWord(drawn.places)} decimal places.`
     : drawn.question === 'logarithmic'
-      ? 'Solve. Check every answer in the original equation.'
-      : 'Solve.'
+      ? 'Solve exactly. Check every answer in the original equation.'
+      : 'Solve. Give the exact answer.'
   const answer: ExpLogAnswer = {
     type: 'expLogEquations',
     question: drawn.question,

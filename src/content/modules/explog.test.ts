@@ -132,7 +132,9 @@ describe.each([
       }
       expect(first?.seed).toBe(1)
       expect(statements.size, templateId).toBeGreaterThanOrEqual(25)
-      expect(Math.max(...answers.values()), templateId).toBeLessThanOrEqual(30)
+      // Exact values a student can find without a calculator cluster on small answers (log_2(8) and
+      // log(1000) are both 3), so that template may repeat an answer a little more often.
+      expect(Math.max(...answers.values()), templateId).toBeLessThanOrEqual(templateId === 'lf.value' ? 45 : 30)
       expect(traps.size).toBeGreaterThan(0)
     },
     LOOP_TIMEOUT,

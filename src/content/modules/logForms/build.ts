@@ -138,47 +138,68 @@ function decimalValue(problem: string, places: number, nudge: string, require: r
   }
 }
 
+// Textbook sizes: a power she can recognize without a calculator (up to 2^10, 3^6, 5^4, 10^6).
+const MAX_POWER = 1024
+
 function powerProblem(rng: Rng): string {
+  if (rng.chance(0.25)) return `log(${ipow(10, rng.pick([2, 3, 4, 5, 6] as const))})`
   const b = rng.pick(BASES)
-  // Larger exponents, so the value is not the same 2, 3 or 4 that the other families also make.
-  const k = rng.pick([5, 6, 7, 8, 9, 10, 11, 12] as const)
+  const k = rng.pick([2, 3, 4, 5, 6, 7, 8, 9, 10] as const)
   const arg = ipow(b, k)
-  if (arg > 1_000_000 || reserved(b) || reserved(k) || reserved(arg)) throw new LogSkip()
+  if (arg > MAX_POWER || reserved(b) || reserved(k) || reserved(arg)) throw new LogSkip()
   return `log_${b}(${arg})`
 }
 
 function fractionProblem(rng: Rng): string {
   const b = rng.pick([2, 3, 5] as const)
-  const q = rng.pick([2, 3, 4, 5] as const)
-  const p = rng.pick([1, 2, 3, 5, 7, 9, 11] as const)
+  const q = rng.pick([2, 3, 4] as const)
+  const p = rng.pick([1, 2, 3, 4, 5, 7] as const)
   if (gcd(p, q) !== 1) throw new LogSkip()
   const base = ipow(b, q)
   const arg = ipow(b, p)
-  if (base > 3125 || arg > 1_000_000) throw new LogSkip()
+  if (base > 625 || arg > MAX_POWER) throw new LogSkip()
   return `log_${base}(${arg})`
 }
 
 function negativePower(rng: Rng): string {
+  if (rng.chance(0.3)) {
+    const k = rng.pick([1, 2, 3, 4] as const)
+    return `log(${(10 ** -k).toFixed(k)})`
+  }
   const b = rng.pick([2, 3, 4, 5, 6, 7, 8] as const)
-  const k = rng.pick([1, 2, 8, 9] as const)
+  const k = rng.pick([1, 2, 3, 4, 5] as const)
   const arg = ipow(b, k)
-  if (arg > 100_000) throw new LogSkip()
+  if (arg > 625) throw new LogSkip()
   return `log_${b}(1/${arg})`
 }
 
 function unitBase(rng: Rng): string {
-  const b = rng.pick([2, 3, 4, 5, 8] as const)
-  const k = rng.pick([4, 5, 6, 7] as const)
+  const b = rng.pick([2, 3, 4, 5] as const)
+  const k = rng.pick([1, 2, 3, 4, 5] as const)
+  if (ipow(b, k) > 256) throw new LogSkip()
   return `log_(1/${b})(${ipow(b, k)})`
 }
 
+/** n is b^k for some whole k ≥ 0. */
+function powerOf(n: number, b: number): boolean {
+  let m = n
+  while (m > 1 && m % b === 0) m /= b
+  return m === 1
+}
+
 function sumProblem(rng: Rng): string {
-  const b = rng.pick([2, 3, 5, 6] as const)
-  const k = rng.pick([8, 9, 10] as const)
+  // Two logs that cannot be evaluated one at a time but combine into a power of the base:
+  // log_6(4) + log_6(9) = 2, log_2(40) − log_2(5) = 3.
+  const b = rng.pick([2, 3, 6, 10, 12] as const)
+  const k = rng.pick([1, 2, 3] as const)
   const arg = ipow(b, k)
-  if (arg > 1_000_000) throw new LogSkip()
+  if (rng.chance(0.4)) {
+    const d = rng.pick([3, 5, 6, 7] as const)
+    if (powerOf(d, b)) throw new LogSkip()
+    return `log_${b}(${arg * d}) - log_${b}(${d})`
+  }
   const divisors: number[] = []
-  for (let m = 2; m * m < arg; m++) if (arg % m === 0 && m !== arg / m) divisors.push(m)
+  for (let m = 2; m * m < arg; m++) if (arg % m === 0 && !powerOf(m, b)) divisors.push(m)
   if (!divisors.length) throw new LogSkip()
   const m = rng.pick(divisors)
   return `log_${b}(${m}) + log_${b}(${arg / m})`
@@ -220,13 +241,13 @@ function drawConvert(rng: Rng): Drawn {
     const b = rng.pick(BASES)
     const k = rng.pick([2, 3, 4, 5, 6] as const)
     const arg = ipow(b, k)
-    if (arg > 1_000_000) throw new LogSkip()
+    if (arg > 4096) throw new LogSkip()
     given = `${b}^${k} = ${arg}`
   } else if (family === 1) {
     const b = rng.pick(BASES)
     const k = rng.pick([2, 3, 4, 5, 6] as const)
     const arg = ipow(b, k)
-    if (arg > 1_000_000) throw new LogSkip()
+    if (arg > 4096) throw new LogSkip()
     given = `log_${b}(${arg}) = ${k}`
   } else if (family === 2) {
     const k = rng.pick([1, 2, 3] as const)

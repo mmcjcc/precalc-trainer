@@ -266,3 +266,35 @@ describe('LogLineFlow hints', () => {
     FLOW_TIMEOUT,
   )
 })
+
+describe('ExpLogEquationsFlow, fixes from the review', () => {
+  it(
+    'a line that already is the solution goes into the answer box, and one wrong answer counts once',
+    () => {
+      // A one-step problem, ln(x) = k: the first line she writes is the solution.
+      let seed = 1
+      for (; seed < 600; seed++) {
+        const a = generateProblem('expLogEquations', 'ee.logarithmic', seed).answer
+        if (a.type === 'expLogEquations' && /^ln\(x\) = \d$/.test(a.equation)) break
+      }
+      const p = generateProblem('expLogEquations', 'ee.logarithmic', seed)
+      if (p.answer.type !== 'expLogEquations') throw new Error('ee.logarithmic')
+      renderAt(problemPath('expLogEquations', 'ee.logarithmic', seed))
+      type('Next line', p.answer.path[0]!)
+      click('Check this line')
+      expect(accepted()).toHaveLength(1)
+      expect(field('Answer').value.replace(/\s+/g, '')).toBe(p.answer.path[0]!.replace(/\s+/g, ''))
+      // The same wrong answer twice, once with a trailing space, is one recorded attempt.
+      type('Answer', 'x = 3')
+      click('Check the answer')
+      type('Answer', 'x = 3 ')
+      click('Check the answer')
+      expect(finals()).toHaveLength(1)
+      type('Answer', p.answer.answerText)
+      click('Check the answer')
+      expect(finals().at(-1)).toMatchObject({ correct: true })
+      expect(doneEvent()).toBeTruthy()
+    },
+    FLOW_TIMEOUT,
+  )
+})
