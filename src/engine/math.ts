@@ -4,6 +4,36 @@ import { create, all, type MathNode } from 'mathjs'
 export const math = create(all, { predictable: true })
 export type { MathNode }
 
+/**
+ * log_b(x) for numbers. Exact integer results come out exact (log(243, 3) is 5, not 4.999999999999999):
+ * when b^k reproduces x exactly for the nearest integer k, k is the answer. x ≤ 0, b ≤ 0 and b = 1 give
+ * NaN (the evaluator's 'undef').
+ */
+export function logBase(x: number, b: number): number {
+  if (!(b > 0) || b === 1 || !(x > 0)) return Number.NaN
+  const v = b === 10 ? Math.log10(x) : b === 2 ? Math.log2(x) : Math.log(x) / Math.log(b)
+  const k = Math.round(v)
+  if (Math.abs(v - k) < 1e-9 * Math.max(1, Math.abs(k)) && Math.abs(k) <= 1074 && b ** k === x) return k
+  return v
+}
+
+/**
+ * The app's logarithms (her course and her TI-84): log(x) is base 10, ln(x) is base e, log(x, b) is base
+ * b. math.js on its own has no `ln` and reads a one-argument `log` as the NATURAL log, so both are
+ * defined here; the parser (logs/syntax.ts) turns log_2(8), log2(8) and logBASE(8, 2) into log(8, 2).
+ * Only `log1p` and `kldivergence` depend on math.js's own `log`, and the app uses neither.
+ */
+math.import(
+  {
+    ln: math.typed('ln', { number: (x: number) => (x > 0 ? Math.log(x) : Number.NaN) }),
+    log: math.typed('log', {
+      number: (x: number) => (x > 0 ? Math.log10(x) : Number.NaN),
+      'number, number': (x: number, b: number) => logBase(x, b),
+    }),
+  },
+  { override: true },
+)
+
 export const FUNC_NAMES = new Set([
   'sqrt',
   'cbrt',
@@ -72,7 +102,11 @@ export function tryConst(node: MathNode): number | null {
   }
 }
 
-/** Rewrite E^(p/q) with odd q as nthRoot(E,q)^p so negatives stay real. */
+/**
+ * Rewrite E^(p/q) with odd q as nthRoot(E,q)^p so negatives stay real. Only an exponent that IS p/q is
+ * rewritten (x^(1/3), x^(2/5)): a decimal exponent such as 10^0.4771 or e^0.33 keeps its own value
+ * (approxFraction alone would turn 0.4771 into 5/11 and 0.33 into 1/3).
+ */
 export function normalizeOddRoots(node: MathNode): MathNode {
   return node.transform((n) => {
     if (n.type !== 'OperatorNode' || rec(n).op !== '^') return n
@@ -82,6 +116,7 @@ export function normalizeOddRoots(node: MathNode): MathNode {
     if (exp == null) return n
     const { num, den } = approxFraction(exp, 12)
     if (den <= 1) return n
+    if (Math.abs(exp - num / den) > 1e-12 * Math.max(1, Math.abs(exp))) return n
     const baseSrc = `(${args[0].toString()})`
     if (den % 2 === 1) {
       const root = `nthRoot(${baseSrc}, ${den})`
@@ -229,16 +264,31 @@ export function walkNode(node: MathNode, visit: (n: MathNode) => void): void {
   for (const a of nodeArgs(node)) walkNode(a, visit)
 }
 
+/** The log functions of app syntax (after the parser's rewrite): log(u), log(u, b), ln(u), and math.js's log10/log2. */
+export const LOG_FUNCS: ReadonlySet<string> = new Set(['log', 'ln', 'log10', 'log2'])
+
 /**
  * Sub-expressions that bound the domain of `node`:
- *  - `zero`: must be ≠ 0 (denominators, bases of negative powers),
- *  - `nonneg`: must be ≥ 0 (sqrt radicands, even nthRoot radicands, bases of x^(p/q) with even q).
+ *  - `zero`: must be ≠ 0 (denominators, bases of negative powers, b − 1 for a log with a variable base b),
+ *  - `nonneg`: must be ≥ 0 (sqrt radicands, even nthRoot radicands, bases of x^(p/q) with even q),
+ *  - `pos`: must be > 0 (log arguments, and the base of a log when it has a variable in it).
  * Their roots are domain-boundary points for the Tier-2 boundary method.
  */
-export function domainSubexpressions(node: MathNode): { zero: MathNode[]; nonneg: MathNode[] } {
+export function domainSubexpressions(node: MathNode): { zero: MathNode[]; nonneg: MathNode[]; pos: MathNode[] } {
   const zero: MathNode[] = []
   const nonneg: MathNode[] = []
+  const pos: MathNode[] = []
   walkNode(node, (n) => {
+    const fn = fnName(n)
+    if (fn && LOG_FUNCS.has(fn)) {
+      const [a, b] = nodeArgs(n)
+      if (a && collectVars(a).length) pos.push(a)
+      if (b && collectVars(b).length) {
+        pos.push(b)
+        zero.push(compileExpression(`(${b.toString()}) - 1`))
+      }
+      return
+    }
     if (isOp(n, '/')) {
       const d = nodeArgs(n)[1]
       if (d && collectVars(d).length) zero.push(d)
@@ -268,7 +318,7 @@ export function domainSubexpressions(node: MathNode): { zero: MathNode[]; nonneg
       }
     }
   })
-  return { zero, nonneg }
+  return { zero, nonneg, pos }
 }
 
 export { almostInt }

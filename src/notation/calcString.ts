@@ -147,6 +147,9 @@ const printTi84 = makePrinter({
       const index = idx && isSimple(idx) ? (p[1] ?? '') : `(${p[1] ?? ''})`
       return `${index}ˣ√(${p[0] ?? ''})`
     }
+    // LOG( is base 10 and takes one input; any other base is MATH > A: logBASE(value, base).
+    if (name === 'log' && p.length === 2) return `logBASE(${p[0] ?? ''},${p[1] ?? ''})`
+    if (name === 'exp') return `e^(${p[0] ?? ''})`
     return `${name}(${p.join(',')})`
   },
 })
@@ -162,6 +165,8 @@ const printNspire = makePrinter({
     if (name === 'sqrt') return `√(${p[0] ?? ''})`
     if (name === 'abs') return `abs(${p[0] ?? ''})`
     if (name === 'nthRoot') return `root(${p[0] ?? ''},${p[1] ?? ''})`
+    // The Nspire's log(value, base) already has this order; exp is typed as e^( ).
+    if (name === 'exp') return `e^(${p[0] ?? ''})`
     return `${name}(${p.join(',')})`
   },
 })

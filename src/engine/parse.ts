@@ -1,10 +1,40 @@
 import type { VarName } from '@/shared/types'
 import { collectVars, compileExpression, FUNC_NAMES, type MathNode } from './math'
+import { InputSyntaxError, rewriteLogSyntax } from './logs/syntax'
 import type { ParseError, ParseResult, Relation, Statement } from './types'
 import type { RelOp } from '@/shared/types'
 
 const KEEP_IDENTS = new Set([...FUNC_NAMES, 'pi', 'e', 'inf', 'infinity', 'oo'])
 const DEFAULT_VARS: readonly string[] = ['x', 'y', 'n']
+
+/**
+ * Names found inside a run of letters, longest first: "xlog(2)" is x·log(2), "2xsqrt(x)" is 2·x·sqrt(x),
+ * "pix" is pi·x. A run made only of the single letters the app uses (x, y, n, h, e) contains none of
+ * these names, so it still splits letter by letter exactly as before ("xy" is x·y, "ex" is e·x).
+ */
+const SEGMENT_NAMES: readonly string[] = [...new Set([...FUNC_NAMES].map((n) => n.toLowerCase()).filter((n) => /^[a-z]{2,}$/.test(n)).concat('pi'))].sort(
+  (a, b) => b.length - a.length,
+)
+
+/** A run of letters → the names and single letters it is made of. */
+function segmentLetters(word: string): string[] {
+  if (FUNC_NAMES.has(word)) return [word]
+  const lower = word.toLowerCase()
+  if (KEEP_IDENTS.has(lower)) return [lower]
+  const out: string[] = []
+  let i = 0
+  while (i < lower.length) {
+    const name = SEGMENT_NAMES.find((n) => lower.startsWith(n, i))
+    if (name) {
+      out.push(name)
+      i += name.length
+    } else {
+      out.push(lower[i]!)
+      i++
+    }
+  }
+  return out
+}
 
 type Tok =
   | { kind: 'num' | 'id' | 'op' | 'comma'; text: string }
@@ -83,8 +113,7 @@ function tokenize(src: string): Tok[] {
     if (/[A-Za-z]/.test(c)) {
       let j = i + 1
       while (j < s.length && /[A-Za-z]/.test(s[j]!)) j++
-      const word = s.slice(i, j)
-      toks.push({ kind: 'id', text: FUNC_NAMES.has(word) ? word : word.toLowerCase() })
+      for (const seg of segmentLetters(s.slice(i, j))) toks.push({ kind: 'id', text: seg })
       i = j
       continue
     }
@@ -118,12 +147,25 @@ function splitBareIdent(text: string): string {
   return [...text].join('*')
 }
 
-/** `xy` → `x*y`, `2x(y+2)` → `2*x*(y+2)`, `cbrt(7x+3)` stays a call. */
+/** Where a function name first appears in the text she typed (for the caret of a parse error). */
+function namePosition(input: string, name: string): number {
+  const at = input.toLowerCase().indexOf(name.toLowerCase())
+  return at < 0 ? 0 : at
+}
+
+/**
+ * `xy` → `x*y`, `2x(y+2)` → `2*x*(y+2)`, `cbrt(7x+3)` stays a call, `x log(2)` → `x*log(2)`.
+ * Logs are first rewritten to `log(u)` / `ln(u)` / `log(u, b)` (`logs/syntax.ts`). Throws
+ * InputSyntaxError (position into `input`) for a log or a function name without parentheses.
+ */
 export function insertImplicitMul(input: string): string {
-  const toks = tokenize(input)
+  const toks = tokenize(rewriteLogSyntax(input))
   const out: string[] = []
   for (let i = 0; i < toks.length; i++) {
     const t = toks[i]!
+    if (t.kind === 'id' && FUNC_NAMES.has(t.text) && toks[i + 1]?.kind !== 'lparen') {
+      throw new InputSyntaxError(`${t.text} needs parentheses around its input, like ${t.text}(x).`, namePosition(input, t.text), t.text.length)
+    }
     if (i > 0 && needsMul(toks[i - 1]!, t)) out.push('*')
     if (t.kind === 'id') out.push(splitBareIdent(t.text))
     else out.push(t.text)
@@ -203,7 +245,13 @@ function parseSide(raw: string, offset: number): { node: MathNode; src: string }
   if (!trimmed) {
     throw new LineError('One side of the relation is empty — every line needs both sides.', offset)
   }
-  const prepared = insertImplicitMul(trimmed)
+  let prepared: string
+  try {
+    prepared = insertImplicitMul(trimmed)
+  } catch (e) {
+    if (e instanceof InputSyntaxError) throw new LineError(e.message, offset + lead + Math.min(e.position, trimmed.length), e.length)
+    throw e
+  }
   try {
     const node = compileExpression(prepared)
     return { node, src: prepared }

@@ -268,3 +268,7 @@ export type {
 // Polynomials (precalculus Unit 2): completing the square, synthetic division, zeros and end behavior, rational
 // root candidates. Exact arithmetic; API in docs/progress/polynomials-core.md.
 export * from './polynomials'
+
+// Exponentials and logarithms (precalculus): log/ln semantics, log properties and exponent rules line by
+// line, exponential and log equations with the extraneous check, exact values. API in docs/progress/explog-core.md.
+export * from './logs'

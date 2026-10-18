@@ -230,8 +230,8 @@ export function statementDomainPoints(stmt: Statement, v: string, fixed: Scope =
   for (const clause of stmt.disjuncts) {
     for (const rel of clause) {
       for (const side of [rel.lhs, rel.rhs]) {
-        const { zero, nonneg } = domainSubexpressions(side)
-        for (const sub of [...zero, ...nonneg]) {
+        const { zero, nonneg, pos } = domainSubexpressions(side)
+        for (const sub of [...zero, ...nonneg, ...pos]) {
           if (!nodeMentions(sub, v)) continue
           const r = findRootsOf(nodeG(sub, v, fixed), gridN)
           pts.push(...r.roots, ...r.poles)

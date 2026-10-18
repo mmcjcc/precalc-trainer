@@ -454,6 +454,32 @@ export type ErrorPatternId =
   | 'geo_sides_from_exterior_180'
   | 'geo_exterior_sum_as_interior'
   | 'geo_lines_relation_swapped'
+  // exponentials and logarithms (engine/logs; precalculus). Each id fires only when the slip produces her
+  // line or answer for the problem in front of her. log_check_answers is the caveat of a legal step that
+  // widens the domain (like squaring_caveat), not a mistake.
+  | 'log_sum_split'
+  | 'log_product_as_product'
+  | 'log_quotient_as_quotient'
+  | 'log_power_as_power'
+  | 'log_coefficient_as_power'
+  | 'log_coefficient_inside'
+  | 'log_change_base_inverted'
+  | 'log_identity_misused'
+  | 'log_power_abs'
+  | 'log_exp_sum_split'
+  | 'log_exp_power_added'
+  | 'log_exp_negative_exponent'
+  | 'log_exp_coefficient_base'
+  | 'log_convert_swapped'
+  | 'log_convert_multiplied'
+  | 'log_convert_dropped'
+  | 'log_one_side'
+  | 'log_extraneous_kept'
+  | 'log_valid_rejected'
+  | 'log_value_sign'
+  | 'log_value_divided'
+  | 'log_ln_confused'
+  | 'log_check_answers'
   // behavioral (ui)
   | 'abandoned'
 

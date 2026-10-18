@@ -109,6 +109,18 @@ export function nodeToLatex(node: MathNode): string {
     const inner = nodeArgs(node)[0]
     return `\\left|${inner ? nodeToLatex(inner) : ''}\\right|`
   }
+  // Logs as her textbook writes them: log is base 10, ln is base e, log(u, b) is log_b(u).
+  if (isFn(node, 'log') || isFn(node, 'ln') || isFn(node, 'log10') || isFn(node, 'log2')) {
+    const [a, b] = nodeArgs(node)
+    const inner = parens(a ? nodeToLatex(a) : '')
+    if (isFn(node, 'ln')) return `\\ln${inner}`
+    if (isFn(node, 'log2')) return `\\log_{2}${inner}`
+    return b && isFn(node, 'log') ? `\\log_{${nodeToLatex(b)}}${inner}` : `\\log${inner}`
+  }
+  if (isFn(node, 'exp')) {
+    const inner = nodeArgs(node)[0]
+    return `e^{${inner ? nodeToLatex(inner) : ''}}`
+  }
   if (node.type === 'FunctionNode') {
     const fn = (node as unknown as { fn: { name?: string } | string }).fn
     const name = typeof fn === 'string' ? fn : (fn.name ?? 'f')

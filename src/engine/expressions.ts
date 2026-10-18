@@ -10,6 +10,8 @@ import { runMatchers } from './matchers'
 import { normalizeGlyphs, parseExpression, parseStatement } from './parse'
 import { classifyRewriteNodes } from './rewriteClassifier'
 import { DEFAULT_SEED, exprEquiv, type Scope } from './samples'
+import { checkLogRewrite } from './logs/rewrite'
+import { isExpLogNode } from './logs/slips'
 
 export type Evaluator = (scope: Partial<Record<VarName, number>>) => number | 'undef'
 
@@ -115,6 +117,8 @@ export function verifyRewrite(prev: string, next: string, ctx: StepContext): Ste
       parseError: { message: pn.error.message, position: pn.error.position, length: pn.error.length },
     }
   }
+  // Logs and exponentials: judged on the previous expression's domain (logs/rewrite.ts), with the log slips named.
+  if (isExpLogNode(pp.node) || isExpLogNode(pn.node)) return checkLogRewrite(prev, next, { vars: ctx.vars, seed: ctx.seed })
   const vars = [...new Set([...collectVars(pp.node), ...collectVars(pn.node)])].sort()
   const res = exprEquiv(pp.node, pn.node, vars.length ? vars : ['x'], ctx.seed, { domain: 'strict' }, ctx.checkValue)
   const normalized = { text: pn.text, latex: '' }

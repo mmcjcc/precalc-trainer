@@ -20,6 +20,7 @@ import { isInequalityStatement, type Scope } from './samples'
 import { compareSets2D, type SliceMismatch } from './slicing'
 import { detectMove, sameLine, squaringRestriction, swapXY, type Detection } from './transforms'
 import type { Statement } from './types'
+import { checkLogStatements, routesToLogs } from './logs/step'
 
 interface Tier2 {
   verdict: Verdict
@@ -162,8 +163,18 @@ function extraWitness(ce: Counterexample | undefined): string | undefined {
   return `${ce.pointDisplay} fits your new line but ${why} — check every answer in the original at the end.`
 }
 
-/** Verify a parsed step. `verifyStep` wraps this with parsing. */
+/**
+ * Verify a parsed step. `verifyStep` wraps this with parsing. A one-variable line with a log, or with the
+ * variable in an exponent (2^x, e^x), goes to the logs core (logs/step.ts): it compares solutions only
+ * inside the domain, on a grid that reaches far enough for half-life answers, and names the log slips.
+ */
 export function verifyStatements(oldS: Statement, newS: Statement, ctx: StepContext): StepResult {
+  if (routesToLogs(oldS, newS)) return checkLogStatements(oldS, newS, oldS, { vars: ctx.vars, seed: ctx.seed })
+  return verifyStatementsGeneric(oldS, newS, ctx)
+}
+
+/** The general step checker, without the log routing (the logs core calls this for lines with two variables). */
+export function verifyStatementsGeneric(oldS: Statement, newS: Statement, ctx: StepContext): StepResult {
   const result = verifyCore(oldS, newS, ctx)
   if (result.ok || !ctx.allowSwap) return result
   return swapWithMove(oldS, newS, ctx) ?? result
