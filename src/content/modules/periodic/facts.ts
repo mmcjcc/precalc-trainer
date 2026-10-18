@@ -178,6 +178,9 @@ function dataCompare(a: number, b: number, property: Exclude<PtProperty, 'metall
 /** Noble gases stay out of radius, electronegativity and metallic-character rankings. */
 export function trendAllowed(el: ElementInfo, property: PtProperty): boolean {
   if (el.z > 56 || el.group == null) return false
+  // Main-group elements only: transition-metal trends are irregular, and the course teaches the trends on
+  // groups 1, 2 and 13-18.
+  if (el.group >= 3 && el.group <= 12) return false
   if (el.group === 18 && property !== 'ionization') return false
   return trendByZ(el.z) != null
 }

@@ -10,7 +10,7 @@ import type { ErrorPatternId } from '@/shared/types'
 export const WHY_TEXT: Record<PtWhyReason, string> = {
   protons: 'More protons pull on the same shell',
   shells: 'There is another shell of electrons',
-  shielding: 'Inner electrons block the nucleus',
+  shielding: 'Inner electrons shield the outer electrons',
 }
 
 export const PT_RULES: readonly RuleCard[] = [

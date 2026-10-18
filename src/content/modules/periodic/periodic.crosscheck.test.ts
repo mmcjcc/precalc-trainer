@@ -23,7 +23,7 @@ const EXCEPTIONS: readonly (readonly [string, string])[] = [
 
 const PROTONS = 'More protons pull on the same shell'
 const SHELLS = 'There is another shell of electrons'
-const SHIELDING = 'Inner electrons block the nucleus'
+const SHIELDING = 'Inner electrons shield the outer electrons'
 
 type Property = 'radius' | 'ionization' | 'electronegativity' | 'metallic'
 

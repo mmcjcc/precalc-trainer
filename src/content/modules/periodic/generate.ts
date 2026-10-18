@@ -465,6 +465,9 @@ function drawWhy(rng: Rng): { prompt: string; drafts: BuiltStage[]; params: Reco
         nudge: 'Decide whether the two elements share a row or sit one above the other.',
         ruleCard: 'pt.why',
         check: { kind: 'why', reason: item.reason },
+        // Down a group the textbook gives both reasons together: a new shell, farther out, shielded by
+        // the inner electrons. Either one is right.
+        ...(item.reason === 'protons' ? {} : { accept: [item.reason === 'shells' ? WHY_TEXT.shielding : WHY_TEXT.shells] }),
         choices: rng.shuffle([
           { id: WHY_TEXT.protons, text: WHY_TEXT.protons },
           { id: WHY_TEXT.shells, text: WHY_TEXT.shells },
