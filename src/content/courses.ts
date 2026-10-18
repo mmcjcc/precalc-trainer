@@ -124,7 +124,7 @@ export const COURSES: readonly CourseDef[] = [
         id: 'g3',
         label: 'Unit 3',
         title: 'Parallel and perpendicular lines',
-        moduleIds: [],
+        moduleIds: ['geoParallel', 'geoPolygonAngles'],
       },
     ],
   },

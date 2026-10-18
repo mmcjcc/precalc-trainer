@@ -898,6 +898,46 @@ describe('buildTutorContext', () => {
     expect(buildTutorContext(instance, attempt('pt-3', { moduleId: 'periodic' }), null, false).work).toEqual([])
   })
 
+  it('describes a Unit 3 transversal, a triangle, and a line', () => {
+    const pairs = generateProblem('geoParallel', 'gl3.pairs', 1)
+    if (pairs.answer.type !== 'geometry') throw new Error('expected a transversal')
+    const pairCtx = buildTutorContext(pairs, attempt('geo-9', { moduleId: 'geoParallel' }), null, false)
+    expect(pairCtx.subject).toBe('geometry')
+    expect(pairCtx.kind).toBe('geometry')
+    expect(pairCtx.statement).toContain(pairs.answer.prompt)
+    expect(pairCtx.statement).toContain(pairs.answer.figure.ariaLabel)
+    const slip = gradeGeoStage(pairs.answer, pairs.answer.trapStage, pairs.answer.trapAnswer)
+    expect(slip.verdict).toBe('mistake')
+    if (slip.verdict !== 'mistake') return
+    expect(verdictFromGeo(slip)?.mistake?.id).toBe(pairs.answer.trap)
+    const picked = buildTutorContext(
+      pairs,
+      attempt('geo-10', { moduleId: 'geoParallel', final: { polyEntries: { [GEO_KEYS[pairs.answer.trapStage]]: pairs.answer.trapAnswer } } }),
+      verdictFromGeo(slip),
+      false,
+    )
+    expect(picked.work.join(' ')).toContain('Corresponding')
+    expect(picked.work.join(' ')).not.toContain(pairs.answer.trapAnswer)
+
+    const triangle = generateProblem('geoPolygonAngles', 'gpa.triangle', 1)
+    if (triangle.answer.type !== 'geometry') throw new Error('expected a triangle')
+    const shown = buildTutorContext(
+      triangle,
+      attempt('geo-11', { moduleId: 'geoPolygonAngles', final: { polyEntries: geoEntries(triangle.answer) } }),
+      null,
+      false,
+    )
+    expect(shown.statement).toContain(triangle.answer.prompt)
+    expect(shown.work).toEqual(geoWork(triangle.answer, geoEntries(triangle.answer)))
+    expect(shown.answer).toBe(triangle.answer.expectedDisplay)
+    expect(shown.canonical[0]).toBe(triangle.answer.reveal[0])
+
+    const line = generateProblem('geoParallel', 'gl3.slopes', 2)
+    if (line.answer.type !== 'geometry') throw new Error('expected a line')
+    expect(line.answer.stages[0]!.kind).toBe('line')
+    expect(buildTutorContext(line, attempt('geo-12', { moduleId: 'geoParallel' }), null, false).statement).toContain('y = 2x + 3')
+  })
+
   it('never adds a name, email, or account field', () => {
     const instance = generateProblem('inequalities', 'ineq.linear', 4)
     const ctx = buildTutorContext(instance, attempt('attempt-1', { steps: [step('x <= 3')] }), null, true)
