@@ -78,7 +78,7 @@ describe('Home: classes and units', () => {
     fireEvent.keyDown(tablist, { key: 'ArrowRight' })
     expect(screen.getByRole('tab', { name: 'Chemistry', selected: true })).toBeTruthy()
     expect(screen.getByRole('tab', { name: 'Honors Precalculus', selected: false })).toBeTruthy()
-    expect(moduleTitles()).toEqual(['Electrons and light'])
+    expect(moduleTitles()).toEqual(['The periodic table'])
 
     fireEvent.keyDown(tablist, { key: 'ArrowRight' })
     expect(screen.getByRole('tab', { name: 'Honors Geometry', selected: true })).toBeTruthy()
@@ -142,8 +142,8 @@ describe('Home: classes and units', () => {
     fireEvent.click(screen.getByRole('tab', { name: 'Chemistry' }))
     expect(screen.queryByRole('heading', { name: 'Unit 1 review' })).toBeNull()
     expect(screen.queryByRole('heading', { name: 'Difference quotient' })).toBeNull()
-    expect(moduleTitles()).toEqual(['Electrons and light'])
-    expect(screen.getByRole('link', { name: /Choose a type/ }).getAttribute('href')).toBe('/m/electrons')
+    expect(moduleTitles()).toEqual(['The periodic table'])
+    expect(screen.getByRole('link', { name: /Choose a type/ }).getAttribute('href')).toBe('/m/periodic')
 
     fireEvent.click(screen.getByRole('button', { name: /Chapter 3/ }))
     expect(moduleTitles()).toEqual(['Significant figures'])
@@ -203,8 +203,8 @@ describe('Home: classes and units', () => {
     })
     renderHome()
     expect(screen.getByRole('tab', { name: 'Chemistry', selected: true })).toBeTruthy()
-    expect(screen.getByRole('button', { name: /Chapter 5/, pressed: true })).toBeTruthy()
-    expect(moduleTitles()).toEqual(['Electrons and light'])
+    expect(screen.getByRole('button', { name: /Chapter 6/, pressed: true })).toBeTruthy()
+    expect(moduleTitles()).toEqual(['The periodic table'])
     // The computed default is not written until she picks a class or opens a real deep link.
     expect(useStore.getState().settings.courseId).toBeUndefined()
   })
@@ -238,8 +238,8 @@ describe('Home: classes and units', () => {
     resetStoreForTests()
     renderHome('/c/chemistry/missing')
     expect(screen.getByRole('tab', { name: 'Chemistry', selected: true })).toBeTruthy()
-    expect(screen.getByRole('button', { name: /Chapter 5/, pressed: true })).toBeTruthy()
-    expect(useStore.getState().settings.unitByCourse?.chemistry).toBe('ch5')
+    expect(screen.getByRole('button', { name: /Chapter 6/, pressed: true })).toBeTruthy()
+    expect(useStore.getState().settings.unitByCourse?.chemistry).toBe('ch6')
   })
 
   it('keeps Continue above the tabs, weak spots under them, and draws weak spots only from the selected class', () => {

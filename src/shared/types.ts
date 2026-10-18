@@ -15,7 +15,7 @@
 export type RelOp = '=' | '<' | '<=' | '>' | '>='
 /** `h` is the difference-quotient step; the parser accepts it only when the problem owns it (ctx.vars). */
 export type VarName = 'x' | 'y' | 'n' | 'h'
-export type ModuleId = 'numberLine' | 'inequalities' | 'evenOdd' | 'inverses' | 'propertiesDrill' | 'sigFigs' | 'atoms' | 'diffQuotient' | 'graphFeatures' | 'domainRange' | 'composition' | 'functionOps' | 'transformations' | 'piecewiseRate' | 'electrons' | 'quadratics' | 'polyDivision' | 'polyZeros' | 'rationalFns' | 'signCharts' | 'complexNums' | 'geoSegments' | 'geoAngles' | 'geoLogic' | 'geoProof'
+export type ModuleId = 'numberLine' | 'inequalities' | 'evenOdd' | 'inverses' | 'propertiesDrill' | 'sigFigs' | 'atoms' | 'diffQuotient' | 'graphFeatures' | 'domainRange' | 'composition' | 'functionOps' | 'transformations' | 'piecewiseRate' | 'electrons' | 'periodic' | 'quadratics' | 'polyDivision' | 'polyZeros' | 'rationalFns' | 'signCharts' | 'complexNums' | 'geoSegments' | 'geoAngles' | 'geoLogic' | 'geoProof'
 export type CalcId = 'ti84' | 'nspire'
 
 /** Fine-grained property tags. Canonical steps carry one; the engine's move detector reports one. */
@@ -413,6 +413,28 @@ export type ErrorPatternId =
   | 'geo_congruent_for_midpoint'
   | 'geo_linear_for_vertical'
   | 'geo_vertical_for_linear'
+  // periodic table (content/modules/periodic; chemistry chapter 6). One id per slip the module
+  // computes for the problem in front of her. A candidate equal to the right answer is never used.
+  | 'pt_trend_reversed'
+  | 'pt_radius_like_ionization'
+  | 'pt_group_number_valence'
+  | 'pt_hydrogen_metal'
+  | 'pt_helium_p_block'
+  | 'pt_cation_larger'
+  | 'pt_anion_smaller'
+  | 'pt_isoelectronic_electron_count'
+  | 'pt_period_as_valence'
+  | 'pt_f_as_d_block'
+  | 'pt_helium_octet'
+  | 'pt_valence_is_atomic_number'
+  | 'pt_valence_is_period'
+  | 'pt_alkaline_called_alkali'
+  | 'pt_alkali_called_alkaline'
+  | 'pt_metalloid_called_metal'
+  | 'pt_metal_called_metalloid'
+  | 'pt_why_shells_across_period'
+  | 'pt_why_shielding_same_shell'
+  | 'pt_why_protons_down_group'
   // behavioral (ui)
   | 'abandoned'
 

@@ -95,6 +95,12 @@ export const COURSES: readonly CourseDef[] = [
         title: 'Electrons in atoms',
         moduleIds: ['electrons'],
       },
+      {
+        id: 'ch6',
+        label: 'Chapter 6',
+        title: 'The periodic table',
+        moduleIds: ['periodic'],
+      },
     ],
   },
   {

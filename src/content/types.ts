@@ -17,7 +17,7 @@ import type {
   VarName,
 } from '@/shared/types'
 
-export type ProblemKind = 'inequality' | 'numberLine' | 'evenOdd' | 'inverse' | 'drill' | 'sigFigs' | 'atoms' | 'diffQuotient' | 'graphFeatures' | 'domainRange' | 'composition' | 'functionOps' | 'transformations' | 'piecewiseRate' | 'electrons' | 'quadratics' | 'polyDivision' | 'polyZeros' | 'rationalFns' | 'signCharts' | 'complexNums' | 'geometry'
+export type ProblemKind = 'inequality' | 'numberLine' | 'evenOdd' | 'inverse' | 'drill' | 'sigFigs' | 'atoms' | 'diffQuotient' | 'graphFeatures' | 'domainRange' | 'composition' | 'functionOps' | 'transformations' | 'piecewiseRate' | 'electrons' | 'periodic' | 'quadratics' | 'polyDivision' | 'polyZeros' | 'rationalFns' | 'signCharts' | 'complexNums' | 'geometry'
 
 /** Which geometry screen this problem is. Unit 2 adds the logic and proof screens. */
 export type GeometryQuestion =
@@ -40,6 +40,40 @@ export type GeometryQuestion =
  * `a` through `h` are the Unit 2 parts (a related statement, a proof row, …).
  */
 export type GeometryStageId = 'x' | 'result' | 'a' | 'b' | 'c' | 'd' | 'e' | 'f' | 'g' | 'h'
+
+/** Periodic-table property she ranks. Metallic character has no measured column. */
+export type PtProperty = 'radius' | 'ionization' | 'electronegativity' | 'metallic'
+
+/** Which end of a ranking comes first. */
+export type PtDirection = 'increasing' | 'decreasing'
+
+/** The reason a trend comparison happens. The wording she picks lives with the periodic module. */
+export type PtWhyReason = 'protons' | 'shells' | 'shielding'
+
+/** One checked part of a periodic-table problem. */
+export type PtStageId = 'a' | 'b' | 'c' | 'd' | 'e'
+
+/**
+ * How to recompute one part from the tables. The grader uses this. The solve-again test does not:
+ * it reads the prompt and looks the value up on its own.
+ */
+export type PtCheck =
+  | { kind: 'period'; z: number }
+  | { kind: 'group'; z: number }
+  | { kind: 'block'; z: number }
+  | { kind: 'class'; z: number }
+  | { kind: 'family'; z: number }
+  | { kind: 'valence'; z: number }
+  /** Valence electrons of a main-group column. Group 18 means 8, and the prompt excludes helium. */
+  | { kind: 'valence-group'; group: number }
+  | { kind: 'config-valence'; config: string }
+  | { kind: 'config-block'; config: string }
+  | { kind: 'config-period'; config: string }
+  | { kind: 'rank'; property: PtProperty; direction: PtDirection; zs: number[] }
+  | { kind: 'larger'; z: number; charge: number }
+  /** Isoelectronic ions. `ions` is the set; radius order follows nuclear charge. */
+  | { kind: 'iso'; direction: PtDirection; ions: { z: number; charge: number }[] }
+  | { kind: 'why'; reason: PtWhyReason }
 
 /** Which complex-number screen this problem is. */
 export type ComplexNumsQuestion = 'arith' | 'divide' | 'powers' | 'quadratic' | 'zeros'
@@ -979,6 +1013,46 @@ export type AnswerSpec =
       trapAnswer: string
     }
   | {
+      /**
+       * The periodic table (chemistry, CK-12 chapter 6). Parts are checked one at a time.
+       * Grade a part with `gradePtStage`. Named mistakes are the `pt_` ids.
+       * A ranking is graded from the trend table, not from the rule alone.
+       */
+      type: 'periodic'
+      question: 'locate' | 'valence' | 'trends' | 'ions' | 'why'
+      /** What the problem is. No method and no trap. */
+      prompt: string
+      stages: {
+        id: PtStageId
+        kind: 'text' | 'choice'
+        /** Box or choice legend, e.g. "Period", "Order". */
+        label: string
+        /** Line under the box or the choices. Never this part's answer. */
+        hint: string
+        /** What a correct answer looks like. Choice parts use the choice id. */
+        answerText: string
+        /** Other spellings that grade correct, such as "no group" for an ungrouped element. */
+        accept?: string[]
+        /** Choice parts only. `trap` is set when that pick is a named mistake. */
+        choices?: { id: string; text: string; trap?: ErrorPatternId; witness?: string }[]
+        nudge: string
+        ruleCard: RuleCardId
+        /** Hint rung 3. May state this part's answer. */
+        reveal: string[]
+        /** Slips on this part, in detection order. `text` is the typed value or the choice id. */
+        traps: { id: ErrorPatternId; text: string; witness: string }[]
+        check: PtCheck
+      }[]
+      expectedDisplay: string
+      reveal: string[]
+      ruleCards: RuleCardId[]
+      /** The named mistake this seed promises, when one is possible. */
+      trap?: ErrorPatternId
+      trapStage?: PtStageId
+      /** What that slip produces. Never the right answer. */
+      trapAnswer?: string
+    }
+  | {
       type: 'drill'
       question: 'which_property' | 'legal_or_illegal'
       verdict: 'legal' | 'illegal'
@@ -989,6 +1063,9 @@ export type AnswerSpec =
 
 /** The geometry arm of `AnswerSpec`, named so the flow and the generators share it. */
 export type GeometryAnswer = Extract<AnswerSpec, { type: 'geometry' }>
+
+/** The periodic-table arm of `AnswerSpec`, named so the flow and the generators share it. */
+export type PeriodicAnswer = Extract<AnswerSpec, { type: 'periodic' }>
 
 export interface ProblemInstance {
   /** `${moduleId}/${templateId}@${genVersion}/${seedBase36}` */

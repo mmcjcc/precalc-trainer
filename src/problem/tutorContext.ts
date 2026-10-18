@@ -14,6 +14,8 @@ import type { CxGrade } from '@/content/modules/complexNums/grade'
 import { cxWork } from '@/content/modules/complexNums/build'
 import type { GeoGrade } from '@/content/modules/geometry/grade'
 import { geoWork } from '@/content/modules/geometry/build'
+import type { PtGrade } from '@/content/modules/periodic/grade'
+import { ptWork } from '@/content/modules/periodic/grade'
 import { EC_PATTERN } from '@/content/modules/electrons/patterns'
 import { POLY_PATTERN } from '@/content/modules/polynomials/patterns'
 import { TR_PATTERN } from '@/content/modules/transformations/patterns'
@@ -276,6 +278,20 @@ export function verdictFromCx(grade: CxGrade): TutorVerdict | null {
   })
 }
 
+/** The periodic table. The mistake id is already a pt_ catalog id. Unreadable input is a parse error. */
+export function verdictFromPt(grade: PtGrade): TutorVerdict | null {
+  if (grade.verdict === 'correct') return withMessage('correct', grade.message)
+  if (grade.verdict === 'wrong') return withMessage('wrong', grade.message)
+  if (grade.verdict === 'invalid') return withMessage('parse_error', grade.message)
+  const info = ERROR_PATTERNS[grade.mistake]
+  return withMessage('wrong', grade.witness, undefined, {
+    id: grade.mistake,
+    title: clip(info.title, 200),
+    lesson: clip(info.lesson, TUTOR_LIMITS.field),
+    witness: clip(grade.witness, TUTOR_LIMITS.field),
+  })
+}
+
 /** Geometry. The mistake id is already a geo_ catalog id. Unreadable input is a parse error. */
 export function verdictFromGeo(grade: GeoGrade): TutorVerdict | null {
   if (grade.verdict === 'correct') return withMessage('correct', grade.message)
@@ -381,6 +397,11 @@ function workOf(instance: ProblemInstance, attempt: Attempt | null): string[] {
       .slice(0, TUTOR_LIMITS.lines)
       .map((line) => clip(line, TUTOR_LIMITS.line))
   }
+  if (instance.answer.type === 'periodic') {
+    return ptWork(instance.answer, attempt.final?.polyEntries)
+      .slice(0, TUTOR_LIMITS.lines)
+      .map((line) => clip(line, TUTOR_LIMITS.line))
+  }
   const final = attempt.final
   if (!final) return []
   const lines: string[] = []
@@ -436,6 +457,8 @@ function statementOf(instance: ProblemInstance): string {
   } else if (answer.type === 'geometry') {
     const lines = answer.lines?.length ? ` Lines: ${answer.lines.join(' | ')}` : ''
     text = `${answer.prompt}${lines} Figure: ${answer.figure.ariaLabel}`
+  } else if (answer.type === 'periodic') {
+    text = answer.prompt
   }
   const clipped = clip(text, TUTOR_LIMITS.field)
   return clipped.trim() ? clipped : clip(instance.title, TUTOR_LIMITS.field)
@@ -461,7 +484,8 @@ function canonicalOf(instance: ProblemInstance): string[] {
     answer.type === 'rationalFns' ||
     answer.type === 'signCharts' ||
     answer.type === 'complexNums' ||
-    answer.type === 'geometry'
+    answer.type === 'geometry' ||
+    answer.type === 'periodic'
   ) {
     lines = answer.reveal
   }
@@ -494,6 +518,7 @@ function answerOf(instance: ProblemInstance): string | undefined {
     case 'signCharts':
     case 'complexNums':
     case 'geometry':
+    case 'periodic':
       text = answer.expectedDisplay
       break
     case 'graphFeatures':

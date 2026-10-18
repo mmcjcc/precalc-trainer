@@ -4,6 +4,7 @@ import type { RfGrade } from '@/content/modules/rationalFns/grade'
 import type { ScGrade } from '@/content/modules/signCharts/grade'
 import type { CxGrade } from '@/content/modules/complexNums/grade'
 import type { GeoGrade } from '@/content/modules/geometry/grade'
+import type { PtGrade } from '@/content/modules/periodic/grade'
 import type { PwGrade } from '@/content/modules/piecewiseRate/grade'
 import { EC_PATTERN } from '@/content/modules/electrons/patterns'
 import { POLY_PATTERN } from '@/content/modules/polynomials/patterns'
@@ -300,6 +301,24 @@ export function recordCxGrades(grade: CxGrade): void {
  * value that is not in simplest radical form, are not attempts: nothing is logged.
  */
 export function recordGeoGrades(grade: GeoGrade): void {
+  if (grade.verdict === 'invalid') return
+  const s = useStore.getState()
+  if (grade.verdict === 'correct') {
+    s.recordFinalAnswer({ correct: true, via: 'text' })
+    return
+  }
+  if (grade.verdict === 'mistake') {
+    s.recordFinalAnswer({ correct: false, pattern: grade.mistake, via: 'text' })
+    return
+  }
+  s.recordFinalAnswer({ correct: false, via: 'text' })
+}
+
+/**
+ * Log one periodic-table check. A named mistake is stored under its pt_ id. Unreadable input
+ * is not an attempt: nothing is logged.
+ */
+export function recordPtGrades(grade: PtGrade): void {
   if (grade.verdict === 'invalid') return
   const s = useStore.getState()
   if (grade.verdict === 'correct') {

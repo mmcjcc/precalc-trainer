@@ -1543,6 +1543,128 @@ export const ERROR_PATTERNS: Record<ErrorPatternId, ErrorPatternInfo> = {
     lesson: 'Opposite angles are the pair made by two crossing lines. The angles in this line sit next to each other and form a straight line, so their measures add to 180.',
     example: 'Angle 8 and the angle beside it on the straight line are called vertical ✗ → the two angles add to 180',
   },
+  // --- periodic table (content/modules/periodic; chemistry chapter 6). Examples use Fr, Ra, Po, At, Rn, ---
+  // which the templates never ask about, and they never use a bare answer the templates can generate.
+  pt_trend_reversed: {
+    id: 'pt_trend_reversed',
+    title: 'The list runs the other way',
+    lesson: 'The order you were asked for starts at one end of the property. Writing the same elements from the other end reverses the ranking, even when every symbol is one you were given.',
+    example: 'Fr, Ra, At from the large end when the small end was asked ✗ → start at the end the question names',
+  },
+  pt_radius_like_ionization: {
+    id: 'pt_radius_like_ionization',
+    title: 'Radius and ionization energy run opposite ways',
+    lesson: 'Atomic radius and first ionization energy move in opposite directions. A bigger atom holds its outer electron less tightly, so the largest atom is not the one that takes the most energy to ionize.',
+    example: 'Fr, Ra, At listed in the ionization order on a radius question ✗ → radius puts the largest atom at the other end',
+  },
+  pt_group_number_valence: {
+    id: 'pt_group_number_valence',
+    title: 'The column number is not the valence count',
+    lesson: 'On the right side of the table the column numbers run through the teens, but the outer shell holds fewer electrons than that. Valence electrons are only that outer shell: take ten off the column number there.',
+    example: "At's column number used as the valence count ✗ → only the outer shell counts",
+  },
+  pt_hydrogen_metal: {
+    id: 'pt_hydrogen_metal',
+    title: 'Hydrogen is not with the losers',
+    lesson: 'Hydrogen sits in the first column, but it does not lose an electron the way the elements under it do. Treat it with the elements on the right side of the staircase, not with that column.',
+    example: 'H grouped with the losers under it ✗ → group it with the right side of the staircase',
+  },
+  pt_helium_p_block: {
+    id: 'pt_helium_p_block',
+    title: 'Helium is not in the right-hand block',
+    lesson: 'Helium sits in the last column, but its only shell is the first one. That shell has a single subshell, and it is not the right-hand kind. The right-hand block starts on the next row.',
+    example: 'He placed in the right-hand block ✗ → the first shell has no right-hand subshell',
+  },
+  pt_cation_larger: {
+    id: 'pt_cation_larger',
+    title: 'A positive ion is smaller than its atom',
+    lesson: 'A positive ion has lost electrons. The nucleus then pulls a smaller cloud in more tightly, so the ion is not the larger of the two.',
+    example: 'Fr+ called the larger one ✗ → the neutral atom is larger',
+  },
+  pt_anion_smaller: {
+    id: 'pt_anion_smaller',
+    title: 'A negative ion is larger than its atom',
+    lesson: 'A negative ion has gained electrons. Those extra electrons repel one another and the cloud spreads out, so the ion is not the smaller of the two.',
+    example: 'At− called the smaller one ✗ → the ion is larger',
+  },
+  pt_isoelectronic_electron_count: {
+    id: 'pt_isoelectronic_electron_count',
+    title: 'Same electron count, so compare the protons',
+    lesson: 'In an isoelectronic series every ion has the same number of electrons. Size then follows the nucleus: fewer protons hold that cloud less tightly, and the ion is larger. Ordering them by the electron count of the neutral atoms reverses this.',
+    example: "Fr+, Ra2+ and At− ordered by the neutral atoms' electron counts ✗ → fewer protons means the larger ion",
+  },
+  pt_period_as_valence: {
+    id: 'pt_period_as_valence',
+    title: 'The row is not the outer-shell count',
+    lesson: 'The period is the row, counted from the top of the table. The number of electrons in the outer shell is a different count. Do not use that outer-shell count as the row.',
+    example: 'The outer-shell count used as the row ✗ → count the rows from the top',
+  },
+  pt_f_as_d_block: {
+    id: 'pt_f_as_d_block',
+    title: 'The bottom rows are not the middle block',
+    lesson: 'The two rows set below the main table fill inner subshells the middle columns do not use. The middle block is the ten columns in the main table. Those bottom rows are their own block.',
+    example: 'The bottom row called a middle-block element ✗ → those rows are their own block',
+  },
+  pt_helium_octet: {
+    id: 'pt_helium_octet',
+    title: 'Helium does not have a full octet',
+    lesson: 'A full octet is the eight electrons of a later noble gas. Helium’s only shell holds a pair, and that pair is the whole shell. Do not give helium the later noble gases’ count.',
+    example: 'He given an octet ✗ → a pair fills its only shell',
+  },
+  pt_valence_is_atomic_number: {
+    id: 'pt_valence_is_atomic_number',
+    title: 'Valence electrons are not every electron',
+    lesson: 'The atomic number counts every electron in the neutral atom, inner shells included. Valence electrons are only the outer shell. The two counts match only on the first row.',
+    example: "Rn's place in the table used as the valence count ✗ → count the outer shell only",
+  },
+  pt_valence_is_period: {
+    id: 'pt_valence_is_period',
+    title: 'The row number is not the valence count',
+    lesson: 'The period numbers the row. Valence electrons are the count in the outer shell, not the number of the row. They match for some atoms and not for others.',
+    example: "Po's row number used as the valence count ✗ → count the outer shell",
+  },
+  pt_alkaline_called_alkali: {
+    id: 'pt_alkaline_called_alkali',
+    title: 'The second column is not the first column’s family',
+    lesson: 'The first column, under hydrogen, is one family. The second column is the next family: those atoms lose a pair of outer electrons, not a single one.',
+    example: 'Ra called a first-column element ✗ → the second column is its own family',
+  },
+  pt_alkali_called_alkaline: {
+    id: 'pt_alkali_called_alkaline',
+    title: 'The first column is not the second column’s family',
+    lesson: 'The second column is its own family. The first column, other than hydrogen, loses one outer electron. That is a different family from the column beside it.',
+    example: 'Fr called a second-column element ✗ → the first column under hydrogen is its own family',
+  },
+  pt_metalloid_called_metal: {
+    id: 'pt_metalloid_called_metal',
+    title: 'The staircase elements are the in-between group',
+    lesson: 'Elements that touch the staircase are not the losers on the left and not the gainers on the right. They are the in-between group. Calling one a loser puts it on the wrong side.',
+    example: 'A staircase element called a loser ✗ → the staircase elements are the in-between group',
+  },
+  pt_metal_called_metalloid: {
+    id: 'pt_metal_called_metalloid',
+    title: 'Left of the staircase is not the in-between group',
+    lesson: 'An element well to the left of the staircase loses electrons. The in-between group is only the elements that touch the staircase itself. The losers are not in that group.',
+    example: 'Ra called an in-between element ✗ → it sits with the losers on the left',
+  },
+  pt_why_shells_across_period: {
+    id: 'pt_why_shells_across_period',
+    title: 'A shared row does not add a shell',
+    lesson: 'Two elements in the same row have the same number of shells. The difference across that row is how hard the nucleus pulls on the shell they already share, not a new shell.',
+    example: 'Xe and I explained by a new shell ✗ → they share a row, so the nucleus pulls on the shell they both have',
+  },
+  pt_why_shielding_same_shell: {
+    id: 'pt_why_shielding_same_shell',
+    title: 'Inner electrons are not what changes across a row',
+    lesson: 'The inner electrons change when a new inner shell is added, which happens down a column. Across a row those inner shells stay the same. What changes is how hard the nucleus pulls on the shared outer shell.',
+    example: 'Xe and I explained by inner electrons ✗ → across one row the nucleus pulls harder on the shared shell',
+  },
+  pt_why_protons_down_group: {
+    id: 'pt_why_protons_down_group',
+    title: 'Down a column, the shared-shell pull is not the reason',
+    lesson: 'Going down a column adds a shell, and the inner electrons stand between the nucleus and the outer electron. The across-the-row reason, a harder pull on one shared shell, is not what changes here.',
+    example: 'Cs and Fr explained by a harder pull on one shell ✗ → a new shell and the electrons inside it are what change',
+  },
   // --- behavioral (ui) ---
   abandoned: {
     id: 'abandoned',

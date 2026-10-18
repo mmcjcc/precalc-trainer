@@ -76,11 +76,12 @@ describe('course registry', () => {
     ])
     expect(unitsWithModules(precalc!).map((u) => u.id)).toEqual(['unit1', 'unit2'])
     expect(precalc!.units.map((u) => u.id)).toEqual(['unit1', 'unit2'])
-    expect(unitsWithModules(chemistry!).map((u) => u.id)).toEqual(['ch3', 'ch4', 'ch5'])
+    expect(unitsWithModules(chemistry!).map((u) => u.id)).toEqual(['ch3', 'ch4', 'ch5', 'ch6'])
     expect(chemistry!.units.map((u) => [u.id, u.moduleIds])).toEqual([
       ['ch3', ['sigFigs']],
       ['ch4', ['atoms']],
       ['ch5', ['electrons']],
+      ['ch6', ['periodic']],
     ])
     const geometry = getCourse('geometry')
     expect(geometry?.units.map((u) => [u.id, u.label, u.title, u.moduleIds])).toEqual([

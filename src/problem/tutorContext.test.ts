@@ -8,6 +8,7 @@ import { canonicalEntries as rfEntries, gradeRfStage, RF_KEYS, rfWork } from '@/
 import { canonicalEntries as scEntries, gradeScStage, SC_KEYS, scWork } from '@/content/modules/signCharts'
 import { canonicalEntries as cxEntries, gradeCxStage, CX_KEYS, cxWork } from '@/content/modules/complexNums'
 import { canonicalEntries as geoEntries, gradeGeoStage, GEO_KEYS, geoWork } from '@/content/modules/geometry'
+import { gradePtStage, PT_KEYS, ptWork } from '@/content/modules/periodic'
 import { reasonLabel } from '@/content/modules/geometry/reasons'
 import { checkSquareLine, configurationMistakes, gradeAxisOfSymmetry, gradeConfiguration, gradeVertex, squareMistakes, syntheticMistakes, vertexMistakes } from '@/engine'
 import { ratToString } from '@/notation'
@@ -28,6 +29,7 @@ import {
   verdictFromSc,
   verdictFromCx,
   verdictFromGeo,
+  verdictFromPt,
 } from '@/problem/tutorContext'
 import type { Attempt, AttemptStep } from '@/store'
 import type { StepResult } from '@/shared/types'
@@ -858,6 +860,42 @@ describe('buildTutorContext', () => {
     expect(shown.statement).toContain('Lines:')
     for (const line of algebra.answer.lines ?? []) expect(shown.statement).toContain(line)
     expect(shown.canonical.length).toBe(algebra.answer.stages.length)
+  })
+
+  it('describes a periodic-table problem and her parts, with the named slip', () => {
+    const instance = generateProblem('periodic', 'pt.locate', 1)
+    if (instance.answer.type !== 'periodic') throw new Error('expected a periodic-table problem')
+    const a = instance.answer
+    const entries: Record<string, string> = {}
+    for (const stage of a.stages) entries[PT_KEYS[stage.id]] = stage.answerText
+    const ctx = buildTutorContext(instance, attempt('pt-1', { moduleId: 'periodic', final: { polyEntries: entries } }), null, false)
+    expect(ctx.subject).toBe('chemistry')
+    expect(ctx.kind).toBe('periodic')
+    expect(ctx.moduleId).toBe('periodic')
+    expect(ctx.statement).toBe(a.prompt)
+    expect(ctx.work).toEqual(ptWork(a, entries))
+    expect(ctx.answer).toBe(a.expectedDisplay)
+    expect(ctx.canonical[0]).toBe(a.reveal[0])
+    expect(ctx.finished).toBe(false)
+    if (!a.trap || !a.trapStage || a.trapAnswer == null) throw new Error('seed 1 has no promised trap')
+    const trap = gradePtStage(a, a.trapStage, a.trapAnswer)
+    expect(trap.verdict).toBe('mistake')
+    if (trap.verdict !== 'mistake') return
+    const verdict = verdictFromPt(trap)
+    expect(verdict?.status).toBe('wrong')
+    expect(verdict?.mistake?.id).toBe(a.trap)
+    expect(verdict?.mistake?.lesson).toBeTruthy()
+    expect(verdict?.mistake?.witness).toBe(trap.witness)
+    const bad = buildTutorContext(
+      instance,
+      attempt('pt-2', { moduleId: 'periodic', final: { polyEntries: { [PT_KEYS[a.trapStage]]: a.trapAnswer } } }),
+      verdict,
+      false,
+    )
+    expect(bad.work).toEqual([expect.stringContaining(a.trapAnswer)])
+    expect(bad.verdict?.mistake?.id).toBe(a.trap)
+    expect(verdictFromPt(gradePtStage(a, a.stages[0]!.id, '???'))?.status).toBe('parse_error')
+    expect(buildTutorContext(instance, attempt('pt-3', { moduleId: 'periodic' }), null, false).work).toEqual([])
   })
 
   it('never adds a name, email, or account field', () => {

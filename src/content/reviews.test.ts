@@ -37,6 +37,7 @@ describe('review definitions', () => {
     expect(ids).not.toContain('sigFigs')
     expect(ids).not.toContain('atoms')
     expect(ids).not.toContain('electrons')
+    expect(ids).not.toContain('periodic')
   })
 
   it('is a list, so a later unit is another entry', () => {
