@@ -89,17 +89,6 @@ function congKey(text: string): string | null {
     .join('-')
 }
 
-function undirected(name: string): string {
-  const [a, b] = [name[0]!, name[1]!]
-  return a < b ? `${a}${b}` : `${b}${a}`
-}
-
-function triSides(tri: string): Set<string> {
-  const sides = new Set<string>()
-  for (let i = 0; i < 3; i++) sides.add(undirected(`${tri[i]!}${tri[(i + 1) % 3]!}`))
-  return sides
-}
-
 function expectRows(seed: number, skeleton: string, rows: Row[]) {
   const built = proof(seed)
   expect(built.skeleton, `seed ${seed}`).toBe(skeleton)
@@ -232,11 +221,11 @@ describe('two-column triangle skeletons, each row written out', () => {
   it('sas-midpoint: the midpoint makes the two halves, which are a side of SAS', () => {
     expectRows(10, 'sas-midpoint', [
       { pick: 'reason', statement: MID, reason: 'given' },
-      { pick: 'reason', statement: SIDE, reason: 'def-midpoint' },
+      { pick: 'statement', statement: SIDE, reason: 'def-midpoint' },
       { pick: 'reason', statement: SIDE, reason: 'given' },
       { pick: 'reason', statement: ANG, reason: 'given' },
       { pick: 'reason', statement: CONG, reason: 'post-sas' },
-      { pick: 'statement', statement: SIDE, reason: 'thm-cpctc' },
+      { pick: 'reason', statement: SIDE, reason: 'thm-cpctc' },
     ])
   })
 
@@ -294,31 +283,22 @@ describe('two-column triangle skeletons, each row written out', () => {
     }
   })
 
-  it('the midpoint CPCTC trap pairs two real sides, and a side that is not a side of either triangle is plain wrong', () => {
+  it('the midpoint proof ends on its Prove line, and the row she completes is the definition of a midpoint', () => {
+    // Reviewer's fix: it used to prove the triangles, add a CPCTC row after Prove, and offer AB ≅ DC there,
+    // which is also a pair of corresponding parts (a right answer graded wrong).
     for (let step = 0; step < 20; step++) {
       const seed = 10 + step * SKELETONS.length
       const built = proof(seed)
-      const stage = built.answer.stages[5]!
-      const right = statementOf(stage)
-      const names = /^Triangles ([A-Z]{3}) and ([A-Z]{3})\./.exec(built.answer.figure.ariaLabel)
-      expect(names, `seed ${seed}`).toBeTruthy()
-      const sides = new Set<string>([...triSides(names![1]!), ...triSides(names![2]!)])
-      const order = stage.choices?.find((choice) => choice.id === 'order')
-      const halves = /^([A-Z]{2}) ≅ ([A-Z]{2})$/.exec(order?.text ?? '')
-      expect(halves, `seed ${seed} ${order?.text}`).toBeTruthy()
-      expect(sides.has(undirected(halves![1]!)) && sides.has(undirected(halves![2]!)), order?.text).toBe(true)
-      expect(order?.text).not.toBe(right)
-      expect(order?.trap).toBe('geo_vertices_out_of_order')
-      expect(gradeGeoStage(built.answer, stage.id, 'order')).toMatchObject({
-        verdict: 'mistake',
-        mistake: 'geo_vertices_out_of_order',
-      })
-      for (const choice of stage.choices ?? []) {
-        const parts = /^([A-Z]{2}) ≅ ([A-Z]{2})$/.exec(choice.text)
-        if (!parts) continue
-        if (!sides.has(undirected(parts[1]!)) || !sides.has(undirected(parts[2]!))) {
-          expect(choice.trap, `${seed} ${choice.text}`).toBeUndefined()
-        }
+      const stages = built.answer.stages
+      const prove = /Prove: (.+)\.$/.exec(built.answer.prompt)?.[1]
+      expect(statementOf(stages[stages.length - 1]!), `seed ${seed}`).toBe(prove)
+      const pick = stages[1]!
+      expect(pick.kind).toBe('choice')
+      expect(statementOf(pick), `seed ${seed}`).toMatch(/^[A-Z]M ≅ [A-Z]M$/)
+      for (const choice of pick.choices ?? []) {
+        if (choice.id === pick.answerText) continue
+        expect(choice.trap, `${seed} ${choice.text}`).toBeUndefined()
+        expect(gradeGeoStage(built.answer, pick.id, choice.id).verdict, `${seed} ${choice.text}`).toBe('wrong')
       }
     }
   })

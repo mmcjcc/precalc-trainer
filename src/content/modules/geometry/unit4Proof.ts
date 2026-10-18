@@ -27,9 +27,9 @@ const REASON_NUDGE =
   'Name the fact that makes this line legal. A fact about corresponding parts comes after the triangles are proved congruent, and a side that lies in both triangles is not one of the starting facts.'
 const CHOICE_HINT = 'Pick the statement this row needs.'
 const CHOICE_NUDGE = 'A sentence can be true of the figure and still belong on a different row.'
-const NOTE_PART = 'The triangles were proved congruent on an earlier row. This row names one pair of corresponding parts.'
 const NOTE_TRI = 'The rows above are the facts this step needs. Which sentence do they support?'
 const NOTE_RIGHT = 'The two lines meet at this vertex. Which sentence names the angle there?'
+const NOTE_MID = 'The row above names a midpoint. Which sentence does the definition of a midpoint give?'
 const ORDER_W = 'That order pairs vertices the marks do not pair. Read the correspondence, not a different order of the letters.'
 const ROTS = [70, 110, 160, 200, 250, 300]
 
@@ -812,8 +812,11 @@ function sasMidpoint(_unused: undefined, salt: number): Built {
   assertSame('mid sides', dist(points, A, B), dist(points, D, C))
   assertSame('mid angles', wedge(points, B, A, 'M'), wedge(points, C, D, 'M'), 0.4)
   const givens = [`M is the midpoint of ${B}${C}`, eq(`${A}${B}`, `${D}${C}`), eq(angOf(t1, 1), angOf(t2, 1))]
-  const prove = eq(tri(t1), tri(t2))
+  // The proof ends on the corresponding parts, so that is what it proves; the row she completes is the
+  // definition of the midpoint. (Proving the triangles and then one more row would not end on Prove.)
   const part = eq(`${A}M`, `${D}M`)
+  const prove = part
+  const halves = eq(`${B}M`, `${C}M`)
   return done(
     {
       id: 'sas-midpoint',
@@ -835,16 +838,17 @@ function sasMidpoint(_unused: undefined, salt: number): Built {
       }),
       rows: [
         reason(givens[0]!, 'given'),
-        reason(eq(`${B}M`, `${C}M`), 'def-midpoint'),
+        // True or not, none of the others is what the definition of a midpoint says.
+        statementRow(halves, 'def-midpoint', NOTE_MID, [
+          { id: 'right', text: halves },
+          { id: 'whole', text: eq(`${B}M`, `${B}${C}`) },
+          { id: 'other', text: eq(`${A}M`, `${B}${C}`) },
+          { id: 'given', text: eq(`${A}${B}`, `${D}${C}`) },
+        ]),
         reason(givens[1]!, 'given'),
         reason(givens[2]!, 'given'),
-        reason(prove, 'post-sas'),
-        statementRow(part, 'thm-cpctc', NOTE_PART, [
-          { id: 'right', text: part },
-          { id: 'order', text: eq(`${A}M`, `${C}M`), trap: 'geo_vertices_out_of_order', witness: ORDER_W },
-          { id: 'other', text: eq(`${A}M`, `${B}${C}`) },
-          { id: 'else', text: eq(`${A}${B}`, `${D}${C}`) },
-        ]),
+        reason(eq(tri(t1), tri(t2)), 'post-sas'),
+        reason(part, 'thm-cpctc'),
       ],
     },
     salt,
