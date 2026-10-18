@@ -41,8 +41,14 @@ const apart = (p: GeoLabelBox, q: GeoLabelBox) => p.r <= q.l || q.r <= p.l || p.
 
 /** Every drawn label inside the figure, clear of every stroke by 1 px, and clear of every other label and dot. */
 function layoutProblems(spec: GeoFigureSpec): string[] {
-  const { width, height, strokes, dots, labels } = geoFigureLayout(spec)
+  const { width, height, strokes, dots, labels, leaders } = geoFigureLayout(spec)
   const out: string[] = []
+  // A leader line may touch only its own label.
+  for (const leader of leaders) {
+    for (const label of labels) {
+      if (label.text !== leader.text && crosses(leader.stroke, label, 0)) out.push(`the leader to ${leader.text} crosses ${label.kind} ${label.text}`)
+    }
+  }
   for (const label of labels) {
     if (label.l < 0 || label.t < 0 || label.r > width || label.b > height) out.push(`${label.kind} ${label.text} leaves the figure`)
     if (strokes.some((s) => crosses(s, label, 1))) out.push(`${label.kind} ${label.text} sits on a line`)

@@ -398,8 +398,10 @@ function placeLabels(spec: GeoFigureSpec) {
   }
   taken.push(...parallelMarkBoxes(spec, at, h))
   const strokes = drawnStrokes(spec, at, h)
-  const anglePlaces = placeAngleLabels(spec, at, h, taken, strokes)
-  const linePlaces = placeLineLabels(spec, at, h, taken, strokes)
+  // What later labels keep off: the drawn lines plus each leader line as it is placed.
+  const avoid = [...strokes]
+  const anglePlaces = placeAngleLabels(spec, at, h, taken, avoid)
+  const linePlaces = placeLineLabels(spec, at, h, taken, avoid)
   return { sx, sy, h, at, pointSides, anglePlaces, linePlaces, strokes }
 }
 
@@ -414,7 +416,15 @@ export interface GeoLabelBox extends Box {
  * and every label it draws as a box. Tests use this to check that labels keep off the lines, off the dots,
  * off each other, and inside the figure.
  */
-export function geoFigureLayout(spec: GeoFigureSpec): { width: number; height: number; strokes: Stroke[]; dots: Box[]; labels: GeoLabelBox[] } {
+export function geoFigureLayout(spec: GeoFigureSpec): {
+  width: number
+  height: number
+  strokes: Stroke[]
+  dots: Box[]
+  labels: GeoLabelBox[]
+  /** Leader lines, each with the text of the label it leads to. */
+  leaders: { text: string; stroke: Stroke }[]
+} {
   const { sx, sy, h, pointSides, anglePlaces, linePlaces, strokes } = placeLabels(spec)
   const labels: GeoLabelBox[] = []
   const dots: Box[] = []
@@ -431,7 +441,11 @@ export function geoFigureLayout(spec: GeoFigureSpec): { width: number; height: n
     const place = linePlaces[i]
     if (line.label && place) labels.push({ kind: 'line', text: line.label, ...textBox(place.x, place.y, line.label, LINE_LABEL_SIZE) })
   })
-  return { width: VW, height: h, strokes, dots, labels }
+  const leaders = (spec.angles ?? []).flatMap((angle, i) => {
+    const leader = anglePlaces[i]?.leader
+    return angle.label && leader ? [{ text: angle.label, stroke: leader }] : []
+  })
+  return { width: VW, height: h, strokes, dots, labels, leaders }
 }
 
 /**
@@ -469,25 +483,40 @@ function placeAngleLabels(
     }
     // A number without an arc creeps out in small steps, so it stays near its vertex.
     const step = g.arc ? 6 : 2
-    for (let r = g.labelR; r <= g.labelR + 200; r += step) candidates.push({ dir: g.bis, r })
-    // A narrow angle with no room inside (a long label in a triangle's sharp corner): just outside the
-    // angle, past either side, with a leader back to its arc.
-    if (!whole && g.arc) {
+    const outside = (from: number, to: number) => {
       for (const past of [g.angA + g.delta, g.angA]) {
         const away = past === g.angA ? -sign : sign
-        for (const deg of [12, 20, 30, 45]) for (let r = g.outer + 8; r <= g.outer + 110; r += 8) candidates.push({ dir: past + away * (deg * Math.PI) / 180, r })
+        for (const deg of [12, 20, 30, 45]) for (let r = g.outer + from; r <= g.outer + to; r += 8) candidates.push({ dir: past + away * (deg * Math.PI) / 180, r })
       }
+    }
+    if (g.arc && !whole) {
+      // Near the vertex first: a little way along the middle of the angle, then just outside the angle
+      // past either side (a long label in a triangle's corner), and only then farther out. A label far
+      // along the middle can end up beside another vertex, where it reads as that angle's.
+      for (let r = g.labelR; r <= g.labelR + 48; r += step) candidates.push({ dir: g.bis, r })
+      outside(8, 64)
+      for (let r = g.labelR + 48 + step; r <= g.labelR + 200; r += step) candidates.push({ dir: g.bis, r })
+      outside(72, 110)
+    } else {
+      for (let r = g.labelR; r <= g.labelR + 200; r += step) candidates.push({ dir: g.bis, r })
     }
     for (const c of candidates) {
       const { x, y } = at_(c.dir, c.r)
       const box = textBox(x, y, angle.label, 13)
       if (!clear(box)) continue
-      taken.push(box)
-      if (c.dir === g.bis && (c.r === g.labelR || !g.arc)) return { x, y }
+      if (c.dir === g.bis && (c.r === g.labelR || !g.arc)) {
+        taken.push(box)
+        return { x, y }
+      }
       // A leader from the arc (or, with no arc, from inside the angle) to the nearest edge of the label.
+      // It may not cross another label, and later labels keep off it.
       const onArc = at_(clampAngle(c.dir, g.angA, g.delta), g.arc ? g.outer + 2 : NUMBER_R)
       const near = { x: Math.min(Math.max(onArc.x, box.l), box.r), y: Math.min(Math.max(onArc.y, box.t), box.b) }
-      return { x, y, leader: [onArc.x, onArc.y, near.x, near.y] }
+      const leader: Stroke = [onArc.x, onArc.y, near.x, near.y]
+      if (taken.some((t) => segmentHitsBox(leader, t))) continue
+      taken.push(box)
+      strokes.push(leader)
+      return { x, y, leader }
     }
     // No clear spot inside the figure: keep the usual one.
     const { x, y } = at_(g.bis, g.labelR)
