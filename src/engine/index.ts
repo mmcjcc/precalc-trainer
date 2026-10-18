@@ -272,3 +272,7 @@ export * from './polynomials'
 // Exponentials and logarithms (precalculus): log/ln semantics, log properties and exponent rules line by
 // line, exponential and log equations with the extraneous check, exact values. API in docs/progress/explog-core.md.
 export * from './logs'
+
+// Chemical nomenclature (chemistry, CK-12 ch. 7): ions, ionic and binary molecular compounds, acids and hydrates,
+// formula to name and back, nm_ named mistakes. API in docs/progress/nomenclature-core.md.
+export * from './nomenclature'
