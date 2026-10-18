@@ -4,6 +4,7 @@
  */
 import { describe, expect, it } from 'vitest'
 import { checkLogStep, gradeConvertForm, gradeLogEquation, gradeLogValue } from '@/engine'
+import { InputSyntaxError, rewriteLogSyntax } from './syntax'
 
 const verdict = (g: { verdict: string }) => g.verdict
 const named = (g: { verdict: string; pattern?: { id: string }; mistake?: string }) =>
@@ -86,6 +87,40 @@ describe('form conversion', () => {
     expect(verdict(gradeConvertForm('log_4(64) = 3', '4^3 = 64'))).toBe('correct')
     expect(verdict(gradeConvertForm('10^-2 = 0.01', 'log(0.01) = -2'))).toBe('correct')
     expect(named(gradeConvertForm('log_4(64) = 3', '3^4 = 64'))).toBe('log_convert_swapped')
+  })
+})
+
+describe('parser findings from the Gemini 4 review, each confirmed by running it', () => {
+  it('a / or * after a log without parentheses asks for them, unless another log follows', () => {
+    expect(rewriteLogSyntax('ln 7/ln 2')).toBe('ln(7)/ln(2)')
+    expect(rewriteLogSyntax('log 7 / log 2')).toBe('log(7) / log(2)')
+    // "ln 1/2" was read as ln(1)/2, and "log_2 1/8" as log_2(1)/8 (then named a quotient-rule slip).
+    for (const s of ['ln 1/2', 'log_2 1/8', 'log 2*x', 'ln 5/2', 'lnx/2', 'log100/2']) {
+      expect(() => rewriteLogSyntax(s), s).toThrow(InputSyntaxError)
+    }
+    expect(verdict(gradeLogEquation('e^(2x) = 5', 'ln 5/2'))).toBe('invalid')
+    expect(verdict(gradeLogEquation('e^(2x) = 5', 'ln(5)/2'))).toBe('correct')
+    expect(verdict(gradeLogEquation('2^x = 7', 'ln 7/ln 2'))).toBe('correct')
+    expect(verdict(gradeLogValue('log_2(1/8)', 'log_2 1/8'))).toBe('invalid')
+  })
+  it('logBASE needs both inputs, as on the TI-84', () => {
+    expect(() => rewriteLogSyntax('logBASE(8)')).toThrow(InputSyntaxError)
+    expect(rewriteLogSyntax('logBASE(8, 2)')).toBe('log(8, 2)')
+    expect(rewriteLogSyntax('logBASE(log(100), 2)')).toBe('log(log(100), 2)')
+  })
+  it('base e written as E is ln', () => {
+    expect(rewriteLogSyntax('log_{E}(x)')).toBe('ln(x)')
+    expect(rewriteLogSyntax('log_e(x)')).toBe('ln(x)')
+  })
+  it('an error inside a log points at its own character in the whole entry', () => {
+    let caught: unknown
+    try {
+      rewriteLogSyntax('log_2(ln 2x)')
+    } catch (e) {
+      caught = e
+    }
+    expect(caught).toBeInstanceOf(InputSyntaxError)
+    expect((caught as InputSyntaxError).position).toBe(6)
   })
 })
 

@@ -63,15 +63,23 @@ function matching(s: string, open: number): number {
   return -1
 }
 
-/** What may come right after a parenthesis-free argument: an operator, a closing bracket, a comma, the end. */
-function argumentEndsAt(s: string, k: number): boolean {
+/**
+ * What may come right after a parenthesis-free argument: an operator, a closing bracket, a comma, the end.
+ * "^" may not ("ln x^2"), and "*" or "/" only before another log ("ln 7/ln 2"): "ln 1/2" could be
+ * ln(1/2) or (ln 1)/2, so it throws and asks for parentheses.
+ */
+function argumentEndsAt(s: string, k: number, name: 'log' | 'ln'): boolean {
   const j = skipSpaces(s, k)
   if (j >= s.length) return true
   const c = s[j]!
-  if ('+-*/=<>),]}|'.includes(c)) {
-    // "2^x" after a parenthesis-free argument would be ambiguous: ln x^2.
-    return true
+  if (c === '*' || c === '/') {
+    if (/^l(?:og|n)/i.test(s.slice(skipSpaces(s, j + 1)))) return true
+    throw new InputSyntaxError(
+      `Use parentheses to show what the ${name} covers, like ${name}(a)${c}b or ${name}(a${c}b). Without them it is not clear whether the ${c} is inside the ${name}.`,
+      j,
+    )
   }
+  if ('+-=<>),]}|'.includes(c)) return true
   // "or" / "and" between relations never reach here (the statement is split first), but a
   // relation sign typed with a glyph might.
   return '≤≥≠'.includes(c)
@@ -127,7 +135,7 @@ function needParens(name: string, at: number, len: number): InputSyntaxError {
 function logCall(arg: string, base: string | null): string {
   if (base === null) return `log(${arg})`
   const b = base.trim()
-  if (b === 'e') return `ln(${arg})`
+  if (b === 'e' || b === 'E') return `ln(${arg})`
   if (b === '10') return `log(${arg})`
   return `log(${arg}, ${b})`
 }
@@ -138,7 +146,7 @@ function readBase(s: string, k: number): { text: string; end: number } {
   if (s[j] === '(' || s[j] === '{') {
     const g = readGroup(s, j, 'the base')
     if (!g.inner.trim()) throw new InputSyntaxError('The base of the log is empty: write it after the _, like log_2(8).', j, g.end - j)
-    return { text: rewriteLogSyntax(g.inner), end: g.end }
+    return { text: rewriteInside(g.inner, j + 1), end: g.end }
   }
   if (isDigit(s[j])) {
     let e = j
@@ -181,7 +189,10 @@ export function rewriteLogSyntax(src: string): string {
       const at = i + k
       if (lower.startsWith('logbase', k)) {
         const after = skipSpaces(src, i + k + 7)
-        if (k + 7 !== run.length || src[after] !== '(') throw new InputSyntaxError('logBASE needs its two inputs in parentheses: logBASE(8, 2) is log base 2 of 8.', at, 7)
+        const usage = 'logBASE needs its two inputs in parentheses: logBASE(8, 2) is log base 2 of 8.'
+        if (k + 7 !== run.length || src[after] !== '(') throw new InputSyntaxError(usage, at, 7)
+        // logBASE(8) is a syntax error on the TI-84 too, not base 10.
+        if (!hasTopLevelComma(readGroup(src, after, 'logBASE').inner)) throw new InputSyntaxError(usage, at, 7)
         out += 'log'
         i = after
         handled = true
@@ -204,6 +215,26 @@ export function rewriteLogSyntax(src: string): string {
   return out
 }
 
+/** rewriteLogSyntax on a bracketed inside that starts at `offset` in the outer text; error positions stay in the outer text. */
+function rewriteInside(inner: string, offset: number): string {
+  try {
+    return rewriteLogSyntax(inner)
+  } catch (e) {
+    if (e instanceof InputSyntaxError) throw new InputSyntaxError(e.message, e.position + offset, e.length)
+    throw e
+  }
+}
+
+function hasTopLevelComma(s: string): boolean {
+  let depth = 0
+  for (const ch of s) {
+    if ('([{'.includes(ch)) depth++
+    else if (')]}'.includes(ch)) depth--
+    else if (ch === ',' && depth === 0) return true
+  }
+  return false
+}
+
 /**
  * One log starting at `at` (its name ends at `nameEnd`; the letter run it sits in ends at `runEnd`).
  * Returns the canonical text and where reading continues.
@@ -212,7 +243,7 @@ function rewriteOneLog(src: string, at: number, nameEnd: number, runEnd: number,
   // Letters glued to the name: "lnx" is ln(x); "logxy" and "lnsqrt(x)" are ambiguous.
   if (nameEnd < runEnd) {
     const atom = readAtom(src, nameEnd)
-    if (!atom || atom.end !== runEnd || !argumentEndsAt(src, atom.end)) throw needParens(name, at, Math.max(name.length, runEnd - at))
+    if (!atom || atom.end !== runEnd || !argumentEndsAt(src, atom.end, name)) throw needParens(name, at, Math.max(name.length, runEnd - at))
     return { text: name === 'ln' ? `ln(${atom.text})` : logCall(atom.text, null), end: atom.end }
   }
   const next = skipSpaces(src, nameEnd)
@@ -228,10 +259,10 @@ function rewriteOneLog(src: string, at: number, nameEnd: number, runEnd: number,
     if (src[open] === '(') {
       const g = readGroup(src, open, 'the log')
       if (!g.inner.trim()) throw new InputSyntaxError('The log has nothing inside its parentheses.', open, g.end - open)
-      return { text: logCall(rewriteLogSyntax(g.inner), base.text), end: g.end }
+      return { text: logCall(rewriteInside(g.inner, open + 1), base.text), end: g.end }
     }
     const atom = readAtom(src, open)
-    if (!atom || !argumentEndsAt(src, atom.end)) {
+    if (!atom || !argumentEndsAt(src, atom.end, name)) {
       throw new InputSyntaxError('Put the input of the log in parentheses right after its base: log_2(8) is log base 2 of 8.', at, Math.max(1, open - at))
     }
     return { text: logCall(atom.text, base.text), end: atom.end }
@@ -246,9 +277,9 @@ function rewriteOneLog(src: string, at: number, nameEnd: number, runEnd: number,
       if (!/^\d+$/.test(digits)) throw new InputSyntaxError(`Write a base with an underscore, like log_${digits}(x).`, next, e - next)
       const g = readGroup(src, open, 'the log')
       if (!g.inner.trim()) throw new InputSyntaxError('The log has nothing inside its parentheses.', open, g.end - open)
-      return { text: logCall(rewriteLogSyntax(g.inner), digits), end: g.end }
+      return { text: logCall(rewriteInside(g.inner, open + 1), digits), end: g.end }
     }
-    if (!/^(\d+\.?\d*|\.\d+)$/.test(digits) || !argumentEndsAt(src, e)) throw needParens(name, at, e - at)
+    if (!/^(\d+\.?\d*|\.\d+)$/.test(digits) || !argumentEndsAt(src, e, name)) throw needParens(name, at, e - at)
     return { text: logCall(digits, null), end: e }
   }
   if (c === undefined || !(isDigit(c) || isLetter(c))) {
@@ -257,11 +288,11 @@ function rewriteOneLog(src: string, at: number, nameEnd: number, runEnd: number,
   if (name === 'ln' && next === nameEnd && isDigit(c)) {
     // "ln2" is ln(2); "ln2(x)" is not a thing.
     const atom = readAtom(src, next)
-    if (!atom || !argumentEndsAt(src, atom.end)) throw needParens(name, at, Math.max(name.length, (atom?.end ?? next + 1) - at))
+    if (!atom || !argumentEndsAt(src, atom.end, name)) throw needParens(name, at, Math.max(name.length, (atom?.end ?? next + 1) - at))
     return { text: `ln(${atom.text})`, end: atom.end }
   }
   // "log 100", "ln x", "log x + 1": one atom after a space.
   const atom = readAtom(src, next)
-  if (!atom || !argumentEndsAt(src, atom.end)) throw needParens(name, at, Math.max(name.length, next - at + 1))
+  if (!atom || !argumentEndsAt(src, atom.end, name)) throw needParens(name, at, Math.max(name.length, next - at + 1))
   return { text: name === 'ln' ? `ln(${atom.text})` : logCall(atom.text, null), end: atom.end }
 }
