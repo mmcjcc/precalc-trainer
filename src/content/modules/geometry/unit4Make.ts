@@ -48,7 +48,8 @@ const WHICH_PROMPT = 'Which postulate or theorem, if any, proves the triangles c
 const ORDER_W = 'That order pairs vertices the marks do not pair. Read the correspondence, not the alphabet and not the picture.'
 const SSA_W = 'SSA is two sides and a non-included angle. It does not prove the triangles congruent. SAS needs the included angle.'
 const AAA_W = 'AAA is three pairs of angles. That shows the same shape, not the same size, so it does not prove the triangles congruent.'
-const HL_W = 'HL needs a right angle in each triangle and the hypotenuse. These triangles have no right angle, and SSA is a different pair of parts.'
+const HL_W = 'HL needs a right angle in each triangle and the hypotenuse. These triangles have no right angle.'
+const HL_SSA_W = 'HL needs a right angle in each triangle and the hypotenuse. These triangles have no right angle, and SSA is a different pair of parts.'
 const SAS_W = 'SAS needs the included angle, the one between the two sides. The angle here is not between them, so the pair is SSA.'
 const SWAP_W = 'That choice puts the side on the wrong side of the two angles. One of them is the side between the angles, and the other is a side that is not.'
 const SHARED_W = 'A side that lies in both triangles is congruent to itself. Leaving that pair out drops a pair the figure already shows.'
@@ -220,6 +221,8 @@ function numberStages(
   resultUnit: 'deg' | 'len',
   resultTrap: { id: ErrorPatternId; text: string; witness: string } | null,
   ruleCard: string,
+  // One triangle has no corresponding parts: each isosceles family says what to set equal.
+  how: { nudge: string; reveal: string } = { nudge: 'Set the two corresponding parts equal, then solve for x.', reveal: 'The two corresponding parts give one equation' },
 ): GeometryAnswer['stages'] {
   const xStage: GeometryAnswer['stages'][number] = {
     id: 'x',
@@ -227,9 +230,9 @@ function numberStages(
     label: 'x',
     hint: X_HINT,
     answerText: String(x),
-    nudge: 'Set the two corresponding parts equal, then solve for x.',
+    nudge: how.nudge,
     ruleCard,
-    reveal: [`The two corresponding parts give one equation, and x = ${x}.`],
+    reveal: [`${how.reveal}, and x = ${x}.`],
     traps: xTrap ? [xTrap] : [],
   }
   const rStage: GeometryAnswer['stages'][number] = {
@@ -374,7 +377,7 @@ function namePart(seed: number): GeoBuilt {
       const draft: ChoiceDraft = { id: i === correct ? 'right' : i === trapAt ? 'order' : `w${i}`, text: texts[i]! }
       if (i === trapAt) {
         draft.trap = 'geo_vertices_out_of_order'
-        draft.witness = ORDER_W
+        draft.witness = VERT_W
       }
       return draft
     })
@@ -528,7 +531,7 @@ function trapsFor(scene: Scene, answer: Method | 'none'): WhichTrap[] {
   if (isSsa(scene, methods)) {
     add('SSA', 'geo_ssa_as_congruence', SSA_W)
     add('SAS', 'geo_sas_not_included', SAS_W)
-    add('HL', 'geo_hl_no_right', HL_W)
+    add('HL', 'geo_hl_no_right', HL_SSA_W)
   }
   if (isAaa(scene, methods)) {
     add('AAA', 'geo_aaa_as_congruence', AAA_W)
@@ -1097,7 +1100,7 @@ export function drawIsosceles(seed: number): GeoBuilt {
       const visible = `${prompt}\n${figure.ariaLabel}`
       if (exposed(visible, String(x)) || exposed(visible, String(side))) continue
       hide('equilateral', visible, [String(x), String(side)])
-      const stages = numberStages(x, null, s0, side, 'len', { id: 'geo_equilateral_angle_for_side', text: '60', witness: EQ_W }, UNIT4_RULE_IDS.equilateral)
+      const stages = numberStages(x, null, s0, side, 'len', { id: 'geo_equilateral_angle_for_side', text: '60', witness: EQ_W }, UNIT4_RULE_IDS.equilateral, { nudge: 'All three sides of an equilateral triangle are congruent. Set two of them equal, then solve for x.', reveal: 'Two sides of the equilateral triangle are equal' })
       return numberAnswer('isoscelesSolve', prompt, figure, stages, [side, side, side], [60, 60, 60], 'geo_equilateral_angle_for_side', 'result', '60', 'Equilateral triangle', { case: 'equilateral' })
     }
     if (family === 3) {
@@ -1147,7 +1150,7 @@ export function drawIsosceles(seed: number): GeoBuilt {
       const visible = `${prompt}\n${figure.ariaLabel}`
       if ([String(x), String(base), String(trap.n)].some((secret) => exposed(visible, secret))) continue
       hide('vertex', visible, [String(x), String(base)])
-      const stages = numberStages(x, { id: 'geo_base_angles_wrong_vertex', text: String(trap.n), witness: BASE_W }, `m${angLetter(ids, askedBase)}`, base, 'deg', null, UNIT4_RULE_IDS.base)
+      const stages = numberStages(x, { id: 'geo_base_angles_wrong_vertex', text: String(trap.n), witness: BASE_W }, `m${angLetter(ids, askedBase)}`, base, 'deg', null, UNIT4_RULE_IDS.base, { nudge: 'The two base angles are congruent, and the three angles add to 180°. Use both to write one equation, then solve for x.', reveal: 'Two equal base angles and the vertex angle add to 180°' })
       return numberAnswer('isoscelesSolve', prompt, figure, stages, [9, 9, 8], stored, 'geo_base_angles_wrong_vertex', 'x', String(trap.n), 'Isosceles triangle', { case: 'vertex' })
     }
     if (family === 0) {
@@ -1193,7 +1196,7 @@ export function drawIsosceles(seed: number): GeoBuilt {
       const visible = `${prompt}\n${figure.ariaLabel}`
       if ([String(x), String(base), String(fit.trapX)].some((secret) => exposed(visible, secret))) continue
       hide('theorem', visible, [String(x), String(base)])
-      const stages = numberStages(x, { id: 'geo_base_angles_wrong_vertex', text: String(fit.trapX), witness: BASE_W }, `m${angLetter(ids, asked)}`, base, 'deg', null, UNIT4_RULE_IDS.base)
+      const stages = numberStages(x, { id: 'geo_base_angles_wrong_vertex', text: String(fit.trapX), witness: BASE_W }, `m${angLetter(ids, asked)}`, base, 'deg', null, UNIT4_RULE_IDS.base, { nudge: 'The angles opposite the congruent sides are congruent. Set those two angles equal, then solve for x.', reveal: 'The base angles are equal' })
       const leg = rng.int(8, 16)
       const baseSide = rng.int(6, leg + leg - 1)
       return numberAnswer('isoscelesSolve', prompt, figure, stages, [leg, leg, baseSide], measures, 'geo_base_angles_wrong_vertex', 'x', String(fit.trapX), 'Isosceles triangle', { case: 'theorem' })
@@ -1252,7 +1255,7 @@ export function drawIsosceles(seed: number): GeoBuilt {
     const visible = `${prompt}\n${figure.ariaLabel}`
     if ([String(x), String(leg), String(fit.trapX)].some((secret) => exposed(visible, secret))) continue
     hide('converse', visible, [String(x), String(leg)])
-    const stages = numberStages(x, { id: 'geo_base_angles_wrong_vertex', text: String(fit.trapX), witness: CONV_W }, askedName, leg, 'len', null, UNIT4_RULE_IDS.base)
+    const stages = numberStages(x, { id: 'geo_base_angles_wrong_vertex', text: String(fit.trapX), witness: CONV_W }, askedName, leg, 'len', null, UNIT4_RULE_IDS.base, { nudge: 'The sides opposite the congruent angles are congruent. Set those two sides equal, then solve for x.', reveal: 'The legs are equal' })
     const sideLens = [0, 1, 2].map((i) => ((i + 2) % 3 === a || (i + 2) % 3 === b ? leg : baseSide))
     return numberAnswer('isoscelesSolve', prompt, figure, stages, sideLens, stored, 'geo_base_angles_wrong_vertex', 'x', String(fit.trapX), 'Isosceles triangle', { case: 'converse' })
   }
