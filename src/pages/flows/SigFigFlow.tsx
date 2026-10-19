@@ -64,7 +64,7 @@ function SigFigHintPanel({ rung, content, onAdvance, disabled }: { rung: 0 | 1 |
   const exhausted = rung === 3
   return (
     <div className="space-y-3">
-      <p className="text-sm text-navy/70">Hints never appear on their own. Ctrl+Shift+H steps through them.</p>
+      <p className="text-sm text-navy/70">Hints never appear on their own.<span className="pointer-coarse:hidden"> Ctrl+Shift+H steps through them.</span></p>
       <button
         type="button"
         onClick={onAdvance}

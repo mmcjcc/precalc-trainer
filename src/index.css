@@ -34,6 +34,19 @@ html { height: 100%; -webkit-text-size-adjust: 100%; }
 body { min-height: 100%; background: #fff; color: var(--color-ink); overflow-wrap: anywhere; }
 #root { min-height: 100dvh; display: flex; flex-direction: column; }
 
+/* Edge to edge (viewport-fit=cover): the phone app is drawn under the status bar and the navigation bar, and a
+   notched iPhone under its notch. Keep the page inside the safe area, and put white bands behind the two bars so
+   the page never scrolls under their icons. In a browser tab every inset is 0 and nothing changes. The bands sit
+   under a bottom sheet (z-40), whose own padding already clears the navigation bar. */
+#root {
+  padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px)
+    env(safe-area-inset-left, 0px);
+}
+#root::before,
+#root::after { content: ""; position: fixed; left: 0; right: 0; z-index: 30; background: #fff; pointer-events: none; }
+#root::before { top: 0; height: env(safe-area-inset-top, 0px); }
+#root::after { bottom: 0; height: env(safe-area-inset-bottom, 0px); }
+
 /* iOS auto-zooms on focus when an input is under 16px. Keep every field at ≥16px. */
 input, textarea, select, button { font: inherit; }
 input[type="text"], input[type="password"], input:not([type]), textarea { font-size: max(16px, 1rem); }
