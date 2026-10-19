@@ -148,8 +148,9 @@ export function nodeToLatex(node: MathNode): string {
         if (isSumLike(a) || (i > 0 && isNegative(a))) tex = parens(tex)
         if (i === 0) return tex
         const prev = args[i - 1]!
-        // 2·3 and x·2 need an explicit dot; 2x, ±3 and 3x do not.
-        const needsDot = a.type === 'ConstantNode' && symbolName(prev) !== PM
+        // 2·3 and x·2 need an explicit dot; 2x, ±3 and 3x do not. A factor that starts with a digit
+        // (5·7^x) needs one too: written side by side, 5 and 7^x read as 57^x.
+        const needsDot = (a.type === 'ConstantNode' || /^\d/.test(tex)) && symbolName(prev) !== PM
         return needsDot ? `\\cdot ${tex}` : tex
       })
       .join('')
