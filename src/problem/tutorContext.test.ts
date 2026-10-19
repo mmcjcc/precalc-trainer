@@ -9,6 +9,7 @@ import { canonicalEntries as scEntries, gradeScStage, SC_KEYS, scWork } from '@/
 import { canonicalEntries as cxEntries, gradeCxStage, CX_KEYS, cxWork } from '@/content/modules/complexNums'
 import { canonicalEntries as geoEntries, gradeGeoStage, GEO_KEYS, geoWork } from '@/content/modules/geometry'
 import { gradePtStage, PT_KEYS, ptWork } from '@/content/modules/periodic'
+import { gradeNmStage, NM_KEYS, nmWork } from '@/content/modules/nomenclature'
 import { reasonLabel } from '@/content/modules/geometry/reasons'
 import { checkSquareLine, configurationMistakes, gradeAxisOfSymmetry, gradeConfiguration, gradeVertex, squareMistakes, syntheticMistakes, vertexMistakes } from '@/engine'
 import { ratToString } from '@/notation'
@@ -30,6 +31,7 @@ import {
   verdictFromCx,
   verdictFromGeo,
   verdictFromPt,
+  verdictFromNm,
 } from '@/problem/tutorContext'
 import type { Attempt, AttemptStep } from '@/store'
 import type { StepResult } from '@/shared/types'
@@ -896,6 +898,51 @@ describe('buildTutorContext', () => {
     expect(bad.verdict?.mistake?.id).toBe(a.trap)
     expect(verdictFromPt(gradePtStage(a, a.stages[0]!.id, '???'))?.status).toBe('parse_error')
     expect(buildTutorContext(instance, attempt('pt-3', { moduleId: 'periodic' }), null, false).work).toEqual([])
+  })
+
+  it('describes a nomenclature problem and her parts, with the named nm_ slip', () => {
+    const instance = generateProblem('ionicNames', 'nm.ionicFormula', 1)
+    if (instance.answer.type !== 'nomenclature') throw new Error('expected a nomenclature problem')
+    const a = instance.answer
+    const entries: Record<string, string> = {}
+    for (const stage of a.stages) entries[NM_KEYS[stage.id]] = stage.answerText
+    const ctx = buildTutorContext(instance, attempt('nm-1', { moduleId: 'ionicNames', final: { polyEntries: entries } }), null, false)
+    expect(ctx.subject).toBe('chemistry')
+    expect(ctx.kind).toBe('nomenclature')
+    expect(ctx.moduleId).toBe('ionicNames')
+    expect(ctx.statement).toBe(a.prompt)
+    expect(ctx.work).toEqual(nmWork(a, entries))
+    expect(ctx.work[0]).toBe(`${a.stages[0]!.label}: ${a.stages[0]!.answerText}`)
+    expect(ctx.answer).toBe(a.expectedDisplay)
+    expect(ctx.canonical[0]).toBe(a.reveal[0])
+    expect(ctx.finished).toBe(false)
+    if (!a.trap || !a.trapStage || a.trapAnswer == null) throw new Error('seed 1 has no promised trap')
+    const trap = gradeNmStage(a, a.trapStage, a.trapAnswer)
+    expect(trap.verdict).toBe('mistake')
+    if (trap.verdict !== 'mistake') return
+    const verdict = verdictFromNm(trap)
+    expect(verdict?.status).toBe('wrong')
+    expect(verdict?.mistake?.id).toBe(a.trap)
+    expect(verdict?.mistake?.lesson).toBeTruthy()
+    expect(verdict?.mistake?.witness).toBe(trap.witness)
+    const bad = buildTutorContext(
+      instance,
+      attempt('nm-2', { moduleId: 'ionicNames', final: { polyEntries: { [NM_KEYS[a.trapStage]]: a.trapAnswer } } }),
+      verdict,
+      false,
+    )
+    expect(bad.work).toEqual([expect.stringContaining(a.trapAnswer)])
+    expect(bad.verdict?.mistake?.id).toBe(a.trap)
+    // Not an attempt: unreadable, or a capital-letter slip, is a parse error; a problem outside the model gives no verdict.
+    expect(verdictFromNm(gradeNmStage(a, a.stages[0]!.id, '???'))?.status).toBe('parse_error')
+    expect(verdictFromNm({ verdict: 'unsupported', message: 'outside the model' })).toBeNull()
+    expect(verdictFromNm(gradeNmStage(a, a.trapStage, a.stages.at(-1)!.answerText))?.status).toBe('correct')
+    // A classify part shows the kind she picked in words.
+    const classify = generateProblem('molecularAcids', 'nm.classify', 1)
+    if (classify.answer.type !== 'nomenclature') throw new Error('expected a classify problem')
+    const picked = buildTutorContext(classify, attempt('nm-3', { moduleId: 'molecularAcids', final: { polyEntries: { a: 'hydrate' } } }), null, false)
+    expect(picked.work).toEqual(['Kind of compound: hydrate'])
+    expect(buildTutorContext(instance, attempt('nm-4', { moduleId: 'ionicNames' }), null, false).work).toEqual([])
   })
 
   it('describes a Unit 3 transversal, a triangle, and a line', () => {

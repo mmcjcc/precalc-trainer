@@ -19,6 +19,7 @@ import { SignChartsFlow } from './flows/SignChartsFlow'
 import { ComplexNumsFlow } from './flows/ComplexNumsFlow'
 import { GeometryFlow } from './flows/GeometryFlow'
 import { PeriodicFlow } from './flows/PeriodicFlow'
+import { NomenclatureFlow } from './flows/NomenclatureFlow'
 import { QuadraticsFlow } from './flows/QuadraticsFlow'
 import { TransformationFlow } from './flows/TransformationFlow'
 import { GraphFeaturesFlow } from './flows/GraphFeaturesFlow'
@@ -134,6 +135,8 @@ function ProblemBody({ instance, flags, templateTitle }: { instance: ProblemInst
       return <GeometryFlow {...props} />
     case 'periodic':
       return <PeriodicFlow {...props} />
+    case 'nomenclature':
+      return <NomenclatureFlow {...props} />
     default:
       return <Navigate to="/" replace />
   }

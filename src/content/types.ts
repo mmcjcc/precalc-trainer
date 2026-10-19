@@ -17,7 +17,47 @@ import type {
   VarName,
 } from '@/shared/types'
 
-export type ProblemKind = 'inequality' | 'numberLine' | 'evenOdd' | 'inverse' | 'drill' | 'sigFigs' | 'atoms' | 'diffQuotient' | 'graphFeatures' | 'domainRange' | 'composition' | 'functionOps' | 'transformations' | 'piecewiseRate' | 'electrons' | 'periodic' | 'quadratics' | 'polyDivision' | 'polyZeros' | 'rationalFns' | 'signCharts' | 'complexNums' | 'geometry'
+export type ProblemKind = 'inequality' | 'numberLine' | 'evenOdd' | 'inverse' | 'drill' | 'sigFigs' | 'atoms' | 'diffQuotient' | 'graphFeatures' | 'domainRange' | 'composition' | 'functionOps' | 'transformations' | 'piecewiseRate' | 'electrons' | 'periodic' | 'quadratics' | 'polyDivision' | 'polyZeros' | 'rationalFns' | 'signCharts' | 'complexNums' | 'geometry' | 'nomenclature'
+
+/** Which chemical-nomenclature screen this problem is (CK-12 chapter 7). */
+export type NomenclatureQuestion = 'ion' | 'ionicFormula' | 'ionicName' | 'ionicFromName' | 'molecular' | 'acid' | 'hydrate' | 'classify'
+
+/** One checked part of a nomenclature problem. */
+export type NmStageId = 'a' | 'b' | 'c'
+
+/**
+ * What kind of answer a nomenclature part has. A format hint, a rule-card example or a catalog example shown on a
+ * part never contains an answer the templates can generate for a part of this kind.
+ */
+export type NmPartKind =
+  | 'ion-name'
+  | 'ion-formula'
+  | 'ionic-name'
+  | 'ionic-formula'
+  | 'molecular-name'
+  | 'molecular-formula'
+  | 'acid-name'
+  | 'acid-formula'
+  | 'hydrate-name'
+  | 'hydrate-formula'
+  | 'class'
+
+/**
+ * What one nomenclature part asks, exactly as the engine's grader takes it (plain app text). The grader is picked
+ * by `kind`: ion_name → gradeIonName(ion), ion_formula → gradeIonFormula(ion), ionic_formula →
+ * gradeIonicFormula(cation, anion), name → gradeNameFromFormula(formula, { inWater }), formula →
+ * gradeFormulaFromName(name), classify → gradeClassify(formula, pick, { inWater }).
+ */
+export type NmCheck =
+  | { kind: 'ion_name'; ion: string }
+  | { kind: 'ion_formula'; ion: string }
+  | { kind: 'ionic_formula'; cation: string; anion: string }
+  | { kind: 'name'; formula: string; inWater?: boolean }
+  | { kind: 'formula'; name: string }
+  | { kind: 'classify'; formula: string; inWater?: boolean }
+
+/** One piece of a nomenclature prompt: words, or a formula or ion (plain app text) the screen draws with subscripts. */
+export type NmPromptPart = { text: string } | { formula: string }
 
 /** Which geometry screen this problem is. Unit 2 adds logic and proof; Unit 3 adds parallels and polygons. */
 export type GeometryQuestion =
@@ -1061,6 +1101,65 @@ export type AnswerSpec =
       trapAnswer?: string
     }
   | {
+      /**
+       * Chemical nomenclature (chemistry, CK-12 chapter 7): single ions, ionic compounds, binary molecular
+       * compounds, acids and hydrates, named from a formula or written from a name, and classified. Parts are
+       * checked one at a time with the module's `gradeNmStage`, which calls the engine's grader named by the
+       * part's `check`. Named mistakes are the `nm_` ids; what the screen shows for a grade comes from `nmShown`.
+       */
+      type: 'nomenclature'
+      question: NomenclatureQuestion
+      /** How the problem is given: a formula to name, a name to write, two ions, the anion of an acid, or a formula to classify. */
+      given: 'formula' | 'name' | 'ions' | 'anion' | 'classify'
+      /**
+       * What is printed, plain app text: 'Fe2(SO4)3', 'iron(III) sulfate', 'SO4^2-', 'sulfate', 'NO2^-' (the anion of
+       * an acid). Two ions: the cation and the anion joined by ' and ' ('Fe^3+ and SO4^2-', or by name).
+       */
+      problem: string
+      /** The two ions of an `ions` problem, as printed (app text or names). */
+      ions?: { cation: string; anion: string }
+      /** What the problem says, display text: 'Name the ionic compound Fe₂(SO₄)₃.' No method and no trap. */
+      prompt: string
+      /** The same prompt in pieces: words, and formulas (app text) the screen draws with real subscripts. */
+      promptParts: NmPromptPart[]
+      stages: {
+        id: NmStageId
+        /** What she enters: a compound's formula, an ion with its charge, a name in words, or one of the four kinds. */
+        kind: 'formula' | 'ion' | 'name' | 'choice'
+        part: NmPartKind
+        /** Box or choice legend, e.g. "Name", "Formula", "Cation". */
+        label: string
+        /** Line under the box or the choices. Never an answer of this kind of part. */
+        hint: string
+        /** The answer, plain app text: 'Fe2(SO4)3', 'iron(III) sulfate', 'SO4^2-', 'HCl(aq)', 'ionic'. */
+        answerText: string
+        /** The answer, display text: 'Fe₂(SO₄)₃', 'SO₄²⁻'. */
+        answerDisplay: string
+        /** Every other form the grader accepts, plain app text: 'HCl' for 'HCl(aq)', 'nickel chloride', 'sodium bicarbonate'. */
+        accept: string[]
+        /** Choice parts only (the four kinds). `trap` is set when that pick is a named mistake. */
+        choices?: { id: string; text: string; trap?: ErrorPatternId; witness?: string }[]
+        /** Hint rung 1. Never this part's answer. */
+        nudge: string
+        ruleCard: RuleCardId
+        /** Hint rung 3: the engine's worked explanation of this part. Reveals the answer. */
+        reveal: string[]
+        /** The engine's candidates for this part (`…Mistakes`): what each slip produces, in the graders' order. */
+        traps: { id: ErrorPatternId; text: string; witness: string }[]
+        check: NmCheck
+      }[]
+      /** Every part's answer, pretty, for the tutor: 'Name: iron(III) sulfate'. */
+      expectedDisplay: string
+      /** The after-finish explanation: every part's steps. Reveals the answer. */
+      reveal: string[]
+      ruleCards: RuleCardId[]
+      /** The named mistake this seed promises (one of the engine's candidates for the part), when one is possible. */
+      trap?: ErrorPatternId
+      trapStage?: NmStageId
+      /** What that slip produces, as she would type it. Never the right answer. */
+      trapAnswer?: string
+    }
+  | {
       type: 'drill'
       question: 'which_property' | 'legal_or_illegal'
       verdict: 'legal' | 'illegal'
@@ -1074,6 +1173,12 @@ export type GeometryAnswer = Extract<AnswerSpec, { type: 'geometry' }>
 
 /** The periodic-table arm of `AnswerSpec`, named so the flow and the generators share it. */
 export type PeriodicAnswer = Extract<AnswerSpec, { type: 'periodic' }>
+
+/** The chemical-nomenclature arm of `AnswerSpec` (chapter 7), named so the flow and the generators share it. */
+export type NomenclatureAnswer = Extract<AnswerSpec, { type: 'nomenclature' }>
+
+/** One part of a nomenclature problem. */
+export type NmStage = NomenclatureAnswer['stages'][number]
 
 export interface ProblemInstance {
   /** `${moduleId}/${templateId}@${genVersion}/${seedBase36}` */
