@@ -16,3 +16,15 @@ export function splitDomain(lo: number, hi: number, breaks?: readonly number[]):
   spans.push([left, hi])
   return spans
 }
+
+/**
+ * Keep the spans where the curve has a value at one or more of n + 1 evenly spaced points. Left of a
+ * log's asymptote it has none, and function-plot throws on a polyline with nothing to draw, which loses
+ * the whole graph.
+ */
+export function spansWithValues(spans: readonly [number, number][], valueAt: (x: number) => number, n: number): [number, number][] {
+  return spans.filter(([a, b]) => {
+    for (let i = 0; i <= n; i++) if (Number.isFinite(valueAt(a + ((b - a) * i) / n))) return true
+    return false
+  })
+}

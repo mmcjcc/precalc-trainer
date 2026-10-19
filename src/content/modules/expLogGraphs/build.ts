@@ -224,7 +224,7 @@ function featureParts(c: Curve): ExpLogPart[] {
         ruleCard: EG_RULE_IDS.domain,
         reveal: [
           `${power} is always positive, so ${say(String(c.a))}·${power} is always ${c.a > 0 ? 'positive' : 'negative'}.`,
-          `The ${shiftWord(c.k)} moves every output to ${c.a > 0 ? 'above' : 'below'} ${say(String(c.k))}, and none of them equals ${say(String(c.k))}.`,
+          `${c.k === 0 ? 'Nothing is added, so every output stays' : c.k > 0 ? `Adding ${c.k} puts every output` : `Subtracting ${-c.k} puts every output`} ${c.a > 0 ? 'above' : 'below'} ${say(String(c.k))}, and none of them equals ${say(String(c.k))}.`,
           `Range: ${say(range)}.`,
         ],
         answerText: range,

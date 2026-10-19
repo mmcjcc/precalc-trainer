@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { evalExpr } from '@/engine'
 import { PALETTE, type GraphDot, type GraphGuide, type GraphSpec, type PlotColor, type PlotStyle, type SolutionSet } from '@/shared/types'
 import { ratToNumber } from '@/notation'
-import { splitDomain } from './graphBreaks'
+import { splitDomain, spansWithValues } from './graphBreaks'
 
 const COLOR: Record<PlotColor, string> = {
   navy: PALETTE.navy,
@@ -31,11 +31,12 @@ function pushCurve(
   breaks: number[] | undefined,
   nSamples: number,
 ) {
-  const spans = splitDomain(domain[0], domain[1], breaks)
+  const all = splitDomain(domain[0], domain[1], breaks)
+  const spans = spansWithValues(all, (x) => evalAt(expr, x), nSamples)
   const attr = style === 'solid' ? undefined : { 'stroke-dasharray': style === 'dotted' ? '2 3' : '6 4' }
   for (const [a, b] of spans) {
     const item: Record<string, unknown> = { fn: asFn(expr), graphType: 'polyline', color, nSamples }
-    if (spans.length > 1) item.range = [a, b]
+    if (all.length > 1) item.range = [a, b]
     if (attr) item.attr = attr
     data.push(item)
   }
@@ -151,9 +152,7 @@ export function Graph({ spec, className }: Props) {
             attr: { 'stroke-dasharray': '3 3' },
           })
         }
-        if (finv) {
-          data.push({ fn: asFn(finv), graphType: 'polyline', color: COLOR.coral, nSamples: 240, attr: { 'stroke-dasharray': '6 4' } })
-        }
+        if (finv) pushCurve(data, finv, COLOR.coral, 'dashed', [lo, hi], undefined, 240)
         if (reflect) {
           data.push({
             x: (scope: { t?: number }) => evalAt(f, Number(scope.t)),

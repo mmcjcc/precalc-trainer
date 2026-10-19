@@ -276,7 +276,8 @@ export function halfLifeProblem(o: {
     const value = A0 * 0.5 ** (t / h)
     slips.push({ id: 'exp_halflife_inverted', values: [A0 * 0.5 ** (h / t)], witness: `Your exponent is ${h}/${t}, the half-life over the time. The number of half-lives is the time over the half-life.` })
     slips.push({ id: 'exp_halflife_decayed', values: [A0 - value], witness: 'Your amount is how much decayed: the start minus what is left. The formula gives what is still there.' })
-    prompt = `A ${A0}-${mass} sample of a radioactive isotope has a half-life of ${h} ${plural(time)}. How much of it is left after ${t} ${plural(time)}? ${roundWords(o.places, mass)}`
+    // The amount goes after the noun: "a 825-milligram sample" needs "an", and the number decides which.
+    prompt = `A radioactive isotope has a half-life of ${h} ${plural(time)}. A sample starts with ${A0} ${plural(mass)} of it. How much is left after ${t} ${plural(time)}? ${roundWords(o.places, mass)}`
     part = decimalPart({
       id: 'answer',
       label: 'Amount left',
@@ -316,7 +317,7 @@ export function halfLifeProblem(o: {
         ? `A wooden tool has lost ${o.percent}% of its carbon-14. The half-life of carbon-14 is 5730 years. How old is the tool? ${roundWords(o.places, 'year')}`
         : `A bone contains ${o.percent}% of the carbon-14 that a living bone has. The half-life of carbon-14 is 5730 years. How old is the bone? ${roundWords(o.places, 'year')}`
     } else {
-      prompt = `A radioactive isotope has a half-life of ${h} ${plural(time)}. How long will it take a ${o.A0}-${mass} sample to decay to ${o.A} ${plural(mass)}? ${roundWords(o.places, time)}`
+      prompt = `A radioactive isotope has a half-life of ${h} ${plural(time)}. How long will it take ${o.A0} ${plural(mass)} of it to decay to ${o.A} ${plural(mass)}? ${roundWords(o.places, time)}`
     }
     const unit = carbon ? 'year' : time
     part = decimalPart({
@@ -345,7 +346,7 @@ export function halfLifeProblem(o: {
     slips.push({ id: 'exp_halflife_inverted', values: [(t * Math.log(q)) / LN_HALF], witness: 'Your half-life comes from the exponent h/t. The number of half-lives is t/h, the time over the half-life.' })
     slips.push({ id: 'exp_halflife_base', values: [t], witness: 'Your half-life equals the time given. That is what you get when the fraction left replaces the 1/2: q^(t/h) = q gives h = t. The base stays 1/2.' })
     slips.push({ id: 'exp_halflife_decayed', values: [(t * LN_HALF) / Math.log(1 - q)], witness: `Your half-life uses the amount that decayed, ${A0 - A} ${plural(mass)}. The formula needs what is left.` })
-    prompt = `A ${A0}-${mass} sample of a radioactive substance decays to ${A} ${plural(mass)} in ${t} ${plural(time)}. What is its half-life? ${roundWords(o.places, time)}`
+    prompt = `A sample of a radioactive substance decays from ${A0} ${plural(mass)} to ${A} ${plural(mass)} in ${t} ${plural(time)}. What is its half-life? ${roundWords(o.places, time)}`
     part = decimalPart({
       id: 'answer',
       label: 'Half-life',

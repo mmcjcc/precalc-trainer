@@ -105,7 +105,7 @@ describe('half-life and carbon-14', () => {
   it('250 g with a 12-day half-life leaves 44.19 g after 30 days', () => {
     expect(250 * 0.5 ** 2.5).toBeCloseTo(44.1942, 4)
     const a = modelAnswer(halfLifeProblem({ ask: 'left', A0: 250, h: 12, t: 30, mass: 'gram', time: 'day', places: 2 }), first)
-    expect(a.prompt).toBe('A 250-gram sample of a radioactive isotope has a half-life of 12 days. How much of it is left after 30 days? Round to the nearest hundredth of a gram.')
+    expect(a.prompt).toBe('A radioactive isotope has a half-life of 12 days. A sample starts with 250 grams of it. How much is left after 30 days? Round to the nearest hundredth of a gram.')
     expect(verdict(a, 'answer', '44.19')).toBe('correct')
     expect(verdict(a, 'answer', '44.19 grams')).toBe('correct')
     expect(verdict(a, 'answer', '44.19 g')).toBe('correct')

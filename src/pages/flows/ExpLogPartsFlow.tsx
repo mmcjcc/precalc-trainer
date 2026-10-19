@@ -147,7 +147,11 @@ export function ExpLogGraphsFlow(props: FlowProps) {
           {answer.question === 'inverse' ? 'The graphs of f and f⁻¹' : `The graph of ${answer.fnName}`}
         </h2>
         <p className="text-sm text-navy">
-          {answer.question === 'inverse' ? 'f⁻¹ is the mirror image of f across the line y = x.' : 'The dashed line is the asymptote, and the dot is the intercept.'}
+          {answer.question === 'inverse'
+            ? 'f⁻¹ is the mirror image of f across the line y = x.'
+            : (answer.graph.dots?.length ?? 0) > 0
+              ? 'The dashed line is the asymptote, and the dot is the intercept.'
+              : 'The dashed line is the asymptote. The intercept is outside this window.'}
         </p>
         <GraphPanel spec={answer.graph} />
       </section>

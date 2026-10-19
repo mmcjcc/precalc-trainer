@@ -194,15 +194,15 @@ describe('word problems, solved again from the sentence', () => {
       const places = ans.places ?? 0
       let mine: number
       let m: RegExpExecArray | null
-      if ((m = /A (\d+)-\w+ sample of a radioactive isotope has a half-life of (\d+) \w+\. How much of it is left after (\d+) /.exec(text))) {
-        mine = Number(m[1]) * 0.5 ** (Number(m[3]) / Number(m[2]))
-      } else if ((m = /half-life of (\d+) \w+\. How long will it take a (\d+)-\w+ sample to decay to (\d+) /.exec(text))) {
+      if ((m = /half-life of (\d+) \w+\. A sample starts with (\d+) \w+ of it\. How much is left after (\d+) /.exec(text))) {
+        mine = Number(m[2]) * 0.5 ** (Number(m[3]) / Number(m[1]))
+      } else if ((m = /half-life of (\d+) \w+\. How long will it take (\d+) \w+ of it to decay to (\d+) /.exec(text))) {
         const [h, A0, A] = [Number(m[1]), Number(m[2]), Number(m[3])]
         mine = bisect((t) => A0 * 0.5 ** (t / h) - A, 0, 100 * h)
       } else if ((m = /(contains|has lost) (\d+)% of (?:the|its) carbon-14/.exec(text))) {
         const q = m[1] === 'contains' ? Number(m[2]) / 100 : 1 - Number(m[2]) / 100
         mine = bisect((t) => 0.5 ** (t / 5730) - q, 0, 100000)
-      } else if ((m = /A (\d+)-\w+ sample of a radioactive substance decays to (\d+) \w+ in (\d+) /.exec(text))) {
+      } else if ((m = /decays from (\d+) \w+ to (\d+) \w+ in (\d+) /.exec(text))) {
         const [A0, A, t] = [Number(m[1]), Number(m[2]), Number(m[3])]
         mine = bisect((h) => A0 * 0.5 ** (t / h) - A, 0.01, 10000)
       } else return [`${where}: unreadable “${text}”`]
