@@ -229,7 +229,7 @@ export function Graph({ spec, className }: Props) {
   const marked = !!spec.solutionMarks && (spec.solutionMarks.pieces.length > 0 || spec.solutionMarks.points.length > 0)
   if (marked) legend.push('gold: solution on the x-axis')
   const extraNames = (extra ?? []).map((c) => c.label)
-  const aria = `Graph of ${f}${finv ? ' and its inverse' : ''}${reflect ? ', with its reflection across y = x' : ''}${extraNames.length ? `, with ${extraNames.join(' and ')}` : ''}${(guides?.length ?? 0) > 0 ? ', with asymptotes' : ''}${(dots ?? []).some((d) => !d.closed) ? ', with a hole' : ''}${marked ? ', with the solution marked on the x-axis' : ''}`
+  const aria = spec.ariaLabel ?? `Graph of ${f}${finv ? ' and its inverse' : ''}${reflect ? ', with its reflection across y = x' : ''}${extraNames.length ? `, with ${extraNames.join(' and ')}` : ''}${(guides?.length ?? 0) > 0 ? ', with asymptotes' : ''}${(dots ?? []).some((d) => !d.closed) ? ', with a hole' : ''}${marked ? ', with the solution marked on the x-axis' : ''}`
   return (
     <div className={className}>
       <div ref={ref} className="overflow-hidden rounded-xl bg-white" role="img" aria-label={aria} aria-busy={status === 'loading'} />

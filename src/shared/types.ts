@@ -480,27 +480,30 @@ export type ErrorPatternId =
   | 'log_value_divided'
   | 'log_ln_confused'
   | 'log_check_answers'
-  // exponential and log graphs, inverses, and growth/decay models (content/modules/expLogGraphs, expModels; precalculus Unit 3).
+  // precalculus Unit 3, second half (content/modules/expLogGraphs, expModels). Each id is the answer that slip
+  // gives on THIS problem, computed by the template. The prefix is exp_ for the graphs and inverses too: every
+  // log_ id belongs to the logs core (engine/logs/types.ts reads LogMistakeId as "every log_ id").
+  // Graphs of a·b^(x − h) + k and a·log_b(x − h) + k:
   | 'exp_asymptote_unshifted'
-  | 'exp_asymptote_sign'
+  | 'exp_shift_sign'
+  | 'exp_sign_of_a'
+  | 'exp_endpoint_closed'
+  | 'exp_domain_range_swapped'
   | 'exp_asymptote_axis'
-  | 'exp_range_reflection'
-  | 'exp_domain_closed'
   | 'exp_intercept_shift'
-  | 'exp_monotonicity_flipped'
-  | 'exp_graph_sign'
-  | 'exp_graph_base'
-  | 'exp_graph_shift'
+  | 'exp_base_direction'
+  // Inverses of exponential and log functions:
   | 'exp_inverse_shift'
-  | 'exp_inverse_swapped'
+  | 'exp_inverse_base_swapped'
   | 'exp_inverse_reciprocal'
+  // Interest, half-life, and continuous growth word problems:
   | 'exp_rate_percent'
   | 'exp_wrong_period'
   | 'exp_simple_interest'
   | 'exp_continuous_swapped'
-  | 'exp_exponent_missing_factor'
+  | 'exp_exponent_missing'
   | 'exp_halflife_inverted'
-  | 'exp_halflife_fraction_base'
+  | 'exp_halflife_base'
   | 'exp_halflife_decayed'
   | 'exp_growth_no_log'
   | 'exp_growth_log_diff'
@@ -707,6 +710,11 @@ export interface GraphSpec {
   xDomain?: [number, number]
   /** Optional badge, e.g. "fails vertical line test". */
   badge?: string
+  /**
+   * Screen-reader name of a function graph instead of "Graph of <formula>". Matching problems set it ("Graph B")
+   * so a candidate graph does not announce its formula. Existing graphs leave it unset.
+   */
+  ariaLabel?: string
   /**
    * Difference quotient: draw ONE secant line of f through (x0, f(x0)) and (x0 + h0, f(x0 + h0)),
    * labelled like the worksheet sketch (x, x + h, f(x), f(x + h), h).

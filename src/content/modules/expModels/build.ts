@@ -1,1283 +1,684 @@
+/**
+ * Exponential growth and decay word problems, drawn from the seed: the principal, the rate, how often it
+ * compounds, the years, the half-life, the amounts and the counts. Each answer is checked with gradeLogValue
+ * (exact, or with { decimal }), and every trap is the value that slip gives for THIS problem: a draw is kept
+ * only when the answer and every trap differ at the rounding the problem asks for.
+ */
 import { problemId } from '@/content/registry'
-import type {
-  DifficultyKnobs,
-  ExpModelsAnswer,
-  ExpModelsStageId,
-  ProblemInstance,
-  RuleCardId,
-  TemplateDef,
-} from '@/content/types'
+import type { Rng } from '@/content/rng'
+import type { AnswerSpec, DifficultyKnobs, ExpLogPart, ExpLogPartTrap, ProblemInstance, TemplateDef } from '@/content/types'
 import type { CalcPanels, ErrorPatternId, GraphSpec } from '@/shared/types'
-import { LogSkip, anyShows, catalogExample, roundPlaces, searchSeed, staticTexts } from '../explog/text'
-import { gradeExpModelsStage } from './grade'
-import { EM_RULES, EM_RULE_FOR, EM_RULE_IDS } from './rules'
+import { gradeExpLogPart, leaks, say, withCommas, type PartGrade } from '../explog/parts'
+import { LogSkip, gcd, roundPlaces, searchSeed } from '../explog/text'
+import { EM_RULES, EM_RULE_IDS } from './rules'
 
 export const EM_MODULE_ID = 'expModels' as const
 
+export type ExpModelsAnswer = Extract<AnswerSpec, { type: 'expModels' }>
+
 const NO_GRAPH: GraphSpec = { kind: 'none' }
 const NO_CALC: CalcPanels = { ti84: [], nspire: [] }
+const VERSION = 1
 
-interface PeriodSpec {
-  n: number
-  word: string
-  wrongN: number
-  wrongDesc: string
+export const MONEY_HINT = 'Dollars and cents. A $ sign and commas are fine.'
+export const NUMBER_HINT = 'A number, rounded the way the problem asks. A unit after it is fine.'
+export const EXACT_HINT = 'An exact expression with ln. Do not round this one.'
+export const INSTRUCTIONS: Record<'interest' | 'halflife' | 'growth', string> = {
+  interest: 'Give the answer in the box, rounded the way the problem asks.',
+  halflife: 'Give the answer in the box, rounded the way the problem asks.',
+  growth: 'One part at a time: k exactly, then k rounded, then the last question. Each part opens when the one before it is right.',
 }
 
-const PERIODS: readonly PeriodSpec[] = [
-  { n: 4, word: 'quarterly', wrongN: 3, wrongDesc: '3 instead of 4 quarters per year' },
-  { n: 12, word: 'monthly', wrongN: 4, wrongDesc: '4 instead of 12 months per year' },
-  { n: 2, word: 'semiannually', wrongN: 6, wrongDesc: '6 instead of 2 semiannual periods per year' },
-  { n: 365, word: 'daily', wrongN: 12, wrongDesc: '12 instead of 365 days per year' },
-]
+const LN_HALF = Math.log(0.5)
 
-function assertSelf(instance: ProblemInstance, answer: ExpModelsAnswer): void {
-  for (const stage of answer.stages) {
-    const g = gradeExpModelsStage(answer, stage.id, stage.answerText)
-    if (g.verdict !== 'correct') {
-      throw new LogSkip(`self-check failed on ${stage.id}: ${stage.answerText}`)
-    }
-    const gExact = gradeExpModelsStage(answer, stage.id, stage.exactExpr)
-    if (gExact.verdict !== 'correct') {
-      throw new LogSkip(`exact expression rejected on ${stage.id}: ${stage.exactExpr}`)
-    }
-    const forms = [stage.answerText]
-    const visible = staticTexts(EM_RULES, stage.formatHint, stage.nudge)
-    if (anyShows(visible, forms)) {
-      throw new LogSkip(`stage ${stage.id} leaked ${stage.answerText}`)
-    }
-    if (anyShows([instance.instructions, answer.prompt], forms)) {
-      throw new LogSkip(`prompt leaked ${stage.answerText}`)
-    }
-    // Confirm every trap on the stage is distinct from the right answer.
-    for (const trap of stage.traps) {
-      if (!Number.isFinite(trap.value)) throw new LogSkip(`non-finite trap ${trap.id}`)
-      const tg = gradeExpModelsStage(answer, stage.id, trap.text)
-      if (tg.verdict === 'correct') {
-        throw new LogSkip(`trap ${trap.id} collided with right answer on ${stage.id}`)
+/** "$2,500". */
+function dollars(n: number): string {
+  return `$${withCommas(String(n))}`
+}
+
+const PERIOD_WORD: Record<number, string> = { 1: 'annually', 2: 'semiannually', 4: 'quarterly', 12: 'monthly' }
+
+const ROUND_YEARS: Record<number, string> = { 1: 'Round to the nearest tenth of a year.', 2: 'Round to the nearest hundredth of a year.' }
+
+function roundWords(places: number, unit: string): string {
+  if (places === 0) return `Round to the nearest ${unit}.`
+  return `Round to the nearest ${places === 1 ? 'tenth' : 'hundredth'} of ${/^(?:[aeiou]|hour)/.test(unit) ? 'an' : 'a'} ${unit}.`
+}
+
+const UNITS: Record<string, string[]> = {
+  year: ['years', 'year', 'yrs', 'yr'],
+  day: ['days', 'day'],
+  hour: ['hours', 'hour', 'hrs', 'hr'],
+  gram: ['grams', 'gram', 'g'],
+  milligram: ['milligrams', 'milligram', 'mg'],
+  bacteria: ['bacteria'],
+  people: ['people', 'residents', 'persons'],
+}
+
+interface Slip {
+  id: ErrorPatternId
+  values: number[]
+  witness: string
+  /** May this slip be the one the problem promises? (Its value looks like an answer someone would type.) */
+  promise?: boolean
+}
+
+/** A rounded-number part. Slips that give no finite value she could type are dropped; the rest must stand apart. */
+function decimalPart(o: {
+  id: string
+  label: string
+  ask: string
+  places: number
+  money?: boolean
+  units?: string[]
+  closedForms: string[]
+  values: number[]
+  slips: Slip[]
+  nudge: string
+  ruleCard: string
+  reveal: string[]
+}): { part: ExpLogPart; promisable: ExpLogPartTrap[] } {
+  const gap = 10 ** -o.places
+  const answer = roundPlaces(o.values[0]!, o.places)
+  const typed = (v: number) => (o.money ? withCommas(roundPlaces(v, o.places)) : roundPlaces(v, o.places))
+  const traps: ExpLogPartTrap[] = []
+  const promisable: ExpLogPartTrap[] = []
+  const taken: number[] = [...o.values]
+  for (const slip of o.slips) {
+    const values = slip.values.filter((v) => Number.isFinite(v) && v > 0 && v < 1e9)
+    if (!values.length) continue
+    // Each slip has to stand apart from every right value and every earlier slip at the rounding asked.
+    for (const v of values) {
+      for (const w of taken) {
+        if (Math.abs(v - w) < gap || roundPlaces(v, o.places) === roundPlaces(w, o.places)) throw new LogSkip(`${slip.id} collides at ${o.places} places`)
       }
     }
+    taken.push(...values)
+    const trap: ExpLogPartTrap = { id: slip.id, text: typed(values[0]!), values, witness: slip.witness }
+    traps.push(trap)
+    // A promised slip gives a number she could take for the answer: within a factor of 6 of it.
+    const ratio = values[0]! / o.values[0]!
+    if (slip.promise !== false && ratio > 1 / 6 && ratio < 6) promisable.push(trap)
   }
-  const promised = gradeExpModelsStage(answer, answer.trapStage, answer.trapAnswer)
-  if (promised.verdict !== 'mistake' || promised.mistake !== answer.trap) {
-    throw new LogSkip(`promised trap ${answer.trap} on ${answer.trapStage} graded ${promised.verdict}`)
-  }
-  const trapStageObj = answer.stages.find((s) => s.id === answer.trapStage)
-  if (trapStageObj) {
-    if (anyShows([catalogExample(answer.trap)], [trapStageObj.answerText])) {
-      throw new LogSkip(`catalog example leaked ${trapStageObj.answerText}`)
-    }
+  return {
+    part: {
+      id: o.id,
+      kind: 'decimal',
+      label: o.label,
+      ask: o.ask,
+      formatHint: o.money ? MONEY_HINT : NUMBER_HINT,
+      nudge: o.nudge,
+      ruleCard: o.ruleCard,
+      reveal: o.reveal,
+      answerText: o.money ? withCommas(answer) : answer,
+      places: o.places,
+      ...(o.money ? { money: true } : {}),
+      ...(o.units ? { units: o.units } : {}),
+      closedForms: o.closedForms,
+      traps,
+    },
+    promisable,
   }
 }
 
-function buildInterest(seed: number, knobs: DifficultyKnobs): ProblemInstance {
-  return searchSeed(seed, 0x656d_6901, 96, (rng) => {
-    const subkind = rng.pick(['discrete_balance', 'continuous_balance', 'time_to_reach', 'doubling_time'] as const)
-    const P = rng.pick([1000, 1200, 1500, 2000, 2500, 3000, 4000, 5000] as const)
-    const rPct = rng.pick([3, 3.5, 4, 4.5, 5, 5.5, 6, 6.5, 7, 8] as const)
-    const r = Number((rPct / 100).toFixed(4))
+// ---------------------------------------------------------------------------
+// em.interest
+// ---------------------------------------------------------------------------
 
-    if (subkind === 'discrete_balance') {
-      const period = rng.pick(PERIODS)
-      const { n, word, wrongN, wrongDesc } = period
-      const t = rng.pick([3, 4, 5, 6, 7, 8, 9, 10] as const)
-      const exactExpr = `${P} * (1 + ${r}/${n})^(${n} * ${t})`
-      const exactValue = P * Math.pow(1 + r / n, n * t)
-      const answerText = roundPlaces(exactValue, 2)
+type InterestAsk = 'balance' | 'time' | 'double'
 
-      const valPercent = P * Math.pow(1 + rPct / n, Math.min(n * t, 48))
-      const valWrongPeriod = P * Math.pow(1 + r / wrongN, wrongN * t)
-      const valSimple = P * (1 + r * t)
-      const valContSwapped = P * Math.exp(r * t)
-      const valMissingN = P * Math.pow(1 + r / n, t)
-
-      const traps: ExpModelsAnswer['stages'][number]['traps'] = [
-        {
-          id: 'exp_rate_percent',
-          text: roundPlaces(valPercent, 2),
-          value: valPercent,
-          witness: `Convert ${rPct}% to the decimal r = ${r} before substituting into 1 + r/n.`,
-        },
-        {
-          id: 'exp_wrong_period',
-          text: roundPlaces(valWrongPeriod, 2),
-          value: valWrongPeriod,
-          witness: `Compounded ${word} means n = ${n} periods per year, not ${wrongDesc}.`,
-        },
-        {
-          id: 'exp_simple_interest',
-          text: roundPlaces(valSimple, 2),
-          value: valSimple,
-          witness: `${roundPlaces(valSimple, 2)} is simple interest P(1 + rt). Use the compound interest formula P(1 + r/n)^(nt).`,
-        },
-        {
-          id: 'exp_continuous_swapped',
-          text: roundPlaces(valContSwapped, 2),
-          value: valContSwapped,
-          witness: `${roundPlaces(valContSwapped, 2)} uses continuous compounding P*e^(rt), but this account compounds ${word} (n = ${n}).`,
-        },
-        {
-          id: 'exp_exponent_missing_factor',
-          text: roundPlaces(valMissingN, 2),
-          value: valMissingN,
-          witness: `The exponent must be n * t = ${n} * ${t} = ${n * t} total compounding periods, not just t = ${t}.`,
-        },
-      ]
-
-      const chosenTrap = rng.pick(traps)
-      const ruleCard = (EM_RULE_FOR[chosenTrap.id] ?? EM_RULE_IDS.compound) as RuleCardId
-      const prompt = `$${P} is invested at ${rPct}% annual interest compounded ${word}. Find the balance after ${t} years. Round to the nearest cent (2 decimal places).`
-      const formulaDisplay = 'A = P(1 + r/n)^(nt)'
-
-      const stage: ExpModelsAnswer['stages'][number] = {
-        id: 'answer',
-        label: 'Balance after ' + t + ' years',
-        placeholder: 'e.g. 2834.71',
-        formatHint: 'Round to the nearest cent (2 decimal places), or enter the exact expression.',
-        answerText,
-        exactExpr,
-        exactValue,
-        places: 2,
-        isMoney: true,
-        nudge: 'Write the rate as a decimal r, divide r by the compounding frequency n, and raise (1 + r/n) to the total number of periods n * t.',
-        ruleCard,
-        reveal: [
-          `Substitute P = ${P}, r = ${r}, n = ${n}, and t = ${t} into A = P(1 + r/n)^(nt):`,
-          `A = ${P}(1 + ${r}/${n})^(${n * t}) ≈ $${answerText}.`,
-        ],
-        traps,
-      }
-
-      const answer: ExpModelsAnswer = {
-        type: 'expModels',
-        question: 'interest',
-        subkind,
-        prompt,
-        formulaDisplay,
-        stages: [stage],
-        expectedDisplay: `$${answerText}`,
-        nudge: stage.nudge,
-        ruleCard,
-        ruleCards: [ruleCard, EM_RULE_IDS.compound, EM_RULE_IDS.continuousInterest, EM_RULE_IDS.solveTime].filter(
-          (v, i, a) => a.indexOf(v) === i,
-        ),
-        reveal: stage.reveal,
-        trap: chosenTrap.id,
-        trapStage: 'answer',
-        trapAnswer: chosenTrap.text,
-      }
-
-      const instance: ProblemInstance = {
-        id: problemId(EM_MODULE_ID, 'em.interest', 1, seed),
-        moduleId: EM_MODULE_ID,
-        templateId: 'em.interest',
-        skill: 'em.interest',
-        genVersion: 1,
-        seed,
-        knobs,
-        kind: 'expModels',
-        title: 'Compound and continuous interest',
-        instructions: 'Solve the compound interest problem. You may give the rounded decimal or an exact expression.',
-        statementText: prompt,
-        vars: ['x'],
-        start: null,
-        canonical: [],
-        answer,
-        graph: NO_GRAPH,
-        calc: NO_CALC,
-        params: { subkind, P, rPct, n, t, trap: chosenTrap.id },
-      }
-      assertSelf(instance, answer)
-      return instance
-    }
-
-    if (subkind === 'continuous_balance') {
-      const t = rng.pick([3, 4, 5, 6, 7, 8, 9] as const)
-      const exactExpr = `${P} * e^(${r} * ${t})`
-      const exactValue = P * Math.exp(r * t)
-      const answerText = roundPlaces(exactValue, 2)
-
-      const valPercent = P * Math.exp(rPct * t)
-      const valSimple = P * (1 + r * t)
-      const valMonthly = P * Math.pow(1 + r / 12, 12 * t)
-      const valMissingT = P * Math.exp(r)
-
-      const traps: ExpModelsAnswer['stages'][number]['traps'] = [
-        {
-          id: 'exp_rate_percent',
-          text: roundPlaces(valPercent, 2),
-          value: valPercent,
-          witness: `Convert ${rPct}% to the decimal r = ${r} before multiplying by t = ${t} in the exponent.`,
-        },
-        {
-          id: 'exp_simple_interest',
-          text: roundPlaces(valSimple, 2),
-          value: valSimple,
-          witness: `${roundPlaces(valSimple, 2)} is simple interest P(1 + rt). Continuous compounding uses A = P * e^(rt).`,
-        },
-        {
-          id: 'exp_continuous_swapped',
-          text: roundPlaces(valMonthly, 2),
-          value: valMonthly,
-          witness: `${roundPlaces(valMonthly, 2)} uses periodic monthly compounding instead of continuous compounding A = P * e^(rt).`,
-        },
-        {
-          id: 'exp_exponent_missing_factor',
-          text: roundPlaces(valMissingT, 2),
-          value: valMissingT,
-          witness: `Multiply the rate r = ${r} by the time t = ${t} in the exponent of e^(rt).`,
-        },
-      ]
-
-      const chosenTrap = rng.pick(traps)
-      const ruleCard = (EM_RULE_FOR[chosenTrap.id] ?? EM_RULE_IDS.continuousInterest) as RuleCardId
-      const prompt = `$${P} is invested at ${rPct}% annual interest compounded continuously. Find the balance after ${t} years. Round to the nearest cent (2 decimal places).`
-      const formulaDisplay = 'A = P * e^(rt)'
-
-      const stage: ExpModelsAnswer['stages'][number] = {
-        id: 'answer',
-        label: 'Balance after ' + t + ' years',
-        placeholder: 'e.g. 2834.71',
-        formatHint: 'Round to the nearest cent (2 decimal places), or enter the exact expression.',
-        answerText,
-        exactExpr,
-        exactValue,
-        places: 2,
-        isMoney: true,
-        nudge: 'Convert the percentage rate to a decimal r and evaluate P * e^(r * t).',
-        ruleCard,
-        reveal: [
-          `Substitute P = ${P}, r = ${r}, and t = ${t} into A = P * e^(rt):`,
-          `A = ${P} * e^(${r} * ${t}) ≈ $${answerText}.`,
-        ],
-        traps,
-      }
-
-      const answer: ExpModelsAnswer = {
-        type: 'expModels',
-        question: 'interest',
-        subkind,
-        prompt,
-        formulaDisplay,
-        stages: [stage],
-        expectedDisplay: `$${answerText}`,
-        nudge: stage.nudge,
-        ruleCard,
-        ruleCards: [ruleCard, EM_RULE_IDS.continuousInterest, EM_RULE_IDS.compound, EM_RULE_IDS.solveTime].filter(
-          (v, i, a) => a.indexOf(v) === i,
-        ),
-        reveal: stage.reveal,
-        trap: chosenTrap.id,
-        trapStage: 'answer',
-        trapAnswer: chosenTrap.text,
-      }
-
-      const instance: ProblemInstance = {
-        id: problemId(EM_MODULE_ID, 'em.interest', 1, seed),
-        moduleId: EM_MODULE_ID,
-        templateId: 'em.interest',
-        skill: 'em.interest',
-        genVersion: 1,
-        seed,
-        knobs,
-        kind: 'expModels',
-        title: 'Compound and continuous interest',
-        instructions: 'Solve the compound interest problem. You may give the rounded decimal or an exact expression.',
-        statementText: prompt,
-        vars: ['x'],
-        start: null,
-        canonical: [],
-        answer,
-        graph: NO_GRAPH,
-        calc: NO_CALC,
-        params: { subkind, P, rPct, t, trap: chosenTrap.id },
-      }
-      assertSelf(instance, answer)
-      return instance
-    }
-
-    if (subkind === 'time_to_reach') {
-      const period = rng.pick(PERIODS.slice(0, 3))
-      const { n, word, wrongN, wrongDesc } = period
-      const mult = rng.pick([1.4, 1.5, 1.6, 1.8, 2.2, 2.5] as const)
-      const A = Math.round(P * mult)
-      const exactExpr = `ln(${A}/${P}) / (${n} * ln(1 + ${r}/${n}))`
-      const exactValue = Math.log(A / P) / (n * Math.log(1 + r / n))
-      const answerText = roundPlaces(exactValue, 2)
-
-      const valMissingN = Math.log(A / P) / Math.log(1 + r / n)
-      const valContSwapped = Math.log(A / P) / r
-      const valSimple = (A / P - 1) / r
-      const valWrongPeriod = Math.log(A / P) / (wrongN * Math.log(1 + r / wrongN))
-      const valPercent = Math.log(A / P) / (n * Math.log(1 + rPct / n))
-
-      const traps: ExpModelsAnswer['stages'][number]['traps'] = [
-        {
-          id: 'exp_exponent_missing_factor',
-          text: roundPlaces(valMissingN, 2),
-          value: valMissingN,
-          witness: `Dividing ln(${A}/${P}) by ln(1 + ${r}/${n}) gives n * t = ${roundPlaces(valMissingN, 2)} periods. Divide by n = ${n} to get t in years.`,
-        },
-        {
-          id: 'exp_continuous_swapped',
-          text: roundPlaces(valContSwapped, 2),
-          value: valContSwapped,
-          witness: `ln(${A}/${P}) / ${r} is for continuous compounding, not ${word} compounding (n = ${n}).`,
-        },
-        {
-          id: 'exp_simple_interest',
-          text: roundPlaces(valSimple, 2),
-          value: valSimple,
-          witness: `Use logarithms on A = P(1 + r/n)^(nt) rather than the simple interest formula.`,
-        },
-        {
-          id: 'exp_wrong_period',
-          text: roundPlaces(valWrongPeriod, 2),
-          value: valWrongPeriod,
-          witness: `Compounded ${word} means n = ${n} periods per year, not ${wrongDesc}.`,
-        },
-        {
-          id: 'exp_rate_percent',
-          text: roundPlaces(valPercent, 2),
-          value: valPercent,
-          witness: `Convert ${rPct}% to the decimal r = ${r} before substituting.`,
-        },
-      ]
-
-      const chosenTrap = rng.pick(traps)
-      const ruleCard = (EM_RULE_FOR[chosenTrap.id] ?? EM_RULE_IDS.solveTime) as RuleCardId
-      const prompt = `$${P} is invested at ${rPct}% annual interest compounded ${word}. How many years will it take for the balance to reach $${A}? Round to 2 decimal places.`
-      const formulaDisplay = 'A = P(1 + r/n)^(nt)'
-
-      const stage: ExpModelsAnswer['stages'][number] = {
-        id: 'answer',
-        label: 'Time t (years)',
-        placeholder: 'e.g. 8.42',
-        formatHint: 'Round to 2 decimal places, or enter the exact logarithmic expression.',
-        answerText,
-        exactExpr,
-        exactValue,
-        places: 2,
-        unit: 'years',
-        nudge: 'Divide A by P first, take ln of both sides, and divide by n * ln(1 + r/n).',
-        ruleCard,
-        reveal: [
-          `Divide by ${P}: (1 + ${r}/${n})^(${n}t) = ${A}/${P}.`,
-          `Take ln and solve for t: t = ln(${A}/${P}) / (${n} * ln(1 + ${r}/${n})) ≈ ${answerText} years.`,
-        ],
-        traps,
-      }
-
-      const answer: ExpModelsAnswer = {
-        type: 'expModels',
-        question: 'interest',
-        subkind,
-        prompt,
-        formulaDisplay,
-        stages: [stage],
-        expectedDisplay: `${answerText} years`,
-        nudge: stage.nudge,
-        ruleCard,
-        ruleCards: [ruleCard, EM_RULE_IDS.solveTime, EM_RULE_IDS.compound, EM_RULE_IDS.continuousInterest].filter(
-          (v, i, a) => a.indexOf(v) === i,
-        ),
-        reveal: stage.reveal,
-        trap: chosenTrap.id,
-        trapStage: 'answer',
-        trapAnswer: chosenTrap.text,
-      }
-
-      const instance: ProblemInstance = {
-        id: problemId(EM_MODULE_ID, 'em.interest', 1, seed),
-        moduleId: EM_MODULE_ID,
-        templateId: 'em.interest',
-        skill: 'em.interest',
-        genVersion: 1,
-        seed,
-        knobs,
-        kind: 'expModels',
-        title: 'Compound and continuous interest',
-        instructions: 'Find the time in years. You may give the rounded decimal or an exact logarithmic expression.',
-        statementText: prompt,
-        vars: ['x'],
-        start: null,
-        canonical: [],
-        answer,
-        graph: NO_GRAPH,
-        calc: NO_CALC,
-        params: { subkind, P, A, rPct, n, trap: chosenTrap.id },
-      }
-      assertSelf(instance, answer)
-      return instance
-    }
-
-    // subkind === 'doubling_time'
-    const continuous = rng.pick([true, false] as const)
+/** The interest problem for these numbers (exported for the hand-worked tests). n = 0 means continuously. */
+export function interestProblem(o: { ask: InterestAsk; P: number; bp: number; n: number; t?: number; A?: number; places?: number }): Drafted {
+  const rate = o.bp / 100
+  const r = o.bp / 10000
+  const rText = String(r)
+  const continuous = o.n === 0
+  const word = continuous ? 'continuously' : PERIOD_WORD[o.n]!
+  const R = rate // the percent itself, the slip of putting 5 for 0.05
+  const otherPeriods = [1, 2, 4, 12].filter((m) => m !== o.n)
+  const slips: Slip[] = []
+  let part: { part: ExpLogPart; promisable: ExpLogPartTrap[] }
+  let prompt: string
+  if (o.ask === 'balance') {
+    const t = o.t!
+    const value = continuous ? o.P * Math.exp(r * t) : o.P * (1 + r / o.n) ** (o.n * t)
     if (continuous) {
-      const exactExpr = `ln(2) / ${r}`
-      const exactValue = Math.log(2) / r
-      const answerText = roundPlaces(exactValue, 2)
-
-      const valPercent = Math.log(2) / rPct
-      const valSimple = 1 / r
-      const valMonthly = Math.log(2) / (12 * Math.log(1 + r / 12))
-
-      const traps: ExpModelsAnswer['stages'][number]['traps'] = [
-        {
-          id: 'exp_rate_percent',
-          text: roundPlaces(valPercent, 2),
-          value: valPercent,
-          witness: `Write ${rPct}% as the decimal r = ${r} in t = ln(2) / r.`,
-        },
-        {
-          id: 'exp_simple_interest',
-          text: roundPlaces(valSimple, 2),
-          value: valSimple,
-          witness: `1 / r = ${roundPlaces(valSimple, 2)} is the simple-interest doubling time. For continuous compounding, e^(rt) = 2 gives t = ln(2) / r.`,
-        },
-        {
-          id: 'exp_continuous_swapped',
-          text: roundPlaces(valMonthly, 2),
-          value: valMonthly,
-          witness: `Use the continuous doubling formula t = ln(2) / r rather than monthly compounding.`,
-        },
-      ]
-
-      const chosenTrap = rng.pick(traps)
-      const ruleCard = (EM_RULE_FOR[chosenTrap.id] ?? EM_RULE_IDS.continuousInterest) as RuleCardId
-      const prompt = `An investment earns ${rPct}% annual interest compounded continuously. Find the doubling time in years. Round to 2 decimal places.`
-      const formulaDisplay = 'A = P * e^(rt)'
-
-      const stage: ExpModelsAnswer['stages'][number] = {
-        id: 'answer',
-        label: 'Doubling time (years)',
-        placeholder: 'e.g. 11.55',
-        formatHint: 'Round to 2 decimal places, or enter the exact expression ln(2)/r.',
-        answerText,
-        exactExpr,
-        exactValue,
-        places: 2,
-        unit: 'years',
-        nudge: 'Set A = 2P in A = P * e^(rt), divide by P to get e^(rt) = 2, and take ln of both sides.',
-        ruleCard,
-        reveal: [`Setting e^(${r}t) = 2 gives t = ln(2) / ${r} ≈ ${answerText} years.`],
-        traps,
-      }
-
-      const answer: ExpModelsAnswer = {
-        type: 'expModels',
-        question: 'interest',
-        subkind,
-        prompt,
-        formulaDisplay,
-        stages: [stage],
-        expectedDisplay: `${answerText} years`,
-        nudge: stage.nudge,
-        ruleCard,
-        ruleCards: [ruleCard, EM_RULE_IDS.continuousInterest, EM_RULE_IDS.solveTime, EM_RULE_IDS.compound].filter(
-          (v, i, a) => a.indexOf(v) === i,
-        ),
-        reveal: stage.reveal,
-        trap: chosenTrap.id,
-        trapStage: 'answer',
-        trapAnswer: chosenTrap.text,
-      }
-
-      const instance: ProblemInstance = {
-        id: problemId(EM_MODULE_ID, 'em.interest', 1, seed),
-        moduleId: EM_MODULE_ID,
-        templateId: 'em.interest',
-        skill: 'em.interest',
-        genVersion: 1,
-        seed,
-        knobs,
-        kind: 'expModels',
-        title: 'Compound and continuous interest',
-        instructions: 'Find the doubling time in years. You may give the rounded decimal or an exact expression.',
-        statementText: prompt,
-        vars: ['x'],
-        start: null,
-        canonical: [],
-        answer,
-        graph: NO_GRAPH,
-        calc: NO_CALC,
-        params: { subkind, continuous: true, rPct, trap: chosenTrap.id },
-      }
-      assertSelf(instance, answer)
-      return instance
-    }
-
-    const period = rng.pick(PERIODS.slice(0, 3))
-    const { n, word, wrongN, wrongDesc } = period
-    const exactExpr = `ln(2) / (${n} * ln(1 + ${r}/${n}))`
-    const exactValue = Math.log(2) / (n * Math.log(1 + r / n))
-    const answerText = roundPlaces(exactValue, 2)
-
-    const valMissingN = Math.log(2) / Math.log(1 + r / n)
-    const valContSwapped = Math.log(2) / r
-    const valSimple = 1 / r
-    const valWrongPeriod = Math.log(2) / (wrongN * Math.log(1 + r / wrongN))
-
-    const traps: ExpModelsAnswer['stages'][number]['traps'] = [
-      {
-        id: 'exp_exponent_missing_factor',
-        text: roundPlaces(valMissingN, 2),
-        value: valMissingN,
-        witness: `Divide by n = ${n} as well: t = ln(2) / (${n} * ln(1 + ${r}/${n})).`,
-      },
-      {
-        id: 'exp_continuous_swapped',
-        text: roundPlaces(valContSwapped, 2),
-        value: valContSwapped,
-        witness: `ln(2) / ${r} is the continuous doubling time, but this account compounds ${word} (n = ${n}).`,
-      },
-      {
-        id: 'exp_simple_interest',
-        text: roundPlaces(valSimple, 2),
-        value: valSimple,
-        witness: `1 / r is simple interest doubling time. Solve (1 + r/n)^(nt) = 2 using logarithms.`,
-      },
-      {
-        id: 'exp_wrong_period',
-        text: roundPlaces(valWrongPeriod, 2),
-        value: valWrongPeriod,
-        witness: `Compounded ${word} means n = ${n} periods per year, not ${wrongDesc}.`,
-      },
-    ]
-
-    const chosenTrap = rng.pick(traps)
-    const ruleCard = (EM_RULE_FOR[chosenTrap.id] ?? EM_RULE_IDS.solveTime) as RuleCardId
-    const prompt = `An investment earns ${rPct}% annual interest compounded ${word}. Find the doubling time in years. Round to 2 decimal places.`
-    const formulaDisplay = 'A = P(1 + r/n)^(nt)'
-
-    const stage: ExpModelsAnswer['stages'][number] = {
-      id: 'answer',
-      label: 'Doubling time (years)',
-      placeholder: 'e.g. 11.58',
-      formatHint: 'Round to 2 decimal places, or enter the exact logarithmic expression.',
-      answerText,
-      exactExpr,
-      exactValue,
-      places: 2,
-      unit: 'years',
-      nudge: 'Set (1 + r/n)^(nt) = 2, take ln of both sides, and divide by n * ln(1 + r/n).',
-      ruleCard,
-      reveal: [`Setting (1 + ${r}/${n})^(${n}t) = 2 gives t = ln(2) / (${n} * ln(1 + ${r}/${n})) ≈ ${answerText} years.`],
-      traps,
-    }
-
-    const answer: ExpModelsAnswer = {
-      type: 'expModels',
-      question: 'interest',
-      subkind,
-      prompt,
-      formulaDisplay,
-      stages: [stage],
-      expectedDisplay: `${answerText} years`,
-      nudge: stage.nudge,
-      ruleCard,
-      ruleCards: [ruleCard, EM_RULE_IDS.solveTime, EM_RULE_IDS.compound, EM_RULE_IDS.continuousInterest].filter(
-        (v, i, a) => a.indexOf(v) === i,
-      ),
-      reveal: stage.reveal,
-      trap: chosenTrap.id,
-      trapStage: 'answer',
-      trapAnswer: chosenTrap.text,
-    }
-
-    const instance: ProblemInstance = {
-      id: problemId(EM_MODULE_ID, 'em.interest', 1, seed),
-      moduleId: EM_MODULE_ID,
-      templateId: 'em.interest',
-      skill: 'em.interest',
-      genVersion: 1,
-      seed,
-      knobs,
-      kind: 'expModels',
-      title: 'Compound and continuous interest',
-      instructions: 'Find the doubling time in years. You may give the rounded decimal or an exact expression.',
-      statementText: prompt,
-      vars: ['x'],
-      start: null,
-      canonical: [],
-      answer,
-      graph: NO_GRAPH,
-      calc: NO_CALC,
-      params: { subkind, continuous: false, rPct, n, trap: chosenTrap.id },
-    }
-    assertSelf(instance, answer)
-    return instance
-  })
-}
-
-function buildHalflife(seed: number, knobs: DifficultyKnobs): ProblemInstance {
-  return searchSeed(seed, 0x656d_6802, 96, (rng) => {
-    const subkind = rng.pick(['amount_left', 'time_to_amount', 'c14_dating', 'find_halflife'] as const)
-    const formulaDisplay = 'A = A_0 * (1/2)^(t/h)'
-
-    if (subkind === 'amount_left') {
-      const A0 = rng.pick([80, 100, 120, 150, 200, 240, 300, 400] as const)
-      const h = rng.pick([4, 5, 6, 8, 10, 12, 15, 20] as const)
-      const t = rng.pick([3, 5, 7, 9, 11, 13, 14, 17, 19, 23] as const)
-      if (t === h || Math.abs(t - h) <= 1) throw new LogSkip('keep t distinct from h')
-
-      const exactExpr = `${A0} * (1/2)^(${t}/${h})`
-      const exactValue = A0 * Math.pow(0.5, t / h)
-      const answerText = roundPlaces(exactValue, 2)
-
-      const valInverted = A0 * Math.pow(0.5, h / t)
-      const valDecayed = A0 - exactValue
-      const valFracBase = A0 * Math.pow(1 / h, t / h)
-
-      const traps: ExpModelsAnswer['stages'][number]['traps'] = [
-        {
-          id: 'exp_halflife_inverted',
-          text: roundPlaces(valInverted, 2),
-          value: valInverted,
-          witness: `The exponent is elapsed time divided by half-life, t/h = ${t}/${h}, not h/t = ${h}/${t}.`,
-        },
-        {
-          id: 'exp_halflife_decayed',
-          text: roundPlaces(valDecayed, 2),
-          value: valDecayed,
-          witness: `${roundPlaces(valDecayed, 2)} g is the amount that has decayed (A_0 - A). The formula A_0(1/2)^(t/h) gives the amount remaining: ${answerText} g.`,
-        },
-        {
-          id: 'exp_halflife_fraction_base',
-          text: roundPlaces(valFracBase, 2),
-          value: valFracBase,
-          witness: `The base in the half-life formula is always 1/2, with the half-life h = ${h} in the denominator of the exponent t/h.`,
-        },
-      ]
-
-      const chosenTrap = rng.pick(traps)
-      const prompt = `A radioactive sample has an initial mass of ${A0} g and a half-life of ${h} days. Find the mass remaining after ${t} days. Round to 2 decimal places.`
-
-      const stage: ExpModelsAnswer['stages'][number] = {
-        id: 'answer',
-        label: 'Amount remaining (g)',
-        placeholder: 'e.g. 35.36',
-        formatHint: 'Round to 2 decimal places, or enter the exact expression.',
-        answerText,
-        exactExpr,
-        exactValue,
-        places: 2,
-        unit: 'g',
-        nudge: 'Substitute A_0, elapsed time t, and half-life h into A = A_0 * (1/2)^(t/h).',
-        ruleCard: EM_RULE_IDS.halflife,
-        reveal: [`Substitute A_0 = ${A0}, t = ${t}, and h = ${h}: A = ${A0} * (1/2)^(${t}/${h}) ≈ ${answerText} g.`],
-        traps,
-      }
-
-      const answer: ExpModelsAnswer = {
-        type: 'expModels',
-        question: 'halflife',
-        subkind,
-        prompt,
-        formulaDisplay,
-        stages: [stage],
-        expectedDisplay: `${answerText} g`,
-        nudge: stage.nudge,
-        ruleCard: EM_RULE_IDS.halflife,
-        ruleCards: [EM_RULE_IDS.halflife, EM_RULE_IDS.solveTime, EM_RULE_IDS.growthRate],
-        reveal: stage.reveal,
-        trap: chosenTrap.id,
-        trapStage: 'answer',
-        trapAnswer: chosenTrap.text,
-      }
-
-      const instance: ProblemInstance = {
-        id: problemId(EM_MODULE_ID, 'em.halflife', 1, seed),
-        moduleId: EM_MODULE_ID,
-        templateId: 'em.halflife',
-        skill: 'em.halflife',
-        genVersion: 1,
-        seed,
-        knobs,
-        kind: 'expModels',
-        title: 'Half-life and radioactive decay',
-        instructions: 'Solve the half-life problem. You may give the rounded decimal or an exact expression.',
-        statementText: prompt,
-        vars: ['x'],
-        start: null,
-        canonical: [],
-        answer,
-        graph: NO_GRAPH,
-        calc: NO_CALC,
-        params: { subkind, A0, h, t, trap: chosenTrap.id },
-      }
-      assertSelf(instance, answer)
-      return instance
-    }
-
-    if (subkind === 'time_to_amount') {
-      const A0 = rng.pick([100, 120, 160, 200, 250, 300, 400] as const)
-      const pctRemaining = rng.pick([15, 20, 28, 30, 35, 40, 60, 65, 70, 75] as const)
-      const A = Number(((A0 * pctRemaining) / 100).toFixed(1))
-      if (!Number.isInteger(A)) throw new LogSkip('keep integer A')
-      const h = rng.pick([4, 6, 8, 10, 12, 15, 18, 24] as const)
-
-      const exactExpr = `${h} * ln(${A}/${A0}) / ln(1/2)`
-      const exactValue = (h * Math.log(A / A0)) / Math.log(0.5)
-      const answerText = roundPlaces(exactValue, 2)
-
-      const valInverted = (h * Math.log(0.5)) / Math.log(A / A0)
-      const valDecayed = (h * Math.log((A0 - A) / A0)) / Math.log(0.5)
-      const valFracBase = h * (A / A0)
-
-      const traps: ExpModelsAnswer['stages'][number]['traps'] = [
-        {
-          id: 'exp_halflife_inverted',
-          text: roundPlaces(valInverted, 2),
-          value: valInverted,
-          witness: `Solving (1/2)^(t/h) = ${A}/${A0} gives t/h = ln(${A}/${A0}) / ln(1/2), not ln(1/2) / ln(${A}/${A0}).`,
-        },
-        {
-          id: 'exp_halflife_decayed',
-          text: roundPlaces(valDecayed, 2),
-          value: valDecayed,
-          witness: `Use the amount remaining A = ${A} g in the ratio A/A_0 = ${A}/${A0}, not the amount decayed ${A0 - A} g.`,
-        },
-        {
-          id: 'exp_halflife_fraction_base',
-          text: roundPlaces(valFracBase, 2),
-          value: valFracBase,
-          witness: `Use logarithms with base 1/2 to solve (1/2)^(t/${h}) = ${A}/${A0} rather than multiplying ${h} by ${A}/${A0}.`,
-        },
-      ]
-
-      const chosenTrap = rng.pick(traps)
-      const prompt = `A radioactive isotope has a half-life of ${h} hours. How many hours will it take for a ${A0} g sample to decay to ${A} g? Round to 2 decimal places.`
-
-      const stage: ExpModelsAnswer['stages'][number] = {
-        id: 'answer',
-        label: 'Time t (hours)',
-        placeholder: 'e.g. 14.21',
-        formatHint: 'Round to 2 decimal places, or enter the exact logarithmic expression.',
-        answerText,
-        exactExpr,
-        exactValue,
-        places: 2,
-        unit: 'hours',
-        nudge: 'Divide A by A_0, take ln of both sides, divide by ln(1/2), and multiply by the half-life h.',
-        ruleCard: EM_RULE_IDS.halflife,
-        reveal: [
-          `Set ${A} = ${A0}(1/2)^(t/${h}), so (1/2)^(t/${h}) = ${A}/${A0}.`,
-          `Solve for t: t = ${h} * ln(${A}/${A0}) / ln(1/2) ≈ ${answerText} hours.`,
-        ],
-        traps,
-      }
-
-      const answer: ExpModelsAnswer = {
-        type: 'expModels',
-        question: 'halflife',
-        subkind,
-        prompt,
-        formulaDisplay,
-        stages: [stage],
-        expectedDisplay: `${answerText} hours`,
-        nudge: stage.nudge,
-        ruleCard: EM_RULE_IDS.halflife,
-        ruleCards: [EM_RULE_IDS.halflife, EM_RULE_IDS.solveTime, EM_RULE_IDS.growthRate],
-        reveal: stage.reveal,
-        trap: chosenTrap.id,
-        trapStage: 'answer',
-        trapAnswer: chosenTrap.text,
-      }
-
-      const instance: ProblemInstance = {
-        id: problemId(EM_MODULE_ID, 'em.halflife', 1, seed),
-        moduleId: EM_MODULE_ID,
-        templateId: 'em.halflife',
-        skill: 'em.halflife',
-        genVersion: 1,
-        seed,
-        knobs,
-        kind: 'expModels',
-        title: 'Half-life and radioactive decay',
-        instructions: 'Solve the half-life problem. You may give the rounded decimal or an exact expression.',
-        statementText: prompt,
-        vars: ['x'],
-        start: null,
-        canonical: [],
-        answer,
-        graph: NO_GRAPH,
-        calc: NO_CALC,
-        params: { subkind, A0, A, h, trap: chosenTrap.id },
-      }
-      assertSelf(instance, answer)
-      return instance
-    }
-
-    if (subkind === 'c14_dating') {
-      const h = 5730
-      const pct = rng.pick([14, 18, 22, 26, 32, 36, 40, 44, 56, 62, 68, 74, 80, 84] as const)
-      const ratio = Number((pct / 100).toFixed(2))
-      const decayedRatio = Number(((100 - pct) / 100).toFixed(2))
-
-      const exactExpr = `5730 * ln(${ratio}) / ln(1/2)`
-      const exactValue = (h * Math.log(ratio)) / Math.log(0.5)
-      const answerText = roundPlaces(exactValue, 1)
-
-      const valInverted = (h * Math.log(0.5)) / Math.log(ratio)
-      const valDecayed = (h * Math.log(decayedRatio)) / Math.log(0.5)
-      const valFracBase = h * (1 - ratio)
-
-      const traps: ExpModelsAnswer['stages'][number]['traps'] = [
-        {
-          id: 'exp_halflife_inverted',
-          text: roundPlaces(valInverted, 1),
-          value: valInverted,
-          witness: `Solving (1/2)^(t/5730) = ${ratio} gives t = 5730 * ln(${ratio}) / ln(1/2), not 5730 * ln(1/2) / ln(${ratio}).`,
-        },
-        {
-          id: 'exp_halflife_decayed',
-          text: roundPlaces(valDecayed, 1),
-          value: valDecayed,
-          witness: `Use the fraction of carbon-14 remaining (${ratio}), not the fraction that has decayed (${decayedRatio}).`,
-        },
-        {
-          id: 'exp_halflife_fraction_base',
-          text: roundPlaces(valFracBase, 1),
-          value: valFracBase,
-          witness: `Radioactive decay is exponential with base 1/2: solve (1/2)^(t/5730) = ${ratio} using logarithms.`,
-        },
-      ]
-
-      const chosenTrap = rng.pick(traps)
-      const prompt = `A fossilized wood sample contains ${pct}% of its original carbon-14 (half-life h = 5730 years). Estimate the age of the sample in years. Round to 1 decimal place.`
-
-      const stage: ExpModelsAnswer['stages'][number] = {
-        id: 'answer',
-        label: 'Age of sample (years)',
-        placeholder: 'e.g. 3954.2',
-        formatHint: 'Round to 1 decimal place, or enter the exact logarithmic expression.',
-        answerText,
-        exactExpr,
-        exactValue,
-        places: 1,
-        unit: 'years',
-        nudge: 'Set A/A_0 equal to the remaining decimal fraction and solve (1/2)^(t/5730) = A/A_0 for t.',
-        ruleCard: EM_RULE_IDS.halflife,
-        reveal: [
-          `With ${pct}% remaining, A/A_0 = ${ratio}, so (1/2)^(t/5730) = ${ratio}.`,
-          `t = 5730 * ln(${ratio}) / ln(1/2) ≈ ${answerText} years.`,
-        ],
-        traps,
-      }
-
-      const answer: ExpModelsAnswer = {
-        type: 'expModels',
-        question: 'halflife',
-        subkind,
-        prompt,
-        formulaDisplay,
-        stages: [stage],
-        expectedDisplay: `${answerText} years`,
-        nudge: stage.nudge,
-        ruleCard: EM_RULE_IDS.halflife,
-        ruleCards: [EM_RULE_IDS.halflife, EM_RULE_IDS.solveTime, EM_RULE_IDS.growthRate],
-        reveal: stage.reveal,
-        trap: chosenTrap.id,
-        trapStage: 'answer',
-        trapAnswer: chosenTrap.text,
-      }
-
-      const instance: ProblemInstance = {
-        id: problemId(EM_MODULE_ID, 'em.halflife', 1, seed),
-        moduleId: EM_MODULE_ID,
-        templateId: 'em.halflife',
-        skill: 'em.halflife',
-        genVersion: 1,
-        seed,
-        knobs,
-        kind: 'expModels',
-        title: 'Half-life and radioactive decay',
-        instructions: 'Solve the carbon-14 dating problem. You may give the rounded decimal or an exact expression.',
-        statementText: prompt,
-        vars: ['x'],
-        start: null,
-        canonical: [],
-        answer,
-        graph: NO_GRAPH,
-        calc: NO_CALC,
-        params: { subkind, pct, h, trap: chosenTrap.id },
-      }
-      assertSelf(instance, answer)
-      return instance
-    }
-
-    // subkind === 'find_halflife'
-    const A0 = rng.pick([100, 120, 150, 200, 250, 300, 400] as const)
-    const pctRemaining = rng.pick([15, 20, 28, 30, 35, 40, 60, 65, 70, 75] as const)
-    const A = Number(((A0 * pctRemaining) / 100).toFixed(1))
-    if (!Number.isInteger(A)) throw new LogSkip('keep integer A')
-    const t = rng.pick([6, 8, 9, 10, 12, 14, 15, 18, 20, 24] as const)
-
-    const exactExpr = `${t} * ln(1/2) / ln(${A}/${A0})`
-    const exactValue = (t * Math.log(0.5)) / Math.log(A / A0)
-    const answerText = roundPlaces(exactValue, 2)
-
-    const valInverted = (t * Math.log(A / A0)) / Math.log(0.5)
-    const valDecayed = (t * Math.log(0.5)) / Math.log((A0 - A) / A0)
-    const valFracBase = t * (A / A0)
-
-    const traps: ExpModelsAnswer['stages'][number]['traps'] = [
-      {
-        id: 'exp_halflife_inverted',
-        text: roundPlaces(valInverted, 2),
-        value: valInverted,
-        witness: `From t/h = ln(${A}/${A0}) / ln(1/2), solving for h in the denominator gives h = ${t} * ln(1/2) / ln(${A}/${A0}).`,
-      },
-      {
-        id: 'exp_halflife_decayed',
-        text: roundPlaces(valDecayed, 2),
-        value: valDecayed,
-        witness: `Use the remaining mass A = ${A} g in A/A_0 = ${A}/${A0}, not the decayed mass ${A0 - A} g.`,
-      },
-      {
-        id: 'exp_halflife_fraction_base',
-        text: roundPlaces(valFracBase, 2),
-        value: valFracBase,
-        witness: `Solve (1/2)^(${t}/h) = ${A}/${A0} using logarithms rather than multiplying ${t} by ${A}/${A0}.`,
-      },
-    ]
-
-    const chosenTrap = rng.pick(traps)
-    const prompt = `A ${A0} g sample of a radioactive substance decays to ${A} g in ${t} days. Find the half-life of the substance in days. Round to 2 decimal places.`
-
-    const stage: ExpModelsAnswer['stages'][number] = {
-      id: 'answer',
-      label: 'Half-life h (days)',
-      placeholder: 'e.g. 9.32',
-      formatHint: 'Round to 2 decimal places, or enter the exact logarithmic expression.',
-      answerText,
-      exactExpr,
-      exactValue,
-      places: 2,
-      unit: 'days',
-      nudge: 'Set (1/2)^(t/h) = A/A_0, take ln of both sides to get (t/h) * ln(1/2) = ln(A/A_0), and solve for h.',
-      ruleCard: EM_RULE_IDS.halflife,
-      reveal: [
-        `Divide by ${A0}: (1/2)^(${t}/h) = ${A}/${A0}.`,
-        `Take ln and solve for h: h = ${t} * ln(1/2) / ln(${A}/${A0}) ≈ ${answerText} days.`,
-      ],
-      traps,
-    }
-
-    const answer: ExpModelsAnswer = {
-      type: 'expModels',
-      question: 'halflife',
-      subkind,
-      prompt,
-      formulaDisplay,
-      stages: [stage],
-      expectedDisplay: `${answerText} days`,
-      nudge: stage.nudge,
-      ruleCard: EM_RULE_IDS.halflife,
-      ruleCards: [EM_RULE_IDS.halflife, EM_RULE_IDS.solveTime, EM_RULE_IDS.growthRate],
-      reveal: stage.reveal,
-      trap: chosenTrap.id,
-      trapStage: 'answer',
-      trapAnswer: chosenTrap.text,
-    }
-
-    const instance: ProblemInstance = {
-      id: problemId(EM_MODULE_ID, 'em.halflife', 1, seed),
-      moduleId: EM_MODULE_ID,
-      templateId: 'em.halflife',
-      skill: 'em.halflife',
-      genVersion: 1,
-      seed,
-      knobs,
-      kind: 'expModels',
-      title: 'Half-life and radioactive decay',
-      instructions: 'Find the half-life. You may give the rounded decimal or an exact expression.',
-      statementText: prompt,
-      vars: ['x'],
-      start: null,
-      canonical: [],
-      answer,
-      graph: NO_GRAPH,
-      calc: NO_CALC,
-      params: { subkind, A0, A, t, trap: chosenTrap.id },
-    }
-    assertSelf(instance, answer)
-    return instance
-  })
-}
-
-function buildGrowth(seed: number, knobs: DifficultyKnobs): ProblemInstance {
-  return searchSeed(seed, 0x656d_6703, 96, (rng) => {
-    const subkind = rng.pick(['predict', 'time_to_size'] as const)
-    const P0 = rng.pick([50, 80, 100, 120, 150, 200] as const)
-    const ratioNum = rng.pick([15, 18, 22, 24, 25, 28, 30, 35] as const)
-    const P1 = Math.round((P0 * ratioNum) / 10)
-    if (P1 <= P0 + 10) throw new LogSkip('keep P1 well above P0')
-    const t1 = rng.pick([4, 5, 6, 7, 8, 9, 10] as const)
-
-    const kExactExpr = `ln(${P1}/${P0})/${t1}`
-    const kExact = Math.log(P1 / P0) / t1
-    const kRoundText = roundPlaces(kExact, 4)
-    const kRound = Number(kRoundText)
-
-    const kNoLogVal = P1 / P0 / t1
-    const kNoLogExpr = `(${P1}/${P0})/${t1}`
-    const kLogDiffVal = Math.log(P1 - P0) / t1
-    const kLogDiffExpr = `ln(${P1 - P0})/${t1}`
-    const kSwappedVal = t1 / Math.log(P1 / P0)
-    const kSwappedExpr = `${t1}/ln(${P1}/${P0})`
-
-    const stage1: ExpModelsAnswer['stages'][number] = {
-      id: 'exact_k',
-      label: 'Exact growth rate k',
-      placeholder: 'e.g. ln(P_1/P_0)/t',
-      formatHint: 'Write the exact expression in terms of ln, such as ln(a/b)/t.',
-      answerText: kExactExpr,
-      exactExpr: kExactExpr,
-      exactValue: kExact,
-      nudge: 'Substitute P_0, P_1, and t into P_1 = P_0 * e^(kt), divide by P_0, take ln of both sides, and divide by t.',
-      ruleCard: EM_RULE_IDS.growthRate,
-      reveal: [`From ${P1} = ${P0} * e^(${t1}k), e^(${t1}k) = ${P1}/${P0}, so k = ${kExactExpr}.`],
-      traps: [
-        {
-          id: 'exp_growth_no_log',
-          text: kNoLogExpr,
-          value: kNoLogVal,
-          exactExpr: kNoLogExpr,
-          witness: `Divide ${P1} by ${P0} first, then take the natural logarithm ln(${P1}/${P0}) before dividing by ${t1}.`,
-        },
-        {
-          id: 'exp_growth_log_diff',
-          text: kLogDiffExpr,
-          value: kLogDiffVal,
-          exactExpr: kLogDiffExpr,
-          witness: `Isolate e^(${t1}k) by dividing ${P1} by ${P0} (not subtracting ${P0} from ${P1}): use ln(${P1}/${P0}), not ln(${P1} - ${P0}).`,
-        },
-        {
-          id: 'exp_growth_swapped',
-          text: kSwappedExpr,
-          value: kSwappedVal,
-          exactExpr: kSwappedExpr,
-          witness: `Solving ${t1}k = ln(${P1}/${P0}) for k divides ln(${P1}/${P0}) by ${t1}, not ${t1} by ln(${P1}/${P0}).`,
-        },
-      ],
-    }
-
-    const stage2: ExpModelsAnswer['stages'][number] = {
-      id: 'rounded_k',
-      label: 'Growth rate k (rounded to 4 decimal places)',
-      placeholder: 'e.g. 0.1386',
-      formatHint: 'Round k to 4 decimal places.',
-      answerText: kRoundText,
-      exactExpr: kExactExpr,
-      exactValue: kExact,
-      places: 4,
-      nudge: 'Evaluate your exact expression for k on a calculator and round to 4 decimal places.',
-      ruleCard: EM_RULE_IDS.growthRate,
-      reveal: [`Evaluating ${kExactExpr} to 4 decimal places gives k ≈ ${kRoundText}.`],
-      traps: [
-        {
-          id: 'exp_growth_no_log',
-          text: roundPlaces(kNoLogVal, 4),
-          value: kNoLogVal,
-          witness: `Take the natural logarithm of the ratio ${P1}/${P0} before dividing by ${t1}.`,
-        },
-        {
-          id: 'exp_growth_log_diff',
-          text: roundPlaces(kLogDiffVal, 4),
-          value: kLogDiffVal,
-          witness: `Use the ratio ${P1}/${P0} inside the natural logarithm, not the difference ${P1} - ${P0}.`,
-        },
-        {
-          id: 'exp_growth_swapped',
-          text: roundPlaces(kSwappedVal, 4),
-          value: kSwappedVal,
-          witness: `Divide ln(${P1}/${P0}) by ${t1}, not ${t1} by ln(${P1}/${P0}).`,
-        },
-      ],
-    }
-
-    let stage3: ExpModelsAnswer['stages'][number]
-    let prompt: string
-
-    if (subkind === 'predict') {
-      const t2 = t1 + rng.pick([3, 4, 5, 6] as const)
-      const fExactExpr = `${P0} * e^((${kExactExpr}) * ${t2})`
-      const fExactVal = P0 * Math.exp(kExact * t2)
-      const fAltVal = P0 * Math.exp(kRound * t2)
-      const fAnswerText = roundPlaces(fExactVal, 1)
-
-      const valSwapped = Math.log(t2 / P0) / kExact
-      const valNoLog = P0 * Math.exp(kNoLogVal * t2)
-      const valLogDiff = P0 * Math.exp(kLogDiffVal * t2)
-
-      stage3 = {
-        id: 'followup',
-        label: `Population at t = ${t2} hours`,
-        placeholder: 'e.g. 642.5',
-        formatHint: 'Round the predicted population to 1 decimal place, or enter the exact expression.',
-        answerText: fAnswerText,
-        exactExpr: fExactExpr,
-        exactValue: fExactVal,
-        altExactValue: fAltVal,
-        places: 1,
-        unit: 'bacteria',
-        nudge: `Substitute t = ${t2} into P = ${P0} * e^(k * t) and evaluate.`,
-        ruleCard: EM_RULE_IDS.growthPredict,
-        reveal: [`At t = ${t2}, P(${t2}) = ${P0} * e^(${kExactExpr} * ${t2}) ≈ ${fAnswerText}.`],
-        traps: [
-          {
-            id: 'exp_growth_swapped',
-            text: roundPlaces(valSwapped, 1),
-            value: valSwapped,
-            witness: `t = ${t2} is a time in hours, so substitute ${t2} into the exponent of ${P0} * e^(k * t) rather than solving ${t2} = ${P0} * e^(k * t).`,
-          },
-          {
-            id: 'exp_growth_no_log',
-            text: roundPlaces(valNoLog, 1),
-            value: valNoLog,
-            witness: `Use the logarithmic growth rate k = ${kExactExpr} in the exponent.`,
-          },
-          {
-            id: 'exp_growth_log_diff',
-            text: roundPlaces(valLogDiff, 1),
-            value: valLogDiff,
-            witness: `Use k = ln(${P1}/${P0})/${t1} from the ratio of populations, not the difference.`,
-          },
-        ],
-      }
-      prompt = `A bacteria culture starts with P_0 = ${P0} bacteria and grows continuously according to P = P_0 * e^(kt). After ${t1} hours, the population is ${P1}. Find the exact growth rate k, round k to 4 decimal places, and predict the population after ${t2} hours (rounded to 1 decimal place).`
+      slips.push({ id: 'exp_rate_percent', values: [o.P * Math.exp(R * t)], witness: `Your amount uses r = ${R}, the percent itself. In the formula, ${rate}% is r = ${rText}.` })
+      slips.push({ id: 'exp_simple_interest', values: [o.P * (1 + r * t)], witness: 'Your amount is simple interest, P(1 + rt): the same interest every year. Compounded interest also earns interest on its interest.' })
+      slips.push({ id: 'exp_continuous_swapped', values: [o.P * (1 + r / 12) ** (12 * t)], witness: 'Your amount compounds monthly, P(1 + r/12)^(12t). This account is compounded continuously.' })
+      slips.push({ id: 'exp_continuous_swapped', values: [o.P * (1 + r) ** t], witness: 'Your amount compounds once a year, P(1 + r)^t. This account is compounded continuously.' })
+      slips.push({ id: 'exp_exponent_missing', values: [o.P * Math.exp(r)], witness: `Your amount uses e^r, one year of growth. After ${t} years the exponent is r·t.` })
     } else {
-      const mult = rng.pick([3, 4, 5] as const)
-      const PTarget = P0 * mult
-      if (PTarget === P1) throw new LogSkip('target equals P1')
-      const fExactExpr = `ln(${PTarget}/${P0}) / (${kExactExpr})`
-      const fExactVal = Math.log(PTarget / P0) / kExact
-      const fAltVal = Math.log(PTarget / P0) / kRound
-      const fAnswerText = roundPlaces(fExactVal, 2)
-
-      const valSwapped = P0 * Math.exp(kExact * PTarget)
-      if (!Number.isFinite(valSwapped)) throw new LogSkip('swapped trap overflowed')
-      const valNoLog = Math.log(PTarget / P0) / kNoLogVal
-      const valLogDiff = Math.log(PTarget / P0) / kLogDiffVal
-
-      stage3 = {
-        id: 'followup',
-        label: `Time to reach ${PTarget} bacteria (hours)`,
-        placeholder: 'e.g. 12.63',
-        formatHint: 'Round the time to 2 decimal places, or enter the exact expression.',
-        answerText: fAnswerText,
-        exactExpr: fExactExpr,
-        exactValue: fExactVal,
-        altExactValue: fAltVal,
-        places: 2,
-        unit: 'hours',
-        nudge: `Set P = ${PTarget} in ${PTarget} = ${P0} * e^(k * t), divide by ${P0}, take ln, and divide by k.`,
-        ruleCard: EM_RULE_IDS.growthPredict,
-        reveal: [`Setting ${PTarget} = ${P0} * e^(kt) gives t = ln(${PTarget}/${P0}) / k ≈ ${fAnswerText} hours.`],
-        traps: [
-          {
-            id: 'exp_growth_swapped',
-            text: roundPlaces(valSwapped, 2),
-            value: valSwapped,
-            witness: `${PTarget} is the target population P, not the time t. Set ${PTarget} = ${P0} * e^(kt) and solve for t = ln(${PTarget}/${P0}) / k.`,
-          },
-          {
-            id: 'exp_growth_no_log',
-            text: roundPlaces(valNoLog, 2),
-            value: valNoLog,
-            witness: `Use the logarithmic growth rate k = ${kExactExpr} when solving for t.`,
-          },
-          {
-            id: 'exp_growth_log_diff',
-            text: roundPlaces(valLogDiff, 2),
-            value: valLogDiff,
-            witness: `Use k = ln(${P1}/${P0})/${t1} from the ratio of populations.`,
-          },
-        ],
+      slips.push({ id: 'exp_rate_percent', values: [o.P * (1 + R / o.n) ** (o.n * t)], witness: `Your amount uses r = ${R}, the percent itself. In the formula, ${rate}% is r = ${rText}.` })
+      for (const m of otherPeriods) {
+        slips.push({ id: 'exp_wrong_period', values: [o.P * (1 + r / m) ** (m * t)], witness: `Your amount compounds ${PERIOD_WORD[m]} (n = ${m}). Compounded ${word} means n = ${o.n}.` })
       }
-      prompt = `A bacteria culture starts with P_0 = ${P0} bacteria and grows continuously according to P = P_0 * e^(kt). After ${t1} hours, the population is ${P1}. Find the exact growth rate k, round k to 4 decimal places, and find how many hours it takes the population to reach ${PTarget} (rounded to 2 decimal places).`
+      slips.push({ id: 'exp_simple_interest', values: [o.P * (1 + r * t)], witness: 'Your amount is simple interest, P(1 + rt): the same interest every year. Compound interest also earns interest on its interest.' })
+      slips.push({ id: 'exp_continuous_swapped', values: [o.P * Math.exp(r * t)], witness: `Your amount uses Pe^(rt), the formula for compounding continuously. This account is compounded ${word}.` })
+      if (o.n !== 1) slips.push({ id: 'exp_exponent_missing', values: [o.P * (1 + r / o.n) ** t], witness: `Your exponent is ${t}, the number of years. Compounded ${word}, the account is compounded ${o.n} times a year, ${o.n}·${t} times in all.` })
     }
-
-    const stages = [stage1, stage2, stage3]
-    const trapChoices: readonly { stage: ExpModelsStageId; id: ErrorPatternId; ans: string }[] = [
-      { stage: 'exact_k', id: 'exp_growth_no_log', ans: kNoLogExpr },
-      { stage: 'exact_k', id: 'exp_growth_log_diff', ans: kLogDiffExpr },
-      { stage: 'followup', id: 'exp_growth_swapped', ans: stage3.traps[0]!.text },
-    ]
-    const chosenTrap = rng.pick(trapChoices)
-    const ruleCard = (EM_RULE_FOR[chosenTrap.id] ?? EM_RULE_IDS.growthRate) as RuleCardId
-
-    const answer: ExpModelsAnswer = {
-      type: 'expModels',
-      question: 'growth',
-      subkind,
-      prompt,
-      formulaDisplay: 'P = P_0 * e^(kt)',
-      stages,
-      expectedDisplay: `k = ${kExactExpr} ≈ ${kRoundText}; ${stage3.answerText}`,
-      nudge: stage1.nudge,
-      ruleCard,
-      ruleCards: [ruleCard, EM_RULE_IDS.growthRate, EM_RULE_IDS.growthPredict, EM_RULE_IDS.solveTime].filter(
-        (v, i, a) => a.indexOf(v) === i,
-      ),
-      reveal: stages.flatMap((s) => s.reveal),
-      trap: chosenTrap.id,
-      trapStage: chosenTrap.stage,
-      trapAnswer: chosenTrap.ans,
+    prompt = `${dollars(o.P)} is invested at ${rate}% interest compounded ${word}. How much is in the account after ${t} years? Round to the nearest cent.`
+    const closed = continuous ? `${o.P}*e^(${rText}*${t})` : `${o.P}*(1 + ${rText}/${o.n})^(${o.n}*${t})`
+    part = decimalPart({
+      id: 'answer',
+      label: 'Balance',
+      ask: `How much is in the account after ${t} years? Round to the nearest cent.`,
+      places: 2,
+      money: true,
+      closedForms: [closed],
+      values: [value],
+      slips,
+      nudge: continuous ? 'Write the rate as a decimal, then use the formula for compounding continuously.' : 'Write the rate as a decimal. The word for how often it compounds tells you n.',
+      ruleCard: continuous ? EM_RULE_IDS.continuous : EM_RULE_IDS.compound,
+      reveal: continuous
+        ? [`Compounded continuously: A = Pe^(rt) with P = ${o.P}, r = ${rText}, t = ${t}.`, `A = ${o.P}e^(${rText}·${t}) ≈ ${withCommas(roundPlaces(value, 2))}.`, `The balance is $${withCommas(roundPlaces(value, 2))}.`]
+        : [
+            `A = P(1 + r/n)^(nt) with P = ${o.P}, r = ${rText}, n = ${o.n}, t = ${t}.`,
+            `A = ${o.P}(1 + ${rText}/${o.n})^(${o.n}·${t}) ≈ ${withCommas(roundPlaces(value, 2))}.`,
+            `The balance is $${withCommas(roundPlaces(value, 2))}.`,
+          ],
+    })
+  } else {
+    const ratio = o.ask === 'double' ? 2 : o.A! / o.P
+    const ratioText = o.ask === 'double' ? '2' : `${o.A}/${o.P}`
+    const places = o.places ?? 2
+    const lnRatio = Math.log(ratio)
+    const value = continuous ? lnRatio / r : lnRatio / (o.n * Math.log(1 + r / o.n))
+    if (value > 40) throw new LogSkip('more than forty years')
+    if (continuous) {
+      slips.push({ id: 'exp_rate_percent', values: [lnRatio / R], witness: `Your time uses r = ${R}, the percent itself. In the formula, ${rate}% is r = ${rText}.` })
+      slips.push({ id: 'exp_simple_interest', values: [(ratio - 1) / r], witness: 'Your time is for simple interest, P(1 + rt). Compounded interest grows faster, so it takes less time.' })
+      slips.push({ id: 'exp_continuous_swapped', values: [lnRatio / (12 * Math.log(1 + r / 12))], witness: 'Your time is for compounding monthly. This account is compounded continuously: A = Pe^(rt).' })
+      slips.push({ id: 'exp_continuous_swapped', values: [lnRatio / Math.log(1 + r)], witness: 'Your time is for compounding once a year. This account is compounded continuously: A = Pe^(rt).' })
+    } else {
+      slips.push({ id: 'exp_rate_percent', values: [lnRatio / (o.n * Math.log(1 + R / o.n))], witness: `Your time uses r = ${R}, the percent itself. In the formula, ${rate}% is r = ${rText}.` })
+      for (const m of otherPeriods) {
+        slips.push({ id: 'exp_wrong_period', values: [lnRatio / (m * Math.log(1 + r / m))], witness: `Your time is for compounding ${PERIOD_WORD[m]} (n = ${m}). Compounded ${word} means n = ${o.n}.` })
+      }
+      slips.push({ id: 'exp_simple_interest', values: [(ratio - 1) / r], witness: 'Your time is for simple interest, P(1 + rt). Compound interest grows faster, so it takes less time.' })
+      slips.push({ id: 'exp_continuous_swapped', values: [lnRatio / r], witness: `Your time is for compounding continuously, A = Pe^(rt). This account is compounded ${word}.` })
+      if (o.n !== 1) slips.push({ id: 'exp_exponent_missing', values: [lnRatio / Math.log(1 + r / o.n)], witness: `Your number counts compounding periods, n·t. Compounded ${word}, that is ${o.n} periods a year: divide by ${o.n} to get years.` })
     }
+    const question = o.ask === 'double' ? 'How long will it take the investment to double?' : `How long will it take for the balance to reach ${dollars(o.A!)}?`
+    prompt =
+      o.ask === 'double'
+        ? `An investment earns ${rate}% interest compounded ${word}. How long will it take the investment to double? ${ROUND_YEARS[places]}`
+        : `${dollars(o.P)} is invested at ${rate}% interest compounded ${word}. ${question} ${ROUND_YEARS[places]}`
+    const closed = continuous ? `ln(${ratioText})/${rText}` : `ln(${ratioText})/(${o.n}*ln(1 + ${rText}/${o.n}))`
+    const set = o.ask === 'double' ? 'A = 2P' : `A = ${o.A}, P = ${o.P}`
+    part = decimalPart({
+      id: 'answer',
+      label: o.ask === 'double' ? 'Doubling time' : 'Time',
+      ask: `${question} ${ROUND_YEARS[places]}`,
+      places,
+      units: UNITS.year,
+      closedForms: [closed],
+      values: [value],
+      slips,
+      nudge: o.ask === 'double' ? 'Doubling means A = 2P. Divide both sides by P, then take ln of both sides to bring the exponent down.' : 'Put the numbers into the formula, divide both sides by P, then take ln of both sides to bring the exponent down.',
+      ruleCard: EM_RULE_IDS.time,
+      reveal: continuous
+        ? [`A = Pe^(rt) with ${set} and r = ${rText}: e^(${rText}t) = ${say(ratioText)}.`, `Take ln of both sides: ${rText}t = ln(${say(ratioText)}), so t = ln(${say(ratioText)})/${rText} ≈ ${roundPlaces(value, places)}.`, `It takes about ${roundPlaces(value, places)} years.`]
+        : [
+            `A = P(1 + r/n)^(nt) with ${set}, r = ${rText}, n = ${o.n}: (1 + ${rText}/${o.n})^(${o.n}t) = ${say(ratioText)}.`,
+            `Take ln of both sides: ${o.n}t·ln(1 + ${rText}/${o.n}) = ln(${say(ratioText)}).`,
+            `t = ln(${say(ratioText)})/(${o.n}·ln(1 + ${rText}/${o.n})) ≈ ${roundPlaces(value, places)}.`,
+            `It takes about ${roundPlaces(value, places)} years.`,
+          ],
+    })
+  }
+  return finish('interest', prompt, undefined, [part], [EM_RULE_IDS.compound, EM_RULE_IDS.continuous, EM_RULE_IDS.time])
+}
 
-    const instance: ProblemInstance = {
-      id: problemId(EM_MODULE_ID, 'em.growth', 1, seed),
+function drawInterest(rng: Rng): Drafted {
+  const P = rng.chance(0.6) ? 500 * rng.int(1, 30) : 100 * rng.int(5, 99)
+  const bp = 25 * rng.int(8, 32)
+  const n = rng.chance(0.3) ? 0 : rng.pick([1, 2, 4, 12, 12, 4] as const)
+  const roll = rng.int(0, 99)
+  if (roll < 50) return interestProblem({ ask: 'balance', P, bp, n, t: rng.int(2, 30) })
+  const places = rng.pick([1, 2, 2] as const)
+  if (roll < 78) {
+    const A = Math.round((P * (1.2 + rng.int(1, 28) / 10)) / 100) * 100
+    if (A <= P * 1.15) throw new LogSkip('target too close to the principal')
+    return interestProblem({ ask: 'time', P, bp, n, A, places })
+  }
+  return interestProblem({ ask: 'double', P, bp, n, places })
+}
+
+// ---------------------------------------------------------------------------
+// em.halflife
+// ---------------------------------------------------------------------------
+
+type DecayAsk = 'left' | 'time' | 'carbon' | 'halflife'
+
+/** The decay problem for these numbers (exported for the hand-worked tests). */
+export function halfLifeProblem(o: {
+  ask: DecayAsk
+  A0?: number
+  A?: number
+  h?: number
+  t?: number
+  /** carbon: percent left, or percent lost when `lost` is set. */
+  percent?: number
+  lost?: boolean
+  mass?: 'gram' | 'milligram'
+  time?: 'day' | 'hour' | 'year'
+  places: number
+}): Drafted {
+  const mass = o.mass ?? 'gram'
+  const time = o.time ?? 'day'
+  const slips: Slip[] = []
+  let part: { part: ExpLogPart; promisable: ExpLogPartTrap[] }
+  let prompt: string
+  const plural = (unit: string) => `${unit}s`
+  if (o.ask === 'left') {
+    const { A0, h, t } = o as Required<typeof o>
+    const value = A0 * 0.5 ** (t / h)
+    slips.push({ id: 'exp_halflife_inverted', values: [A0 * 0.5 ** (h / t)], witness: `Your exponent is ${h}/${t}, the half-life over the time. The number of half-lives is the time over the half-life.` })
+    slips.push({ id: 'exp_halflife_decayed', values: [A0 - value], witness: 'Your amount is how much decayed: the start minus what is left. The formula gives what is still there.' })
+    prompt = `A ${A0}-${mass} sample of a radioactive isotope has a half-life of ${h} ${plural(time)}. How much of it is left after ${t} ${plural(time)}? ${roundWords(o.places, mass)}`
+    part = decimalPart({
+      id: 'answer',
+      label: 'Amount left',
+      ask: `How much is left after ${t} ${plural(time)}? ${roundWords(o.places, mass)}`,
+      places: o.places,
+      units: UNITS[mass],
+      closedForms: [`${A0}*(1/2)^(${t}/${h})`],
+      values: [value],
+      slips,
+      nudge: 'Count the half-lives first: the time divided by the half-life. Each one halves what is left.',
+      ruleCard: EM_RULE_IDS.halfLife,
+      reveal: [`A = A₀(1/2)^(t/h) with A₀ = ${A0}, h = ${h}, t = ${t}.`, `A = ${A0}(1/2)^(${t}/${h}) ≈ ${roundPlaces(value, o.places)}.`, `About ${roundPlaces(value, o.places)} ${plural(mass)} are left.`],
+    })
+  } else if (o.ask === 'time' || o.ask === 'carbon') {
+    const carbon = o.ask === 'carbon'
+    const h = carbon ? 5730 : o.h!
+    const q = carbon ? (o.lost ? 1 - o.percent! / 100 : o.percent! / 100) : o.A! / o.A0!
+    const qText = carbon ? roundPlaces(q, 2).replace(/0+$/, '').replace(/\.$/, '') : `${o.A}/${o.A0}`
+    const value = (h * Math.log(q)) / LN_HALF
+    slips.push({ id: 'exp_halflife_inverted', values: [(h * LN_HALF) / Math.log(q)], witness: 'Your time comes from the exponent h/t, the half-life over the time. The number of half-lives is t/h: the time over the half-life.' })
+    slips.push({
+      id: 'exp_halflife_base',
+      values: [h],
+      witness: `Your time is exactly one half-life. That is what you get when the fraction left replaces the 1/2: q^(t/h) = q gives t = h. The base stays 1/2, and the fraction left is what the power equals.`,
+    })
+    slips.push({
+      id: 'exp_halflife_decayed',
+      values: [(h * Math.log(1 - q)) / LN_HALF],
+      witness: carbon
+        ? o.lost
+          ? `Your time uses ${o.percent}% as the part that is left. The problem says that much was lost.`
+          : `Your time uses ${100 - o.percent!}%, the part that decayed. The problem says ${o.percent}% is left.`
+        : `Your time uses the amount that decayed, ${o.A0! - o.A!} ${plural(mass)}. The formula needs what is left.`,
+    })
+    if (carbon) {
+      prompt = o.lost
+        ? `A wooden tool has lost ${o.percent}% of its carbon-14. The half-life of carbon-14 is 5730 years. How old is the tool? ${roundWords(o.places, 'year')}`
+        : `A bone contains ${o.percent}% of the carbon-14 that a living bone has. The half-life of carbon-14 is 5730 years. How old is the bone? ${roundWords(o.places, 'year')}`
+    } else {
+      prompt = `A radioactive isotope has a half-life of ${h} ${plural(time)}. How long will it take a ${o.A0}-${mass} sample to decay to ${o.A} ${plural(mass)}? ${roundWords(o.places, time)}`
+    }
+    const unit = carbon ? 'year' : time
+    part = decimalPart({
+      id: 'answer',
+      label: carbon ? 'Age' : 'Time',
+      ask: carbon ? `How old is it? ${roundWords(o.places, 'year')}` : `How long will it take? ${roundWords(o.places, unit)}`,
+      places: o.places,
+      units: UNITS[unit],
+      closedForms: [`${h}*ln(${qText})/ln(1/2)`],
+      values: [value],
+      slips,
+      nudge: carbon
+        ? 'Write the fraction of carbon-14 that is left. Set (1/2)^(t/5730) equal to it, then take ln of both sides.'
+        : 'Divide by the starting amount, so (1/2)^(t/h) equals the fraction left. Then take ln of both sides.',
+      ruleCard: EM_RULE_IDS.halfLife,
+      reveal: [
+        `The fraction left is ${say(qText)}: (1/2)^(t/${h}) = ${say(qText)}.`,
+        `Take ln of both sides: (t/${h})·ln(1/2) = ln(${say(qText)}), so t = ${h}·ln(${say(qText)})/ln(1/2) ≈ ${roundPlaces(value, o.places)}.`,
+        carbon ? `It is about ${withCommas(roundPlaces(value, o.places))} years old.` : `It takes about ${roundPlaces(value, o.places)} ${plural(time)}.`,
+      ],
+    })
+  } else {
+    const { A0, A, t } = o as Required<typeof o>
+    const q = A / A0
+    const value = (t * LN_HALF) / Math.log(q)
+    slips.push({ id: 'exp_halflife_inverted', values: [(t * Math.log(q)) / LN_HALF], witness: 'Your half-life comes from the exponent h/t. The number of half-lives is t/h, the time over the half-life.' })
+    slips.push({ id: 'exp_halflife_base', values: [t], witness: 'Your half-life equals the time given. That is what you get when the fraction left replaces the 1/2: q^(t/h) = q gives h = t. The base stays 1/2.' })
+    slips.push({ id: 'exp_halflife_decayed', values: [(t * LN_HALF) / Math.log(1 - q)], witness: `Your half-life uses the amount that decayed, ${A0 - A} ${plural(mass)}. The formula needs what is left.` })
+    prompt = `A ${A0}-${mass} sample of a radioactive substance decays to ${A} ${plural(mass)} in ${t} ${plural(time)}. What is its half-life? ${roundWords(o.places, time)}`
+    part = decimalPart({
+      id: 'answer',
+      label: 'Half-life',
+      ask: `What is the half-life? ${roundWords(o.places, time)}`,
+      places: o.places,
+      units: UNITS[time],
+      closedForms: [`${t}*ln(1/2)/ln(${A}/${A0})`],
+      values: [value],
+      slips,
+      nudge: 'Divide by the starting amount: (1/2)^(t/h) equals the fraction left. Take ln of both sides, then solve for h.',
+      ruleCard: EM_RULE_IDS.halfLife,
+      reveal: [
+        `(1/2)^(${t}/h) = ${A}/${A0}.`,
+        `Take ln of both sides: (${t}/h)·ln(1/2) = ln(${A}/${A0}), so h = ${t}·ln(1/2)/ln(${A}/${A0}) ≈ ${roundPlaces(value, o.places)}.`,
+        `The half-life is about ${roundPlaces(value, o.places)} ${plural(time)}.`,
+      ],
+    })
+  }
+  return finish('halflife', prompt, 'A = A_0\\left(\\tfrac{1}{2}\\right)^{t/h}', [part], [EM_RULE_IDS.halfLife, EM_RULE_IDS.time])
+}
+
+function drawHalfLife(rng: Rng): Drafted {
+  const roll = rng.int(0, 99)
+  const time = rng.pick(['day', 'hour', 'year'] as const)
+  const h = time === 'hour' ? rng.int(2, 24) : time === 'day' ? rng.int(3, 60) : rng.int(5, 90)
+  const mass = rng.chance(0.5) ? 'gram' : 'milligram'
+  const A0 = mass === 'gram' ? 10 * rng.int(2, 50) : 25 * rng.int(2, 40)
+  const places = rng.pick([1, 2] as const)
+  if (roll < 30) {
+    const t = rng.int(Math.max(1, Math.round(0.3 * h)), Math.round(4 * h))
+    if (t === h) throw new LogSkip('one half-life exactly')
+    return halfLifeProblem({ ask: 'left', A0, h, t, mass, time, places })
+  }
+  if (roll < 70 && roll >= 45) {
+    const lost = rng.chance(0.35)
+    const percent = rng.intExcept(5, 95, [50])
+    return halfLifeProblem({ ask: 'carbon', percent, lost, places: 0 })
+  }
+  const A = Math.round(A0 * (rng.int(8, 90) / 100))
+  if (A <= 0 || A >= A0 || 2 * A === A0) throw new LogSkip('not a decay to a smaller amount')
+  if (roll < 45) return halfLifeProblem({ ask: 'time', A0, A, h, mass, time, places })
+  const t = time === 'hour' ? rng.int(2, 30) : time === 'day' ? rng.int(2, 60) : rng.int(5, 80)
+  return halfLifeProblem({ ask: 'halflife', A0, A, t, mass, time, places })
+}
+
+// ---------------------------------------------------------------------------
+// em.growth
+// ---------------------------------------------------------------------------
+
+/** n/d as a terminating decimal ("1.5" for 270/180), or null. */
+function terminating(n: number, d: number): string | null {
+  const g = gcd(n, d)
+  let rest = d / g
+  while (rest % 2 === 0) rest /= 2
+  while (rest % 5 === 0) rest /= 5
+  if (rest !== 1) return null
+  const text = (n / d).toFixed(10).replace(/0+$/, '').replace(/\.$/, '')
+  return text.includes('.') ? text : null
+}
+
+/** The growth problem for these numbers (exported for the hand-worked tests). */
+export function growthProblem(o: { who: 'bacteria' | 'town'; P0: number; P1: number; t1: number; follow: { ask: 'predict'; T: number } | { ask: 'reach'; S: number; places: number } }): Drafted {
+  const { P0, P1, t1 } = o
+  const unit = o.who === 'bacteria' ? 'hour' : 'year'
+  const g = gcd(P1, P0)
+  const kExpr = `ln(${P1}/${P0})/${t1}`
+  const kAnswer = P0 / g === 1 ? `ln(${P1 / g})/${t1}` : `ln(${P1 / g}/${P0 / g})/${t1}`
+  const k = Math.log(P1 / P0) / t1
+  const kRounded = Number(roundPlaces(k, 4))
+  if (!(kRounded > 0)) throw new LogSkip('k rounds to 0')
+  const count = (n: number) => (o.who === 'town' ? withCommas(String(n)) : String(n))
+  const kSlips = (): Slip[] => [
+    { id: 'exp_growth_no_log', values: [P1 / P0 / t1], witness: `Your k is the ratio ${P1}/${P0} divided by ${t1}. kt is an exponent of e, so it comes down with ln first.` },
+    { id: 'exp_growth_log_diff', values: [Math.log(P1 - P0) / t1], witness: `Your k uses ln(${P1} − ${P0}), the log of the difference. P₀ multiplies e^(kt), so divide by it: the ratio, not the difference.` },
+    { id: 'exp_growth_swapped', values: [t1 / Math.log(P1 / P0)], witness: 'Your k has the time on top and the ln of the counts underneath. kt equals the ln, so k is the ln divided by the time.' },
+    { id: 'log_ln_confused', values: [Math.log10(P1 / P0) / t1], witness: 'Your k uses log, the base-10 LOG key. e^(kt) is undone by ln, the LN key.' },
+    { id: 'log_quotient_as_quotient', values: [Math.log(P1) / Math.log(P0) / t1], witness: `Your k uses ln(${P1})/ln(${P0}), a quotient of two logs. The ln of the ratio ${P1}/${P0} is a different number.` },
+  ]
+  // (a) the exact k
+  const exactTraps: ExpLogPartTrap[] = []
+  const textOf: Record<string, string> = {
+    exp_growth_no_log: `(${P1}/${P0})/${t1}`,
+    exp_growth_log_diff: `ln(${P1 - P0})/${t1}`,
+    exp_growth_swapped: `${t1}/ln(${P1}/${P0})`,
+    log_ln_confused: `log(${P1}/${P0})/${t1}`,
+    log_quotient_as_quotient: `ln(${P1})/ln(${P0})/${t1}`,
+  }
+  const seen: number[] = [k]
+  for (const s of kSlips()) {
+    const v = s.values[0]!
+    if (!Number.isFinite(v) || seen.some((w) => Math.abs(v - w) < 1e-4)) throw new LogSkip(`${s.id} gives the same k`)
+    seen.push(v)
+    exactTraps.push({ id: s.id, text: textOf[s.id]!, values: [v], witness: s.witness })
+  }
+  const exactPart: ExpLogPart = {
+    id: 'k',
+    kind: 'exact',
+    label: 'k, exactly',
+    ask: 'Find k. Give the exact value.',
+    formatHint: EXACT_HINT,
+    nudge: `Put both counts into P = P₀e^(kt): ${count(P1)} = ${count(P0)}e^(${t1}k). Divide by ${count(P0)}, then take ln of both sides.`,
+    ruleCard: EM_RULE_IDS.growth,
+    reveal: [`${count(P1)} = ${count(P0)}e^(${t1}k), so e^(${t1}k) = ${P1}/${P0}.`, `Take ln of both sides: ${t1}k = ln(${P1}/${P0}), so k = ln(${P1}/${P0})/${t1} = ${say(kAnswer)}.`],
+    answerText: kAnswer,
+    // Every equal exact form is right (gradeLogValue's exact model); these are the ones the self-check types.
+    closedForms: [kExpr, ...(terminating(P1, P0) ? [`ln(${terminating(P1, P0)})/${t1}`] : [])],
+    traps: exactTraps,
+  }
+  // (b) k rounded
+  const rounded = decimalPart({
+    id: 'kRounded',
+    label: 'k, rounded',
+    ask: 'Round k to four decimal places.',
+    places: 4,
+    closedForms: [kExpr],
+    values: [k],
+    slips: kSlips(),
+    nudge: 'Work out your exact k on the calculator, with the LN key, and round it to four decimal places.',
+    ruleCard: EM_RULE_IDS.growth,
+    reveal: [`k = ${say(kAnswer)} ≈ ${roundPlaces(k, 4)}.`],
+  })
+  // (c) a prediction, or the time to reach a size, with the exact k or the rounded k
+  let follow: { part: ExpLogPart; promisable: ExpLogPartTrap[] }
+  const things = o.who === 'bacteria' ? 'bacteria' : 'people'
+  if (o.follow.ask === 'predict') {
+    const T = o.follow.T
+    const exact = P0 * Math.exp(k * T)
+    const near = P0 * Math.exp(kRounded * T)
+    follow = decimalPart({
+      id: 'follow',
+      label: o.who === 'bacteria' ? `Bacteria after ${T} hours` : `Population after ${T} years`,
+      ask: o.who === 'bacteria' ? `How many bacteria will there be after ${T} hours? Round to the nearest whole number.` : `What will the population be after ${T} years? Round to the nearest whole number.`,
+      places: 0,
+      units: UNITS[things],
+      closedForms: [`${P0}*e^((${kExpr})*${T})`, `${P0}*e^(${kRounded}*${T})`],
+      values: [exact, near],
+      slips: [],
+      nudge: `Put t = ${T} into P = ${count(P0)}e^(kt), with your k.`,
+      ruleCard: EM_RULE_IDS.growth,
+      reveal: [`P = ${count(P0)}e^(k·${T}) with k = ${say(kAnswer)}: about ${withCommas(roundPlaces(exact, 0))}.`, `With k rounded to ${kRounded}, it is about ${withCommas(roundPlaces(near, 0))}. Either is right.`],
+    })
+  } else {
+    const { S, places } = o.follow
+    const lnS = Math.log(S / P0)
+    const exact = lnS / k
+    const near = lnS / kRounded
+    follow = decimalPart({
+      id: 'follow',
+      label: o.who === 'bacteria' ? `Time to reach ${S} bacteria` : `Time to reach ${withCommas(String(S))} people`,
+      ask: o.who === 'bacteria' ? `When will there be ${S} bacteria? ${roundWords(places, unit)}` : `When will the population reach ${withCommas(String(S))}? ${roundWords(places, unit)}`,
+      places,
+      units: UNITS[unit],
+      closedForms: [`ln(${S}/${P0})/(${kExpr})`, `ln(${S}/${P0})/${kRounded}`],
+      values: [exact, near],
+      slips: [
+        { id: 'exp_growth_no_log', values: [S / P0 / k, S / P0 / kRounded], witness: `Your time is the ratio ${S}/${P0} divided by k. kt is an exponent of e: take ln of both sides first.` },
+        { id: 'exp_growth_log_diff', values: [Math.log(S - P0) / k, Math.log(S - P0) / kRounded], witness: `Your time uses ln(${S} − ${P0}), the log of the difference. Divide by P₀ first: the ratio, not the difference.` },
+        { id: 'exp_growth_swapped', values: [k / lnS, kRounded / lnS], witness: 'Your time has k on top and the ln of the counts underneath. kt equals the ln, so t is the ln divided by k.', promise: false },
+        { id: 'log_ln_confused', values: [Math.log10(S / P0) / k, Math.log10(S / P0) / kRounded], witness: 'Your time uses log, the base-10 LOG key. e^(kt) is undone by ln, the LN key.' },
+      ],
+      nudge: `Set P = ${count(S)}: ${count(S)} = ${count(P0)}e^(kt). Divide by ${count(P0)}, take ln of both sides, then divide by k.`,
+      ruleCard: EM_RULE_IDS.growth,
+      reveal: [
+        `${count(S)} = ${count(P0)}e^(kt), so e^(kt) = ${S}/${P0} and kt = ln(${S}/${P0}).`,
+        `t = ln(${S}/${P0})/k ≈ ${roundPlaces(exact, places)} with the exact k (${roundPlaces(near, places)} with k ≈ ${kRounded}).`,
+      ],
+    })
+  }
+  const promisable = [...exactTraps, ...rounded.promisable, ...follow.promisable]
+  const stages = [exactPart, rounded.part, follow.part]
+  const prompt =
+    o.who === 'bacteria'
+      ? `A culture of bacteria grows according to P = P₀e^(kt), where t is the time in hours. There are ${P0} bacteria at the start and ${P1} after ${t1} hours.`
+      : `The population of a town grows according to P = P₀e^(kt), where t is the time in years. The town has ${count(P0)} people now and ${count(P1)} after ${t1} years.`
+  return finishParts('growth', prompt, 'P = P_0e^{kt}', stages, promisable, [EM_RULE_IDS.growth, EM_RULE_IDS.time])
+}
+
+function drawGrowth(rng: Rng): Drafted {
+  const bacteria = rng.chance(0.55)
+  const P0 = bacteria ? 50 * rng.int(2, 20) : 1000 * rng.int(5, 80)
+  const P1 = Math.round((P0 * (100 + 5 * rng.int(1, 20))) / 100)
+  const t1 = bacteria ? rng.int(2, 8) : rng.int(3, 10)
+  if (P1 <= P0) throw new LogSkip('no growth')
+  if (rng.chance(0.5)) return growthProblem({ who: bacteria ? 'bacteria' : 'town', P0, P1, t1, follow: { ask: 'predict', T: t1 + rng.int(2, 12) } })
+  const scale = bacteria ? 50 : 1000
+  const S = Math.round((P0 * (P1 / P0 + 0.5 + rng.int(0, 25) / 10)) / scale) * scale
+  if (S <= P1) throw new LogSkip('the target is not past the second count')
+  return growthProblem({ who: bacteria ? 'bacteria' : 'town', P0, P1, t1, follow: { ask: 'reach', S, places: rng.pick([1, 2] as const) } })
+}
+
+// ---------------------------------------------------------------------------
+// Assembling and checking
+// ---------------------------------------------------------------------------
+
+export interface Drafted {
+  question: ExpModelsAnswer['question']
+  prompt: string
+  modelTex?: string
+  stages: ExpLogPart[]
+  /** The exp_ traps that may be promised: the brief's slips, with a value that looks like an answer. */
+  promisable: ExpLogPartTrap[]
+  ruleCards: string[]
+}
+
+function finish(question: ExpModelsAnswer['question'], prompt: string, modelTex: string | undefined, parts: { part: ExpLogPart; promisable: ExpLogPartTrap[] }[], ruleCards: string[]): Drafted {
+  return finishParts(question, prompt, modelTex, parts.map((p) => p.part), parts.flatMap((p) => p.promisable), ruleCards)
+}
+
+function finishParts(question: ExpModelsAnswer['question'], prompt: string, modelTex: string | undefined, stages: ExpLogPart[], promisable: ExpLogPartTrap[], ruleCards: string[]): Drafted {
+  return { question, prompt, ...(modelTex ? { modelTex } : {}), stages, promisable: promisable.filter((tr) => tr.id.startsWith('exp_')), ruleCards }
+}
+
+/** Every spelling of a part's answer that has to grade right. */
+export function modelForms(part: ExpLogPart): string[] {
+  if (part.kind === 'exact') return [part.answerText, ...(part.closedForms ?? [])]
+  const plain = part.answerText.replace(/,/g, '')
+  const forms = [part.answerText, plain, withCommas(plain)]
+  if (part.money) forms.push(`$${withCommas(plain)}`, `$${plain}`, `${plain} dollars`, `A = ${plain}`)
+  else forms.push(`t = ${plain}`)
+  if (part.units?.length) forms.push(`${withCommas(plain)} ${part.units[0]}`)
+  return [...new Set(forms)]
+}
+
+function cardTexts(): string[] {
+  return EM_RULES.flatMap((r) => [r.title, r.body, r.example ?? ''])
+}
+
+/** The draw, assembled and checked: every answer and spelling right, every trap its own id, nothing shown early. */
+export function modelAnswer(d: Drafted, pick: (traps: readonly ExpLogPartTrap[]) => ExpLogPartTrap): ExpModelsAnswer {
+  if (!d.promisable.length) throw new LogSkip('no trap to promise')
+  const chosen = pick(d.promisable)
+  const stage = d.stages.find((s) => s.traps.includes(chosen))!
+  const answer: ExpModelsAnswer = {
+    type: 'expModels',
+    question: d.question,
+    prompt: d.prompt,
+    ...(d.modelTex ? { modelTex: d.modelTex } : {}),
+    stages: d.stages,
+    expectedDisplay: d.stages
+      .map((s) => `${s.label}: ${s.money ? '$' : ''}${say(s.kind === 'decimal' ? withCommas(s.answerText.replace(/,/g, '')) : s.answerText)}${s.units?.[0] ? ` ${s.units[0]}` : ''}`)
+      .join('; '),
+    nudge: d.stages[0]!.nudge,
+    ruleCard: d.stages[0]!.ruleCard,
+    ruleCards: d.ruleCards,
+    reveal: d.stages.flatMap((s) => s.reveal),
+    trap: chosen.id,
+    trapStage: stage.id,
+    trapAnswer: chosen.text,
+  }
+  for (const part of answer.stages) {
+    // The answer itself (and, for k, each exact form) grades right. The other spellings of a number ($, commas,
+    // units) are the reader's job and are covered by the tests over 300 seeds.
+    for (const form of part.kind === 'exact' ? modelForms(part) : [part.answerText]) {
+      const g = gradeExpLogPart(part, form)
+      if (g.verdict !== 'correct') throw new LogSkip(`${part.id}: “${form}” graded ${g.verdict}`)
+    }
+  }
+  // Every trap already stands apart from the right values and from each other at the rounding asked (or, for the
+  // exact k, as a number), which is what makes it grade as its own id; the promised one is graded here, and the
+  // tests grade every trap of 300 seeds.
+  const g = gradeExpLogPart(stage, chosen.text)
+  if (g.verdict !== 'mistake' || g.mistake !== chosen.id) throw new LogSkip(`the promised ${chosen.id} “${chosen.text}” graded ${g.verdict === 'mistake' ? g.mistake : g.verdict}`)
+  const found = leaks(answer.prompt, INSTRUCTIONS[answer.question], answer.stages, modelForms, cardTexts())
+  if (found.length) throw new LogSkip(`a text she sees early spells an answer: ${found[0]}`)
+  return answer
+}
+
+const TITLES: Record<ExpModelsAnswer['question'], string> = {
+  interest: 'Compound and continuous interest',
+  halflife: 'Half-life and decay',
+  growth: 'Continuous growth',
+}
+
+function generate(templateId: string, salt: number, draw: (rng: Rng) => Drafted) {
+  return (seed: number, knobs: DifficultyKnobs = {}): ProblemInstance => {
+    const answer = searchSeed(seed, salt, 64, (rng) => modelAnswer(draw(rng), (traps) => rng.pick(traps)))
+    return {
+      id: problemId(EM_MODULE_ID, templateId, VERSION, seed),
       moduleId: EM_MODULE_ID,
-      templateId: 'em.growth',
-      skill: 'em.growth',
-      genVersion: 1,
-      seed,
+      templateId,
+      skill: templateId,
+      genVersion: VERSION,
+      seed: seed >>> 0,
       knobs,
       kind: 'expModels',
-      title: 'Continuous exponential growth and decay',
-      instructions: 'Find the exact rate constant k, its rounded value, and use the model to answer the follow-up question.',
-      statementText: prompt,
-      vars: ['x'],
+      title: TITLES[answer.question],
+      instructions: INSTRUCTIONS[answer.question],
+      statementText: answer.prompt,
+      vars: [],
       start: null,
       canonical: [],
       answer,
       graph: NO_GRAPH,
       calc: NO_CALC,
-      params: { subkind, P0, P1, t1, trap: chosenTrap.id, trapStage: chosenTrap.stage },
+      params: { question: answer.question, trap: answer.trap, trapStage: answer.trapStage, answer: answer.stages.map((s) => s.answerText).join(' | ') },
     }
-    assertSelf(instance, answer)
-    return instance
-  })
+  }
 }
 
 export const interestTemplate: TemplateDef = {
   id: 'em.interest',
   title: 'Compound and continuous interest',
-  description: 'Balance, time to reach a target balance, and doubling time under periodic and continuous compounding.',
-  version: 1,
+  description: 'The balance to the cent, the time to reach a balance, or the doubling time, compounded n times a year or continuously.',
+  version: VERSION,
   knobs: [],
-  generate: buildInterest,
+  generate: generate('em.interest', 51, drawInterest),
 }
 
 export const halflifeTemplate: TemplateDef = {
   id: 'em.halflife',
-  title: 'Half-life and radioactive decay',
-  description: 'Remaining mass, time to reach a given mass, carbon-14 dating, and finding the half-life from two measurements.',
-  version: 1,
+  title: 'Half-life and decay',
+  description: 'The amount left, the time to decay to an amount, carbon-14 dating, or the half-life from two measurements.',
+  version: VERSION,
   knobs: [],
-  generate: buildHalflife,
+  generate: generate('em.halflife', 52, drawHalfLife),
 }
 
 export const growthTemplate: TemplateDef = {
   id: 'em.growth',
-  title: 'Continuous exponential growth and decay',
-  description: 'Find the continuous growth rate k from two data points (exact and rounded) and predict size or time.',
-  version: 1,
+  title: 'Continuous growth',
+  description: 'k from two counts, exactly and rounded, then a prediction or the time to reach a size.',
+  version: VERSION,
   knobs: [],
-  generate: buildGrowth,
+  generate: generate('em.growth', 53, drawGrowth),
 }
 
-export const EM_TEMPLATES: readonly TemplateDef[] = [interestTemplate, halflifeTemplate, growthTemplate]
+export const EM_TEMPLATES = [interestTemplate, halflifeTemplate, growthTemplate] as const
+
+/** Grade her entry for one part of a word problem. */
+export function gradeEmPart(answer: ExpModelsAnswer, stageId: string, text: string): PartGrade {
+  const part = answer.stages.find((s) => s.id === stageId)
+  if (!part) return { verdict: 'invalid', message: 'This part could not be found.' }
+  return gradeExpLogPart(part, text)
+}
+
+export { partsWork as emWork } from '../explog/parts'

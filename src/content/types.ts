@@ -28,31 +28,65 @@ export type LogPropertiesQuestion = 'expand' | 'condense'
 /** Precalculus Unit 3. An exponential, logarithmic, or quadratic-in-form equation. */
 export type ExpLogQuestion = 'exponential' | 'logarithmic' | 'quadratic'
 
-/** Precalculus Unit 3. Features of exponential/log graphs, graph matching, or inverse functions. */
+/** Precalculus Unit 3, second half. The features of one graph, matching a graph, or an inverse. */
 export type ExpLogGraphsQuestion = 'features' | 'match' | 'inverse'
 
-export type ExpLogGraphsStageId = 'domain' | 'range' | 'asymptote' | 'intercept' | 'behavior' | 'match' | 'inverse'
-
-export interface ExpLogMatchCandidate {
-  id: 'A' | 'B' | 'C' | 'D'
-  /** Formula in app syntax, e.g. "2^(x - 1) + 3". */
-  formula: string
-  /** Display equation, e.g. "f(x) = 2^(x - 1) + 3". */
-  equation: string
-  /** GraphSpec for GraphPanel. */
-  graph: GraphSpec
-  /** Accessible caption for GraphPanel (does not leak the formula when matching graphs). */
-  caption: string
-  /** Trap id when this candidate is one of the three distractors. */
-  trap?: ErrorPatternId
-  /** Concrete witness for this distractor. */
-  witness?: string
-}
-
-/** Precalculus Unit 3. Compound/continuous interest, half-life decay, or continuous growth from two data points. */
+/** Precalculus Unit 3, second half. Interest, half-life and decay, or continuous growth. */
 export type ExpModelsQuestion = 'interest' | 'halflife' | 'growth'
 
-export type ExpModelsStageId = 'answer' | 'exact_k' | 'rounded_k' | 'followup'
+/**
+ * How one part of a second-half Unit 3 problem is answered and read:
+ *  - interval: a domain or a range (parseSetAnswer: interval notation, an inequality, set-builder, "all real numbers");
+ *  - line: an asymptote, x = a number or y = a number;
+ *  - point: an exact point, (0, 13/4) or (e^2 + 3, 0);
+ *  - choice: one of the listed options (increasing or decreasing; a letter A to D);
+ *  - formula: an inverse function in x, checked by composing it with f;
+ *  - exact: an exact value, checked with gradeLogValue;
+ *  - decimal: a rounded number, checked with gradeLogValue and { decimal: { places } }.
+ */
+export type ExpLogPartKind = 'interval' | 'line' | 'point' | 'choice' | 'formula' | 'exact' | 'decimal'
+
+/** A slip named on one part. The template computes it for this problem. */
+export interface ExpLogPartTrap {
+  id: ErrorPatternId
+  /** What the slip gives, as she would type it. Never the right answer. */
+  text: string
+  /** exact and decimal parts: the values the slip can give (with the exact k and with the rounded k). */
+  values?: number[]
+  /** The sentence about her answer. It never states this problem's answer. */
+  witness: string
+}
+
+/** One part of a second-half Unit 3 problem, answered and checked on its own. */
+export interface ExpLogPart {
+  /** 'domain', 'range', 'asymptote', 'intercept', 'behavior', 'match', 'inverse', 'answer', 'k', 'kRounded', 'follow'. */
+  id: string
+  kind: ExpLogPartKind
+  /** Card title and box label: "Domain", "Balance". */
+  label: string
+  /** The part's question in one sentence, including whether it is exact or how to round. */
+  ask: string
+  /** Under the box. No answer a template can generate. */
+  formatHint: string
+  /** choice: the options, in the order shown. */
+  choices?: { value: string; label: string }[]
+  /** Hint rung 1: the rule, not this problem's answer. */
+  nudge: string
+  ruleCard: RuleCardId
+  /** Hint rung 3 for this part. May state the answer. */
+  reveal: string[]
+  /** The answer as she would type it. */
+  answerText: string
+  /** decimal: places asked (0 for a whole number). */
+  places?: number
+  /** decimal: a dollar amount, so "$2,834.71" and "2,834.71" are read as 2834.71. */
+  money?: boolean
+  /** decimal: unit words she may type after the number ("years", "grams"). */
+  units?: string[]
+  /** exact and decimal: the right value in app syntax, for gradeLogValue. Two when two are right (the exact k or the rounded k). */
+  closedForms?: string[]
+  traps: ExpLogPartTrap[]
+}
 
 /** Which geometry screen this problem is. Unit 2 adds logic and proof; Unit 3 adds parallels and polygons; Unit 4 adds congruent triangles. */
 export type GeometryQuestion =
@@ -1189,104 +1223,74 @@ export type AnswerSpec =
     }
   | {
       /**
-       * Graphs of exponential and logarithmic functions (precalculus Unit 3).
-       * `features`: domain, range, asymptote, intercept, and increasing/decreasing one part at a time.
-       * `match`: four candidate graphs drawn with GraphPanel (differing by sign of a, base above/below 1, and shift).
-       * `inverse`: inverse of an exponential or log function, graded by composition on the original's range.
+       * Graphs of exponential and logarithmic functions (precalculus Unit 3, second half): a·b^(x − h) + k or
+       * a·log_b(x − h) + k.
+       *  - features: domain, range, asymptote, intercept, increasing or decreasing, one part at a time;
+       *  - match: four candidate graphs (or four equations for one graph) that differ by the sign of a, the base
+       *    above or below 1, and the direction of a shift;
+       *  - inverse: f⁻¹(x), checked by composing it with f on the range of f, never by its spelling.
+       * Grade a part with the module's `gradeEgPart`. Named mistakes are the exp_ graph ids (and log_convert_dropped).
        */
       type: 'expLogGraphs'
       question: ExpLogGraphsQuestion
       family: 'exponential' | 'logarithmic'
-      /** Function name ("f" or "g"). */
+      /** f for an exponential, g for a log. */
       fnName: 'f' | 'g'
-      /** The expression in x, app syntax: "2 * 3^(x - 1) - 4" or "-log_2(x + 3) + 1". */
+      /** The function, app syntax: "2 * 3^(x - 1) - 4", "-log_(1/2)(x + 3) + 2". */
       f: string
-      /** Display equation: "f(x) = 2 * 3^(x - 1) - 4" or "y = 2^(x - 1) + 3". */
-      equation: string
-      /** Parameters of a * b^(x - h) + k or a * log_b(x - h) + k. */
+      /** KaTeX of "f(x) = …", built from a, the base, h and k (not from the parser). */
+      tex: string
       a: number
-      /** Base text ("2", "3", "1/2", "e", "10", ...). */
-      baseText: string
-      baseValue: number
+      /** The base, app syntax: "2", "1/2", "3/2", "e", "10". */
+      base: string
       h: number
       k: number
-      /** Matching sub-mode for eg.match: pick the graph ('graph') or pick the equation ('equation'). */
-      matchMode?: 'graph' | 'equation'
-      /** Four candidates for eg.match, each with its own GraphSpec. */
-      candidates?: ExpLogMatchCandidate[]
-      /** Canonical inverse expression in x (for eg.inverse), app syntax. */
-      inverseExpr?: string
-      /** Canonical inverse equation, e.g. "y = log_2(x - 3) + 1". */
-      inverseEquation?: string
+      /** The question in one line. Says what to find and nothing about the method or the trap. */
       prompt: string
-      stages: {
-        id: ExpLogGraphsStageId
-        label: string
-        placeholder: string
-        formatHint: string
-        answerText: string
-        /** Optional quick-pick buttons (e.g. Increasing / Decreasing, or A / B / C / D). */
-        choices?: { id: string; label: string }[]
-        nudge: string
-        ruleCard: RuleCardId
-        reveal: string[]
-        traps: { id: ErrorPatternId; text: string; witness: string }[]
-      }[]
+      /** match: pick one of four graphs for the equation, or one of four equations for the graph. */
+      matchMode?: 'graph' | 'equation'
+      /** match: the four candidates in letter order. Their graphs are part of the question. */
+      candidates?: { letter: string; f: string; tex: string; graph: GraphSpec }[]
+      stages: ExpLogPart[]
       expectedDisplay: string
       nudge: string
       ruleCard: RuleCardId
       ruleCards: RuleCardId[]
+      /** Hint rung 3 and the worked answer. May state the answer. */
       reveal: string[]
+      /** The named mistake this seed promises. */
       trap: ErrorPatternId
-      trapStage: ExpLogGraphsStageId
+      /** The part it is promised on. */
+      trapStage: string
+      /** What that slip gives, as she would type it. Never the right answer. */
       trapAnswer: string
-      /** Graph of f (and finv for eg.inverse), shown after completion for features/inverse. */
+      /**
+       * features and inverse: the graph of f (and of f⁻¹), shown only after she finishes. match in equation mode:
+       * the graph she reads, which is part of the question. NOT on `instance.graph`, which can be opened early.
+       */
       graph: GraphSpec
     }
   | {
       /**
-       * Exponential growth and decay models (precalculus Unit 3).
-       * `interest`: A = P(1 + r/n)^(nt) and A = Pe^(rt) (balance, time to reach a balance, or doubling time).
-       * `halflife`: A = A_0(1/2)^{t/h} (amount left, time to reach an amount, C-14 dating, half-life from two measurements).
-       * `growth`: P = P_0 e^(kt) (exact k = ln(P_1/P_0)/t, rounded k, then prediction or time to reach a size).
+       * Exponential growth and decay word problems (precalculus Unit 3, second half): compound and continuous
+       * interest, half-life and carbon-14 dating, continuous growth from two counts. Every number is checked with
+       * gradeLogValue (exact, or with { decimal }) through the module's `gradeEmPart`; the named mistakes are the
+       * exp_ model ids (and log_ln_confused, log_quotient_as_quotient for k), computed for this problem.
        */
       type: 'expModels'
       question: ExpModelsQuestion
-      subkind: string
-      /** Word problem statement. */
+      /** The textbook sentences, ending with how to round. */
       prompt: string
-      /** Model equation in display text, e.g. "A = P(1 + r/n)^(nt)". */
-      formulaDisplay: string
-      stages: {
-        id: ExpModelsStageId
-        label: string
-        placeholder: string
-        formatHint: string
-        /** Canonical answer string (rounded decimal or exact expression). */
-        answerText: string
-        /** Exact expression in app syntax that evaluates to the true unrounded value. */
-        exactExpr: string
-        /** Unrounded numeric value (and optional secondary value from rounded k in multi-stage growth). */
-        exactValue: number
-        altExactValue?: number
-        /** Number of decimal places requested (undefined when exact expression is required, e.g. exact_k). */
-        places?: number
-        /** Whether this answer is a dollar amount (accepts $, commas). */
-        isMoney?: boolean
-        /** Optional unit suffix to accept if typed (e.g. "years", "g", "mg"). */
-        unit?: string
-        nudge: string
-        ruleCard: RuleCardId
-        reveal: string[]
-        traps: { id: ErrorPatternId; text: string; value: number; exactExpr?: string; witness: string }[]
-      }[]
+      /** KaTeX of the model when the problem itself states it ("P = P_0e^{kt}"). */
+      modelTex?: string
+      stages: ExpLogPart[]
       expectedDisplay: string
       nudge: string
       ruleCard: RuleCardId
       ruleCards: RuleCardId[]
       reveal: string[]
       trap: ErrorPatternId
-      trapStage: ExpModelsStageId
+      trapStage: string
       trapAnswer: string
     }
   | {

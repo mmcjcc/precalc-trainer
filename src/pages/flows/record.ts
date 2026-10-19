@@ -4,8 +4,7 @@ import type { RfGrade } from '@/content/modules/rationalFns/grade'
 import type { ScGrade } from '@/content/modules/signCharts/grade'
 import type { CxGrade } from '@/content/modules/complexNums/grade'
 import type { LogGrade } from '@/engine'
-import type { EgGrade } from '@/content/modules/expLogGraphs'
-import type { EmGrade } from '@/content/modules/expModels'
+import type { PartGrade } from '@/content/modules/explog/parts'
 import type { GeoGrade } from '@/content/modules/geometry/grade'
 import type { PtGrade } from '@/content/modules/periodic/grade'
 import type { PwGrade } from '@/content/modules/piecewiseRate/grade'
@@ -368,21 +367,12 @@ export function recordAtomGrade(grade: AtomGrade): void {
   for (const p of grade.patterns) s.recordFinalAnswer({ correct: false, pattern: p.id, via: 'text' })
 }
 
-export function recordEgGrades(grade: EgGrade): void {
-  if (grade.verdict === 'invalid') return
-  const s = useStore.getState()
-  if (grade.verdict === 'correct') {
-    s.recordFinalAnswer({ correct: true, via: 'text' })
-    return
-  }
-  if (grade.verdict === 'mistake') {
-    s.recordFinalAnswer({ correct: false, pattern: grade.mistake, via: 'text' })
-    return
-  }
-  s.recordFinalAnswer({ correct: false, via: 'text' })
-}
-
-export function recordEmGrades(grade: EmGrade): void {
+/**
+ * Log one check of a part of an exponential/log graph or a growth and decay problem (precalculus Unit 3, second
+ * half). A named mistake is stored under its exp_ (or log_) id. Unreadable input, a calculator decimal where the
+ * exact value is asked, and a number not rounded as asked are not attempts: nothing is logged.
+ */
+export function recordExpLogPartGrade(grade: PartGrade): void {
   if (grade.verdict === 'invalid') return
   const s = useStore.getState()
   if (grade.verdict === 'correct') {

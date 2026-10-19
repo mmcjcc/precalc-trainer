@@ -21,8 +21,7 @@ import { POLY_PATTERN } from '@/content/modules/polynomials/patterns'
 import { TR_PATTERN } from '@/content/modules/transformations/patterns'
 import type { GeometryQuestion, ProblemInstance } from '@/content/types'
 import { logFormsWork } from '@/content/modules/logForms'
-import { egWork, type EgGrade } from '@/content/modules/expLogGraphs'
-import { emWork, type EmGrade } from '@/content/modules/expModels'
+import { partsWork, type PartGrade } from '@/content/modules/explog/parts'
 import { ERROR_PATTERNS } from '@/engine'
 import type { OpsGrade } from '@/content/modules/functionOps/ops'
 import type { DescriptionGrade, EconfigGrade, FunctionGrade, LogGrade, PolyGrade, SquareLineGrade, TransformGrade } from '@/engine'
@@ -328,27 +327,17 @@ export function verdictFromGeo(grade: GeoGrade): TutorVerdict | null {
   })
 }
 
-/** Exponential and logarithmic graphs. The mistake id is already an exp_ catalog id. */
-export function verdictFromEg(grade: EgGrade): TutorVerdict | null {
-  if (grade.verdict === 'correct') return withMessage('correct', grade.message)
-  if (grade.verdict === 'wrong') return withMessage('wrong', grade.message)
-  if (grade.verdict === 'invalid') return withMessage('parse_error', grade.message)
+/**
+ * One part of an exponential/log graph or a growth and decay word problem (Unit 3, second half). The mistake
+ * id is already a catalog id (exp_, or a log_ id the problem computed). Unreadable input is a parse error.
+ */
+export function verdictFromExpLogPart(grade: PartGrade, herText?: string): TutorVerdict | null {
+  const line = herText?.trim() ? herText.trim() : undefined
+  if (grade.verdict === 'correct') return withMessage('correct', grade.message, line)
+  if (grade.verdict === 'wrong') return withMessage('wrong', grade.message, line)
+  if (grade.verdict === 'invalid') return withMessage('parse_error', grade.message, line)
   const info = ERROR_PATTERNS[grade.mistake]
-  return withMessage('wrong', grade.witness, undefined, {
-    id: grade.mistake,
-    title: clip(info.title, 200),
-    lesson: clip(info.lesson, TUTOR_LIMITS.field),
-    witness: clip(grade.witness, TUTOR_LIMITS.field),
-  })
-}
-
-/** Exponential growth and decay models. The mistake id is already an exp_ catalog id. */
-export function verdictFromEm(grade: EmGrade): TutorVerdict | null {
-  if (grade.verdict === 'correct') return withMessage('correct', grade.message)
-  if (grade.verdict === 'wrong') return withMessage('wrong', grade.message)
-  if (grade.verdict === 'invalid') return withMessage('parse_error', grade.message)
-  const info = ERROR_PATTERNS[grade.mistake]
-  return withMessage('wrong', grade.witness, undefined, {
+  return withMessage('wrong', grade.witness, line, {
     id: grade.mistake,
     title: clip(info.title, 200),
     lesson: clip(info.lesson, TUTOR_LIMITS.field),
@@ -453,13 +442,9 @@ function workOf(instance: ProblemInstance, attempt: Attempt | null): string[] {
     if (box) lines.push(clip(box, TUTOR_LIMITS.line))
     return lines.slice(0, TUTOR_LIMITS.lines)
   }
-  if (instance.answer.type === 'expLogGraphs') {
-    return egWork(instance.answer, attempt.final?.polyEntries)
-      .slice(0, TUTOR_LIMITS.lines)
-      .map((line) => clip(line, TUTOR_LIMITS.line))
-  }
-  if (instance.answer.type === 'expModels') {
-    return emWork(instance.answer, attempt.final?.polyEntries)
+  // Graphs and inverses, and growth and decay word problems: her boxes, part by part.
+  if (instance.answer.type === 'expLogGraphs' || instance.answer.type === 'expModels') {
+    return partsWork(instance.answer.stages, attempt.final?.polyEntries)
       .slice(0, TUTOR_LIMITS.lines)
       .map((line) => clip(line, TUTOR_LIMITS.line))
   }
@@ -570,7 +555,10 @@ function statementOf(instance: ProblemInstance): string {
   } else if (answer.type === 'expLogEquations') {
     text = `${answer.equation}. ${answer.prompt}`
   } else if (answer.type === 'expLogGraphs') {
-    text = `${answer.equation}. ${answer.prompt}`
+    // A matching problem shows four graphs or four equations: the tutor gets each candidate's formula. In
+    // equation mode she sees one graph and the four equations, not the function on its own.
+    const candidates = answer.candidates?.length ? ` ${answer.matchMode === 'graph' ? 'Graphs' : 'Equations'}: ${answer.candidates.map((c) => `${c.letter}: ${answer.fnName}(x) = ${c.f}`).join('; ')}.` : ''
+    text = answer.matchMode === 'equation' ? `${answer.prompt}${candidates}` : `${answer.fnName}(x) = ${answer.f}. ${answer.prompt}${candidates}`
   } else if (answer.type === 'expModels') {
     text = answer.prompt
   } else if (answer.type === 'geometry') {

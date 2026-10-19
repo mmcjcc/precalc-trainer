@@ -9,6 +9,9 @@ import { canonicalEntries as scEntries, gradeScStage, SC_KEYS, scWork } from '@/
 import { canonicalEntries as cxEntries, gradeCxStage, CX_KEYS, cxWork } from '@/content/modules/complexNums'
 import { canonicalEntries as geoEntries, gradeGeoStage, GEO_KEYS, geoWork } from '@/content/modules/geometry'
 import { gradePtStage, PT_KEYS, ptWork } from '@/content/modules/periodic'
+import { gradeEgPart } from '@/content/modules/expLogGraphs'
+import { gradeEmPart } from '@/content/modules/expModels'
+import { partEntries, partsWork } from '@/content/modules/explog/parts'
 import { reasonLabel } from '@/content/modules/geometry/reasons'
 import { checkSquareLine, configurationMistakes, gradeAxisOfSymmetry, gradeConfiguration, gradeLogEquation, gradeLogValue, gradeVertex, squareMistakes, syntheticMistakes, vertexMistakes } from '@/engine'
 import { ratToString } from '@/notation'
@@ -32,7 +35,9 @@ import {
   verdictFromGeo,
   verdictFromLog,
   verdictFromPt,
+  verdictFromExpLogPart,
 } from '@/problem/tutorContext'
+import { ERROR_PATTERNS } from '@/engine'
 import type { Attempt, AttemptStep } from '@/store'
 import type { StepResult } from '@/shared/types'
 
@@ -995,6 +1000,49 @@ describe('buildTutorContext', () => {
     expect(solving.canonical[0]).toBe(eq.answer.reveal[0])
     expect(solving.verdict?.status).toBe('wrong')
     expect(solving.verdict?.mistake?.id).toBe(graded.verdict === 'mistake' ? graded.mistake : undefined)
+  })
+
+  it('describes an exp/log graph and a growth or decay word problem part by part, with the named slip', () => {
+    const graph = generateProblem('expLogGraphs', 'eg.features', 1)
+    if (graph.answer.type !== 'expLogGraphs') throw new Error('expected a graph')
+    const g = graph.answer
+    const entries = { [g.stages[0]!.id]: g.stages[0]!.answerText, [g.stages[1]!.id]: '(0, inf)' }
+    const ctx = buildTutorContext(graph, attempt('eg-1', { moduleId: 'expLogGraphs', final: { polyEntries: entries } }), null, false)
+    expect(ctx.subject).toBe('precalculus')
+    expect(ctx.kind).toBe('expLogGraphs')
+    expect(ctx.statement).toBe(`${g.fnName}(x) = ${g.f}. ${g.prompt}`)
+    expect(ctx.work).toEqual(partsWork(g.stages, entries))
+    expect(ctx.work[0]).toBe(`${g.stages[0]!.label}: ${g.stages[0]!.answerText}`)
+    expect(ctx.answer).toBe(g.expectedDisplay)
+    expect(ctx.canonical[0]).toBe(g.reveal[0])
+    const slip = gradeEgPart(g, g.trapStage, g.trapAnswer)
+    expect(slip.verdict).toBe('mistake')
+    const verdict = verdictFromExpLogPart(slip, g.trapAnswer)
+    expect(verdict?.status).toBe('wrong')
+    expect(verdict?.mistake?.id).toBe(g.trap)
+    expect(verdict?.mistake?.lesson).toBe(ERROR_PATTERNS[g.trap].lesson)
+    expect(verdict?.line).toBe(g.trapAnswer)
+    expect(verdictFromExpLogPart(gradeEgPart(g, g.stages[0]!.id, '???'))?.status).toBe('parse_error')
+    expect(buildTutorContext(graph, attempt('eg-2', { moduleId: 'expLogGraphs' }), null, false).work).toEqual([])
+
+    // A matching problem tells the tutor every candidate, since it cannot see the graphs.
+    const match = generateProblem('expLogGraphs', 'eg.match', 1)
+    if (match.answer.type !== 'expLogGraphs') throw new Error('expected a match')
+    const m = buildTutorContext(match, attempt('eg-3', { moduleId: 'expLogGraphs', final: { polyEntries: { match: 'B' } } }), null, false)
+    for (const c of match.answer.candidates ?? []) expect(m.statement).toContain(`${c.letter}: ${match.answer.fnName}(x) = ${c.f}`)
+    expect(m.work[0]).toMatch(/^The matching (graph|equation): (Graph )?B$/)
+
+    const model = generateProblem('expModels', 'em.growth', 1)
+    if (model.answer.type !== 'expModels') throw new Error('expected a word problem')
+    const w = model.answer
+    const done = buildTutorContext(model, attempt('em-1', { moduleId: 'expModels', final: { polyEntries: partEntries(w.stages) } }), null, true)
+    expect(done.kind).toBe('expModels')
+    expect(done.statement).toBe(w.prompt)
+    expect(done.work).toEqual(w.stages.map((s) => `${s.label}: ${s.answerText}`))
+    expect(done.answer).toBe(w.expectedDisplay)
+    expect(done.finished).toBe(true)
+    const wrong = verdictFromExpLogPart(gradeEmPart(w, w.trapStage, w.trapAnswer), w.trapAnswer)
+    expect(wrong?.mistake?.id).toBe(w.trap)
   })
 
   it('describes a Unit 4 congruence, an isosceles triangle, and a proof without changing the geometry kind', () => {
