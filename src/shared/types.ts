@@ -15,7 +15,7 @@
 export type RelOp = '=' | '<' | '<=' | '>' | '>='
 /** `h` is the difference-quotient step; the parser accepts it only when the problem owns it (ctx.vars). */
 export type VarName = 'x' | 'y' | 'n' | 'h'
-export type ModuleId = 'numberLine' | 'inequalities' | 'evenOdd' | 'inverses' | 'propertiesDrill' | 'sigFigs' | 'atoms' | 'diffQuotient' | 'graphFeatures' | 'domainRange' | 'composition' | 'functionOps' | 'transformations' | 'piecewiseRate' | 'electrons' | 'periodic' | 'quadratics' | 'polyDivision' | 'polyZeros' | 'rationalFns' | 'signCharts' | 'complexNums' | 'logForms' | 'logProperties' | 'expLogEquations' | 'geoSegments' | 'geoAngles' | 'geoLogic' | 'geoProof' | 'geoParallel' | 'geoPolygonAngles' | 'geoCongruence' | 'geoIsosceles' | 'geoTriangleProofs'
+export type ModuleId = 'numberLine' | 'inequalities' | 'evenOdd' | 'inverses' | 'propertiesDrill' | 'sigFigs' | 'atoms' | 'diffQuotient' | 'graphFeatures' | 'domainRange' | 'composition' | 'functionOps' | 'transformations' | 'piecewiseRate' | 'electrons' | 'periodic' | 'quadratics' | 'polyDivision' | 'polyZeros' | 'rationalFns' | 'signCharts' | 'complexNums' | 'logForms' | 'logProperties' | 'expLogEquations' | 'expLogGraphs' | 'expModels' | 'geoSegments' | 'geoAngles' | 'geoLogic' | 'geoProof' | 'geoParallel' | 'geoPolygonAngles' | 'geoCongruence' | 'geoIsosceles' | 'geoTriangleProofs'
 export type CalcId = 'ti84' | 'nspire'
 
 /** Fine-grained property tags. Canonical steps carry one; the engine's move detector reports one. */
@@ -480,6 +480,31 @@ export type ErrorPatternId =
   | 'log_value_divided'
   | 'log_ln_confused'
   | 'log_check_answers'
+  // exponential and log graphs, inverses, and growth/decay models (content/modules/expLogGraphs, expModels; precalculus Unit 3).
+  | 'exp_asymptote_unshifted'
+  | 'exp_asymptote_sign'
+  | 'exp_asymptote_axis'
+  | 'exp_range_reflection'
+  | 'exp_domain_closed'
+  | 'exp_intercept_shift'
+  | 'exp_monotonicity_flipped'
+  | 'exp_graph_sign'
+  | 'exp_graph_base'
+  | 'exp_graph_shift'
+  | 'exp_inverse_shift'
+  | 'exp_inverse_swapped'
+  | 'exp_inverse_reciprocal'
+  | 'exp_rate_percent'
+  | 'exp_wrong_period'
+  | 'exp_simple_interest'
+  | 'exp_continuous_swapped'
+  | 'exp_exponent_missing_factor'
+  | 'exp_halflife_inverted'
+  | 'exp_halflife_fraction_base'
+  | 'exp_halflife_decayed'
+  | 'exp_growth_no_log'
+  | 'exp_growth_log_diff'
+  | 'exp_growth_swapped'
   // honors geometry Unit 4 (content/modules/geometry). Each id is the exact pick or number
   // that slip produces on this problem: a method that does not apply, or the wrong vertex.
   | 'geo_ssa_as_congruence'

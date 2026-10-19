@@ -177,6 +177,8 @@ describe('Home: classes and units', () => {
       'Logarithms and exponential form',
       'Properties of logarithms',
       'Exponential and logarithmic equations',
+      'Graphs of exponential and logarithmic functions',
+      'Exponential growth and decay',
     ])
     expect(screen.getAllByRole('link', { name: /Choose a type/ }).map((link) => link.getAttribute('href'))).toContain('/m/logForms')
     expect(screen.getByRole('button', { name: /Unit 3/, pressed: true }).textContent).not.toMatch(/Coming soon/)

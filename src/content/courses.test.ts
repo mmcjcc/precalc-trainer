@@ -74,7 +74,13 @@ describe('course registry', () => {
       'signCharts',
       'complexNums',
     ])
-    expect(modulesInUnit(precalc!.units[2]!).map((m) => m.id)).toEqual(['logForms', 'logProperties', 'expLogEquations'])
+    expect(modulesInUnit(precalc!.units[2]!).map((m) => m.id)).toEqual([
+      'logForms',
+      'logProperties',
+      'expLogEquations',
+      'expLogGraphs',
+      'expModels',
+    ])
     expect(precalc!.units[2]).toMatchObject({ id: 'unit3', label: 'Unit 3', title: 'Exponential and logarithmic functions' })
     expect(unitsWithModules(precalc!).map((u) => u.id)).toEqual(['unit1', 'unit2', 'unit3'])
     expect(precalc!.units.map((u) => u.id)).toEqual(['unit1', 'unit2', 'unit3'])

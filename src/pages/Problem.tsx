@@ -19,6 +19,8 @@ import { SignChartsFlow } from './flows/SignChartsFlow'
 import { ComplexNumsFlow } from './flows/ComplexNumsFlow'
 import { ExpLogEquationsFlow, LogPropertiesFlow } from './flows/LogLineFlow'
 import { LogFormsFlow } from './flows/LogFormsFlow'
+import { ExpLogGraphsFlow } from './flows/ExpLogGraphsFlow'
+import { ExpModelsFlow } from './flows/ExpModelsFlow'
 import { GeometryFlow } from './flows/GeometryFlow'
 import { assertGeometryQuestion } from '@/problem/tutorContext'
 import { PeriodicFlow } from './flows/PeriodicFlow'
@@ -139,6 +141,10 @@ function ProblemBody({ instance, flags, templateTitle }: { instance: ProblemInst
       return <LogPropertiesFlow {...props} />
     case 'expLogEquations':
       return <ExpLogEquationsFlow {...props} />
+    case 'expLogGraphs':
+      return <ExpLogGraphsFlow {...props} />
+    case 'expModels':
+      return <ExpModelsFlow {...props} />
     case 'geometry':
       if (instance.answer.type === 'geometry') assertGeometryQuestion(instance.answer.question)
       return <GeometryFlow {...props} />

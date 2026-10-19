@@ -21,6 +21,8 @@ import { POLY_PATTERN } from '@/content/modules/polynomials/patterns'
 import { TR_PATTERN } from '@/content/modules/transformations/patterns'
 import type { GeometryQuestion, ProblemInstance } from '@/content/types'
 import { logFormsWork } from '@/content/modules/logForms'
+import { egWork, type EgGrade } from '@/content/modules/expLogGraphs'
+import { emWork, type EmGrade } from '@/content/modules/expModels'
 import { ERROR_PATTERNS } from '@/engine'
 import type { OpsGrade } from '@/content/modules/functionOps/ops'
 import type { DescriptionGrade, EconfigGrade, FunctionGrade, LogGrade, PolyGrade, SquareLineGrade, TransformGrade } from '@/engine'
@@ -326,6 +328,34 @@ export function verdictFromGeo(grade: GeoGrade): TutorVerdict | null {
   })
 }
 
+/** Exponential and logarithmic graphs. The mistake id is already an exp_ catalog id. */
+export function verdictFromEg(grade: EgGrade): TutorVerdict | null {
+  if (grade.verdict === 'correct') return withMessage('correct', grade.message)
+  if (grade.verdict === 'wrong') return withMessage('wrong', grade.message)
+  if (grade.verdict === 'invalid') return withMessage('parse_error', grade.message)
+  const info = ERROR_PATTERNS[grade.mistake]
+  return withMessage('wrong', grade.witness, undefined, {
+    id: grade.mistake,
+    title: clip(info.title, 200),
+    lesson: clip(info.lesson, TUTOR_LIMITS.field),
+    witness: clip(grade.witness, TUTOR_LIMITS.field),
+  })
+}
+
+/** Exponential growth and decay models. The mistake id is already an exp_ catalog id. */
+export function verdictFromEm(grade: EmGrade): TutorVerdict | null {
+  if (grade.verdict === 'correct') return withMessage('correct', grade.message)
+  if (grade.verdict === 'wrong') return withMessage('wrong', grade.message)
+  if (grade.verdict === 'invalid') return withMessage('parse_error', grade.message)
+  const info = ERROR_PATTERNS[grade.mistake]
+  return withMessage('wrong', grade.witness, undefined, {
+    id: grade.mistake,
+    title: clip(info.title, 200),
+    lesson: clip(info.lesson, TUTOR_LIMITS.field),
+    witness: clip(grade.witness, TUTOR_LIMITS.field),
+  })
+}
+
 /** Operations with functions. The mistake id is already an op_ catalog id. */
 export function verdictFromOps(grade: OpsGrade): TutorVerdict {
   if (grade.verdict === 'correct') return withMessage('correct', grade.message)
@@ -422,6 +452,16 @@ function workOf(instance: ProblemInstance, attempt: Attempt | null): string[] {
     const box = attempt.final?.polyEntries?.answer?.trim()
     if (box) lines.push(clip(box, TUTOR_LIMITS.line))
     return lines.slice(0, TUTOR_LIMITS.lines)
+  }
+  if (instance.answer.type === 'expLogGraphs') {
+    return egWork(instance.answer, attempt.final?.polyEntries)
+      .slice(0, TUTOR_LIMITS.lines)
+      .map((line) => clip(line, TUTOR_LIMITS.line))
+  }
+  if (instance.answer.type === 'expModels') {
+    return emWork(instance.answer, attempt.final?.polyEntries)
+      .slice(0, TUTOR_LIMITS.lines)
+      .map((line) => clip(line, TUTOR_LIMITS.line))
   }
   if (instance.answer.type === 'geometry') {
     return geoWork(instance.answer, attempt.final?.polyEntries)
@@ -529,6 +569,10 @@ function statementOf(instance: ProblemInstance): string {
     text = `${answer.expr}. ${answer.prompt}`
   } else if (answer.type === 'expLogEquations') {
     text = `${answer.equation}. ${answer.prompt}`
+  } else if (answer.type === 'expLogGraphs') {
+    text = `${answer.equation}. ${answer.prompt}`
+  } else if (answer.type === 'expModels') {
+    text = answer.prompt
   } else if (answer.type === 'geometry') {
     assertGeometryQuestion(answer.question)
     const lines = answer.lines?.length ? ` Lines: ${answer.lines.join(' | ')}` : ''
@@ -563,6 +607,8 @@ function canonicalOf(instance: ProblemInstance): string[] {
     answer.type === 'logForms' ||
     answer.type === 'logProperties' ||
     answer.type === 'expLogEquations' ||
+    answer.type === 'expLogGraphs' ||
+    answer.type === 'expModels' ||
     answer.type === 'geometry' ||
     answer.type === 'periodic'
   ) {
@@ -599,6 +645,8 @@ function answerOf(instance: ProblemInstance): string | undefined {
     case 'logForms':
     case 'logProperties':
     case 'expLogEquations':
+    case 'expLogGraphs':
+    case 'expModels':
     case 'geometry':
     case 'periodic':
       text = answer.expectedDisplay

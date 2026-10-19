@@ -74,7 +74,7 @@ export const COURSES: readonly CourseDef[] = [
         id: 'unit3',
         label: 'Unit 3',
         title: 'Exponential and logarithmic functions',
-        moduleIds: ['logForms', 'logProperties', 'expLogEquations'],
+        moduleIds: ['logForms', 'logProperties', 'expLogEquations', 'expLogGraphs', 'expModels'],
       },
     ],
   },

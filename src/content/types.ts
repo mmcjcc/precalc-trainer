@@ -17,7 +17,7 @@ import type {
   VarName,
 } from '@/shared/types'
 
-export type ProblemKind = 'inequality' | 'numberLine' | 'evenOdd' | 'inverse' | 'drill' | 'sigFigs' | 'atoms' | 'diffQuotient' | 'graphFeatures' | 'domainRange' | 'composition' | 'functionOps' | 'transformations' | 'piecewiseRate' | 'electrons' | 'periodic' | 'quadratics' | 'polyDivision' | 'polyZeros' | 'rationalFns' | 'signCharts' | 'complexNums' | 'logForms' | 'logProperties' | 'expLogEquations' | 'geometry'
+export type ProblemKind = 'inequality' | 'numberLine' | 'evenOdd' | 'inverse' | 'drill' | 'sigFigs' | 'atoms' | 'diffQuotient' | 'graphFeatures' | 'domainRange' | 'composition' | 'functionOps' | 'transformations' | 'piecewiseRate' | 'electrons' | 'periodic' | 'quadratics' | 'polyDivision' | 'polyZeros' | 'rationalFns' | 'signCharts' | 'complexNums' | 'logForms' | 'logProperties' | 'expLogEquations' | 'expLogGraphs' | 'expModels' | 'geometry'
 
 /** Precalculus Unit 3. Evaluate, rewrite the form, or round a change-of-base value. */
 export type LogFormsQuestion = 'value' | 'convert' | 'decimal'
@@ -27,6 +27,32 @@ export type LogPropertiesQuestion = 'expand' | 'condense'
 
 /** Precalculus Unit 3. An exponential, logarithmic, or quadratic-in-form equation. */
 export type ExpLogQuestion = 'exponential' | 'logarithmic' | 'quadratic'
+
+/** Precalculus Unit 3. Features of exponential/log graphs, graph matching, or inverse functions. */
+export type ExpLogGraphsQuestion = 'features' | 'match' | 'inverse'
+
+export type ExpLogGraphsStageId = 'domain' | 'range' | 'asymptote' | 'intercept' | 'behavior' | 'match' | 'inverse'
+
+export interface ExpLogMatchCandidate {
+  id: 'A' | 'B' | 'C' | 'D'
+  /** Formula in app syntax, e.g. "2^(x - 1) + 3". */
+  formula: string
+  /** Display equation, e.g. "f(x) = 2^(x - 1) + 3". */
+  equation: string
+  /** GraphSpec for GraphPanel. */
+  graph: GraphSpec
+  /** Accessible caption for GraphPanel (does not leak the formula when matching graphs). */
+  caption: string
+  /** Trap id when this candidate is one of the three distractors. */
+  trap?: ErrorPatternId
+  /** Concrete witness for this distractor. */
+  witness?: string
+}
+
+/** Precalculus Unit 3. Compound/continuous interest, half-life decay, or continuous growth from two data points. */
+export type ExpModelsQuestion = 'interest' | 'halflife' | 'growth'
+
+export type ExpModelsStageId = 'answer' | 'exact_k' | 'rounded_k' | 'followup'
 
 /** Which geometry screen this problem is. Unit 2 adds logic and proof; Unit 3 adds parallels and polygons; Unit 4 adds congruent triangles. */
 export type GeometryQuestion =
@@ -1162,6 +1188,108 @@ export type AnswerSpec =
       explanation: string[]
     }
   | {
+      /**
+       * Graphs of exponential and logarithmic functions (precalculus Unit 3).
+       * `features`: domain, range, asymptote, intercept, and increasing/decreasing one part at a time.
+       * `match`: four candidate graphs drawn with GraphPanel (differing by sign of a, base above/below 1, and shift).
+       * `inverse`: inverse of an exponential or log function, graded by composition on the original's range.
+       */
+      type: 'expLogGraphs'
+      question: ExpLogGraphsQuestion
+      family: 'exponential' | 'logarithmic'
+      /** Function name ("f" or "g"). */
+      fnName: 'f' | 'g'
+      /** The expression in x, app syntax: "2 * 3^(x - 1) - 4" or "-log_2(x + 3) + 1". */
+      f: string
+      /** Display equation: "f(x) = 2 * 3^(x - 1) - 4" or "y = 2^(x - 1) + 3". */
+      equation: string
+      /** Parameters of a * b^(x - h) + k or a * log_b(x - h) + k. */
+      a: number
+      /** Base text ("2", "3", "1/2", "e", "10", ...). */
+      baseText: string
+      baseValue: number
+      h: number
+      k: number
+      /** Matching sub-mode for eg.match: pick the graph ('graph') or pick the equation ('equation'). */
+      matchMode?: 'graph' | 'equation'
+      /** Four candidates for eg.match, each with its own GraphSpec. */
+      candidates?: ExpLogMatchCandidate[]
+      /** Canonical inverse expression in x (for eg.inverse), app syntax. */
+      inverseExpr?: string
+      /** Canonical inverse equation, e.g. "y = log_2(x - 3) + 1". */
+      inverseEquation?: string
+      prompt: string
+      stages: {
+        id: ExpLogGraphsStageId
+        label: string
+        placeholder: string
+        formatHint: string
+        answerText: string
+        /** Optional quick-pick buttons (e.g. Increasing / Decreasing, or A / B / C / D). */
+        choices?: { id: string; label: string }[]
+        nudge: string
+        ruleCard: RuleCardId
+        reveal: string[]
+        traps: { id: ErrorPatternId; text: string; witness: string }[]
+      }[]
+      expectedDisplay: string
+      nudge: string
+      ruleCard: RuleCardId
+      ruleCards: RuleCardId[]
+      reveal: string[]
+      trap: ErrorPatternId
+      trapStage: ExpLogGraphsStageId
+      trapAnswer: string
+      /** Graph of f (and finv for eg.inverse), shown after completion for features/inverse. */
+      graph: GraphSpec
+    }
+  | {
+      /**
+       * Exponential growth and decay models (precalculus Unit 3).
+       * `interest`: A = P(1 + r/n)^(nt) and A = Pe^(rt) (balance, time to reach a balance, or doubling time).
+       * `halflife`: A = A_0(1/2)^{t/h} (amount left, time to reach an amount, C-14 dating, half-life from two measurements).
+       * `growth`: P = P_0 e^(kt) (exact k = ln(P_1/P_0)/t, rounded k, then prediction or time to reach a size).
+       */
+      type: 'expModels'
+      question: ExpModelsQuestion
+      subkind: string
+      /** Word problem statement. */
+      prompt: string
+      /** Model equation in display text, e.g. "A = P(1 + r/n)^(nt)". */
+      formulaDisplay: string
+      stages: {
+        id: ExpModelsStageId
+        label: string
+        placeholder: string
+        formatHint: string
+        /** Canonical answer string (rounded decimal or exact expression). */
+        answerText: string
+        /** Exact expression in app syntax that evaluates to the true unrounded value. */
+        exactExpr: string
+        /** Unrounded numeric value (and optional secondary value from rounded k in multi-stage growth). */
+        exactValue: number
+        altExactValue?: number
+        /** Number of decimal places requested (undefined when exact expression is required, e.g. exact_k). */
+        places?: number
+        /** Whether this answer is a dollar amount (accepts $, commas). */
+        isMoney?: boolean
+        /** Optional unit suffix to accept if typed (e.g. "years", "g", "mg"). */
+        unit?: string
+        nudge: string
+        ruleCard: RuleCardId
+        reveal: string[]
+        traps: { id: ErrorPatternId; text: string; value: number; exactExpr?: string; witness: string }[]
+      }[]
+      expectedDisplay: string
+      nudge: string
+      ruleCard: RuleCardId
+      ruleCards: RuleCardId[]
+      reveal: string[]
+      trap: ErrorPatternId
+      trapStage: ExpModelsStageId
+      trapAnswer: string
+    }
+  | {
       type: 'drill'
       question: 'which_property' | 'legal_or_illegal'
       verdict: 'legal' | 'illegal'
@@ -1175,6 +1303,12 @@ export type GeometryAnswer = Extract<AnswerSpec, { type: 'geometry' }>
 
 /** The periodic-table arm of `AnswerSpec`, named so the flow and the generators share it. */
 export type PeriodicAnswer = Extract<AnswerSpec, { type: 'periodic' }>
+
+/** The exponential/log graphs arm of `AnswerSpec`. */
+export type ExpLogGraphsAnswer = Extract<AnswerSpec, { type: 'expLogGraphs' }>
+
+/** The exponential growth/decay models arm of `AnswerSpec`. */
+export type ExpModelsAnswer = Extract<AnswerSpec, { type: 'expModels' }>
 
 export interface ProblemInstance {
   /** `${moduleId}/${templateId}@${genVersion}/${seedBase36}` */
