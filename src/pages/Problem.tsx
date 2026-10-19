@@ -20,6 +20,7 @@ import { ComplexNumsFlow } from './flows/ComplexNumsFlow'
 import { ExpLogEquationsFlow, LogPropertiesFlow } from './flows/LogLineFlow'
 import { LogFormsFlow } from './flows/LogFormsFlow'
 import { GeometryFlow } from './flows/GeometryFlow'
+import { assertGeometryQuestion } from '@/problem/tutorContext'
 import { PeriodicFlow } from './flows/PeriodicFlow'
 import { QuadraticsFlow } from './flows/QuadraticsFlow'
 import { TransformationFlow } from './flows/TransformationFlow'
@@ -139,6 +140,7 @@ function ProblemBody({ instance, flags, templateTitle }: { instance: ProblemInst
     case 'expLogEquations':
       return <ExpLogEquationsFlow {...props} />
     case 'geometry':
+      if (instance.answer.type === 'geometry') assertGeometryQuestion(instance.answer.question)
       return <GeometryFlow {...props} />
     case 'periodic':
       return <PeriodicFlow {...props} />

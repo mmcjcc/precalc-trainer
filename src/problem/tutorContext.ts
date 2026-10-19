@@ -19,7 +19,7 @@ import { ptWork } from '@/content/modules/periodic/grade'
 import { EC_PATTERN } from '@/content/modules/electrons/patterns'
 import { POLY_PATTERN } from '@/content/modules/polynomials/patterns'
 import { TR_PATTERN } from '@/content/modules/transformations/patterns'
-import type { ProblemInstance } from '@/content/types'
+import type { GeometryQuestion, ProblemInstance } from '@/content/types'
 import { logFormsWork } from '@/content/modules/logForms'
 import { ERROR_PATTERNS } from '@/engine'
 import type { OpsGrade } from '@/content/modules/functionOps/ops'
@@ -455,6 +455,44 @@ function workOf(instance: ProblemInstance, attempt: Attempt | null): string[] {
   return lines.slice(0, TUTOR_LIMITS.lines)
 }
 
+/**
+ * Every geometry question uses the same screen and the same tutor description.
+ * A new question has to be listed here or this fails to compile.
+ */
+export function assertGeometryQuestion(question: GeometryQuestion): void {
+  switch (question) {
+    case 'addition':
+    case 'midpoint':
+    case 'coord':
+    case 'angleAddition':
+    case 'bisector':
+    case 'pairs':
+    case 'words':
+    case 'related':
+    case 'truth':
+    case 'laws':
+    case 'reason':
+    case 'algebraic':
+    case 'twocolumn':
+    case 'transversalPairs':
+    case 'parallelSolve':
+    case 'parallelConverse':
+    case 'lineSlopes':
+    case 'triangleAngles':
+    case 'polygonAngles':
+    case 'congruentParts':
+    case 'congruentWhich':
+    case 'congruentSolve':
+    case 'isoscelesSolve':
+    case 'triangleProof':
+      return
+    default: {
+      const unexpected: never = question
+      throw new Error(`unknown geometry question ${String(unexpected)}`)
+    }
+  }
+}
+
 function statementOf(instance: ProblemInstance): string {
   const answer = instance.answer
   let text = instance.statementText
@@ -492,6 +530,7 @@ function statementOf(instance: ProblemInstance): string {
   } else if (answer.type === 'expLogEquations') {
     text = `${answer.equation}. ${answer.prompt}`
   } else if (answer.type === 'geometry') {
+    assertGeometryQuestion(answer.question)
     const lines = answer.lines?.length ? ` Lines: ${answer.lines.join(' | ')}` : ''
     text = `${answer.prompt}${lines} Figure: ${answer.figure.ariaLabel}`
   } else if (answer.type === 'periodic') {

@@ -132,6 +132,12 @@ export const COURSES: readonly CourseDef[] = [
         title: 'Parallel and perpendicular lines',
         moduleIds: ['geoParallel', 'geoPolygonAngles'],
       },
+      {
+        id: 'g4',
+        label: 'Unit 4',
+        title: 'Congruent triangles',
+        moduleIds: ['geoCongruence', 'geoIsosceles', 'geoTriangleProofs'],
+      },
     ],
   },
 ]

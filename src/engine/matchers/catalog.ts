@@ -1908,6 +1908,75 @@ export const ERROR_PATTERNS: Record<ErrorPatternId, ErrorPatternInfo> = {
     lesson: 'Combining logs, or dropping the same log from both sides, can widen the domain, so the new line may have an answer the original cannot use. At the end, put each answer back into the original’s logs.',
     example: 'log(x) + log(x − 3) = 1 → log(x(x − 3)) = 1 ⚠ (x = −2 will fit it, but not the original)',
   },
+  // --- honors geometry Unit 4. Examples use 11, 23, and 41.
+  // No template generates those as an answer. A lesson may name a method only together with the
+  // one it is confused with, and never with the words a correct button would show for that slip.
+  geo_ssa_as_congruence: {
+    id: 'geo_ssa_as_congruence',
+    title: 'SSA does not prove congruence',
+    lesson: 'SSA is two sides and a non-included angle, and it does not prove the triangles congruent. SAS is the pair that does: two sides and the included angle. The picture can be finished in two different ways when the angle is not between the sides.',
+    example: 'two sides and the angle opposite one of them ✗ → two sides and the included angle',
+  },
+  geo_aaa_as_congruence: {
+    id: 'geo_aaa_as_congruence',
+    title: 'AAA does not prove congruence',
+    lesson: 'AAA is three pairs of congruent angles. That shows the same shape, not the same size, so it does not prove the triangles congruent. A larger copy has the same angles.',
+    example: 'three pairs of angles ✗ → three pairs of sides, or two sides with the included angle',
+  },
+  geo_sas_not_included: {
+    id: 'geo_sas_not_included',
+    title: 'The angle has to sit between the two sides',
+    lesson: 'SAS needs the included angle, the angle between the two sides. SSA is the pair with the angle that is not between them, and that pair does not prove congruence.',
+    example: 'the angle across from one side ✗ → the angle between the two sides',
+  },
+  geo_asa_aas_swapped: {
+    id: 'geo_asa_aas_swapped',
+    title: 'Check whether the side sits between the angles',
+    lesson: 'Two angles and the included side are one reason. Two angles and a side that is not included are a different reason. The figure shows which side it is, and the two reasons are not interchangeable.',
+    example: 'the side that is not between the angles ✗ → the side between the two angles',
+  },
+  geo_hl_no_right: {
+    id: 'geo_hl_no_right',
+    title: 'HL is only for right triangles',
+    lesson: 'HL applies only when each triangle has a right angle: the hypotenuse and one leg. SSA is a different pair and is not this theorem. Without a right angle there is no hypotenuse.',
+    example: 'the long side and another side, with no right angle ✗ → the side opposite the right angle, and one leg',
+  },
+  geo_vertices_out_of_order: {
+    id: 'geo_vertices_out_of_order',
+    title: 'The letters name the corresponding vertices',
+    lesson: 'The order of the letters is the correspondence. The first vertex of one triangle corresponds to the first vertex of the other, and the same for the second and the third. A different order pairs vertices that do not correspond.',
+    example: 'the second vertex named where the first one belongs ✗ → the first vertex with the first vertex',
+  },
+  geo_cpctc_too_soon: {
+    id: 'geo_cpctc_too_soon',
+    title: 'The triangles come before their parts',
+    lesson: 'Corresponding parts are used after the triangles have been proved congruent. Using that fact on the row that is still proving the triangles congruent puts it a row too early.',
+    example: 'the parts, on the row that proves the triangles congruent ✗ → the parts, on the next row',
+  },
+  geo_shared_side_missed: {
+    id: 'geo_shared_side_missed',
+    title: 'A side in both triangles still has to be named',
+    lesson: 'A side that lies in both triangles is congruent to itself. That row is not one of the facts written at the start, so the proof still has to name the side.',
+    example: 'the side treated as a starting fact ✗ → the side congruent to itself',
+  },
+  geo_base_angles_wrong_vertex: {
+    id: 'geo_base_angles_wrong_vertex',
+    title: 'The base angles sit opposite the congruent sides',
+    lesson: 'In an isosceles triangle the base angles are congruent, and they are the angles opposite the congruent sides. The vertex angle is the third one. Setting a base angle equal to the vertex angle uses the wrong vertex.',
+    example: 'x = 11 ✗ → x = 23',
+  },
+  geo_equilateral_angle_for_side: {
+    id: 'geo_equilateral_angle_for_side',
+    title: 'That number is an angle, and the question asks for a side',
+    lesson: 'When all three sides are congruent, the triangle is equilateral and each angle measures 60°. That number is an angle. The side is what the expression equals once x is known.',
+    example: '11 ✗ → 41',
+  },
+  geo_vertical_angles_missed: {
+    id: 'geo_vertical_angles_missed',
+    title: 'A crossing still gives a pair of congruent angles',
+    lesson: 'Two lines that cross make vertical angles, and vertical angles are congruent, so that pair counts. Leaving the pair out leaves the proof short of what the figure already shows.',
+    example: 'the opposite angles left out ✗ → the opposite angles counted',
+  },
   // --- behavioral (ui) ---
   abandoned: {
     id: 'abandoned',

@@ -70,6 +70,9 @@ describe('module registry', () => {
       'geoProof',
       'geoParallel',
       'geoPolygonAngles',
+      'geoCongruence',
+      'geoIsosceles',
+      'geoTriangleProofs',
     ])
   })
 })
