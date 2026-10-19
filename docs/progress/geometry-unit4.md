@@ -48,3 +48,31 @@ Every problem is drawn from its seed. Six letters come from a pool that leaves o
 - A first visit to Honors Geometry lands on the last unit that has modules, which is now Unit 4. The home test that arrows onto the class expects the three Unit 4 titles. Clicking Unit 3 still expects the two Unit 3 titles.
 - The vertical-angles proof used a steeper crossing than the "which method" figure, and the letter at the crossing sat on a ray. It now uses the same crossing that already cleared the layout check. `GeoFigure` was not changed.
 - On the skeleton where she picks the congruence statement, that row is a statement choice, not a reason. CPCTC too soon is the reason pick on the congruence row itself. Typing a reason id into the statement picker is not an attempt.
+
+## Review (Claude, 2026-10-18)
+
+Two passes. The first build's answers were right but came from fixed tables (x = 8 in most problems, every
+correspondence A-D, B-E, C-F with the second triangle a translated copy), wrote "AB matches DE", kept the
+method names out of the rule cards, and had the five grading bugs listed under the rework above; it went back
+to Grok with a brief. After the rework:
+
+- Independent re-solve, `geometry.unit4.crosscheck.test.ts` (reviewer's): every gc.which answer is decided
+  from the DRAWN marks (ticks, arcs, right-angle squares, parallel arrows), with shared sides, vertical angles
+  and alternate interior angles found from the coordinates; every pick that grades as a named mistake must be
+  that slip on this figure; gc.parts mode B must force one correspondence with exactly one consistent
+  statement; gc.solve and gi.solve are re-solved with exact fractions (one corresponding pair, one x, real
+  triangles, the drawn angles agree); every proof row must follow from the rows above by its reason, a
+  statement row has exactly one right choice, the last row is the Prove line, and every figure mark is
+  given. Distributions: each gc.which answer 10-25%, the alphabetical pairing right at most 25% of the time,
+  10+ values of x, no x over 20%. 400 seeds per template, green.
+- Found by that test after the rework: the midpoint proof (sas-midpoint) proved the triangles and then added
+  a CPCTC row after its Prove line, where the distractor AB ≅ DC is also a pair of corresponding parts (a
+  right answer graded wrong). It now proves AM ≅ DM, and the row she completes is the definition of a
+  midpoint.
+- Gemini 4 review, five findings, two real and fixed: the isosceles problems reused "set the two
+  corresponding parts equal" (one triangle has none, and on the vertex-angle family that sentence is the
+  trap); and two witnesses talked about marks or SSA on figures without them. Not changed: "not enough
+  information" figures may look congruent (textbooks draw them that way on purpose: only the marks count);
+  hlPerp draws the right-angle squares that the perpendicular givens imply.
+- Browser, 375 px: 86 figures (12 gc.parts, 24 gc.which, 12 gc.solve, 12 gi.solve, 26 proofs): no label
+  outside its figure, crossed by a line, or overlapping another.
