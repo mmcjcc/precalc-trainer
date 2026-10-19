@@ -2304,6 +2304,129 @@ export const ERROR_PATTERNS: Record<ErrorPatternId, ErrorPatternInfo> = {
     lesson: 'Two lines that cross make vertical angles, and vertical angles are congruent, so that pair counts. Leaving the pair out leaves the proof short of what the figure already shows.',
     example: 'the opposite angles left out ✗ → the opposite angles counted',
   },
+  // --- honors geometry Unit 5 (quadrilaterals). Examples use the letters J, K, L, M, N, which no template
+  // uses, and no number a template generates. A lesson or example for a slip that can be named on a "most
+  // specific name" question never names a quadrilateral, so it cannot hand over the answer.
+  geo_consecutive_angles_equal: {
+    id: 'geo_consecutive_angles_equal',
+    title: 'Consecutive angles add to 180°',
+    lesson: 'Two angles of a parallelogram that share a side are consecutive, and they are supplementary: their measures add to 180°. The congruent angles are the opposite ones, across from each other.',
+    example: 'm∠J = m∠K ✗ → m∠J + m∠K = 180',
+  },
+  geo_opposite_angles_supplementary: {
+    id: 'geo_opposite_angles_supplementary',
+    title: 'Opposite angles are congruent',
+    lesson: 'Opposite angles of a parallelogram are congruent, so their measures are equal. The angles that add to 180° are consecutive ones, which share a side.',
+    example: 'm∠J + m∠L = 180 ✗ → m∠J = m∠L',
+  },
+  geo_diagonal_half_as_whole: {
+    id: 'geo_diagonal_half_as_whole',
+    title: 'A diagonal is twice its half',
+    lesson: 'The diagonals of a parallelogram bisect each other, so the point where they cross cuts each diagonal into two equal halves. The whole diagonal is twice one half, not equal to it.',
+    example: 'JN = JL ✗ → JL = 2 · JN',
+  },
+  geo_diagonals_assumed_congruent: {
+    id: 'geo_diagonals_assumed_congruent',
+    title: 'Each diagonal is cut in half, not matched to the other',
+    lesson: 'The diagonals of a parallelogram bisect each other: the two halves of one diagonal are equal. The two diagonals are congruent to each other only in a rectangle, so a half of one need not equal a half of the other.',
+    example: 'JN = KN ✗ → JN = NL',
+  },
+  geo_parallelogram_as_rhombus: {
+    id: 'geo_parallelogram_as_rhombus',
+    title: 'Opposite sides match, not neighbors',
+    lesson: 'In a parallelogram, opposite sides are congruent. Two sides that meet at a vertex are equal only when the parallelogram is a rhombus, and nothing here says that.',
+    example: 'JK = KL ✗ → JK = ML',
+  },
+  geo_rect_rhombus_swapped: {
+    id: 'geo_rect_rhombus_swapped',
+    title: 'Rectangles and rhombuses have different diagonals',
+    lesson: 'A rectangle’s diagonals are congruent, so the four half-diagonals are equal. A rhombus’s diagonals are perpendicular, and each one bisects two angles. Only a square has both, so one shape’s fact does not belong to the other.',
+    example: 'rhombus JKLM: JN = KN ✗ → JL ⊥ KM, and JN = NL',
+  },
+  geo_median_not_halved: {
+    id: 'geo_median_not_halved',
+    title: 'The median is half the sum of the bases',
+    lesson: 'The median of a trapezoid joins the midpoints of the legs. Its length is the average of the bases: add the two bases, then divide by 2.',
+    example: 'median = JK + ML ✗ → median = ½(JK + ML)',
+  },
+  geo_median_as_base: {
+    id: 'geo_median_as_base',
+    title: 'The median sits between the bases',
+    lesson: 'The median of a trapezoid is parallel to the bases and halfway between them, so its length is between theirs: half their sum. It is not equal to either base.',
+    example: 'median = JK ✗ → median = ½(JK + ML)',
+  },
+  geo_midsegment_doubled: {
+    id: 'geo_midsegment_doubled',
+    title: 'A midsegment is half the third side',
+    lesson: 'The segment that joins the midpoints of two sides of a triangle is parallel to the third side and half as long. The third side is twice the midsegment, not the other way around.',
+    example: 'midsegment = 2 · third side ✗ → midsegment = ½ · third side',
+  },
+  geo_kite_angles_wrong_pair: {
+    id: 'geo_kite_angles_wrong_pair',
+    title: 'A kite’s congruent angles are where unequal sides meet',
+    lesson: 'A kite has two pairs of congruent sides. Its one pair of congruent opposite angles is at the two vertices where a side from one pair meets a side from the other pair. The angles between the congruent sides are usually different.',
+    example: 'kite JKLM with JK ≅ JM: m∠J = m∠L ✗ → m∠K = m∠M',
+  },
+  geo_trapezoid_as_parallelogram: {
+    id: 'geo_trapezoid_as_parallelogram',
+    title: 'A trapezoid is not a parallelogram',
+    lesson: 'An isosceles trapezoid has one pair of parallel sides. Its two angles at one base are congruent, two angles along one leg add to 180°, and its diagonals are congruent but do not bisect each other. Parallelogram rules do not carry over.',
+    example: 'bases JK and ML: m∠J = m∠L ✗ → m∠J + m∠L = 180',
+  },
+  geo_parallel_congruent_mixed: {
+    id: 'geo_parallel_congruent_mixed',
+    title: 'Parallel and congruent have to be the same pair',
+    lesson: 'One pair of opposite sides proves a parallelogram only when that same pair is both parallel and congruent. One pair parallel and the other pair congruent also fits an isosceles trapezoid.',
+    example: 'JK ∥ ML and KL ≅ JM ✗ → JK ∥ ML and JK ≅ ML',
+  },
+  geo_one_pair_half_test: {
+    id: 'geo_one_pair_half_test',
+    title: 'One pair has to be both parallel and congruent',
+    lesson: 'One pair of opposite sides proves a parallelogram only when that same pair is both parallel and congruent. A pair that is only congruent, or only parallel, is not enough on its own.',
+    example: 'JK ≅ ML ✗ → JK ≅ ML and JK ∥ ML',
+  },
+  geo_consecutive_marks_as_opposite: {
+    id: 'geo_consecutive_marks_as_opposite',
+    title: 'Those congruent angles share a side',
+    lesson: 'The angle test needs each angle to match the angle across from it, for both pairs. Matching marks on two angles that share a side are a different fact, and an isosceles trapezoid has them.',
+    example: '∠J ≅ ∠K and ∠L ≅ ∠M ✗ → ∠J ≅ ∠L and ∠K ≅ ∠M',
+  },
+  geo_one_diagonal_bisected: {
+    id: 'geo_one_diagonal_bisected',
+    title: 'Both diagonals have to be cut in half',
+    lesson: 'The diagonals bisect each other only when the crossing point is the midpoint of both of them. When the marks cut just one diagonal in half, a kite can have the same marks.',
+    example: 'JN ≅ NL only ✗ → JN ≅ NL and KN ≅ NM',
+  },
+  geo_parallelogram_test_missed: {
+    id: 'geo_parallelogram_test_missed',
+    title: 'Those marks are one of the five ways',
+    lesson: 'Any one of five facts proves a parallelogram: both pairs of opposite sides parallel, both pairs of opposite sides congruent, one pair both parallel and congruent, both pairs of opposite angles congruent, or diagonals that cut each other in half. These marks give one of them.',
+    example: 'marks that give one of the five ways, called short ✗ → that way proves it',
+  },
+  geo_square_not_rectangle: {
+    id: 'geo_square_not_rectangle',
+    title: 'A square is a rectangle and a rhombus',
+    lesson: 'A square has four right angles, so it is a rectangle, and four congruent sides, so it is a rhombus. Everything true of every rectangle and every rhombus is true of a square.',
+    example: 'square JKLM: not a rectangle ✗ → a rectangle, and a rhombus too',
+  },
+  geo_not_most_specific: {
+    id: 'geo_not_most_specific',
+    title: 'Use the most specific name',
+    lesson: 'That name fits, but the facts say more. Each special name adds facts to a more general one, so the most specific name is the one that uses every fact you are given.',
+    example: 'a true name that leaves out a given fact ✗ → the name that uses every given fact',
+  },
+  geo_converse_property: {
+    id: 'geo_converse_property',
+    title: 'A property is not always a test',
+    lesson: 'A property of a shape does not prove the shape on its own. Perpendicular diagonals, or congruent diagonals, can belong to a four-sided figure that has no special name at all.',
+    example: 'perpendicular diagonals, read as proof of a special shape ✗ → a fact many shapes share',
+  },
+  geo_slope_inverted: {
+    id: 'geo_slope_inverted',
+    title: 'Slope is rise over run',
+    lesson: 'Slope is the change in y divided by the change in x: (y₂ − y₁)/(x₂ − x₁). Dividing the change in x by the change in y gives the reciprocal, which is a different slope.',
+    example: 'a rise of 1 over a run of 4: 4 ✗ → 1/4',
+  },
   // --- behavioral (ui) ---
   abandoned: {
     id: 'abandoned',

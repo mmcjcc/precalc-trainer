@@ -82,6 +82,30 @@ export const GEO_UNIT4_MISTAKE_IDS = [
   'geo_vertical_angles_missed',
 ] as const
 
+/** Unit 5 mistakes (quadrilaterals). A number or pick is named only when it is exactly what that slip produces here. */
+export const GEO_UNIT5_MISTAKE_IDS = [
+  'geo_consecutive_angles_equal',
+  'geo_opposite_angles_supplementary',
+  'geo_diagonal_half_as_whole',
+  'geo_diagonals_assumed_congruent',
+  'geo_parallelogram_as_rhombus',
+  'geo_rect_rhombus_swapped',
+  'geo_median_not_halved',
+  'geo_median_as_base',
+  'geo_midsegment_doubled',
+  'geo_kite_angles_wrong_pair',
+  'geo_trapezoid_as_parallelogram',
+  'geo_parallel_congruent_mixed',
+  'geo_one_pair_half_test',
+  'geo_consecutive_marks_as_opposite',
+  'geo_one_diagonal_bisected',
+  'geo_parallelogram_test_missed',
+  'geo_square_not_rectangle',
+  'geo_not_most_specific',
+  'geo_converse_property',
+  'geo_slope_inverted',
+] as const
+
 export const GEO_UNIT1_MISTAKE_IDS = GEO_MISTAKE_IDS
 
 export type GeoMistakeId =
@@ -89,6 +113,7 @@ export type GeoMistakeId =
   | (typeof GEO_UNIT2_MISTAKE_IDS)[number]
   | (typeof GEO_UNIT3_MISTAKE_IDS)[number]
   | (typeof GEO_UNIT4_MISTAKE_IDS)[number]
+  | (typeof GEO_UNIT5_MISTAKE_IDS)[number]
 
 export type GeoGrade =
   | { verdict: 'correct'; message: string }
@@ -212,7 +237,8 @@ export function isGeoMistake(id: ErrorPatternId): id is GeoMistakeId {
     (GEO_MISTAKE_IDS as readonly string[]).includes(id) ||
     (GEO_UNIT2_MISTAKE_IDS as readonly string[]).includes(id) ||
     (GEO_UNIT3_MISTAKE_IDS as readonly string[]).includes(id) ||
-    (GEO_UNIT4_MISTAKE_IDS as readonly string[]).includes(id)
+    (GEO_UNIT4_MISTAKE_IDS as readonly string[]).includes(id) ||
+    (GEO_UNIT5_MISTAKE_IDS as readonly string[]).includes(id)
   )
 }
 

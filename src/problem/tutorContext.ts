@@ -534,6 +534,13 @@ export function assertGeometryQuestion(question: GeometryQuestion): void {
     case 'congruentSolve':
     case 'isoscelesSolve':
     case 'triangleProof':
+    case 'parallelogramProps':
+    case 'parallelogramProve':
+    case 'parallelogramCoords':
+    case 'specialQuadProps':
+    case 'quadClassify':
+    case 'midsegment':
+    case 'trapezoidKite':
       return
     default: {
       const unexpected: never = question
@@ -588,7 +595,9 @@ function statementOf(instance: ProblemInstance): string {
   } else if (answer.type === 'geometry') {
     assertGeometryQuestion(answer.question)
     const lines = answer.lines?.length ? ` Lines: ${answer.lines.join(' | ')}` : ''
-    text = `${answer.prompt}${lines} Figure: ${answer.figure.ariaLabel}`
+    // A problem stated in words alone (a list of facts) has no figure to describe.
+    const figure = answer.figure.ariaLabel.trim() ? ` Figure: ${answer.figure.ariaLabel}` : ''
+    text = `${answer.prompt}${lines}${figure}`
   } else if (answer.type === 'periodic' || answer.type === 'nomenclature') {
     text = answer.prompt
   }

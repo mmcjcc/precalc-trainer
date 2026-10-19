@@ -15,7 +15,7 @@
 export type RelOp = '=' | '<' | '<=' | '>' | '>='
 /** `h` is the difference-quotient step; the parser accepts it only when the problem owns it (ctx.vars). */
 export type VarName = 'x' | 'y' | 'n' | 'h'
-export type ModuleId = 'numberLine' | 'inequalities' | 'evenOdd' | 'inverses' | 'propertiesDrill' | 'sigFigs' | 'atoms' | 'diffQuotient' | 'graphFeatures' | 'domainRange' | 'composition' | 'functionOps' | 'transformations' | 'piecewiseRate' | 'electrons' | 'periodic' | 'quadratics' | 'polyDivision' | 'polyZeros' | 'rationalFns' | 'signCharts' | 'complexNums' | 'logForms' | 'logProperties' | 'expLogEquations' | 'expLogGraphs' | 'expModels' | 'geoSegments' | 'geoAngles' | 'geoLogic' | 'geoProof' | 'geoParallel' | 'geoPolygonAngles' | 'geoCongruence' | 'geoIsosceles' | 'geoTriangleProofs' | 'ionicNames' | 'molecularAcids'
+export type ModuleId = 'numberLine' | 'inequalities' | 'evenOdd' | 'inverses' | 'propertiesDrill' | 'sigFigs' | 'atoms' | 'diffQuotient' | 'graphFeatures' | 'domainRange' | 'composition' | 'functionOps' | 'transformations' | 'piecewiseRate' | 'electrons' | 'periodic' | 'quadratics' | 'polyDivision' | 'polyZeros' | 'rationalFns' | 'signCharts' | 'complexNums' | 'logForms' | 'logProperties' | 'expLogEquations' | 'expLogGraphs' | 'expModels' | 'geoSegments' | 'geoAngles' | 'geoLogic' | 'geoProof' | 'geoParallel' | 'geoPolygonAngles' | 'geoCongruence' | 'geoIsosceles' | 'geoTriangleProofs' | 'geoParallelograms' | 'geoSpecialQuads' | 'geoTrapezoids' | 'ionicNames' | 'molecularAcids'
 export type CalcId = 'ti84' | 'nspire'
 
 /** Fine-grained property tags. Canonical steps carry one; the engine's move detector reports one. */
@@ -555,6 +555,29 @@ export type ErrorPatternId =
   | 'geo_base_angles_wrong_vertex'
   | 'geo_equilateral_angle_for_side'
   | 'geo_vertical_angles_missed'
+  // honors geometry Unit 5, quadrilaterals (content/modules/geometry). Each id is the exact number or pick
+  // that slip produces on this problem: a parallelogram property used the wrong way, a special
+  // quadrilateral's property used on another, a midsegment or median off by the factor of 2, or a name.
+  | 'geo_consecutive_angles_equal'
+  | 'geo_opposite_angles_supplementary'
+  | 'geo_diagonal_half_as_whole'
+  | 'geo_diagonals_assumed_congruent'
+  | 'geo_parallelogram_as_rhombus'
+  | 'geo_rect_rhombus_swapped'
+  | 'geo_median_not_halved'
+  | 'geo_median_as_base'
+  | 'geo_midsegment_doubled'
+  | 'geo_kite_angles_wrong_pair'
+  | 'geo_trapezoid_as_parallelogram'
+  | 'geo_parallel_congruent_mixed'
+  | 'geo_one_pair_half_test'
+  | 'geo_consecutive_marks_as_opposite'
+  | 'geo_one_diagonal_bisected'
+  | 'geo_parallelogram_test_missed'
+  | 'geo_square_not_rectangle'
+  | 'geo_not_most_specific'
+  | 'geo_converse_property'
+  | 'geo_slope_inverted'
   // behavioral (ui)
   | 'abandoned'
 

@@ -128,7 +128,10 @@ export interface ExpLogPart {
   traps: ExpLogPartTrap[]
 }
 
-/** Which geometry screen this problem is. Unit 2 adds logic and proof; Unit 3 adds parallels and polygons; Unit 4 adds congruent triangles. */
+/**
+ * Which geometry screen this problem is. Unit 2 adds logic and proof; Unit 3 adds parallels and polygons; Unit 4 adds
+ * congruent triangles; Unit 5 adds quadrilaterals.
+ */
 export type GeometryQuestion =
   | 'addition'
   | 'midpoint'
@@ -154,6 +157,13 @@ export type GeometryQuestion =
   | 'congruentSolve'
   | 'isoscelesSolve'
   | 'triangleProof'
+  | 'parallelogramProps'
+  | 'parallelogramProve'
+  | 'parallelogramCoords'
+  | 'specialQuadProps'
+  | 'quadClassify'
+  | 'midsegment'
+  | 'trapezoidKite'
 
 /**
  * One checked part of a geometry problem. `x` and `result` are the Unit 1 boxes.

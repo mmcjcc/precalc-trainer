@@ -28,6 +28,12 @@ import {
 import { drawIsosceles, drawParts, drawSolve, drawWhich } from './unit4Make'
 import { drawTriangleProof } from './unit4Proof'
 import { CONGRUENCE_RULES, ISOSCELES_RULES, TRIANGLE_PROOF_RULES } from './unit4Rules'
+import { drawPgramCoords } from './unit5Coords'
+import { drawPgramProps } from './unit5Pgram'
+import { drawPgramProve } from './unit5Prove'
+import { PARALLELOGRAM_RULES, SPECIAL_RULES, TRAPEZOID_RULES } from './unit5Rules'
+import { drawClassify, drawSpecialProps } from './unit5Special'
+import { drawMidsegment, drawTrapezoidKite } from './unit5Trap'
 
 export { readGeoAnswer, formatPoint, formatQty, formatValue, geoQty, sameGeoValue, sameQty, simplifyRadical } from './answer'
 export type { GeoQty, GeoRead, GeoReadOptions, GeoValue } from './answer'
@@ -293,6 +299,106 @@ export const geoTriangleProofsModule: ModuleDef = {
   nextStep: () => null,
 }
 
+/**
+ * Parallelograms (honors geometry Unit 5, Jurgensen 5-1 and 5-2). Algebra with the properties, which fact
+ * proves a quadrilateral is a parallelogram, and parallelograms on the coordinate plane.
+ */
+export const geoParallelogramsModule: ModuleDef = {
+  id: 'geoParallelograms',
+  subject: 'Geometry',
+  title: 'Parallelograms',
+  blurb: 'Use the sides, angles, and diagonals of a parallelogram, decide which fact proves one, and check one on the coordinate plane.',
+  order: 18,
+  templates: [
+    geoTemplate(
+      'geoParallelograms',
+      'gq.props',
+      'Parallelogram properties',
+      'Sides, angles, or diagonal pieces of a parallelogram are expressions in x. Find x, then the measure asked.',
+      drawPgramProps,
+    ),
+    geoTemplate(
+      'geoParallelograms',
+      'gq.prove',
+      'Proving a parallelogram',
+      'A quadrilateral with marks. Which fact, if any, proves it is a parallelogram?',
+      drawPgramProve,
+    ),
+    geoTemplate(
+      'geoParallelograms',
+      'gq.coords',
+      'Parallelograms on the coordinate plane',
+      'Four vertices on a grid. Find slopes, lengths, or the midpoints of the diagonals, then say what they show.',
+      drawPgramCoords,
+    ),
+  ],
+  ruleCards: PARALLELOGRAM_RULES,
+  progress: PROGRESS,
+  nextStep: () => null,
+}
+
+/**
+ * Rectangles, rhombuses, and squares (honors geometry Unit 5, Jurgensen 5-4). Algebra with the special
+ * properties, and the most specific name a quadrilateral must have.
+ */
+export const geoSpecialQuadsModule: ModuleDef = {
+  id: 'geoSpecialQuads',
+  subject: 'Geometry',
+  title: 'Rectangles, rhombuses, and squares',
+  blurb: 'Use the diagonals of a rectangle, a rhombus, and a square, and name a quadrilateral as exactly as the facts allow.',
+  order: 19,
+  templates: [
+    geoTemplate(
+      'geoSpecialQuads',
+      'gs.props',
+      'Rectangles, rhombuses, and squares',
+      'Diagonal pieces or angles of a rectangle, a rhombus, or a square are expressions in x. Find x, then the measure asked.',
+      drawSpecialProps,
+    ),
+    geoTemplate(
+      'geoSpecialQuads',
+      'gs.classify',
+      'Naming quadrilaterals',
+      'From facts, marks, or coordinates: the most specific name, or whether it must be a rectangle and a rhombus.',
+      drawClassify,
+    ),
+  ],
+  ruleCards: SPECIAL_RULES,
+  progress: PROGRESS,
+  nextStep: () => null,
+}
+
+/**
+ * Trapezoids, kites, and midsegments (honors geometry Unit 5, Jurgensen 5-3 and 5-5). The triangle midsegment and
+ * the median of a trapezoid, and an isosceles trapezoid or a kite with expressions in x.
+ */
+export const geoTrapezoidsModule: ModuleDef = {
+  id: 'geoTrapezoids',
+  subject: 'Geometry',
+  title: 'Trapezoids, kites, and midsegments',
+  blurb: 'Use a triangle midsegment and the median of a trapezoid, and the angles and diagonals of isosceles trapezoids and kites.',
+  order: 20,
+  templates: [
+    geoTemplate(
+      'geoTrapezoids',
+      'gz.midseg',
+      'Midsegments and medians',
+      'A triangle midsegment or the median of a trapezoid, with expressions in x. Find x, then the length asked.',
+      drawMidsegment,
+    ),
+    geoTemplate(
+      'geoTrapezoids',
+      'gz.isosceles',
+      'Isosceles trapezoids and kites',
+      'Angles or diagonals of an isosceles trapezoid, or angles of a kite, with expressions in x. Find x, then the measure asked.',
+      drawTrapezoidKite,
+    ),
+  ],
+  ruleCards: TRAPEZOID_RULES,
+  progress: PROGRESS,
+  nextStep: () => null,
+}
+
 registerModule(geoSegmentsModule)
 registerModule(geoAnglesModule)
 registerModule(geoLogicModule)
@@ -302,3 +408,6 @@ registerModule(geoPolygonAnglesModule)
 registerModule(geoCongruenceModule)
 registerModule(geoIsoscelesModule)
 registerModule(geoTriangleProofsModule)
+registerModule(geoParallelogramsModule)
+registerModule(geoSpecialQuadsModule)
+registerModule(geoTrapezoidsModule)

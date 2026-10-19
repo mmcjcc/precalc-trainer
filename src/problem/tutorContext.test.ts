@@ -1141,6 +1141,54 @@ describe('buildTutorContext', () => {
     expect(filled.statement).not.toContain(solve.answer.stages[1]!.answerText)
   })
 
+  it('describes the Unit 5 quadrilateral problems without changing the geometry kind', () => {
+    const cases = [
+      ['geoParallelograms', 'gq.props', 'parallelogramProps'],
+      ['geoParallelograms', 'gq.prove', 'parallelogramProve'],
+      ['geoParallelograms', 'gq.coords', 'parallelogramCoords'],
+      ['geoSpecialQuads', 'gs.props', 'specialQuadProps'],
+      ['geoSpecialQuads', 'gs.classify', 'quadClassify'],
+      ['geoTrapezoids', 'gz.midseg', 'midsegment'],
+      ['geoTrapezoids', 'gz.isosceles', 'trapezoidKite'],
+    ] as const
+    for (const [moduleId, templateId, question] of cases) {
+      const instance = generateProblem(moduleId, templateId, 1)
+      if (instance.answer.type !== 'geometry') throw new Error(`${templateId} is not geometry`)
+      const a = instance.answer
+      expect(a.question).toBe(question)
+      assertGeometryQuestion(a.question)
+      const ctx = buildTutorContext(instance, attempt(`u5-${templateId}`, { moduleId }), null, false)
+      expect(ctx.kind).toBe('geometry')
+      expect(ctx.subject).toBe('geometry')
+      expect(ctx.statement).toBe(a.figure.ariaLabel ? `${a.prompt} Figure: ${a.figure.ariaLabel}` : a.prompt)
+      expect(ctx.canonical[0]).toBe(a.reveal[0])
+      for (const stage of a.stages) expect(ctx.statement).not.toContain(stage.reveal[0]!)
+      const slip = gradeGeoStage(a, a.trapStage, a.trapAnswer)
+      expect(slip.verdict).toBe('mistake')
+      if (slip.verdict !== 'mistake') continue
+      expect(verdictFromGeo(slip)?.mistake?.id).toBe(a.trap)
+      expect(verdictFromGeo(slip)?.status).toBe('wrong')
+      expect(verdictFromGeo(gradeGeoStage(a, a.stages[0]!.id, a.stages[0]!.kind === 'choice' ? '' : '???'))?.status).toBe('parse_error')
+      const filled = buildTutorContext(instance, attempt(`u5-${templateId}-done`, { moduleId, final: { polyEntries: geoEntries(a) } }), null, true)
+      expect(filled.work).toEqual(geoWork(a, geoEntries(a)))
+      expect(filled.answer).toBe(a.expectedDisplay)
+    }
+
+    // A naming question stated in facts alone has no figure, and the tutor sees the button words she picked.
+    let factsSeen = 0
+    for (let seed = 1; seed <= 200 && factsSeen === 0; seed++) {
+      const named = generateProblem('geoSpecialQuads', 'gs.classify', seed)
+      if (named.answer.type !== 'geometry' || named.answer.figure.points.length > 0 || named.answer.stages.length !== 1) continue
+      const stage = named.answer.stages[0]!
+      const ctx = buildTutorContext(named, attempt('u5-facts', { moduleId: 'geoSpecialQuads', final: { polyEntries: { [GEO_KEYS[stage.id]]: stage.answerText } } }), null, false)
+      expect(ctx.statement).toBe(named.answer.prompt)
+      expect(ctx.statement).not.toContain('Figure:')
+      expect(ctx.work).toEqual([`${stage.label}: ${stage.choices!.find((c) => c.id === stage.answerText)!.text}`])
+      factsSeen += 1
+    }
+    expect(factsSeen).toBe(1)
+  }, 120_000)
+
   it('never adds a name, email, or account field', () => {
     const instance = generateProblem('inequalities', 'ineq.linear', 4)
     const ctx = buildTutorContext(instance, attempt('attempt-1', { steps: [step('x <= 3')] }), null, true)

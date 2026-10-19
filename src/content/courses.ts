@@ -144,6 +144,12 @@ export const COURSES: readonly CourseDef[] = [
         title: 'Congruent triangles',
         moduleIds: ['geoCongruence', 'geoIsosceles', 'geoTriangleProofs'],
       },
+      {
+        id: 'g5',
+        label: 'Unit 5',
+        title: 'Quadrilaterals',
+        moduleIds: ['geoParallelograms', 'geoSpecialQuads', 'geoTrapezoids'],
+      },
     ],
   },
 ]
