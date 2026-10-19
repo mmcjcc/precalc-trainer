@@ -62,7 +62,7 @@ or the textbook) is one more entry in that file.
 | Nov | 2 Reasoning and proof | conditionals, converse, inverse, contrapositive, laws of logic; properties and two-column proofs | shipped 2026-10-17 |
 | Nov | 3 Parallel and perpendicular lines | transversal angle pairs, proving lines parallel, slopes and equations of lines; triangle and polygon angle sums | shipped 2026-10-17 |
 | Nov | 4 Congruent triangles | corresponding parts, which method (SSS, SAS, ASA, AAS, HL, not enough information), algebra with congruent and isosceles triangles, two-column proofs with CPCTC | shipped 2026-10-18 (rebuilt once: fixed tables) |
-| Dec | 5 Quadrilaterals | parallelograms, proving a parallelogram, rectangles, rhombuses, squares, trapezoids, kites, midsegments | brief written |
+| Dec | 5 Quadrilaterals | geoParallelograms (properties, proving a parallelogram, on the coordinate plane), geoSpecialQuads (rectangles, rhombuses and squares, the most specific name), geoTrapezoids (midsegments and medians, isosceles trapezoids and kites) | shipped 2026-10-19, built by a Claude agent; reviewer re-solve of 7,000 problems |
 
 ## Chemistry (CK-12 order)
 

@@ -351,7 +351,7 @@ export const geoSpecialQuadsModule: ModuleDef = {
     geoTemplate(
       'geoSpecialQuads',
       'gs.props',
-      'Rectangles, rhombuses, and squares',
+      'Special parallelograms',
       'Diagonal pieces or angles of a rectangle, a rhombus, or a square are expressions in x. Find x, then the measure asked.',
       drawSpecialProps,
     ),

@@ -122,3 +122,36 @@ ticks, equal arcs, right-angle squares on 90°), and each figure's first vertex 
   two must-be parts, a rhombus named only a parallelogram, five coordinate parts, a midpoint part, the third
   hint, and a degree sign on an angle.
 - `tutorContext.test.ts`: every new question kind, and a words-only problem without "Figure:".
+
+## Review (Claude, 2026-10-19)
+
+Built by one Claude agent in a single pass (about 0.92M tokens, two hours); no rework was needed.
+
+- Independent re-solve, `geometry.unit5.crosscheck.test.ts` (reviewer's), 1000 seeds per template
+  (`GEO5_SEEDS` to change), with no call into the unit's solvers or grading:
+  - numeric templates (gq.props, gs.props, gz.midseg, gz.isosceles): every "NAME = expression" in the sentence,
+    at the stored x, must equal what the to-scale figure measures (lengths at one common scale, angles within
+    0.6°), the asked part must equal the figure's measure, the figure must be the shape the sentence names
+    (parallel pairs, right angle, equal sides, isosceles legs, kite sides), and every named midpoint and
+    crossing point must be where it is drawn. The isosceles-trapezoid diagonal problems are not drawn to scale
+    ("No lengths are marked"), so they are solved directly: the whole diagonal equals the other diagonal's two
+    pieces, and the asked diagonal is that length;
+  - gq.coords: slopes, lengths and diagonal midpoints recomputed exactly from the vertices in the sentence, and
+    the conclusion counted (one pair's slopes with the other pair's lengths never prove a parallelogram);
+  - gq.prove: the answer must be the one test the DRAWN marks satisfy (or "none"), never two, and every mark
+    must be true of the drawing;
+  - gs.classify: coordinates classified exactly with the exclusive definitions (and the outline must be convex),
+    marks read independently (side ticks, diagonal-half ticks, right angles at a vertex or at the crossing), and
+    the worded facts checked against the reviewer's own table of the 27 fact patterns, with the structure the
+    patterns hide (adjacent or opposite sides, base angles of one base, a diagonal bisecting its own end angles)
+    checked separately. A pattern not in the table fails the test.
+  All seven pass. The first run's only flags were the checker's own (square problems give one angle; the
+  trapezoid-diagonal figures are not to scale), and the 1000-seed run found one pattern the 300-seed survey
+  had not shown ("All four sides of N are congruent": a rhombus, as stored).
+- 28 problems worked by hand from the sentences, all right.
+- Browser at 375 px: gq.props, gq.prove, gq.coords, gs.classify (marks), gs.props, gz.midseg and gz.isosceles
+  (kite) played through with a planted mistake and the fix; every page fits the width, and the figures read
+  cleanly (arcs, ticks, midpoint ticks, right-angle squares, the crossing letter).
+- Fixed: gs.props had the same title as its module, so the problem page's breadcrumb read "RECTANGLES,
+  RHOMBUSES, AND SQUARES · RECTANGLES, RHOMBUSES, AND SQUARES". The template and its problems are now
+  "Special parallelograms".

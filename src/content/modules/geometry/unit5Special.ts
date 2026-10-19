@@ -250,7 +250,7 @@ function sideAngles(rng: Rng, shape: 'rect' | 'rhombus'): GeoBuilt | null {
     }),
   ]
   const shapeAngles = shape === 'rect' ? [90, 90, 90, 90] : [0, 1, 2, 3].map((k) => (mod4(k - i) % 2 === 0 ? 2 * gA : 2 * gB))
-  return numberFinish(prompt, figure, stages, [], shapeAngles, 'Rectangles, rhombuses, and squares', { case: shape === 'rect' ? 'rectAngles' : 'rhombusAngles', x, asked: `m∠${askName}` }, ['geo_rect_rhombus_swapped'])
+  return numberFinish(prompt, figure, stages, [], shapeAngles, 'Special parallelograms', { case: shape === 'rect' ? 'rectAngles' : 'rhombusAngles', x, asked: `m∠${askName}` }, ['geo_rect_rhombus_swapped'])
 }
 
 /**
@@ -360,7 +360,7 @@ function cornerAngles(rng: Rng, shape: 'rect' | 'rhombus'): GeoBuilt | null {
       deg: true,
     }),
   ]
-  return numberFinish(prompt, figure, stages, [], [], 'Rectangles, rhombuses, and squares', { case: shape === 'rect' ? 'rectCorner' : 'rhombusBisect', x, asked: `m∠${askName}` }, ['geo_rect_rhombus_swapped'])
+  return numberFinish(prompt, figure, stages, [], [], 'Special parallelograms', { case: shape === 'rect' ? 'rectCorner' : 'rhombusBisect', x, asked: `m∠${askName}` }, ['geo_rect_rhombus_swapped'])
 }
 
 /** A square's diagonal bisects a right angle: one expression equals 45. */
@@ -400,7 +400,7 @@ function squareAngle(rng: Rng): GeoBuilt | null {
       traps: [{ id: 'geo_half_for_whole', stage: 'x', text: typed(slip!), witness: SQUARE_CORNER_W }],
     }),
   ]
-  return numberFinish(prompt, figure, stages, [], [], 'Rectangles, rhombuses, and squares', { case: 'squareAngle', x, asked: 'x' }, ['geo_half_for_whole'])
+  return numberFinish(prompt, figure, stages, [], [], 'Special parallelograms', { case: 'squareAngle', x, asked: 'x' }, ['geo_half_for_whole'])
 }
 
 /** A rhombus: the two halves of one diagonal and a half of the other. Halves of different diagonals are not equal. */
@@ -478,7 +478,7 @@ function rhombusHalves(rng: Rng): GeoBuilt | null {
       traps,
     }),
   ]
-  return numberFinish(prompt, figure, stages, [h, k, 2 * h, 2 * k], [], 'Rectangles, rhombuses, and squares', { case: 'rhombusHalves', x, asked: askName }, [
+  return numberFinish(prompt, figure, stages, [h, k, 2 * h, 2 * k], [], 'Special parallelograms', { case: 'rhombusHalves', x, asked: askName }, [
     'geo_rect_rhombus_swapped',
     'geo_diagonal_half_as_whole',
   ])
@@ -589,7 +589,7 @@ function diagonalLengths(rng: Rng, kind: 'rectDiagHalf' | 'rectDiagWhole' | 'squ
       traps,
     }),
   ]
-  return numberFinish(`${prompt}${askName}.`, figure, stages, [h, 2 * h], [], 'Rectangles, rhombuses, and squares', { case: kind, x, asked: askName }, promise)
+  return numberFinish(`${prompt}${askName}.`, figure, stages, [h, 2 * h], [], 'Special parallelograms', { case: kind, x, asked: askName }, promise)
 }
 
 // --- gs.classify ------------------------------------------------------------------------------------------
