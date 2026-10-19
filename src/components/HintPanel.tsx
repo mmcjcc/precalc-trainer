@@ -38,7 +38,7 @@ export function HintPanel({ rung, view, onAdvance, onUseLine, highlight = false,
   const exhausted = rung === 3 || (rung === 2 && !view.reveal)
   return (
     <div className="space-y-3">
-      <p className="text-sm text-navy/70">Hints never appear on their own. Ctrl+Shift+H steps through them.</p>
+      <p className="text-sm text-navy/70">Hints never appear on their own.<span className="pointer-coarse:hidden"> Ctrl+Shift+H steps through them.</span></p>
       <button
         type="button"
         onClick={onAdvance}

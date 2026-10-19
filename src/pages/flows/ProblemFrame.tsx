@@ -272,7 +272,8 @@ export function ProblemFrame({ instance, attempt, flags, templateTitle, progress
               </span>
             )}
             {attempt?.mode === 'timed' && <span className="font-mono">test mode · {elapsed}</span>}
-            <button type="button" onClick={() => setHelp(true)} className="min-h-11 rounded px-2 underline hover:text-navy">
+            {/* Keyboard shortcuts mean nothing where the pointer is a finger (a phone or a tablet). */}
+            <button type="button" onClick={() => setHelp(true)} className="min-h-11 rounded px-2 underline hover:text-navy pointer-coarse:hidden">
               shortcuts (?)
             </button>
           </div>
