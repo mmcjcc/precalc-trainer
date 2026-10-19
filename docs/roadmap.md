@@ -46,7 +46,8 @@ or the textbook) is one more entry in that file.
 | done (Oct 11) | Rational functions | - (exact logic in the module; Claude cross-check of 900 problems) | done: module rationalFns (features, asymptotes, rational equations), built by Grok |
 | done (Oct 14) | Polynomial and rational inequalities | - (sign-chart logic in the module; Claude cross-check of 900 problems; adversarial review by Gemini, three gaps fixed) | done: module signCharts (polynomial, rational, and a checkable sign chart), built by Grok |
 | done (Oct 15) | Complex numbers | - (exact complex arithmetic in the module; Claude cross-check of 1,500 problems; adversarial review by Gemini, four reader gaps fixed) | done: module complexNums (arithmetic, division, powers of i, complex quadratic roots, conjugate zeros), built by Grok |
-| done (Oct 18), first half | Exponentials and logarithms | done: src/engine/logs (22 mistakes; API in docs/progress/explog-core.md; Gemini review, 3 parser fixes; partial-answer and u-substitution fixes in review) | done: modules logForms, logProperties, expLogEquations, built by Grok; Claude re-solve of 2,400 problems. Next: graphs, inverses, growth and decay word problems (brief written) |
+| done (Oct 18), first half | Exponentials and logarithms | done: src/engine/logs (22 mistakes; API in docs/progress/explog-core.md; Gemini review, 3 parser fixes; partial-answer and u-substitution fixes in review) | done: modules logForms, logProperties, expLogEquations, built by Grok; Claude re-solve of 2,400 problems |
+| done (Oct 19), second half | Exponential and log graphs, inverses, growth and decay | - (22 exp_ mistakes in the catalog; the logs core grades the values) | done: modules expLogGraphs (features, match, inverse) and expModels (interest, half-life, growth), started by Gemini 4, finished by a Claude agent; Claude re-solve of 1,800 problems; review fixed log graphs that would not draw |
 | Jan | Unit circle, radians, trig of any angle | exact-value table and its independent test | drills |
 | Feb | Trig identities | identity proof flow: line-by-line equivalence already works for trig | identity bank, hints |
 | Mar | Trig graphs and equations | solutions on [0, 2π) as exact sets | templates |
@@ -71,7 +72,7 @@ or the textbook) is one more entry in that file.
 | done (Sep 27) | 5 Electrons: light (c = λν, E = hν) | - | done: light templates on the sig-fig engine; Claude cross-check of 900 answers |
 | done (Oct 1) | 5 Electrons: electron configurations | done: src/engine/econfig (17 mistakes; API in docs/progress/econfig-core.md) | done: six templates on the 'electrons' module; Claude cross-check of 1,800 problems |
 | done (Oct 17) | 6 Periodic table and trends | - (trend data with an independent anchor test; Claude re-solve of 10,000 problems) | done: module periodic (locate, valence, trends, ions, why), built by Grok |
-| Nov 16 | 7 Nomenclature | done (Oct 18): src/engine/nomenclature (32 mistakes; API in docs/progress/nomenclature-core.md; reviewer anchor test of about 90 textbook pairs) | Grok building the templates and screens |
+| done (Oct 18) | 7 Nomenclature | done: src/engine/nomenclature (32 mistakes; API in docs/progress/nomenclature-core.md; reviewer anchor test of about 90 textbook pairs) | done: modules ionicNames and molecularAcids (8 templates), built by a Claude agent; reviewer re-solve of 3,170 answers |
 | Dec | 8-9 Ions, bonding | low fit for step checking; drills only | Grok |
 | Jan | 10 The mole | **conversion-chain engine** (units cancel, factor orientation, sig figs at the end); reused through ch 16 | molar mass and particle templates |
 | Feb | 11 Balancing equations | atom-count checker (subscripts vs coefficients) | reaction bank |

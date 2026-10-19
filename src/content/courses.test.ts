@@ -84,13 +84,17 @@ describe('course registry', () => {
     expect(precalc!.units[2]).toMatchObject({ id: 'unit3', label: 'Unit 3', title: 'Exponential and logarithmic functions' })
     expect(unitsWithModules(precalc!).map((u) => u.id)).toEqual(['unit1', 'unit2', 'unit3'])
     expect(precalc!.units.map((u) => u.id)).toEqual(['unit1', 'unit2', 'unit3'])
-    expect(unitsWithModules(chemistry!).map((u) => u.id)).toEqual(['ch3', 'ch4', 'ch5', 'ch6'])
+    expect(unitsWithModules(chemistry!).map((u) => u.id)).toEqual(['ch3', 'ch4', 'ch5', 'ch6', 'ch7'])
     expect(chemistry!.units.map((u) => [u.id, u.moduleIds])).toEqual([
       ['ch3', ['sigFigs']],
       ['ch4', ['atoms']],
       ['ch5', ['electrons']],
       ['ch6', ['periodic']],
+      ['ch7', ['ionicNames', 'molecularAcids']],
     ])
+    const ch7 = chemistry!.units[4]!
+    expect([ch7.label, ch7.title]).toEqual(['Chapter 7', 'Chemical nomenclature'])
+    expect(modulesInUnit(ch7).map((m) => m.id)).toEqual(['ionicNames', 'molecularAcids'])
     const geometry = getCourse('geometry')
     expect(geometry?.units.map((u) => [u.id, u.label, u.title, u.moduleIds])).toEqual([
       ['g1', 'Unit 1', 'Tools of geometry', ['geoSegments', 'geoAngles']],

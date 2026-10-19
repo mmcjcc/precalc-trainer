@@ -221,8 +221,42 @@ Seed-1 URLs (each shows the named trap):
 - `#/p/expModels/em.growth/1` — `exp_growth_no_log` on 700 bacteria growing to 1330 in 7 hours: k ≈ 0.2714, the
   ratio over the time without ln (the answer is 0.0917).
 
+### Review (Claude, 2026-10-19)
+
+Independent re-solve: `src/content/modules/explog2.reviewer.test.ts` (the reviewer's, not the builder's) works every
+problem again from what she sees, with only the app's parser shared: interest, half-life and growth from the numbers
+in the sentences with `Math.log`; each stored inverse composed with the printed f at sampled points; domain, range,
+asymptote, intercept and direction read numerically off f; exactly one match candidate equal to f, and the stored
+one; and every curve on every graph (f, f⁻¹, all four match candidates) with points inside its window. 300 seeds
+per template, all green. Its one false alarm was its own: g(f(−5.87)) for f = 3·10^(x − 6) + 5 lost digits where
+f is that flat, so the checker skips points where f has not moved.
+
+Browser check at 375 px, every template played through with a named mistake, an answer that does not count
+(a point given as a number, no choice picked, rounded too far) and the fix: no page scroll sideways, graphs
+310 px wide; the plotted match curve agrees with the stored equation to 0.01 at 891 points.
+
+Fixed:
+- No log graph was drawn: the finished features graph of a log, all four graphs of a log matching problem and
+  the finished graph of a log's inverse said "Could not draw this graph here". The span left of the asymptote has
+  no points, and function-plot throws on an empty polyline, which loses the whole graph. `Graph` now leaves out a
+  span with nothing to draw (`spansWithValues` in `graphBreaks.ts`, tested), and f⁻¹ goes through the same path.
+  jsdom does not run function-plot, so only the browser showed it.
+- "A 825-milligram sample": the half-life prompts put the amount after the noun ("A sample starts with 825
+  milligrams of it", "decays from 775 milligrams to 558 milligrams", "How long will it take 270 grams of it…"),
+  so no article sits before a number; the reviewer's test fails any prompt with one.
+- The finished features graph says "The intercept is outside this window" when the intercept is not drawn,
+  instead of promising a dot.
+- The range explanation reads "Subtracting 1 puts every output below −1" instead of "The − 1 moves every output
+  to below −1".
+
+Display hot fix shipped to main ahead of this (7a9a56c): 5·7^x and 1000(1.05)^x were drawn as 57^x and
+10001.05^x on the live site; a factor whose LaTeX starts with a digit now keeps its dot.
+
 ### Not changed (noted)
 
+- The direction part's mistake card for a negative a shows the catalog's range example (one example per id).
+- A $ typed into an answer that is not money reads "Unknown letter "$9" — this problem uses only x." (the shared
+  number reader).
 - `gradeLogValue` builds the core's own slip list on every call, also on a decimal problem where only the tolerance
   matters; it is most of the generation time (about 5 ms per growth problem).
 - An exponential's horizontal reflection, a(−x), and stretches inside the function are not drawn; the brief's

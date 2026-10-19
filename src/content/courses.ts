@@ -107,6 +107,12 @@ export const COURSES: readonly CourseDef[] = [
         title: 'The periodic table',
         moduleIds: ['periodic'],
       },
+      {
+        id: 'ch7',
+        label: 'Chapter 7',
+        title: 'Chemical nomenclature',
+        moduleIds: ['ionicNames', 'molecularAcids'],
+      },
     ],
   },
   {

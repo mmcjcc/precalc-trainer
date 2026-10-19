@@ -16,6 +16,7 @@ import type { GeoGrade } from '@/content/modules/geometry/grade'
 import { geoWork } from '@/content/modules/geometry/build'
 import type { PtGrade } from '@/content/modules/periodic/grade'
 import { ptWork } from '@/content/modules/periodic/grade'
+import { nmWork } from '@/content/modules/nomenclature/grade'
 import { EC_PATTERN } from '@/content/modules/electrons/patterns'
 import { POLY_PATTERN } from '@/content/modules/polynomials/patterns'
 import { TR_PATTERN } from '@/content/modules/transformations/patterns'
@@ -24,7 +25,7 @@ import { logFormsWork } from '@/content/modules/logForms'
 import { partsWork, type PartGrade } from '@/content/modules/explog/parts'
 import { ERROR_PATTERNS } from '@/engine'
 import type { OpsGrade } from '@/content/modules/functionOps/ops'
-import type { DescriptionGrade, EconfigGrade, FunctionGrade, LogGrade, PolyGrade, SquareLineGrade, TransformGrade } from '@/engine'
+import type { DescriptionGrade, EconfigGrade, FunctionGrade, LogGrade, NmGrade, PolyGrade, SquareLineGrade, TransformGrade } from '@/engine'
 import { getModule, hasModule } from '@/content/registry'
 import type { FinalAnswerGrade } from '@/problem/inequality'
 import { decodeSlotStep } from '@/problem/evenOdd'
@@ -313,6 +314,24 @@ export function verdictFromPt(grade: PtGrade): TutorVerdict | null {
   })
 }
 
+/**
+ * Chemical nomenclature. The mistake id is already an nm_ catalog id. Unreadable input, a capital-letter problem
+ * and an answer not in the form asked for are a parse error; a problem outside the model gives no verdict.
+ */
+export function verdictFromNm(grade: NmGrade): TutorVerdict | null {
+  if (grade.verdict === 'unsupported') return null
+  if (grade.verdict === 'correct') return withMessage('correct', grade.message)
+  if (grade.verdict === 'wrong') return withMessage('wrong', grade.message)
+  if (grade.verdict === 'invalid') return withMessage('parse_error', grade.message)
+  const info = ERROR_PATTERNS[grade.mistake]
+  return withMessage('wrong', grade.witness, undefined, {
+    id: grade.mistake,
+    title: clip(info.title, 200),
+    lesson: clip(info.lesson, TUTOR_LIMITS.field),
+    witness: clip(grade.witness, TUTOR_LIMITS.field),
+  })
+}
+
 /** Geometry. The mistake id is already a geo_ catalog id. Unreadable input is a parse error. */
 export function verdictFromGeo(grade: GeoGrade): TutorVerdict | null {
   if (grade.verdict === 'correct') return withMessage('correct', grade.message)
@@ -458,6 +477,11 @@ function workOf(instance: ProblemInstance, attempt: Attempt | null): string[] {
       .slice(0, TUTOR_LIMITS.lines)
       .map((line) => clip(line, TUTOR_LIMITS.line))
   }
+  if (instance.answer.type === 'nomenclature') {
+    return nmWork(instance.answer, attempt.final?.polyEntries)
+      .slice(0, TUTOR_LIMITS.lines)
+      .map((line) => clip(line, TUTOR_LIMITS.line))
+  }
   const final = attempt.final
   if (!final) return []
   const lines: string[] = []
@@ -565,7 +589,7 @@ function statementOf(instance: ProblemInstance): string {
     assertGeometryQuestion(answer.question)
     const lines = answer.lines?.length ? ` Lines: ${answer.lines.join(' | ')}` : ''
     text = `${answer.prompt}${lines} Figure: ${answer.figure.ariaLabel}`
-  } else if (answer.type === 'periodic') {
+  } else if (answer.type === 'periodic' || answer.type === 'nomenclature') {
     text = answer.prompt
   }
   const clipped = clip(text, TUTOR_LIMITS.field)
@@ -598,7 +622,8 @@ function canonicalOf(instance: ProblemInstance): string[] {
     answer.type === 'expLogGraphs' ||
     answer.type === 'expModels' ||
     answer.type === 'geometry' ||
-    answer.type === 'periodic'
+    answer.type === 'periodic' ||
+    answer.type === 'nomenclature'
   ) {
     lines = answer.reveal
   }
@@ -637,6 +662,7 @@ function answerOf(instance: ProblemInstance): string | undefined {
     case 'expModels':
     case 'geometry':
     case 'periodic':
+    case 'nomenclature':
       text = answer.expectedDisplay
       break
     case 'graphFeatures':

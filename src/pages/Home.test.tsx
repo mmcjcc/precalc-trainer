@@ -31,6 +31,7 @@ function moduleTitles(): string[] {
 const precalc = getCourse('precalc')!
 const unit1Titles = modulesInUnit(precalc.units[0]!).map((module) => module.title)
 const unit2Titles = modulesInUnit(precalc.units[1]!).map((module) => module.title)
+const ch7Titles = ['Ions and ionic compounds', 'Molecular compounds, acids, and hydrates']
 const unit3Titles = modulesInUnit(precalc.units[2]!).map((module) => module.title)
 
 function done(at: number, moduleId: string, skill: string): Ev {
@@ -79,7 +80,7 @@ describe('Home: classes and units', () => {
     fireEvent.keyDown(tablist, { key: 'ArrowRight' })
     expect(screen.getByRole('tab', { name: 'Chemistry', selected: true })).toBeTruthy()
     expect(screen.getByRole('tab', { name: 'Honors Precalculus', selected: false })).toBeTruthy()
-    expect(moduleTitles()).toEqual(['The periodic table'])
+    expect(moduleTitles()).toEqual(ch7Titles)
 
     fireEvent.keyDown(tablist, { key: 'ArrowRight' })
     expect(screen.getByRole('tab', { name: 'Honors Geometry', selected: true })).toBeTruthy()
@@ -148,6 +149,10 @@ describe('Home: classes and units', () => {
     fireEvent.click(screen.getByRole('tab', { name: 'Chemistry' }))
     expect(screen.queryByRole('heading', { name: 'Unit 1 review' })).toBeNull()
     expect(screen.queryByRole('heading', { name: 'Difference quotient' })).toBeNull()
+    expect(moduleTitles()).toEqual(ch7Titles)
+    expect(screen.getAllByRole('link', { name: /Choose a type/ }).map((link) => link.getAttribute('href'))).toEqual(['/m/ionicNames', '/m/molecularAcids'])
+
+    fireEvent.click(screen.getByRole('button', { name: /Chapter 6/ }))
     expect(moduleTitles()).toEqual(['The periodic table'])
     expect(screen.getByRole('link', { name: /Choose a type/ }).getAttribute('href')).toBe('/m/periodic')
 
@@ -222,8 +227,8 @@ describe('Home: classes and units', () => {
     })
     renderHome()
     expect(screen.getByRole('tab', { name: 'Chemistry', selected: true })).toBeTruthy()
-    expect(screen.getByRole('button', { name: /Chapter 6/, pressed: true })).toBeTruthy()
-    expect(moduleTitles()).toEqual(['The periodic table'])
+    expect(screen.getByRole('button', { name: /Chapter 7/, pressed: true })).toBeTruthy()
+    expect(moduleTitles()).toEqual(ch7Titles)
     // The computed default is not written until she picks a class or opens a real deep link.
     expect(useStore.getState().settings.courseId).toBeUndefined()
   })
@@ -257,8 +262,8 @@ describe('Home: classes and units', () => {
     resetStoreForTests()
     renderHome('/c/chemistry/missing')
     expect(screen.getByRole('tab', { name: 'Chemistry', selected: true })).toBeTruthy()
-    expect(screen.getByRole('button', { name: /Chapter 6/, pressed: true })).toBeTruthy()
-    expect(useStore.getState().settings.unitByCourse?.chemistry).toBe('ch6')
+    expect(screen.getByRole('button', { name: /Chapter 7/, pressed: true })).toBeTruthy()
+    expect(useStore.getState().settings.unitByCourse?.chemistry).toBe('ch7')
   })
 
   it('keeps Continue above the tabs, weak spots under them, and draws weak spots only from the selected class', () => {

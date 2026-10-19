@@ -13,7 +13,7 @@ import { POLY_PATTERN } from '@/content/modules/polynomials/patterns'
 import { TR_PATTERN } from '@/content/modules/transformations/patterns'
 import { useStore } from '@/store'
 import type { FieldResult, FinalAnswerGrade } from '@/problem/inequality'
-import type { DescriptionGrade, EconfigGrade, FunctionGrade, PolyGrade, SquareLineGrade, TransformGrade } from '@/engine'
+import type { DescriptionGrade, EconfigGrade, FunctionGrade, NmGrade, PolyGrade, SquareLineGrade, TransformGrade } from '@/engine'
 import type { AtomGrade, SigFigGrade, SigFigTapGrade } from '@/shared/types'
 
 /**
@@ -341,6 +341,24 @@ export function recordGeoGrades(grade: GeoGrade): void {
  */
 export function recordPtGrades(grade: PtGrade): void {
   if (grade.verdict === 'invalid') return
+  const s = useStore.getState()
+  if (grade.verdict === 'correct') {
+    s.recordFinalAnswer({ correct: true, via: 'text' })
+    return
+  }
+  if (grade.verdict === 'mistake') {
+    s.recordFinalAnswer({ correct: false, pattern: grade.mistake, via: 'text' })
+    return
+  }
+  s.recordFinalAnswer({ correct: false, via: 'text' })
+}
+
+/**
+ * Log one nomenclature check. A named mistake is stored under its nm_ id. Unreadable input, a capital-letter
+ * problem, an answer not in the form asked for, and a problem outside the model are not attempts: nothing is logged.
+ */
+export function recordNmGrade(grade: NmGrade): void {
+  if (grade.verdict === 'invalid' || grade.verdict === 'unsupported') return
   const s = useStore.getState()
   if (grade.verdict === 'correct') {
     s.recordFinalAnswer({ correct: true, via: 'text' })

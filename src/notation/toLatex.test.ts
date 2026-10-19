@@ -7,6 +7,8 @@ describe('toLatex: a number times a power of a number keeps its dot', () => {
     ['4^x - 9 * 2^x + 8 = 0', '4^{x}-9\\cdot 2^{x}+8 = 0'],
     ['2 * 3^(x - 1) - 4', '2\\cdot 3^{x-1}-4'],
     ['2 * 3x', '2\\cdot 3x'],
+    // The live site showed this one as 10001.05^x = 3000.
+    ['1000(1.05)^x = 3000', '1000\\cdot 1.05^{x} = 3000'],
   ])('%s', (text, tex) => {
     expect(toLatex(text)).toBe(tex)
   })

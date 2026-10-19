@@ -2,8 +2,8 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { resetStoreForTests, useStore } from '@/store'
 import { gradeFinalAnswer, type FinalAnswerTarget } from '@/problem/inequality'
-import { gradeAxisOfSymmetry, gradeVertex, checkSquareLine } from '@/engine'
-import { recordPolyGrades, recordSetAnswer } from './record'
+import { gradeAxisOfSymmetry, gradeVertex, checkSquareLine, gradeFormulaFromName, gradeNameFromFormula } from '@/engine'
+import { recordNmGrade, recordPolyGrades, recordSetAnswer } from './record'
 
 const target: FinalAnswerTarget = {
   set: { kind: 'set', intervals: [] } as unknown as FinalAnswerTarget['set'],
@@ -89,6 +89,36 @@ describe('recordPolyGrades', () => {
     recordPolyGrades([gradeVertex(F, '')])
     recordPolyGrades([{ verdict: 'invalid', reason: 'not_in_form', message: 'That is equal to f(x), but it is not vertex form yet.' }])
     recordPolyGrades([gradeVertex(F, '(3, -5)'), { verdict: 'unsupported', message: 'outside the model' }])
+    expect(finals()).toHaveLength(0)
+    expect(useStore.getState().attempt?.final).toBeUndefined()
+  })
+})
+
+describe('recordNmGrade', () => {
+  const finals = () => useStore.getState().events.filter((e) => e.t === 'final_answer')
+
+  beforeEach(() => {
+    resetStoreForTests()
+    startAttempt()
+  })
+
+  it('logs a right answer, a named nm_ slip with its id, and a plain wrong answer', () => {
+    recordNmGrade(gradeNameFromFormula('FeCl3', 'iron(II) chloride'))
+    recordNmGrade(gradeNameFromFormula('NaCl', 'potassium chloride'))
+    recordNmGrade(gradeNameFromFormula('FeCl3', 'iron(III) chloride'))
+    expect(finals()).toHaveLength(3)
+    expect(finals()[0]).toMatchObject({ correct: false, pattern: 'nm_numeral_wrong', via: 'text' })
+    expect(finals()[1]).toMatchObject({ correct: false, via: 'text' })
+    expect((finals()[1] as { pattern?: string }).pattern).toBeUndefined()
+    expect(finals()[2]).toMatchObject({ correct: true, via: 'text' })
+  })
+
+  it('records nothing for an unreadable answer, a capital-letter slip, the wrong form, or a problem outside the model', () => {
+    recordNmGrade(gradeFormulaFromName('cobalt(II) chloride', 'COCl2'))
+    recordNmGrade(gradeFormulaFromName('sodium chloride', 'NACL'))
+    recordNmGrade(gradeNameFromFormula('FeCl3', 'FeCl3'))
+    recordNmGrade(gradeNameFromFormula('FeCl3', '???'))
+    recordNmGrade(gradeNameFromFormula('MnO2', 'manganese(IV) oxide'))
     expect(finals()).toHaveLength(0)
     expect(useStore.getState().attempt?.final).toBeUndefined()
   })
