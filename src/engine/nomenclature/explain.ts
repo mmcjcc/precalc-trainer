@@ -44,7 +44,9 @@ const groupOf = (ion: NmIon) => (ion.symbol ? elementBySymbol(ion.symbol)?.group
 function fixedChargeSource(ion: NmIon): string {
   const g = groupOf(ion)
   if (ion.kind === 'polyatomic') return 'from the polyatomic ion table'
-  if (g === 1 || g === 2) return `as every group ${g} metal is`
+  // Hydrogen sits in group 1 but is no metal: hydride is H gaining one electron.
+  if (ion.symbol === 'H' && ion.charge < 0) return 'a hydrogen atom that has gained one electron'
+  if ((g === 1 || g === 2) && ion.charge > 0) return `as every group ${g} metal is`
   if (g !== null && g >= 13) return `from its place in group ${g}`
   return 'its only taught charge'
 }

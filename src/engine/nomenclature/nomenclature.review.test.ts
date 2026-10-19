@@ -196,3 +196,13 @@ describe('the classic slips are named', () => {
     expect(named(gradeClassify('HNO3', 'acid'))).toBe('correct')
   })
 })
+
+describe('explanations found in the content review', () => {
+  it('hydride is not explained as a group 1 metal', async () => {
+    const { explainIon, explainFormulaFromName } = await import('@/engine')
+    const ion = explainIon('H^-').steps.join(' ')
+    expect(ion).not.toMatch(/group 1 metal/)
+    expect(ion).toMatch(/gained one electron/)
+    expect(explainFormulaFromName('sodium hydride').steps.join(' ')).not.toMatch(/Hydride is H⁻, as every group 1 metal is/)
+  })
+})
