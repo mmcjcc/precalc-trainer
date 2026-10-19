@@ -131,3 +131,21 @@ Fixed-seed URLs with the promised slip: `#/p/ionicNames/nm.ion/3` (SO₄²⁻: "
 - [done] the live note under a formula box goes through the same filter (the engine's case note names CO, which is
   the answer to carbon monoxide); nm.ionicFromName mixes its seed so seed n is not nm.ionicName's compound.
 - [done] typecheck, whole suite, build.
+
+## Review (Claude, 2026-10-18)
+
+- Independent re-solve, `nomenclature.crosscheck.test.ts` (reviewer's): every generated problem answered again
+  with the reviewer's own ion table and naming rules, no call into the core (charge balance, Roman numerals,
+  polyatomic ions, Greek prefixes, acid names, hydrates, the four kinds). 400 seeds per template: 3,170 answers
+  agree with the stored answer or one of its accepted forms; 144 parts are outside the oracle (phosphite and a
+  few other ions it does not list) and are skipped.
+- The core's own anchor test (`nomenclature.review.test.ts`, about 90 textbook pairs typed by the reviewer) still
+  passes.
+- Fixed in the core: hydride's charge was explained "as every group 1 metal is" (hydrogen sits in group 1 but is
+  not a metal); it now reads "a hydrogen atom that has gained one electron".
+- The builder's notes on the core's wording (classify titles, several catalog lessons and one witness that name
+  the answer of a single-ion or classify part) are real; the screen's `nmShown` filter already keeps them off a
+  part she can retry, so the core text is left for a later pass.
+- Browser, 375 px: no horizontal overflow; the live preview shows what she types with real subscripts and the
+  charge ("Sn^4+" reads as Sn⁴⁺); the polyatomic ion table opens from the problem.
+- Built by a Claude agent (Grok's balance had run out); about 950k tokens.

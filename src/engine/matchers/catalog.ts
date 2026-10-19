@@ -2062,7 +2062,7 @@ export const ERROR_PATTERNS: Record<ErrorPatternId, ErrorPatternInfo> = {
   nm_acid_named_as_salt: {
     id: 'nm_acid_named_as_salt',
     title: 'In water, it is named as an acid',
-    lesson: 'Hydrogen and an anion dissolved in water make an acid, and an acid has its own kind of name: hydro-…-ic acid without oxygen, -ic or -ous acid with it. hydrogen chloride names the pure gas, not the acid.',
+    lesson: 'Hydrogen and an anion dissolved in water make an acid, and an acid has its own kind of name: hydro-…-ic acid without oxygen, -ic or -ous acid with it. The name hydrogen chloride is for the pure gas, not the acid.',
     example: 'HBr(aq): hydrogen bromide ✗ → hydrobromic acid',
   },
   nm_acid_anion_ending: {
