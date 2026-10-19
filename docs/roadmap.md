@@ -71,7 +71,7 @@ or the textbook) is one more entry in that file.
 | done (Sep 27) | 5 Electrons: light (c = λν, E = hν) | - | done: light templates on the sig-fig engine; Claude cross-check of 900 answers |
 | done (Oct 1) | 5 Electrons: electron configurations | done: src/engine/econfig (17 mistakes; API in docs/progress/econfig-core.md) | done: six templates on the 'electrons' module; Claude cross-check of 1,800 problems |
 | done (Oct 17) | 6 Periodic table and trends | - (trend data with an independent anchor test; Claude re-solve of 10,000 problems) | done: module periodic (locate, valence, trends, ions, why), built by Grok |
-| Nov 16 | 7 Nomenclature | done (Oct 18): src/engine/nomenclature (32 mistakes; API in docs/progress/nomenclature-core.md; reviewer anchor test of about 90 textbook pairs) | Grok building the templates and screens |
+| done (Oct 18) | 7 Nomenclature | done: src/engine/nomenclature (32 mistakes; API in docs/progress/nomenclature-core.md; reviewer anchor test of about 90 textbook pairs) | done: modules ionicNames and molecularAcids (8 templates), built by a Claude agent; reviewer re-solve of 3,170 answers |
 | Dec | 8-9 Ions, bonding | low fit for step checking; drills only | Grok |
 | Jan | 10 The mole | **conversion-chain engine** (units cancel, factor orientation, sig figs at the end); reused through ch 16 | molar mass and particle templates |
 | Feb | 11 Balancing equations | atom-count checker (subscripts vs coefficients) | reaction bank |
