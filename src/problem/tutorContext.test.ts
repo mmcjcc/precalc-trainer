@@ -11,11 +11,12 @@ import { canonicalEntries as geoEntries, gradeGeoStage, GEO_KEYS, geoWork } from
 import { gradePtStage, PT_KEYS, ptWork } from '@/content/modules/periodic'
 import { gradeNmStage, NM_KEYS, nmWork } from '@/content/modules/nomenclature'
 import { reasonLabel } from '@/content/modules/geometry/reasons'
-import { checkSquareLine, configurationMistakes, gradeAxisOfSymmetry, gradeConfiguration, gradeVertex, squareMistakes, syntheticMistakes, vertexMistakes } from '@/engine'
+import { checkSquareLine, configurationMistakes, gradeAxisOfSymmetry, gradeConfiguration, gradeLogEquation, gradeLogValue, gradeVertex, squareMistakes, syntheticMistakes, vertexMistakes } from '@/engine'
 import { ratToString } from '@/notation'
 import { gradeFinalAnswer } from '@/problem/inequality'
 import { encodeSlotStep } from '@/problem/evenOdd'
 import {
+  assertGeometryQuestion,
   buildTutorContext,
   verdictFromSigFig,
   verdictFromFunction,
@@ -30,6 +31,7 @@ import {
   verdictFromSc,
   verdictFromCx,
   verdictFromGeo,
+  verdictFromLog,
   verdictFromPt,
   verdictFromNm,
 } from '@/problem/tutorContext'
@@ -983,6 +985,112 @@ describe('buildTutorContext', () => {
     if (line.answer.type !== 'geometry') throw new Error('expected a line')
     expect(line.answer.stages[0]!.kind).toBe('line')
     expect(buildTutorContext(line, attempt('geo-12', { moduleId: 'geoParallel' }), null, false).statement).toContain('y = 2x + 3')
+  })
+
+  it('describes a logarithm from her box and from her lines, with the named slip', () => {
+    const instance = generateProblem('logForms', 'lf.value', 1)
+    if (instance.answer.type !== 'logForms') throw new Error('expected a log value')
+    const a = instance.answer
+    const ctx = buildTutorContext(instance, attempt('lf-1', { moduleId: 'logForms', final: { polyEntries: { answer: a.trapAnswer } } }), null, false)
+    expect(ctx.subject).toBe('precalculus')
+    expect(ctx.kind).toBe('logForms')
+    expect(ctx.moduleId).toBe('logForms')
+    expect(ctx.statement).toBe(`${a.problem}. ${a.prompt}`)
+    expect(ctx.work).toEqual([a.trapAnswer])
+    expect(ctx.answer).toBe(a.expectedDisplay)
+    expect(ctx.canonical[0]).toBe(a.reveal[0])
+    expect(ctx.finished).toBe(false)
+
+    const trap = gradeLogValue(a.problem, a.trapAnswer)
+    expect(trap.verdict).toBe('mistake')
+    if (trap.verdict !== 'mistake') return
+    const verdict = verdictFromLog(trap, a.trapAnswer)
+    expect(verdict?.status).toBe('wrong')
+    expect(verdict?.mistake?.id).toBe(trap.mistake)
+    expect(verdict?.mistake?.lesson).toBeTruthy()
+    expect(verdict?.mistake?.witness).toBe(trap.witness)
+    expect(verdict?.line).toBe(a.trapAnswer)
+    expect(verdictFromLog(gradeLogValue(a.problem, '???'))?.status).toBe('parse_error')
+    expect(buildTutorContext(instance, attempt('lf-2', { moduleId: 'logForms' }), null, false).work).toEqual([])
+
+    const line = generateProblem('logProperties', 'lp.expand', 1)
+    if (line.answer.type !== 'logProperties') throw new Error('expected an expansion')
+    const worked = buildTutorContext(line, attempt('lp-1', { moduleId: 'logProperties', steps: [step(line.answer.answerText)] }), null, true)
+    expect(worked.statement).toBe(`${line.answer.expr}. ${line.answer.prompt}`)
+    expect(worked.work).toEqual([line.answer.answerText])
+    expect(worked.answer).toBe(line.answer.expectedDisplay)
+    expect(worked.finished).toBe(true)
+
+    const eq = generateProblem('expLogEquations', 'ee.logarithmic', 1)
+    if (eq.answer.type !== 'expLogEquations') throw new Error('expected an equation')
+    const graded = gradeLogEquation(eq.answer.equation, eq.answer.trapAnswer)
+    const solving = buildTutorContext(
+      eq,
+      attempt('ee-1', {
+        moduleId: 'expLogEquations',
+        steps: [step(eq.answer.path[0] ?? eq.answer.equation)],
+        final: { polyEntries: { answer: eq.answer.trapAnswer } },
+      }),
+      verdictFromLog(graded, eq.answer.trapAnswer),
+      false,
+    )
+    expect(solving.kind).toBe('expLogEquations')
+    expect(solving.statement).toBe(`${eq.answer.equation}. ${eq.answer.prompt}`)
+    expect(solving.work[0]).toBe(eq.answer.path[0])
+    expect(solving.work).toContain(eq.answer.trapAnswer)
+    expect(solving.answer).toBe(eq.answer.expectedDisplay)
+    expect(solving.canonical[0]).toBe(eq.answer.reveal[0])
+    expect(solving.verdict?.status).toBe('wrong')
+    expect(solving.verdict?.mistake?.id).toBe(graded.verdict === 'mistake' ? graded.mistake : undefined)
+  })
+
+  it('describes a Unit 4 congruence, an isosceles triangle, and a proof without changing the geometry kind', () => {
+    const cases = [
+      ['geoCongruence', 'gc.parts', 1],
+      ['geoCongruence', 'gc.which', 1],
+      ['geoCongruence', 'gc.solve', 1],
+      ['geoIsosceles', 'gi.solve', 1],
+      ['geoTriangleProofs', 'gt.twocolumn', 1],
+    ] as const
+    for (const [moduleId, templateId, seed] of cases) {
+      const instance = generateProblem(moduleId, templateId, seed)
+      if (instance.answer.type !== 'geometry') throw new Error(`${templateId} is not geometry`)
+      const a = instance.answer
+      assertGeometryQuestion(a.question)
+      const ctx = buildTutorContext(instance, attempt(`u4-${templateId}`, { moduleId }), null, false)
+      expect(ctx.kind).toBe('geometry')
+      expect(ctx.subject).toBe('geometry')
+      expect(ctx.statement).toBe(`${a.prompt} Figure: ${a.figure.ariaLabel}`)
+      expect(ctx.canonical[0]).toBe(a.reveal[0])
+      const slip = gradeGeoStage(a, a.trapStage, a.trapAnswer)
+      expect(slip.verdict).toBe('mistake')
+      if (slip.verdict !== 'mistake') continue
+      expect(verdictFromGeo(slip)?.mistake?.id).toBe(a.trap)
+      expect(verdictFromGeo(slip)?.status).toBe('wrong')
+    }
+
+    const proof = generateProblem('geoTriangleProofs', 'gt.twocolumn', 1)
+    if (proof.answer.type !== 'geometry') throw new Error('expected a proof')
+    const row = proof.answer.stages[0]!
+    const picked = buildTutorContext(
+      proof,
+      attempt('u4-proof', { moduleId: 'geoTriangleProofs', final: { polyEntries: { [GEO_KEYS[row.id]]: row.answerText } } }),
+      null,
+      false,
+    )
+    expect(picked.work).toEqual([`${row.label}: ${reasonLabel(row.answerText)}`])
+
+    const solve = generateProblem('geoCongruence', 'gc.solve', 1)
+    if (solve.answer.type !== 'geometry') throw new Error('expected a solve')
+    const filled = buildTutorContext(
+      solve,
+      attempt('u4-solve', { moduleId: 'geoCongruence', final: { polyEntries: geoEntries(solve.answer) } }),
+      null,
+      false,
+    )
+    expect(filled.work).toEqual(geoWork(solve.answer, geoEntries(solve.answer)))
+    expect(filled.answer).toBe(solve.answer.expectedDisplay)
+    expect(filled.statement).not.toContain(solve.answer.stages[1]!.answerText)
   })
 
   it('never adds a name, email, or account field', () => {

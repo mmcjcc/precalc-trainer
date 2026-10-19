@@ -336,27 +336,41 @@ function solveTwoExp(rel: Relation, v: string): ClosedForm | null {
  * (e^(2x) − 5e^x + 6 = 0). Each root u > 0 gives x = log_b(u)/k; a root u ≤ 0 gives nothing (a power of a
  * positive base is never 0 or negative).
  */
-function solveExpQuadratic(rel: Relation, v: string): { solutions: LogSolution[]; explanation: string[] } | null {
+function solveExpQuadratic(
+  rel: Relation,
+  v: string,
+): { solutions: LogSolution[]; explanation: string[]; uText: string; uRoots: { value: number; text: string }[] } | null {
   const terms = [...signedTerms(rel.lhs), ...signedTerms(rel.rhs).map((t) => ({ sign: (t.sign === 1 ? -1 : 1) as 1 | -1, node: t.node }))]
-  let base: { text: string; value: number; viaE: boolean } | null = null
-  const parts: { coef: number; k: number }[] = []
+  type Base = { text: string; value: number; viaE: boolean }
+  const parts: { coef: number; k: number; b: Base | null }[] = []
   for (const t of terms) {
     if (!collectVars(t.node).includes(v)) {
       const c = tryConst(t.node)
       if (c == null) return null
-      parts.push({ coef: t.sign * c, k: 0 })
+      parts.push({ coef: t.sign * c, k: 0, b: null })
       continue
     }
     const et = expTerm(t.node, v)
     if (!et || Math.abs(et.lin.m) > 1e-15) return null
-    const b = { text: et.viaE ? 'e' : et.base.replace(/^\((.*)\)$/, '$1'), value: et.baseValue, viaE: et.viaE }
-    if (base && Math.abs(base.value - b.value) > 1e-12 * b.value) return null
-    base ??= b
     const c = tryConst(et.coef)
     if (c == null) return null
-    parts.push({ coef: t.sign * c, k: et.lin.k })
+    parts.push({ coef: t.sign * c, k: et.lin.k, b: { text: et.viaE ? 'e' : et.base.replace(/^\((.*)\)$/, '$1'), value: et.baseValue, viaE: et.viaE } })
   }
-  if (!base) return null
+  // One base for u: the smallest. Another base must be a whole power of it (4^x = (2^x)^2, 27^x = (3^x)^3).
+  const used = parts.flatMap((p) => (p.b ? [p.b] : []))
+  if (!used.length) return null
+  const base = used.reduce((m, b) => (b.value < m.value ? b : m))
+  const rewritten: string[] = []
+  for (const p of parts) {
+    if (!p.b || Math.abs(p.b.value - base.value) <= 1e-12 * base.value) continue
+    if (p.b.viaE || base.viaE || !(base.value > 1)) return null
+    const m = Math.log(p.b.value) / Math.log(base.value)
+    const mr = Math.round(m)
+    if (mr < 2 || Math.abs(m - mr) > 1e-9) return null
+    p.k *= mr
+    const line = `Write ${display(`${p.b.text}^${v}`)} as (${display(`${base.text}^${v}`)})^${mr}.`
+    if (!rewritten.includes(line)) rewritten.push(line)
+  }
   const ks = parts.filter((p) => p.k !== 0).map((p) => p.k)
   const k0 = Math.min(...ks.map(Math.abs)) * Math.sign(ks[0]!)
   const coeffs = [0, 0, 0]
@@ -376,7 +390,7 @@ function solveExpQuadratic(rel: Relation, v: string): { solutions: LogSolution[]
     { c: coeffs[1]!, a: 'u' },
     { c: coeffs[0]!, a: '1' },
   ].filter((t) => Math.abs(t.c) > 1e-15))} = 0`
-  const explanation = [`Let u = ${display(uText)}: ${display(quad)}.`, `Solve for u: ${joinOr(roots.map((r) => `u = ${display(r.text)}`))}.`]
+  const explanation = [...rewritten, `Let u = ${display(uText)}: ${display(quad)}.`, `Solve for u: ${joinOr(roots.map((r) => `u = ${display(r.text)}`))}.`]
   const solutions: LogSolution[] = []
   for (const r of roots) {
     if (!(r.value > 0)) {
@@ -396,7 +410,7 @@ function solveExpQuadratic(rel: Relation, v: string): { solutions: LogSolution[]
     solutions.push({ value: rational && rr ? ratToNumber(rr) : val, text: rational && rr ? ratToString(rr) : text, exact: true })
     explanation.push(`${display(uText)} = ${display(inner)} gives ${v} = ${display(rational && rr ? ratToString(rr) : text)}.`)
   }
-  return { solutions: solutions.sort((a, b) => a.value - b.value), explanation }
+  return { solutions: solutions.sort((a, b) => a.value - b.value), explanation, uText, uRoots: roots.map((r) => ({ value: r.value, text: r.text })) }
 }
 
 // ---------------------------------------------------------------------------
@@ -762,6 +776,11 @@ function slipSets(a: LogEquation, equation: string, vars?: readonly VarName[]): 
   const push = (id: LogMistakeId, values: number[], witness: string) => {
     const vs = dedupeValues(values)
     if (sameSet(vs, right)) return
+    // Some of the solutions and nothing else reads as a missing solution, not as this slip (x = 1 alone for
+    // 4^x − 3·2^x + 2 = 0 also solves a slipped line), unless the slip IS throwing a valid answer out.
+    if (id !== 'log_valid_rejected' && vs.length > 0 && vs.length < right.length && vs.every((t) => right.some((s) => near(t, s, 1e-9)))) return
+    // A value a hair from a real solution (5.001 for 5) is a rounding of it, not a slip.
+    if (vs.some((t) => right.some((s) => !near(t, s, 1e-9) && near(t, s, 2e-3)))) return
     const twin = out.find((o) => sameSet(o.values, vs))
     if (twin) {
       if (twin.id !== id && !twin.shadows.includes(id)) twin.shadows.push(id)
@@ -772,7 +791,18 @@ function slipSets(a: LogEquation, equation: string, vars?: readonly VarName[]): 
   if (a.extraneous.length) {
     push('log_extraneous_kept', [...right, ...a.extraneous.map((e) => e.value)], `${a.extraneous.map((e) => e.sentence).join(' ')} Check every answer in the ORIGINAL equation: ${joinAnd(a.extraneous.map((e) => `${v} = ${display(e.text)}`))} is extraneous.`)
   }
-  const negatives = a.solutions.filter((s) => s.value < 0)
+  const p = parseStatement(equation, vars ?? ['x'])
+  const rel = p.ok ? singleRelation(p.statement) : null
+  // Quadratic in an exponential: the values of u reported as the solutions (2^x = 8 written as x = 8).
+  const quad = rel && a.kind === 'exponential' ? solveExpQuadratic(rel, v) : null
+  if (quad) {
+    const sentence = `Those are the values of u = ${display(quad.uText)}, not of ${v}. Each value of u still has to be turned back into ${v}: set ${display(quad.uText)} equal to it and solve for the exponent.`
+    const positive = quad.uRoots.filter((r) => r.value > 0).map((r) => r.value)
+    if (positive.length) push('log_convert_dropped', positive, sentence)
+    if (positive.length < quad.uRoots.length) push('log_convert_dropped', quad.uRoots.map((r) => r.value), sentence)
+  }
+  // Only a log equation has a domain that could make her throw a negative answer out.
+  const negatives = a.kind === 'logarithmic' ? a.solutions.filter((s) => s.value < 0) : []
   if (negatives.length) {
     push(
       'log_valid_rejected',
@@ -780,8 +810,6 @@ function slipSets(a: LogEquation, equation: string, vars?: readonly VarName[]): 
       `${negatives.map((s) => `${v} = ${display(s.text)} keeps every log input positive (${inputsAt(equation, v, s.value, vars)}), so it is a real solution.`).join(' ')} Only an answer that makes a log’s input 0 or negative is extraneous.`,
     )
   }
-  const p = parseStatement(equation, vars ?? ['x'])
-  const rel = p.ok ? singleRelation(p.statement) : null
   if (rel) {
     const D = { intervals: a.domain, boundaries: [] as number[] }
     // The slips of the equation itself, then of the line a textbook writes after taking logs

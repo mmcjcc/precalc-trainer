@@ -244,3 +244,23 @@ describe('Unit 3 transversal figures', () => {
     expect(problems.slice(0, 10)).toEqual([])
   }, HEAVY)
 })
+
+describe('Unit 4 triangle figures', () => {
+  const TEMPLATES = [
+    ['geoCongruence', 'gc.parts'],
+    ['geoCongruence', 'gc.which'],
+    ['geoCongruence', 'gc.solve'],
+    ['geoIsosceles', 'gi.solve'],
+    ['geoTriangleProofs', 'gt.twocolumn'],
+  ] as const
+
+  it('keep every label off the lines, off the other labels, and inside the figure, over 300 seeds', () => {
+    const problems: string[] = []
+    for (const [module, template] of TEMPLATES) {
+      for (let seed = 1; seed <= 300; seed++) {
+        for (const p of layoutProblems(figureOf(module, template, seed))) problems.push(`${template}/${seed}: ${p}`)
+      }
+    }
+    expect(problems.slice(0, 12)).toEqual([])
+  }, HEAVY)
+})

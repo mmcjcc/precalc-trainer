@@ -15,7 +15,7 @@
 export type RelOp = '=' | '<' | '<=' | '>' | '>='
 /** `h` is the difference-quotient step; the parser accepts it only when the problem owns it (ctx.vars). */
 export type VarName = 'x' | 'y' | 'n' | 'h'
-export type ModuleId = 'numberLine' | 'inequalities' | 'evenOdd' | 'inverses' | 'propertiesDrill' | 'sigFigs' | 'atoms' | 'diffQuotient' | 'graphFeatures' | 'domainRange' | 'composition' | 'functionOps' | 'transformations' | 'piecewiseRate' | 'electrons' | 'periodic' | 'quadratics' | 'polyDivision' | 'polyZeros' | 'rationalFns' | 'signCharts' | 'complexNums' | 'geoSegments' | 'geoAngles' | 'geoLogic' | 'geoProof' | 'geoParallel' | 'geoPolygonAngles' | 'ionicNames' | 'molecularAcids'
+export type ModuleId = 'numberLine' | 'inequalities' | 'evenOdd' | 'inverses' | 'propertiesDrill' | 'sigFigs' | 'atoms' | 'diffQuotient' | 'graphFeatures' | 'domainRange' | 'composition' | 'functionOps' | 'transformations' | 'piecewiseRate' | 'electrons' | 'periodic' | 'quadratics' | 'polyDivision' | 'polyZeros' | 'rationalFns' | 'signCharts' | 'complexNums' | 'geoSegments' | 'geoAngles' | 'geoLogic' | 'geoProof' | 'geoParallel' | 'geoPolygonAngles' | 'ionicNames' | 'molecularAcids' | 'logForms' | 'logProperties' | 'expLogEquations' | 'geoCongruence' | 'geoIsosceles' | 'geoTriangleProofs'
 export type CalcId = 'ti84' | 'nspire'
 
 /** Fine-grained property tags. Canonical steps carry one; the engine's move detector reports one. */
@@ -514,6 +514,19 @@ export type ErrorPatternId =
   | 'nm_class_ammonium_molecular'
   | 'nm_class_hydrate_ignored'
   | 'nm_class_acid_ignored'
+  // honors geometry Unit 4 (content/modules/geometry). Each id is the exact pick or number
+  // that slip produces on this problem: a method that does not apply, or the wrong vertex.
+  | 'geo_ssa_as_congruence'
+  | 'geo_aaa_as_congruence'
+  | 'geo_sas_not_included'
+  | 'geo_asa_aas_swapped'
+  | 'geo_hl_no_right'
+  | 'geo_vertices_out_of_order'
+  | 'geo_cpctc_too_soon'
+  | 'geo_shared_side_missed'
+  | 'geo_base_angles_wrong_vertex'
+  | 'geo_equilateral_angle_for_side'
+  | 'geo_vertical_angles_missed'
   // behavioral (ui)
   | 'abandoned'
 

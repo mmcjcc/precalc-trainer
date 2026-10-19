@@ -371,6 +371,14 @@ for equations her line may also be any line with exactly the slipped line's solu
 - **Negative bases with a variable exponent** ((−2)^x, (log 0.5)^(x/5730)) are never generated as candidates:
   math.js takes about 15 ms per evaluation of one (it searches for a real root), and they are defined only at
   isolated points.
+- **Partial answers (review, 2026-10-18):** an answer with some of the solutions and nothing else is "You have
+  1 of the 2 solutions", never a slip that happens to share that root; the one exception is
+  `log_valid_rejected`, a valid negative root thrown out of a LOG equation (an exponential equation has no log
+  domain, so it never gets that id). A candidate within 0.2% of a real root is dropped (it is a rounding, not a
+  slip). "Take the log of both sides" needs two positive sides (no log(0) witness). The values of u reported as
+  the solutions of a quadratic in an exponential are `log_convert_dropped`, with a witness that names no value
+  of x. Mixed bases that are whole powers of one base (4^x and 2^x, 9^x and 3^x) are solved by u-substitution
+  with the textbook explanation.
 
 ## 6. Notes for the content stage
 

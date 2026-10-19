@@ -3,7 +3,7 @@
  * problems with answers worked by hand, pushed through the public API.
  */
 import { describe, expect, it } from 'vitest'
-import { checkLogStep, gradeConvertForm, gradeLogEquation, gradeLogValue } from '@/engine'
+import { checkLogStep, gradeConvertForm, gradeLogEquation, gradeLogValue, logEquationMistakes } from '@/engine'
 import { InputSyntaxError, rewriteLogSyntax } from './syntax'
 
 const verdict = (g: { verdict: string }) => g.verdict
@@ -121,6 +121,47 @@ describe('parser findings from the Gemini 4 review, each confirmed by running it
     }
     expect(caught).toBeInstanceOf(InputSyntaxError)
     expect((caught as InputSyntaxError).position).toBe(6)
+  })
+})
+
+describe('equation slips found in the content review, each confirmed by running it', () => {
+  it('one of two solutions is a missing solution, never a slip that happens to share it', () => {
+    // x = 1 also solves the slipped 4^x − 6^x + 2 = 0; x = 0 alone was already "1 of the 2 solutions".
+    for (const [eq, partial] of [
+      ['4^x - 3 * 2^x + 2 = 0', 'x = 1'],
+      ['4^x - 3 * 2^x + 2 = 0', 'x = 0'],
+      ['9^x - 30 * 3^x + 81 = 0', 'x = 1'],
+      ['e^(2x) - 5e^x + 6 = 0', 'x = ln(2)'],
+    ] as const) {
+      const g = gradeLogEquation(eq, partial)
+      expect(g.verdict, `${eq} <= ${partial}`).toBe('wrong')
+      expect(g.verdict === 'wrong' ? g.message : '').toMatch(/1 of the 2 solutions/)
+    }
+    // A thrown-out negative root of a LOG equation is still its own slip.
+    expect(named(gradeLogEquation('log_3(x^2 - 8x) = 2', 'x = 9'))).toBe('log_valid_rejected')
+    expect(named(gradeLogEquation('log_3(x + 9) = log_3(6)', 'no solution'))).toBe('log_valid_rejected')
+  })
+  it('an exponential equation has no log domain to reject a negative answer in', () => {
+    expect(verdict(gradeLogEquation('3^(x + 2) = 2^x', 'no solution'))).toBe('wrong')
+    expect(logEquationMistakes('3^(x + 2) = 2^x').map((m) => m.id)).not.toContain('log_valid_rejected')
+  })
+  it('no "take the log of both sides" when a side is 0, and no slip a hair from a real root', () => {
+    for (const eq of ['4^x - 29 * 2^x - 96 = 0', '9^x - 30 * 3^x + 81 = 0', '4^x - 9 * 2^x + 8 = 0']) {
+      const ms = logEquationMistakes(eq)
+      expect(ms.map((m) => m.id), eq).not.toContain('log_one_side')
+      for (const m of ms) expect(m.witness, eq).not.toMatch(/log\(0\)/)
+    }
+    expect(verdict(gradeLogEquation('4^x - 29 * 2^x - 96 = 0', 'x = 5.001'))).not.toBe('mistake')
+  })
+  it('the values of u reported as the solutions are named', () => {
+    expect(named(gradeLogEquation('4^x - 9 * 2^x + 8 = 0', 'x = 1 or x = 8'))).toBe('log_convert_dropped')
+    expect(named(gradeLogEquation('e^(2x) - 5e^x + 6 = 0', 'x = 2 or x = 3'))).toBe('log_convert_dropped')
+    expect(named(gradeLogEquation('4^x - 3 * 2^x - 4 = 0', 'x = 4'))).toBe('log_convert_dropped')
+    // The witness names no solution (x = 0 and x = 3 here).
+    const g = gradeLogEquation('4^x - 9 * 2^x + 8 = 0', 'x = 1 or x = 8')
+    const w = g.verdict === 'mistake' ? g.witness : ''
+    expect(w).toMatch(/values of u/)
+    expect(w).not.toMatch(/(^|[^\d^])(0|3)(?!\d)/)
   })
 })
 

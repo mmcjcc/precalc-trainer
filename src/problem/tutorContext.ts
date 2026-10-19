@@ -20,10 +20,11 @@ import { nmWork } from '@/content/modules/nomenclature/grade'
 import { EC_PATTERN } from '@/content/modules/electrons/patterns'
 import { POLY_PATTERN } from '@/content/modules/polynomials/patterns'
 import { TR_PATTERN } from '@/content/modules/transformations/patterns'
-import type { ProblemInstance } from '@/content/types'
+import type { GeometryQuestion, ProblemInstance } from '@/content/types'
+import { logFormsWork } from '@/content/modules/logForms'
 import { ERROR_PATTERNS } from '@/engine'
 import type { OpsGrade } from '@/content/modules/functionOps/ops'
-import type { DescriptionGrade, EconfigGrade, FunctionGrade, NmGrade, PolyGrade, SquareLineGrade, TransformGrade } from '@/engine'
+import type { DescriptionGrade, EconfigGrade, FunctionGrade, LogGrade, NmGrade, PolyGrade, SquareLineGrade, TransformGrade } from '@/engine'
 import { getModule, hasModule } from '@/content/registry'
 import type { FinalAnswerGrade } from '@/problem/inequality'
 import { decodeSlotStep } from '@/problem/evenOdd'
@@ -265,6 +266,25 @@ export function verdictFromSc(grade: ScGrade): TutorVerdict | null {
   })
 }
 
+/**
+ * A logarithm grade (a value, a rewritten form, or an equation's solution). The mistake id is
+ * already a log_ catalog id. Unreadable input is a parse error, not a wrong answer. The worked
+ * explanation is not part of the verdict: it contains the answer.
+ */
+export function verdictFromLog(grade: LogGrade, line?: string): TutorVerdict | null {
+  if (grade.verdict === 'unsupported') return null
+  if (grade.verdict === 'correct') return withMessage('correct', grade.message, line)
+  if (grade.verdict === 'wrong') return withMessage('wrong', grade.message, line)
+  if (grade.verdict === 'invalid') return withMessage('parse_error', grade.message, line)
+  const info = ERROR_PATTERNS[grade.mistake]
+  return withMessage('wrong', grade.witness, line, {
+    id: grade.mistake,
+    title: clip(info.title, 200),
+    lesson: clip(info.lesson, TUTOR_LIMITS.field),
+    witness: clip(grade.witness, TUTOR_LIMITS.field),
+  })
+}
+
 /** Complex numbers. The mistake id is already a cx_ catalog id. Unreadable input is a parse error. */
 export function verdictFromCx(grade: CxGrade): TutorVerdict | null {
   if (grade.verdict === 'correct') return withMessage('correct', grade.message)
@@ -411,6 +431,17 @@ function workOf(instance: ProblemInstance, attempt: Attempt | null): string[] {
       .slice(0, TUTOR_LIMITS.lines)
       .map((line) => clip(line, TUTOR_LIMITS.line))
   }
+  if (instance.answer.type === 'logForms') {
+    return logFormsWork(instance.answer, attempt.final?.polyEntries)
+      .slice(0, TUTOR_LIMITS.lines)
+      .map((line) => clip(line, TUTOR_LIMITS.line))
+  }
+  if (instance.answer.type === 'logProperties' || instance.answer.type === 'expLogEquations') {
+    const lines = attempt.steps.map((step) => clip(step.text, TUTOR_LIMITS.line))
+    const box = attempt.final?.polyEntries?.answer?.trim()
+    if (box) lines.push(clip(box, TUTOR_LIMITS.line))
+    return lines.slice(0, TUTOR_LIMITS.lines)
+  }
   if (instance.answer.type === 'geometry') {
     return geoWork(instance.answer, attempt.final?.polyEntries)
       .slice(0, TUTOR_LIMITS.lines)
@@ -448,6 +479,44 @@ function workOf(instance: ProblemInstance, attempt: Attempt | null): string[] {
   return lines.slice(0, TUTOR_LIMITS.lines)
 }
 
+/**
+ * Every geometry question uses the same screen and the same tutor description.
+ * A new question has to be listed here or this fails to compile.
+ */
+export function assertGeometryQuestion(question: GeometryQuestion): void {
+  switch (question) {
+    case 'addition':
+    case 'midpoint':
+    case 'coord':
+    case 'angleAddition':
+    case 'bisector':
+    case 'pairs':
+    case 'words':
+    case 'related':
+    case 'truth':
+    case 'laws':
+    case 'reason':
+    case 'algebraic':
+    case 'twocolumn':
+    case 'transversalPairs':
+    case 'parallelSolve':
+    case 'parallelConverse':
+    case 'lineSlopes':
+    case 'triangleAngles':
+    case 'polygonAngles':
+    case 'congruentParts':
+    case 'congruentWhich':
+    case 'congruentSolve':
+    case 'isoscelesSolve':
+    case 'triangleProof':
+      return
+    default: {
+      const unexpected: never = question
+      throw new Error(`unknown geometry question ${String(unexpected)}`)
+    }
+  }
+}
+
 function statementOf(instance: ProblemInstance): string {
   const answer = instance.answer
   let text = instance.statementText
@@ -478,7 +547,14 @@ function statementOf(instance: ProblemInstance): string {
       answer.question === 'zeros'
         ? `f(x) = ${answer.f}. One zero is ${answer.givenZero}. ${answer.prompt}`
         : `${answer.expression}. ${answer.prompt}`
+  } else if (answer.type === 'logForms') {
+    text = `${answer.problem}. ${answer.prompt}`
+  } else if (answer.type === 'logProperties') {
+    text = `${answer.expr}. ${answer.prompt}`
+  } else if (answer.type === 'expLogEquations') {
+    text = `${answer.equation}. ${answer.prompt}`
   } else if (answer.type === 'geometry') {
+    assertGeometryQuestion(answer.question)
     const lines = answer.lines?.length ? ` Lines: ${answer.lines.join(' | ')}` : ''
     text = `${answer.prompt}${lines} Figure: ${answer.figure.ariaLabel}`
   } else if (answer.type === 'periodic' || answer.type === 'nomenclature') {
@@ -508,6 +584,9 @@ function canonicalOf(instance: ProblemInstance): string[] {
     answer.type === 'rationalFns' ||
     answer.type === 'signCharts' ||
     answer.type === 'complexNums' ||
+    answer.type === 'logForms' ||
+    answer.type === 'logProperties' ||
+    answer.type === 'expLogEquations' ||
     answer.type === 'geometry' ||
     answer.type === 'periodic' ||
     answer.type === 'nomenclature'
@@ -542,6 +621,9 @@ function answerOf(instance: ProblemInstance): string | undefined {
     case 'rationalFns':
     case 'signCharts':
     case 'complexNums':
+    case 'logForms':
+    case 'logProperties':
+    case 'expLogEquations':
     case 'geometry':
     case 'periodic':
     case 'nomenclature':

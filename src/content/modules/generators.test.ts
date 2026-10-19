@@ -37,7 +37,7 @@ function sameExpr(a: string, b: string): boolean {
 }
 
 describe('module registry', () => {
-  it('registers all thirty modules in display order', () => {
+  it('registers all thirty-six modules in display order', () => {
     expect(MODULES.map((m) => m.id)).toEqual([
       'numberLine',
       'graphFeatures',
@@ -57,6 +57,9 @@ describe('module registry', () => {
       'rationalFns',
       'signCharts',
       'complexNums',
+      'logForms',
+      'logProperties',
+      'expLogEquations',
       'sigFigs',
       'atoms',
       'electrons',
@@ -69,6 +72,9 @@ describe('module registry', () => {
       'geoProof',
       'geoParallel',
       'geoPolygonAngles',
+      'geoCongruence',
+      'geoIsosceles',
+      'geoTriangleProofs',
     ])
   })
 })

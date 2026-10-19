@@ -25,6 +25,9 @@ import {
   drawTransversalPairs,
   drawTriangleAngles,
 } from './unit3Make'
+import { drawIsosceles, drawParts, drawSolve, drawWhich } from './unit4Make'
+import { drawTriangleProof } from './unit4Proof'
+import { CONGRUENCE_RULES, ISOSCELES_RULES, TRIANGLE_PROOF_RULES } from './unit4Rules'
 
 export { readGeoAnswer, formatPoint, formatQty, formatValue, geoQty, sameGeoValue, sameQty, simplifyRadical } from './answer'
 export type { GeoQty, GeoRead, GeoReadOptions, GeoValue } from './answer'
@@ -204,9 +207,98 @@ export const geoPolygonAnglesModule: ModuleDef = {
   nextStep: () => null,
 }
 
+/**
+ * Congruent triangles (honors geometry Unit 4). Corresponding parts, the postulate or theorem
+ * the marks support, and an equation from two congruent parts.
+ */
+export const geoCongruenceModule: ModuleDef = {
+  id: 'geoCongruence',
+  subject: 'Geometry',
+  title: 'Congruent triangles',
+  blurb: 'Name a corresponding part, decide which postulate or theorem the marks support, and solve for a part of two congruent triangles.',
+  order: 15,
+  templates: [
+    geoTemplate(
+      'geoCongruence',
+      'gc.parts',
+      'Corresponding parts',
+      'From a congruence statement, name the corresponding part, or pick the statement the marks support.',
+      drawParts,
+    ),
+    geoTemplate(
+      'geoCongruence',
+      'gc.which',
+      'Which method',
+      'Two triangles with marks. Which postulate or theorem proves they are congruent, if any?',
+      drawWhich,
+    ),
+    geoTemplate(
+      'geoCongruence',
+      'gc.solve',
+      'Corresponding parts',
+      'Two congruent triangles. Corresponding parts are expressions in x. Find x, then the part asked for.',
+      drawSolve,
+    ),
+  ],
+  ruleCards: CONGRUENCE_RULES,
+  progress: PROGRESS,
+  nextStep: () => null,
+}
+
+/**
+ * Isosceles and equilateral triangles (honors geometry Unit 4). Base angles sit across from the
+ * congruent sides, and an equilateral triangle's angles are not its side lengths.
+ */
+export const geoIsoscelesModule: ModuleDef = {
+  id: 'geoIsosceles',
+  subject: 'Geometry',
+  title: 'Isosceles and equilateral triangles',
+  blurb: 'Use two congruent sides, two congruent angles, or three congruent sides. Find x, then the part asked for.',
+  order: 16,
+  templates: [
+    geoTemplate(
+      'geoIsosceles',
+      'gi.solve',
+      'Isosceles and equilateral',
+      'Two sides are congruent, two angles are congruent, or the triangle is equilateral. Find x, then the part asked for.',
+      drawIsosceles,
+    ),
+  ],
+  ruleCards: ISOSCELES_RULES,
+  progress: PROGRESS,
+  nextStep: () => null,
+}
+
+/**
+ * Proving triangles congruent (honors geometry Unit 4). Two-column proofs: a reason from the bank,
+ * or the missing statement, one row at a time.
+ */
+export const geoTriangleProofsModule: ModuleDef = {
+  id: 'geoTriangleProofs',
+  subject: 'Geometry',
+  title: 'Proving triangles congruent',
+  blurb: 'Fill a two-column proof that two triangles are congruent, then a pair of corresponding parts.',
+  order: 17,
+  templates: [
+    geoTemplate(
+      'geoTriangleProofs',
+      'gt.twocolumn',
+      'Two-column proof',
+      'A proof that two triangles are congruent. Most rows need a reason; some rows need the missing statement.',
+      drawTriangleProof,
+    ),
+  ],
+  ruleCards: TRIANGLE_PROOF_RULES,
+  progress: PROGRESS,
+  nextStep: () => null,
+}
+
 registerModule(geoSegmentsModule)
 registerModule(geoAnglesModule)
 registerModule(geoLogicModule)
 registerModule(geoProofModule)
 registerModule(geoParallelModule)
 registerModule(geoPolygonAnglesModule)
+registerModule(geoCongruenceModule)
+registerModule(geoIsoscelesModule)
+registerModule(geoTriangleProofsModule)

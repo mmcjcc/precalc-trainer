@@ -183,6 +183,12 @@ function relationSlipsRaw(r: Relation): RelSlip[] {
   if (r.op !== '=') return out
   const hasExp = expPowersOf(r.lhs).length + expPowersOf(r.rhs).length > 0
   if (!hasExp) return out
+  // Taking logs needs two positive sides: with a side of 0 (4^x − 9·2^x + 8 = 0) there is no log to take.
+  const nonPositive = (s: MathNode) => {
+    const c = isConstant(s) ? tryConst(s) : null
+    return c != null && c <= 0
+  }
+  if (nonPositive(r.lhs) || nonPositive(r.rhs)) return out
   for (const base of logBases(r)) {
     const lL = logOf(r.lhs, base)
     const lR = logOf(r.rhs, base)

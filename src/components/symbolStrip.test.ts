@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { DIFF_QUOTIENT_KEYS, FUNCTION_KEYS, SET_ANSWER_KEYS, STRIP_KEYS, insertToken, type StripKey } from './symbolStrip'
+import { DIFF_QUOTIENT_KEYS, FUNCTION_KEYS, LOG_KEYS, SET_ANSWER_KEYS, STRIP_KEYS, insertToken, type StripKey } from './symbolStrip'
 
 const key = (label: string): StripKey => {
   const k = STRIP_KEYS.find((s) => s.label === label)
@@ -86,5 +86,24 @@ describe('set and function strips', () => {
   it('FUNCTION_KEYS is the expression strip, absolute value included', () => {
     expect(FUNCTION_KEYS.map((k) => k.label)).toEqual(['x', '^', '(', ')', '/', '√', '³√', '| |'])
     expect(FUNCTION_KEYS.find((k) => k.label === '√')!.insert).toBe('sqrt()')
+  })
+})
+
+describe('logarithm strip', () => {
+  const key = (label: string) => {
+    const found = LOG_KEYS.find((k) => k.label === label)
+    if (!found) throw new Error(`no log key ${label}`)
+    return found
+  }
+
+  it('inserts log, ln, a subscript base, e^, and the TI-84 logBASE spelling', () => {
+    expect(LOG_KEYS.map((k) => k.label)).toEqual(['x', 'y', 'n', '^', '(', ')', '/', '=', 'or', 'log', 'ln', 'log_', 'e^', 'logBASE'])
+    expect(insertToken('', 0, 0, key('log'))).toEqual({ value: 'log()', caret: 4 })
+    expect(insertToken('', 0, 0, key('ln'))).toEqual({ value: 'ln()', caret: 3 })
+    // log_() is six characters; caret −2 sits in the subscript, before the parentheses.
+    expect(insertToken('', 0, 0, key('log_'))).toEqual({ value: 'log_()', caret: 4 })
+    expect(insertToken('', 0, 0, key('e^'))).toEqual({ value: 'e^()', caret: 3 })
+    // logBASE(,) lands on the argument, before the comma. That is the TI-84 order.
+    expect(insertToken('', 0, 0, key('logBASE'))).toEqual({ value: 'logBASE(,)', caret: 8 })
   })
 })
