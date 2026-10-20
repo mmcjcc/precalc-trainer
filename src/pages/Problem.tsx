@@ -1,4 +1,4 @@
-import { useMemo, useRef } from 'react'
+import { useMemo, useRef, type ReactNode } from 'react'
 import { Navigate, useParams, useSearchParams } from 'react-router-dom'
 import { generateProblem, getTemplate, hasModule } from '@/content'
 import type { ProblemInstance } from '@/content/types'
@@ -6,6 +6,7 @@ import { useStore, type Attempt } from '@/store'
 import { useAttemptLifecycle, useCompletion } from '@/problem/useAttempt'
 import { useActiveClock } from '@/problem/useIdleNudge'
 import { knobsFromFlags, parseSeedParam } from '@/problem/url'
+import { LeaveProblemSheet } from './flows/LeaveProblemSheet'
 import { AtomFlow } from './flows/AtomFlow'
 import { CompositionFlow } from './flows/CompositionFlow'
 import { FunctionOpsFlow } from './flows/FunctionOpsFlow'
@@ -83,7 +84,7 @@ export function ProblemPage() {
 function ProblemBody({ instance, flags, templateTitle }: { instance: ProblemInstance; flags: string; templateTitle: string }) {
   const takeSecs = useRef<() => number>(() => 0)
   const { completion, finish } = useCompletion(instance, templateTitle, () => takeSecs.current())
-  const live = useAttemptLifecycle(instance, flags, !completion)
+  const { attempt: live, leaveQuestion } = useAttemptLifecycle(instance, flags, !completion)
   // Active seconds run for the whole open attempt (the idle nudge firing does not stop them); the
   // unreported tail is handed to finishAttempt.
   const addActiveSecs = useStore((s) => s.addActiveSecs)
@@ -94,6 +95,17 @@ function ProblemBody({ instance, flags, templateTitle }: { instance: ProblemInst
   const attempt = live ?? (completion ? snapshot.current : null)
   const props: FlowProps = { instance, attempt, flags, templateTitle, completion, finish }
 
+  return (
+    <>
+      {flowFor(props)}
+      {/* Another problem has her work in it: the page asks before this one starts. */}
+      <LeaveProblemSheet question={leaveQuestion} />
+    </>
+  )
+}
+
+function flowFor(props: FlowProps): ReactNode {
+  const { instance } = props
   switch (instance.kind) {
     case 'inequality':
       return <InequalityFlow {...props} />

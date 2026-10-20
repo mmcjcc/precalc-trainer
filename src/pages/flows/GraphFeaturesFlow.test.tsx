@@ -25,7 +25,7 @@ function renderAt(path: string) {
 function WorksheetPage({ instance }: { instance: ProblemInstance }) {
   const takeSecs = useRef(() => 0)
   const { completion, finish } = useCompletion(instance, 'Turning points', () => takeSecs.current())
-  const live = useAttemptLifecycle(instance, '', !completion)
+  const { attempt: live } = useAttemptLifecycle(instance, '', !completion)
   const snapshot = useRef<Attempt | null>(null)
   if (live) snapshot.current = live
   const attempt = live ?? (completion ? snapshot.current : null)

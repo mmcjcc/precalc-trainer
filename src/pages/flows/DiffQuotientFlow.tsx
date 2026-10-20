@@ -5,6 +5,7 @@ import type { AttemptStep } from '@/store'
 import { hintView, liveParseError, progressLine, safeLatex, type SubmitOutcome } from '@/problem/stepEngine'
 import { verdictFromStep } from '@/problem/tutorContext'
 import { useStepEngine } from '@/problem/useStepEngine'
+import { engineVerdict } from '@/components/ComposerVerdict'
 import { HintPanel } from '@/components/HintPanel'
 import { Katex } from '@/components/Katex'
 import { MathInput } from '@/components/MathInput'
@@ -67,6 +68,10 @@ function DqBody({ instance, attempt, flags, templateTitle, completion, finish, a
   )
   const engine = useStepEngine({ instance, attempt, currentLine: lastLine, classify, hint: baseHint, disabled: done })
   const displayHint = engine.lastPattern ? hintView(instance, lastLine, false, engine.lastPattern, solved) : baseHint
+  const lineVerdict = useMemo(
+    () => engineVerdict({ rejection: engine.rejection, kept: engine.kept, caveat: engine.caveat }),
+    [engine.rejection, engine.kept, engine.caveat],
+  )
 
   // Finished: close the attempt once the simplified line's chip question (if any) is answered or skipped.
   const finishing = useRef(false)
@@ -131,6 +136,7 @@ function DqBody({ instance, attempt, flags, templateTitle, completion, finish, a
         />
       }
       tutorVerdict={engine.rejection ? verdictFromStep(engine.rejection, engine.draft) : undefined}
+      lineVerdict={lineVerdict}
       keymap={{
         onHint: solved ? undefined : engine.advanceHint,
         onUndo: engine.undo,

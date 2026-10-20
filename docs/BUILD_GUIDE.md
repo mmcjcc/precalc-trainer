@@ -208,6 +208,15 @@ Every math answer box opts into the phone math keypad (touch screens only; deskt
 `useMathKeypadOn()` is true. Ready-made key sets: `KEYPAD_SETS` in `src/components/keypadKeys.ts`. See
 `docs/progress/phone-keypad.md`.
 
+On a phone (`useBreakpoint() === 'mobile'`) `ProblemFrame` draws the compact problem screen: × + title + progress
+dots, the problem pinned at the top once its card scrolls away, and the verdict where she is looking. A composer flow
+passes `lineVerdict` (`engineVerdict(engine)` for a step engine, else its own `LineVerdict` from
+`components/ComposerVerdict.tsx`) so the composer names the mistake above her input; a hint ladder calls
+`useStuckRequest(rung, advance, disabled)` so "Stuck?" can take the next hint; a wrong-answer card renders
+`<StuckChip />` under itself. On every screen, leaving a problem with her work in it is asked in the app's own sheet
+(`useAttemptLifecycle` returns `{ attempt, leaveQuestion }`; the Problem page shows `LeaveProblemSheet`), and the
+completion card replaces the completion toast. See `docs/progress/phone-screen.md`.
+
 Problem-page flows by kind:
 - **inequality**: worked column starts at `instance.start`; steps until progress says solved; then
   final answer: interval input + set-builder input (both required; cross-checked; patterns 1–3, 10).

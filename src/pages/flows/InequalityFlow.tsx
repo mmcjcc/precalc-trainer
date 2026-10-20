@@ -3,6 +3,7 @@ import { buildStepContext, classifyStep, hintView, liveParseError, progressLine 
 import { verdictFromSetAnswer, verdictFromStep } from '@/problem/tutorContext'
 import type { TutorVerdict } from '@/shared/tutor'
 import { currentLineOf, useStepEngine } from '@/problem/useStepEngine'
+import { engineVerdict } from '@/components/ComposerVerdict'
 import { FinalAnswerCard } from '@/components/FinalAnswerCard'
 import { HintPanel } from '@/components/HintPanel'
 import { MathInput } from '@/components/MathInput'
@@ -38,6 +39,10 @@ export function InequalityFlow({ instance, attempt, flags, templateTitle, comple
   const validate = useCallback((t: string) => liveParseError(t, instance.vars), [instance.vars])
   const [answerVerdict, setAnswerVerdict] = useState<TutorVerdict | null>(null)
   const tutorVerdict = engine.rejection ? verdictFromStep(engine.rejection, engine.draft) : answerVerdict
+  const lineVerdict = useMemo(
+    () => engineVerdict({ rejection: engine.rejection, kept: engine.kept, caveat: engine.caveat }),
+    [engine.rejection, engine.kept, engine.caveat],
+  )
 
   const chipUi = engine.chipPrompt ? (
     <PropertyChips onPick={engine.pickChip} onSkip={engine.skipChip} />
@@ -66,6 +71,7 @@ export function InequalityFlow({ instance, attempt, flags, templateTitle, comple
         />
       }
       tutorVerdict={tutorVerdict}
+      lineVerdict={lineVerdict}
       keymap={{
         onHint: solved ? undefined : engine.advanceHint,
         onUndo: engine.undo,

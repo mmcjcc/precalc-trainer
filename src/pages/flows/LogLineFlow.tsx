@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
+import { KEPT, stepVerdict, type LineVerdict } from '@/components/ComposerVerdict'
 import { Katex } from '@/components/Katex'
 import { MathInput } from '@/components/MathInput'
 import { SigFigCorrect, SigFigExplanation, SigFigRejection } from '@/components/SigFigFeedback'
@@ -314,6 +315,20 @@ function Body({ instance, attempt, flags, templateTitle, completion, finish, mod
   }
   const lineVerdict = feedback?.kind === 'rejected' ? verdictFromStep(feedback.result, draft) : undefined
   const boxVerdict = boxGrade ? verdictFromLog(boxGrade, box) : undefined
+  // The same feedback in the phone composer, one line above her input.
+  const composerVerdict = useMemo<LineVerdict | null>(() => {
+    if (!feedback) return null
+    if (feedback.kind === 'rejected') return stepVerdict(feedback.result)
+    if (feedback.kind === 'same') return { tone: 'info', text: 'That is the line above, written again. Change one thing, then check it.' }
+    if (feedback.kind === 'blocked') return { tone: 'info', text: feedback.message }
+    if (!feedback.caveat) return KEPT
+    const note = feedback.note || ERROR_PATTERNS.log_check_answers.lesson
+    return {
+      tone: 'ok',
+      text: 'Kept. Legal, but check your answers in the original.',
+      why: { title: 'Legal, but check your answers in the original', body: <p className="text-sm text-navy">{note}</p> },
+    }
+  }, [feedback])
   const answerOpen = equation !== null && steps.length > 0
   const shownBox = boxGrade
 
@@ -326,6 +341,7 @@ function Body({ instance, attempt, flags, templateTitle, completion, finish, mod
       progress={progress}
       completion={completion}
       tutorVerdict={boxVerdict ?? lineVerdict}
+      lineVerdict={composerVerdict}
       nudgeText={equation ? 'Still here? Write the next line, then the solution in the answer box. The hint button is right there.' : 'Still here? Type the next line of your work below. The hint button is right there.'}
       keymap={{ onHint: hint.advance, onUndo: undo }}
       statement={

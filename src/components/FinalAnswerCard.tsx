@@ -5,6 +5,7 @@ import { Katex } from './Katex'
 import { keysWith } from './keypadKeys'
 import { MathTextInput } from './MathTextInput'
 import { NumberLineSet } from './NumberLineSet'
+import { StuckChip } from './Stuck'
 import type { StripKey } from './symbolStrip'
 import { useMathKeypadOn } from './useMathKeypad'
 
@@ -223,6 +224,8 @@ export function FinalAnswerCard({ target, initial, onGrade, done = false, variab
           {grade.mismatch.lesson}
         </p>
       )}
+      {/* On a phone: the next hint under her thumb, under a wrong answer (not under an unreadable one). */}
+      {grade && !grade.done && (grade.mismatch || grade.interval.status === 'wrong' || grade.setBuilder.status === 'wrong') && <StuckChip />}
 
       <div className="flex flex-wrap items-center gap-3">
         <button type="submit" disabled={done} className="min-h-12 rounded-xl bg-coral px-4 font-semibold text-navy hover:bg-coral/80 disabled:opacity-50">

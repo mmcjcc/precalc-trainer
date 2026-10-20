@@ -1,5 +1,6 @@
 import type { AtomBox, AtomGrade } from '@/shared/types'
 import { PatternLesson } from './SigFigFeedback'
+import { StuckChip } from './Stuck'
 
 /**
  * Wrong-answer card for the atomic-structure boxes, in the existing rejection styling (✗ + words,
@@ -17,29 +18,33 @@ export function AtomRejection({ grade, labels }: { grade: AtomGrade; labels: Par
   const heading = single ? `Not quite: ${single.title}` : grade.patterns.length + plain.length > 1 ? 'Not quite: a few things to look at' : 'Not quite'
   const sameForAll = plain.length === 1 && grade.boxes.filter((b) => b.status === 'wrong' && !b.pattern).length > 1
   return (
-    <div role="alert" className="rounded-2xl border border-bad bg-bad-100 p-3 text-navy">
-      <p className="font-semibold">
-        <span aria-hidden>✗ </span>
-        {heading}
-      </p>
-      {grade.patterns.length > 0 && (
-        <div className="mt-2 space-y-3">
-          {grade.patterns.map((hit) => (
-            <PatternLesson key={hit.id} hit={hit} witness={hit.witness} heading={single ? 'p' : 'h3'} />
-          ))}
-        </div>
-      )}
-      {plain.length > 0 && (
-        <ul className="mt-2 space-y-1 text-sm">
-          {plain.map((p) => (
-            <li key={p.box}>
-              {!sameForAll && <span className="font-semibold">{labels[p.box] ?? p.box}: </span>}
-              {p.message}
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
+    <>
+      <div role="alert" className="rounded-2xl border border-bad bg-bad-100 p-3 text-navy">
+        <p className="font-semibold">
+          <span aria-hidden>✗ </span>
+          {heading}
+        </p>
+        {grade.patterns.length > 0 && (
+          <div className="mt-2 space-y-3">
+            {grade.patterns.map((hit) => (
+              <PatternLesson key={hit.id} hit={hit} witness={hit.witness} heading={single ? 'p' : 'h3'} />
+            ))}
+          </div>
+        )}
+        {plain.length > 0 && (
+          <ul className="mt-2 space-y-1 text-sm">
+            {plain.map((p) => (
+              <li key={p.box}>
+                {!sameForAll && <span className="font-semibold">{labels[p.box] ?? p.box}: </span>}
+                {p.message}
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+      {/* On a phone: help under her thumb (outside the alert, which stays the verdict's words only). */}
+      <StuckChip />
+    </>
   )
 }
 

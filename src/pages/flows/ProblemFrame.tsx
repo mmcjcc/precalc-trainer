@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { CALC_FOOTER } from '@/content/calc'
 import { getModule } from '@/content/registry'
@@ -10,19 +10,27 @@ import type { TutorVerdict } from '@/shared/tutor'
 import { problemPath } from '@/problem/url'
 import { useReviewChrome } from '@/pages/review/chrome'
 import { useIdleNudge } from '@/problem/useIdleNudge'
-import type { Completion } from '@/problem/useAttempt'
+import { completionWords, type Completion } from '@/problem/useAttempt'
 import type { ProgressLine } from '@/problem/stepEngine'
+import { BottomSheet } from '@/components/BottomSheet'
 import { CalcPanel } from '@/components/CalcPanel'
 import { Composer } from '@/components/Composer'
+import { ComposerStatus, type LineVerdict, type VerdictWhy } from '@/components/ComposerVerdict'
 import { GraphPanel, RuleCardsPanel } from '@/components/GraphPanel'
 import { Katex } from '@/components/Katex'
 import { KeymapHelp } from '@/components/KeymapHelp'
+import { notePress, useKeypadStore } from '@/components/keypadStore'
+import { isNativeApp } from '@/components/nativeApp'
 import { PageLayout, RailToolbar, type RailPanel } from '@/components/PageLayout'
+import { StuckProvider, type StuckApi } from '@/components/Stuck'
 import { useBreakpoint } from '@/components/useBreakpoint'
 import { useKeymap } from '@/components/useKeymap'
 import { TutorAskPanel } from '@/tutor/TutorPanel'
 import { dropFinishedThreads, markThreadFinished } from '@/tutor/threadStorage'
 import { useTutorStatus } from '@/tutor/useTutorStatus'
+import { PhoneHeader } from './PhoneHeader'
+import { PinnedProblemStrip, pinnedSummary, useScrolledPast } from './PinnedProblem'
+import { revealVerdictAboveKeypad, VERDICT_REVEAL_MS } from './verdictReveal'
 
 export interface FrameKeymap {
   onHint?: () => void
@@ -58,6 +66,11 @@ type Props = {
   tutorVerdict?: TutorVerdict | null
   /** Text under the graph, inside the reveal gate (key points, which give a point question away). */
   graphFooter?: ReactNode
+  /**
+   * A composer flow's verdict about her latest line. On a phone the composer shows it right above her input
+   * (the work list, where the full card is, sits behind the composer and the keypad there).
+   */
+  lineVerdict?: LineVerdict | null
   children: ReactNode
 }
 
@@ -104,14 +117,22 @@ function useElapsed(startedAt: string | undefined, running: boolean): string {
   return `${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, '0')}`
 }
 
+/** A figure or a graph in the problem card (every figure in the app is an img role: GeoFigure, graphs, number lines). */
+function holdsFigure(card: HTMLElement | null): boolean {
+  return card?.querySelector('[role="img"], img, canvas') != null
+}
+
 /**
  * Shared problem-page chrome: header, progress line, rail [Hints, Graph it, Calculator, Rule
- * cards], mobile composer, keymap, idle nudge, completion card.
+ * cards], mobile composer, keymap, idle nudge, completion card. On a phone (below 768 px, where the composer is
+ * sticky and the rail is a row of sheets) the header is one compact row, the problem stays pinned at the top once
+ * its card scrolls away, the composer shows the verdict about her line, and "Stuck?" opens the next hint.
  */
-export function ProblemFrame({ instance, attempt, flags, templateTitle, progress, hints, composer, completion, keymap, statement, graphCaption, nudgeText, tutorVerdict, graphFooter, children }: Props) {
+export function ProblemFrame({ instance, attempt, flags, templateTitle, progress, hints, composer, completion, keymap, statement, graphCaption, nudgeText, tutorVerdict, graphFooter, lineVerdict, children }: Props) {
   const navigate = useNavigate()
   const review = useReviewChrome()
   const bp = useBreakpoint()
+  const phone = bp === 'mobile'
   const mod = getModule(instance.moduleId)
   const tutor = useTutorStatus()
   const [openPanel, setOpenPanel] = useState<string | null>(null)
@@ -119,6 +140,7 @@ export function ProblemFrame({ instance, attempt, flags, templateTitle, progress
   const [nudge, setNudge] = useState<string | null>(null)
   const [copied, setCopied] = useState<'idle' | 'ok' | 'fail'>('idle')
   const setNudged = useStore((s) => s.setNudged)
+  const composerOpen = Boolean(composer) && !completion
 
   useEffect(() => {
     if (!attempt?.id) return
@@ -193,6 +215,60 @@ export function ProblemFrame({ instance, attempt, flags, templateTitle, progress
 
   const toggle = useCallback((id: string) => setOpenPanel((cur) => (cur === id ? null : id)), [])
 
+  // ---- sheets opened from the phone's controls -----------------------------------------------------------------
+  // The chip, Why? and the pinned strip leave focus in her box. A sheet closes the keypad while it is up; when the
+  // sheet closes, focus goes back to the box and the keypad comes back with it (as after a key press).
+  const keypadReturns = useRef(false)
+  const rememberKeypad = useCallback(() => {
+    keypadReturns.current = useKeypadStore.getState().target !== null
+  }, [])
+  const bringKeypadBack = useCallback(() => {
+    if (!keypadReturns.current) return
+    keypadReturns.current = false
+    notePress()
+  }, [])
+  const onOpenPanel = useCallback(
+    (id: string | null) => {
+      if (id === null) bringKeypadBack()
+      setOpenPanel(id)
+    },
+    [bringKeypadBack],
+  )
+  // The Why? sheet keeps the lesson it opened with until she closes it (an undo can change her line under it).
+  const [sheet, setSheet] = useState<{ kind: 'problem' } | { kind: 'why'; why: VerdictWhy } | null>(null)
+  const closeSheet = useCallback(() => {
+    bringKeypadBack()
+    setSheet(null)
+  }, [bringKeypadBack])
+
+  // ---- Stuck? --------------------------------------------------------------------------------------------------
+  // Opens the hint sheet; the ladder in it takes the request as a press of its button (nudge and rule only).
+  const stuckPending = useRef(false)
+  const [stuckSeq, setStuckSeq] = useState(0)
+  const takeStuck = useCallback(() => {
+    if (!stuckPending.current) return false
+    stuckPending.current = false
+    return true
+  }, [])
+  const stuck = useCallback(() => {
+    rememberKeypad()
+    stuckPending.current = true
+    setStuckSeq((n) => n + 1)
+    setOpenPanel('hints')
+  }, [rememberKeypad])
+  // A request no ladder took (one that does not take requests) must not fire the next time the sheet opens.
+  useEffect(() => {
+    if (openPanel !== 'hints') stuckPending.current = false
+  }, [openPanel])
+  // Hints are open while the flow takes a hint (Ctrl+Shift+H): not once the problem is done, nor on the inequality's
+  // final-answer card, where the ladder is closed.
+  const hintsOpen = !completion && Boolean(keymap?.onHint)
+  const stuckApi = useMemo<StuckApi>(
+    // Under a wrong verdict only where there is no composer: the composer carries its own chip.
+    () => ({ onStuck: phone && hintsOpen && !composerOpen ? stuck : null, seq: stuckSeq, take: takeStuck }),
+    [phone, hintsOpen, composerOpen, stuck, stuckSeq, takeStuck],
+  )
+
   useKeymap(
     {
       onEscape: () => {
@@ -233,6 +309,51 @@ export function ProblemFrame({ instance, attempt, flags, templateTitle, progress
 
   const elapsed = useElapsed(attempt?.startedAt, Boolean(attempt) && !completion)
 
+  // ---- the pinned problem (phone) ----------------------------------------------------------------------------
+  // The review set keeps its own sticky bar at the top of the screen, so it has no strip.
+  const cardRef = useRef<HTMLDivElement>(null)
+  const stripRef = useRef<HTMLDivElement>(null)
+  const pinnedOn = phone && !review
+  const scrolledPast = useScrolledPast(cardRef, pinnedOn)
+  const summary = useMemo(() => pinnedSummary(instance.statementText, instance.vars), [instance])
+  const [figure, setFigure] = useState(false)
+  useEffect(() => {
+    if (scrolledPast) setFigure(holdsFigure(cardRef.current))
+  }, [scrolledPast])
+  const showProblem = useCallback(() => {
+    if (useKeypadStore.getState().target !== null) {
+      // The keypad is up: her place stays put and the card opens over it.
+      rememberKeypad()
+      setSheet({ kind: 'problem' })
+      return
+    }
+    const card = cardRef.current
+    if (!card) return
+    if (typeof card.scrollIntoView === 'function') card.scrollIntoView({ block: 'start', behavior: 'smooth' })
+    card.focus({ preventScroll: true })
+  }, [rememberKeypad])
+
+  // ---- after a Check on the keypad, the verdict under a part's box comes into view (phone) ----------------------
+  const checks = useKeypadStore((s) => s.checks)
+  const seenChecks = useRef(checks)
+  useEffect(() => {
+    if (checks === seenChecks.current) return
+    seenChecks.current = checks
+    if (!phone) return
+    const timer = setTimeout(() => revealVerdictAboveKeypad(stripRef.current), VERDICT_REVEAL_MS)
+    return () => clearTimeout(timer)
+  }, [checks, phone])
+
+  // ---- completion ------------------------------------------------------------------------------------------------
+  // The card is what says the problem is done (there is no toast while it is on the page), so it comes into view.
+  const completionRef = useRef<HTMLElement>(null)
+  useEffect(() => {
+    if (!completion) return
+    const card = completionRef.current
+    if (card && typeof card.scrollIntoView === 'function') card.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
+  }, [completion])
+  const native = isNativeApp()
+
   async function copyLink() {
     const url = `${window.location.origin}${window.location.pathname}#${problemPath(instance.moduleId, instance.templateId, instance.seed, flags)}`
     try {
@@ -249,100 +370,160 @@ export function ProblemFrame({ instance, attempt, flags, templateTitle, progress
   }
 
   const nextHref = problemPath(instance.moduleId, instance.templateId, randomSeed(), flags)
+  const statementNode = statement ?? <Katex tex={toLatex(instance.statementText)} display />
+  const completionTitle = completion ? (completion.summary.finalCorrect ? 'Problem complete' : 'Problem finished') : ''
+  const completionLine = completion
+    ? `${completion.summary.steps > 0 ? `${completion.summary.steps} steps · ${completion.summary.firstTry} first-try · ` : ''}${completion.summary.hints} ${completion.summary.hints === 1 ? 'hint' : 'hints'}${completion.summary.revealed > 0 ? ` · ${completion.summary.revealed} shown` : ''}${completion.summary.streak > 0 ? ` · day streak ${completion.summary.streak}` : ''}`
+    : ''
+  const spoken = completion ? completionWords(completion.summary, completion.newlyMastered, templateTitle) : null
+  const announcement = spoken ? `${spoken.message}. ${spoken.detail}` : ''
+  const why = lineVerdict && lineVerdict.tone !== 'info' ? lineVerdict.why : undefined
 
   return (
-    <PageLayout rail={rail} openPanel={openPanel} onOpenPanel={setOpenPanel} mobileToolbar={composer && !completion ? 'none' : 'top'}>
-      <div className="space-y-4">
-        <header className="space-y-1">
-          <p className="text-xs font-semibold uppercase tracking-wide text-coral-700">
-            <Link to={`/m/${instance.moduleId}`} className="hover:underline">
-              {mod.title}
-            </Link>{' '}
-            · {templateTitle}
-          </p>
-          <h1 className="text-2xl font-semibold text-navy">{instance.title}</h1>
-          <p className="text-sm text-navy/80">{instance.instructions}</p>
-          <div className="rounded-2xl bg-gold-100 px-4 py-3 text-navy">
-            {statement ?? <Katex tex={toLatex(instance.statementText)} display />}
-          </div>
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-navy/70" aria-live="polite">
-            {progress && (
-              <span>
-                stage {progress.stage} of {progress.total} · {progress.label}
-              </span>
-            )}
-            {attempt?.mode === 'timed' && <span className="font-mono">test mode · {elapsed}</span>}
-            {/* Keyboard shortcuts mean nothing where the pointer is a finger (a phone or a tablet). */}
-            <button type="button" onClick={() => setHelp(true)} className="min-h-11 rounded px-2 underline hover:text-navy pointer-coarse:hidden">
-              shortcuts (?)
-            </button>
-          </div>
-        </header>
-
-        {children}
-
-        {completion && (
-          <section className="space-y-3 rounded-2xl border border-ok bg-ok-100 p-4" aria-labelledby="completion-title">
-            <h2 id="completion-title" className="font-semibold text-navy">
-              <span aria-hidden>✓ </span>
-              {completion.summary.finalCorrect ? 'Problem complete' : 'Problem finished'}
-            </h2>
-            <p className="text-sm text-navy">
-              {completion.summary.steps > 0 && `${completion.summary.steps} steps · ${completion.summary.firstTry} first-try · `}{completion.summary.hints} {completion.summary.hints === 1 ? 'hint' : 'hints'}
-              {completion.summary.revealed > 0 && ` · ${completion.summary.revealed} shown`}
-              {completion.summary.streak > 0 && ` · day streak ${completion.summary.streak}`}
-              {completion.newlyMastered && <span className="font-semibold"> · {templateTitle} newly mastered</span>}
-            </p>
-            <div className="flex flex-wrap items-center gap-2">
-              {review ? (
-                <button type="button" onClick={review.onNext} className="min-h-11 rounded-xl bg-navy px-4 font-semibold text-white hover:bg-navy-600">
-                  Next
-                </button>
-              ) : (
-                <button type="button" onClick={() => navigate(nextHref)} className="min-h-11 rounded-xl bg-navy px-4 font-semibold text-white hover:bg-navy-600">
-                  Next problem
-                </button>
-              )}
-              <button type="button" onClick={() => void copyLink()} className="min-h-11 rounded-xl border border-navy-100 bg-white px-4 font-semibold text-navy hover:bg-navy-50">
-                Copy link
-              </button>
-              <Link to={`/m/${instance.moduleId}`} className="min-h-11 rounded-xl px-3 py-2.5 font-semibold text-navy underline">
-                Back to {mod.title}
-              </Link>
-              <span role="status" className="text-sm text-navy/70">
-                {copied === 'ok' ? 'Link copied' : copied === 'fail' ? 'Could not copy — copy the address bar' : ''}
-              </span>
-            </div>
-          </section>
-        )}
-
-        {composer && !completion && (
-          <Composer
-            toolbar={bp === 'mobile' ? <RailToolbar rail={rail} onOpen={setOpenPanel} /> : undefined}
-            banner={
-              nudge && (
-                <div role="status" className="mb-2 flex items-center justify-between gap-2 rounded-xl bg-gold-100 px-3 py-2 text-sm text-navy">
-                  <span>{nudge}</span>
-                  <button type="button" onClick={() => setNudge(null)} className="min-h-8 rounded px-2 text-navy/70 underline">
-                    Dismiss
-                  </button>
+    <StuckProvider value={stuckApi}>
+      {/* On a phone the frame places the panel buttons itself: in the composer, or under the problem (never above it). */}
+      <PageLayout rail={rail} openPanel={openPanel} onOpenPanel={onOpenPanel} mobileToolbar={phone || composerOpen ? 'none' : 'top'}>
+        <div className="space-y-4">
+          {phone ? (
+            <>
+              <header className="space-y-2">
+                <PhoneHeader
+                  title={instance.title}
+                  instructions={instance.instructions}
+                  closeTo={`/m/${instance.moduleId}`}
+                  closeLabel={`Close, back to ${mod.title}`}
+                  progress={progress}
+                />
+                <div ref={cardRef} tabIndex={-1} className="problem-card rounded-2xl bg-gold-100 px-4 py-3 text-navy outline-none">
+                  {statementNode}
                 </div>
-              )
-            }
-          >
-            {composer}
-          </Composer>
-        )}
-        {!composer && nudge && !completion && (
-          <div role="status" className="flex items-center justify-between gap-2 rounded-xl bg-gold-100 px-3 py-2 text-sm text-navy">
-            <span>{nudge}</span>
-            <button type="button" onClick={() => setNudge(null)} className="min-h-8 rounded px-2 text-navy/70 underline">
-              Dismiss
-            </button>
-          </div>
-        )}
-      </div>
-      <KeymapHelp open={help} onClose={() => setHelp(false)} omit={omitHelp.length ? omitHelp : undefined} />
-    </PageLayout>
+                {attempt?.mode === 'timed' && <p className="font-mono text-sm text-navy/70">test mode · {elapsed}</p>}
+              </header>
+              {!composerOpen && (
+                <div className="flex flex-wrap gap-2" role="group" aria-label="Side panels">
+                  <RailToolbar rail={rail} onOpen={setOpenPanel} />
+                </div>
+              )}
+            </>
+          ) : (
+            <header className="space-y-1">
+              <p className="text-xs font-semibold uppercase tracking-wide text-coral-700">
+                <Link to={`/m/${instance.moduleId}`} className="hover:underline">
+                  {mod.title}
+                </Link>{' '}
+                · {templateTitle}
+              </p>
+              <h1 className="text-2xl font-semibold text-navy">{instance.title}</h1>
+              <p className="text-sm text-navy/80">{instance.instructions}</p>
+              <div className="rounded-2xl bg-gold-100 px-4 py-3 text-navy">{statementNode}</div>
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-navy/70" aria-live="polite">
+                {progress && (
+                  <span>
+                    stage {progress.stage} of {progress.total} · {progress.label}
+                  </span>
+                )}
+                {attempt?.mode === 'timed' && <span className="font-mono">test mode · {elapsed}</span>}
+                {/* Keyboard shortcuts mean nothing where the pointer is a finger (a phone or a tablet). */}
+                <button type="button" onClick={() => setHelp(true)} className="min-h-11 rounded px-2 underline hover:text-navy pointer-coarse:hidden">
+                  shortcuts (?)
+                </button>
+              </div>
+            </header>
+          )}
+
+          {children}
+
+          {completion && (
+            <section ref={completionRef} data-completion-card="" className="space-y-3 rounded-2xl border border-ok bg-ok-100 p-4" aria-labelledby="completion-title">
+              <h2 id="completion-title" className="font-semibold text-navy">
+                <span aria-hidden>✓ </span>
+                {completionTitle}
+              </h2>
+              <p className="text-sm text-navy">
+                {completionLine}
+                {completion.newlyMastered && <span className="font-semibold"> · {templateTitle} newly mastered</span>}
+              </p>
+              <div className="flex flex-wrap items-center gap-2">
+                {review ? (
+                  <button type="button" onClick={review.onNext} className="min-h-11 rounded-xl bg-navy px-4 font-semibold text-white hover:bg-navy-600">
+                    Next
+                  </button>
+                ) : (
+                  <button type="button" onClick={() => navigate(nextHref)} className="min-h-11 rounded-xl bg-navy px-4 font-semibold text-white hover:bg-navy-600">
+                    Next problem
+                  </button>
+                )}
+                {/* Inside the phone app a link to one of its pages opens nowhere else, so it is not offered there. */}
+                {!native && (
+                  <button type="button" onClick={() => void copyLink()} className="min-h-11 rounded-xl border border-navy-100 bg-white px-4 font-semibold text-navy hover:bg-navy-50">
+                    Copy link
+                  </button>
+                )}
+                <Link to={`/m/${instance.moduleId}`} className="min-h-11 rounded-xl px-3 py-2.5 font-semibold text-navy underline">
+                  Back to {mod.title}
+                </Link>
+                {!native && (
+                  <span role="status" className="text-sm text-navy/70">
+                    {copied === 'ok' ? 'Link copied' : copied === 'fail' ? 'Could not copy — copy the address bar' : ''}
+                  </span>
+                )}
+              </div>
+            </section>
+          )}
+          {/* Says "Problem complete" to a screen reader in the toast's words, as the toast did before the card took its
+              place. A plain live region (no status role), always on the page so the words are announced when they arrive. */}
+          <p aria-live="polite" aria-atomic="true" className="sr-only" data-completion-announcer="">
+            {announcement}
+          </p>
+
+          {composerOpen && (
+            <Composer
+              toolbar={phone ? <RailToolbar rail={rail} onOpen={setOpenPanel} /> : undefined}
+              banner={
+                nudge && (
+                  <div role="status" className="mb-2 flex items-center justify-between gap-2 rounded-xl bg-gold-100 px-3 py-2 text-sm text-navy">
+                    <span>{nudge}</span>
+                    <button type="button" onClick={() => setNudge(null)} className="min-h-8 rounded px-2 text-navy/70 underline">
+                      Dismiss
+                    </button>
+                  </div>
+                )
+              }
+              status={
+                phone ? (
+                  <ComposerStatus
+                    verdict={lineVerdict ?? null}
+                    onWhy={() => {
+                      if (!why) return
+                      rememberKeypad()
+                      setSheet({ kind: 'why', why })
+                    }}
+                    onStuck={hintsOpen ? stuck : null}
+                  />
+                ) : undefined
+              }
+            >
+              {composer}
+            </Composer>
+          )}
+          {!composer && nudge && !completion && (
+            <div role="status" className="flex items-center justify-between gap-2 rounded-xl bg-gold-100 px-3 py-2 text-sm text-navy">
+              <span>{nudge}</span>
+              <button type="button" onClick={() => setNudge(null)} className="min-h-8 rounded px-2 text-navy/70 underline">
+                Dismiss
+              </button>
+            </div>
+          )}
+        </div>
+        {pinnedOn && scrolledPast && <PinnedProblemStrip summary={summary} figure={figure} onShow={showProblem} stripRef={stripRef} />}
+        <BottomSheet open={sheet?.kind === 'problem'} onClose={closeSheet} title="The problem">
+          <div className="rounded-2xl bg-gold-100 px-4 py-3 text-navy">{statementNode}</div>
+        </BottomSheet>
+        <BottomSheet open={sheet?.kind === 'why'} onClose={closeSheet} title={sheet?.kind === 'why' ? sheet.why.title : ''}>
+          {sheet?.kind === 'why' && sheet.why.body}
+        </BottomSheet>
+        <KeymapHelp open={help} onClose={() => setHelp(false)} omit={omitHelp.length ? omitHelp : undefined} />
+      </PageLayout>
+    </StuckProvider>
   )
 }

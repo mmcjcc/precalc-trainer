@@ -10,6 +10,7 @@ import { verdictFromOrder, verdictFromSigFig } from '@/problem/tutorContext'
 import { RuleCardView } from '@/components/HintPanel'
 import { SigFigCorrect, SigFigExplanation, SigFigRejection } from '@/components/SigFigFeedback'
 import { SigFigNumeralInput } from '@/components/SigFigNumeralInput'
+import { useStuckRequest } from '@/components/Stuck'
 import { useBreakpoint } from '@/components/useBreakpoint'
 import { EconfigBody } from './EconfigPanel'
 import { ProblemFrame } from './ProblemFrame'
@@ -49,6 +50,7 @@ const HINT_LABEL: Record<0 | 1 | 2 | 3, string> = {
 
 function LightHintPanel({ rung, nudge, card, related, explanation, onAdvance, disabled }: { rung: 0 | 1 | 2 | 3; nudge: string; card: RuleCard | null; related: RuleCard[]; explanation: string[]; onAdvance: () => void; disabled: boolean }) {
   const exhausted = rung === 3
+  useStuckRequest(rung, onAdvance, disabled || exhausted)
   return (
     <div className="space-y-3">
       <p className="text-sm text-navy/70">Hints never appear on their own.<span className="pointer-coarse:hidden"> Ctrl+Shift+H steps through them.</span></p>

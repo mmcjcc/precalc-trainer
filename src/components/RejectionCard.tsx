@@ -1,6 +1,7 @@
 import type { StepResult } from '@/shared/types'
 import { rejectionView, type ExampleSegment } from '@/problem/stepEngine'
 import { Katex } from './Katex'
+import { StuckChip } from './Stuck'
 
 function Segment({ seg }: { seg: ExampleSegment }) {
   if (seg.latex) return <Katex tex={seg.latex} />
@@ -8,18 +9,14 @@ function Segment({ seg }: { seg: ExampleSegment }) {
 }
 
 /**
- * Rejection feedback: pattern title + lesson (plain text), the wrong → right example (each part as
- * math only when it parses), and the counterexample with both sides' values. ✗ + words, never
- * color alone.
+ * The lesson under a rejection's title: the catalog lesson, the sentence about her own line, the wrong → right
+ * example (each part as math only when it parses), and the counterexample with both sides' values. The card in
+ * the work list and the phone composer's "Why?" sheet both show it.
  */
-export function RejectionCard({ result }: { result: StepResult }) {
+export function RejectionDetails({ result }: { result: StepResult }) {
   const v = rejectionView(result)
   return (
-    <div role="alert" className="rounded-2xl border border-bad bg-bad-100 p-3 text-navy">
-      <p className="font-semibold">
-        <span aria-hidden>✗ </span>
-        Not accepted: {v.title}
-      </p>
+    <>
       {v.lesson && <p className="mt-1 text-sm">{v.lesson}</p>}
       {v.witness && <p className="mt-1 text-sm font-medium">{v.witness}</p>}
       {v.example.length > 0 && (
@@ -41,7 +38,29 @@ export function RejectionCard({ result }: { result: StepResult }) {
           ))}
         </ul>
       )}
-    </div>
+    </>
+  )
+}
+
+/**
+ * Rejection feedback: pattern title + lesson (plain text), the wrong → right example (each part as
+ * math only when it parses), and the counterexample with both sides' values. ✗ + words, never
+ * color alone. On a phone, in a column without the composer (even/odd), the Stuck? chip sits under it;
+ * where the composer is open the composer carries the chip and the card stays as it is.
+ */
+export function RejectionCard({ result }: { result: StepResult }) {
+  const v = rejectionView(result)
+  return (
+    <>
+      <div role="alert" className="rounded-2xl border border-bad bg-bad-100 p-3 text-navy">
+        <p className="font-semibold">
+          <span aria-hidden>✗ </span>
+          Not accepted: {v.title}
+        </p>
+        <RejectionDetails result={result} />
+      </div>
+      <StuckChip />
+    </>
   )
 }
 
@@ -51,6 +70,15 @@ export function CaveatBanner({ restriction }: { restriction?: string }) {
     <div className="rounded-xl border border-gold bg-gold-100 px-3 py-2 text-sm text-navy" role="status">
       <span aria-hidden>⚠ </span>
       <span className="font-semibold">Legal, but check for extra answers. </span>
+      <CaveatText restriction={restriction} />
+    </div>
+  )
+}
+
+/** The caveat's explanation (the banner's body; also the phone composer's "Why?" sheet for a kept line). */
+export function CaveatText({ restriction }: { restriction?: string }) {
+  return (
+    <>
       That move can add solutions that the original never had — plug every answer back into the original at the end.
       {restriction && (
         <>
@@ -58,6 +86,6 @@ export function CaveatBanner({ restriction }: { restriction?: string }) {
           Keep the restriction <code className="rounded bg-white px-1 font-mono">{restriction}</code>.
         </>
       )}
-    </div>
+    </>
   )
 }

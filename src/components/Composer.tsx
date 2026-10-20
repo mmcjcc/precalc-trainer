@@ -35,6 +35,8 @@ type Props = {
   toolbar?: ReactNode
   /** Inline banner above the composer (idle nudge, chip prompt). */
   banner?: ReactNode
+  /** Row right above the input (the phone's verdict about her last line, Why?, Stuck?). */
+  status?: ReactNode
 }
 
 /**
@@ -43,7 +45,7 @@ type Props = {
  * The keypad treats it as one region, and after a Check scrolls the page to its end, where her newest
  * line and its message are.
  */
-export function Composer({ children, toolbar, banner }: Props) {
+export function Composer({ children, toolbar, banner, status }: Props) {
   const bp = useBreakpoint()
   const mobile = bp === 'mobile'
   const offset = useVisualViewportOffset(mobile)
@@ -61,6 +63,7 @@ export function Composer({ children, toolbar, banner }: Props) {
     >
       {banner}
       {toolbar && <div className="mb-2 flex flex-wrap gap-2">{toolbar}</div>}
+      {status}
       {children}
     </div>
   )

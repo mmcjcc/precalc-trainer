@@ -17,6 +17,7 @@ import type { CheckValue } from '@/content/types'
 import { Katex } from './Katex'
 import { KEYPAD_SETS } from './keypadKeys'
 import { MathTextInput } from './MathTextInput'
+import { StuckChip } from './Stuck'
 
 /** f(k) and f⁻¹(f(k)) are numbers (maybe negative, maybe a fraction): the math keypad on a touch screen. */
 const NUMBER_BOX = { keys: KEYPAD_SETS.number }
@@ -37,10 +38,14 @@ function VerdictButton({ active, onClick, children, disabled }: { active: boolea
 
 function Message({ ok, text }: { ok: boolean; text: string }) {
   return (
-    <p role={ok ? 'status' : 'alert'} className={`rounded-xl px-3 py-2 text-sm ${ok ? 'bg-ok-100 text-ok' : 'bg-bad-100 text-navy'}`}>
-      <span aria-hidden>{ok ? '✓ ' : '✗ '}</span>
-      {text}
-    </p>
+    <>
+      <p role={ok ? 'status' : 'alert'} className={`rounded-xl px-3 py-2 text-sm ${ok ? 'bg-ok-100 text-ok' : 'bg-bad-100 text-navy'}`}>
+        <span aria-hidden>{ok ? '✓ ' : '✗ '}</span>
+        {text}
+      </p>
+      {/* On a phone: the next hint under her thumb, under a wrong verdict. */}
+      {!ok && <StuckChip />}
+    </>
   )
 }
 

@@ -12,6 +12,7 @@ import { IsotopeTable, PeriodicTiles } from '@/components/IsotopeTable'
 import { Katex } from '@/components/Katex'
 import { SigFigCorrect, SigFigExplanation, SigFigRejection } from '@/components/SigFigFeedback'
 import { SigFigNumeralInput } from '@/components/SigFigNumeralInput'
+import { useStuckRequest } from '@/components/Stuck'
 import { useBreakpoint } from '@/components/useBreakpoint'
 import { ProblemFrame } from './ProblemFrame'
 import { recordAtomGrade, recordSigFigGrade } from './record'
@@ -138,6 +139,7 @@ function AtomHintPanel({
   onAdvance: () => void
   disabled: boolean
 }) {
+  useStuckRequest(rung, onAdvance, disabled || rung === 3)
   return (
     <div className="space-y-3">
       <p className="text-sm text-navy/70">Hints never appear on their own.<span className="pointer-coarse:hidden"> Ctrl+Shift+H steps through them.</span></p>

@@ -130,6 +130,12 @@ body { padding-bottom: var(--keypad-h, 0px); }
 }
 .toast-host { bottom: calc(max(1rem, env(safe-area-inset-bottom, 0px)) + var(--keypad-h, 0px)); }
 
+/* Phone problem screen (pages/flows/ProblemFrame.tsx). Once the gold problem card scrolls out of view, a slim strip
+   pins the problem to the top of the screen, right under the status bar (z-30, like the safe-area bands, which it
+   never overlaps; under the keypad, the sheets and the toasts). Scrolling back to the card stops below the bar. */
+.pinned-problem { top: env(safe-area-inset-top, 0px); }
+.problem-card { scroll-margin-top: calc(env(safe-area-inset-top, 0px) + 0.75rem); }
+
 /* Keycaps */
 kbd.keycap {
   display: inline-block;

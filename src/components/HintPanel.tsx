@@ -2,6 +2,7 @@ import { toLatex } from '@/notation'
 import type { RuleCard } from '@/content/types'
 import type { HintView } from '@/problem/stepEngine'
 import { Katex } from './Katex'
+import { useStuckRequest } from './Stuck'
 
 type Props = {
   rung: 0 | 1 | 2 | 3
@@ -36,6 +37,7 @@ export function RuleCardView({ card }: { card: RuleCard | { id: string; title: s
  */
 export function HintPanel({ rung, view, onAdvance, onUseLine, highlight = false, disabled = false }: Props) {
   const exhausted = rung === 3 || (rung === 2 && !view.reveal)
+  useStuckRequest(rung, onAdvance, disabled || exhausted)
   return (
     <div className="space-y-3">
       <p className="text-sm text-navy/70">Hints never appear on their own.<span className="pointer-coarse:hidden"> Ctrl+Shift+H steps through them.</span></p>

@@ -4,6 +4,7 @@ import { FN_PATTERN } from '@/content/modules/domainRange/patterns'
 import type { RuleCard } from '@/content/types'
 import { RuleCardView } from '@/components/HintPanel'
 import { SigFigCorrect, SigFigExplanation, SigFigRejection } from '@/components/SigFigFeedback'
+import { useStuckRequest } from '@/components/Stuck'
 import { SymbolStrip } from '@/components/MathSymbolStrip'
 import { MathTextInput } from '@/components/MathTextInput'
 import { SET_ANSWER_KEYS, insertToken, type StripKey } from '@/components/symbolStrip'
@@ -55,6 +56,7 @@ export function FnHintLadder({
   onAdvance: () => void
   disabled: boolean
 }) {
+  useStuckRequest(rung, onAdvance, disabled || rung === 3)
   return (
     <div className="space-y-3">
       <p className="text-sm text-navy/70">Hints never appear on their own.<span className="pointer-coarse:hidden"> Ctrl+Shift+H steps through them.</span></p>

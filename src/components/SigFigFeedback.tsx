@@ -1,4 +1,5 @@
 import type { PatternHit } from '@/shared/types'
+import { StuckChip } from './Stuck'
 
 /** Split a catalog example ("0.00450 → 6 figures ✗ → 3 figures") into arrow-joined plain segments. */
 function ExampleLine({ example }: { example: string }) {
@@ -20,12 +21,15 @@ function ExampleLine({ example }: { example: string }) {
   )
 }
 
-/** One named mistake: title, lesson, the witness about her numbers, and the wrong → right example. */
-export function PatternLesson({ hit, witness, heading = 'p' }: { hit: PatternHit; witness?: string; heading?: 'p' | 'h3' }) {
+/**
+ * One named mistake: title, lesson, the witness about her numbers, and the wrong → right example. `showTitle`
+ * false leaves the title to what frames it (the phone composer's "Why?" sheet has it as its heading).
+ */
+export function PatternLesson({ hit, witness, heading = 'p', showTitle = true }: { hit: PatternHit; witness?: string; heading?: 'p' | 'h3'; showTitle?: boolean }) {
   const Title = heading
   return (
     <div>
-      <Title className="font-semibold">{hit.title}</Title>
+      {showTitle && <Title className="font-semibold">{hit.title}</Title>}
       {hit.lesson && <p className="mt-1 text-sm">{hit.lesson}</p>}
       {witness && <p className="mt-1 text-sm font-medium">{witness}</p>}
       {hit.example && <ExampleLine example={hit.example} />}
@@ -36,8 +40,18 @@ export function PatternLesson({ hit, witness, heading = 'p' }: { hit: PatternHit
 /**
  * Wrong-answer card in the existing rejection styling (✗ + words, never color alone): the named
  * mistake(s) with lesson, example and witness, or the grader's plain message when nothing matched.
+ * On a phone, the Stuck? chip sits under it (outside the alert, which stays the verdict's words only).
  */
 export function SigFigRejection({ message, patterns }: { message: string; patterns: PatternHit[] }) {
+  return (
+    <>
+      <SigFigRejectionCard message={message} patterns={patterns} />
+      <StuckChip />
+    </>
+  )
+}
+
+function SigFigRejectionCard({ message, patterns }: { message: string; patterns: PatternHit[] }) {
   const single = patterns.length === 1 ? patterns[0]! : null
   return (
     <div role="alert" className="rounded-2xl border border-bad bg-bad-100 p-3 text-navy">

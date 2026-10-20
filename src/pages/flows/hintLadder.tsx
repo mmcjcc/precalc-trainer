@@ -2,6 +2,7 @@ import { useCallback } from 'react'
 import type { RuleCard } from '@/content/types'
 import { RuleCardView } from '@/components/HintPanel'
 import { SigFigExplanation } from '@/components/SigFigFeedback'
+import { useStuckRequest } from '@/components/Stuck'
 import { useStore, type Attempt } from '@/store'
 
 /** Hint-ladder key (attempt.hintsUsed) for a problem with one ladder. */
@@ -57,6 +58,7 @@ export function HintLadder({
   disabled: boolean
 }) {
   const exhausted = rung === 3
+  useStuckRequest(rung, onAdvance, disabled || exhausted)
   return (
     <div className="space-y-3">
       <p className="text-sm text-navy/70">Hints never appear on their own.<span className="pointer-coarse:hidden"> Ctrl+Shift+H steps through them.</span></p>

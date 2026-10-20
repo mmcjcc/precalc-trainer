@@ -10,6 +10,7 @@ import { RuleCardView } from '@/components/HintPanel'
 import { SigFigDigits } from '@/components/SigFigDigits'
 import { SigFigCorrect, SigFigExplanation, SigFigRejection } from '@/components/SigFigFeedback'
 import { SigFigNumeralInput } from '@/components/SigFigNumeralInput'
+import { useStuckRequest } from '@/components/Stuck'
 import { useBreakpoint } from '@/components/useBreakpoint'
 import { ProblemFrame } from './ProblemFrame'
 import { recordSigFigGrade, recordSigFigTaps } from './record'
@@ -62,6 +63,7 @@ const HINT_LABEL: Record<0 | 1 | 2 | 3, string> = {
 
 function SigFigHintPanel({ rung, content, onAdvance, disabled }: { rung: 0 | 1 | 2 | 3; content: HintContent; onAdvance: () => void; disabled: boolean }) {
   const exhausted = rung === 3
+  useStuckRequest(rung, onAdvance, disabled || exhausted)
   return (
     <div className="space-y-3">
       <p className="text-sm text-navy/70">Hints never appear on their own.<span className="pointer-coarse:hidden"> Ctrl+Shift+H steps through them.</span></p>

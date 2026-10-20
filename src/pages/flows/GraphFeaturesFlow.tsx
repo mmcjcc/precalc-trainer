@@ -12,6 +12,7 @@ import { RuleCardView } from '@/components/HintPanel'
 import { KEYPAD_SETS } from '@/components/keypadKeys'
 import { MathTextInput } from '@/components/MathTextInput'
 import { SigFigCorrect, SigFigExplanation, SigFigRejection } from '@/components/SigFigFeedback'
+import { useStuckRequest } from '@/components/Stuck'
 import { ProblemFrame } from './ProblemFrame'
 import { recordGraphFeatures } from './record'
 import type { FlowProps } from './types'
@@ -98,6 +99,7 @@ function HintLadder({
   onAdvance: () => void
   disabled: boolean
 }) {
+  useStuckRequest(rung, onAdvance, disabled || rung === 3)
   return (
     <div className="space-y-3">
       <p className="text-sm text-navy/70">Hints never appear on their own.<span className="pointer-coarse:hidden"> Ctrl+Shift+H steps through them.</span></p>

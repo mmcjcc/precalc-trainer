@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { act, fireEvent, render, screen } from '@testing-library/react'
+import { act, fireEvent, render, screen, within } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { generateProblem } from '@/content'
@@ -386,6 +386,9 @@ describe('review fixes: idle clock and nudge (F6, F13)', () => {
 })
 
 describe('review fixes: attempt lifecycle (F7, F8)', () => {
+  // The question is the app's own sheet now (no window.confirm): "Leave" or "Back to it".
+  const leaveSheet = () => screen.queryByRole('dialog', { name: 'Unfinished problem' })
+
   it('F7: a stored attempt from an older generator version of this same URL starts fresh without asking', () => {
     const inst = generateProblem('evenOdd', 'evenOdd.special', 12345, {})
     const answer = inst.answer
@@ -400,9 +403,10 @@ describe('review fixes: attempt lifecycle (F7, F8)', () => {
       genVersion: 0,
     })
     useStore.getState().acceptStep({ text: encodeSlotStep('A', answer.fNegX[0]!) })
-    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false)
+    const confirm = vi.spyOn(window, 'confirm')
     try {
       renderAt(problemPath('evenOdd', 'evenOdd.special', 12345))
+      expect(leaveSheet()).toBeNull()
       expect(confirm).not.toHaveBeenCalled()
       const a = useStore.getState().attempt
       expect(a?.problemId).toBe(inst.id)
@@ -420,28 +424,32 @@ describe('review fixes: attempt lifecycle (F7, F8)', () => {
   it('opening another problem after only looking at one asks nothing and records nothing', () => {
     const first = renderAt(problemPath('inequalities', 'ineq.linear', 12345))
     first.unmount()
-    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false)
-    try {
-      renderAt(problemPath('inequalities', 'ineq.linear', 999))
-      expect(confirm).not.toHaveBeenCalled()
-      expect(useStore.getState().attempt?.problemId).toBe(generateProblem('inequalities', 'ineq.linear', 999, {}).id)
-      expect(events('problem_abandoned')).toEqual([])
-    } finally {
-      confirm.mockRestore()
-    }
+    renderAt(problemPath('inequalities', 'ineq.linear', 999))
+    expect(leaveSheet()).toBeNull()
+    expect(useStore.getState().attempt?.problemId).toBe(generateProblem('inequalities', 'ineq.linear', 999, {}).id)
+    expect(events('problem_abandoned')).toEqual([])
   })
 
-  it('F7: Cancel on the leave-confirm for a different problem lands on a working page for the stored one', () => {
+  it('F7: "Back to it" on the leave sheet for a different problem lands on a working page for the stored one', () => {
     const inst = generateProblem('inequalities', 'ineq.linear', 12345, {})
     const first = renderAt(problemPath('inequalities', 'ineq.linear', 12345))
     type('Next line', inst.canonical[0]!.text)
     click('Check this step')
     first.unmount()
-    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false)
+    const confirm = vi.spyOn(window, 'confirm')
     try {
       renderAt(problemPath('inequalities', 'ineq.linear', 999))
-      expect(confirm).toHaveBeenCalledTimes(1)
+      const sheet = leaveSheet()
+      expect(sheet?.textContent).toContain('You have work on this problem. Leave it? It will count as unfinished.')
+      // The sheet names the problem it is about (the stored one, not the page behind it).
+      expect(sheet?.textContent).toContain(inst.title)
+      // Nothing changes while she decides.
       expect(useStore.getState().attempt?.problemId).toBe(inst.id)
+      fireEvent.click(within(sheet!).getByRole('button', { name: 'Back to it' }))
+      expect(leaveSheet()).toBeNull()
+      expect(confirm).not.toHaveBeenCalled()
+      expect(useStore.getState().attempt?.problemId).toBe(inst.id)
+      expect(events('problem_abandoned')).toEqual([])
       type('Next line', inst.canonical[1]!.text)
       click('Check this step')
       expect(useStore.getState().attempt?.steps).toHaveLength(2)
@@ -450,24 +458,38 @@ describe('review fixes: attempt lifecycle (F7, F8)', () => {
     }
   })
 
-  it('F8: the same seed with different difficulty flags asks, then starts its own attempt', () => {
+  it('F7: closing the leave sheet (Esc) is "Back to it": her work is kept', () => {
+    const inst = generateProblem('inequalities', 'ineq.linear', 12345, {})
+    const first = renderAt(problemPath('inequalities', 'ineq.linear', 12345))
+    type('Next line', inst.canonical[0]!.text)
+    click('Check this step')
+    first.unmount()
+    renderAt(problemPath('inequalities', 'ineq.linear', 999))
+    expect(leaveSheet()).toBeTruthy()
+    fireEvent.keyDown(document, { key: 'Escape' })
+    expect(leaveSheet()).toBeNull()
+    expect(useStore.getState().attempt?.problemId).toBe(inst.id)
+    expect(useStore.getState().attempt?.steps).toHaveLength(1)
+    expect(events('problem_abandoned')).toEqual([])
+  })
+
+  it('F8: the same seed with different difficulty flags asks, then "Leave" starts its own attempt', () => {
     const plain = generateProblem('inequalities', 'ineq.linear', 12345, {})
     const neg = generateProblem('inequalities', 'ineq.linear', 12345, { negativeLead: true })
     const first = renderAt(problemPath('inequalities', 'ineq.linear', 12345))
     type('Next line', plain.canonical[0]!.text)
     click('Check this step')
     first.unmount()
-    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true)
-    try {
-      renderAt(problemPath('inequalities', 'ineq.linear', 12345, 'n'))
-      expect(confirm).toHaveBeenCalledTimes(1)
-      expect(useStore.getState().attempt).toMatchObject({ difficulty: 'n', steps: [] })
-      type('Next line', neg.canonical[0]!.text)
-      click('Check this step')
-      expect(screen.queryByText(/Not accepted/)).toBeNull()
-      expect(useStore.getState().attempt?.steps).toHaveLength(1)
-    } finally {
-      confirm.mockRestore()
-    }
+    renderAt(problemPath('inequalities', 'ineq.linear', 12345, 'n'))
+    const sheet = leaveSheet()
+    expect(sheet).toBeTruthy()
+    fireEvent.click(within(sheet!).getByRole('button', { name: 'Leave' }))
+    expect(leaveSheet()).toBeNull()
+    expect(useStore.getState().attempt).toMatchObject({ difficulty: 'n', steps: [] })
+    expect(events('problem_abandoned')).toHaveLength(1)
+    type('Next line', neg.canonical[0]!.text)
+    click('Check this step')
+    expect(screen.queryByText(/Not accepted/)).toBeNull()
+    expect(useStore.getState().attempt?.steps).toHaveLength(1)
   })
 })

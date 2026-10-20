@@ -7,6 +7,7 @@ import { detectInverseCompletion, gradeOneToOne, ONE_TO_ONE_REASONS, type Invers
 import { buildStepContext, classifyStep, hintView, liveParseError, progressLine, type HintView, type ProgressLine } from '@/problem/stepEngine'
 import { useKeyedHint } from '@/problem/useKeyedHint'
 import { currentLineOf, useStepEngine } from '@/problem/useStepEngine'
+import { engineVerdict } from '@/components/ComposerVerdict'
 import { HintPanel } from '@/components/HintPanel'
 import { MathInput } from '@/components/MathInput'
 import { PropertyChips } from '@/components/PropertyChips'
@@ -74,6 +75,10 @@ function InverseBody({ instance, attempt, flags, templateTitle, completion, fini
   const validate = useCallback((t: string) => liveParseError(t, instance.vars), [instance.vars])
   const [cardVerdict, setCardVerdict] = useState<TutorVerdict | null>(null)
   const tutorVerdict = engine.rejection ? verdictFromStep(engine.rejection, engine.draft) : cardVerdict
+  const lineVerdict = useMemo(
+    () => engineVerdict({ rejection: engine.rejection, kept: engine.kept, caveat: engine.caveat }),
+    [engine.rejection, engine.kept, engine.caveat],
+  )
 
   // --- non-column hints -------------------------------------------------------
   const verdictHint = useKeyedHint(attempt, VERDICT_HINT, done)
@@ -160,6 +165,7 @@ function InverseBody({ instance, attempt, flags, templateTitle, completion, fini
       nudgeText={nudgeText}
       hints={hints}
       tutorVerdict={tutorVerdict}
+      lineVerdict={lineVerdict}
       keymap={{
         onHint: phase === 'verdict' ? verdictHint.advance : phase === 'steps' ? engine.advanceHint : checkHint.advance,
         onUndo: stepsOpen ? engine.undo : undefined,

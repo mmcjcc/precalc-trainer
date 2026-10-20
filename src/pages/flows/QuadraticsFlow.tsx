@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
+import { KEPT, patternVerdict, type LineVerdict } from '@/components/ComposerVerdict'
 import { GraphPanel } from '@/components/GraphPanel'
 import { Katex } from '@/components/Katex'
 import { MathInput } from '@/components/MathInput'
 import { SigFigExplanation } from '@/components/SigFigFeedback'
 import { FUNCTION_KEYS } from '@/components/symbolStrip'
 import { WorkedColumn } from '@/components/WorkedColumn'
-import { POLY_PATTERN, polyShow } from '@/content/modules/polynomials/patterns'
+import { POLY_PATTERN, polyGradePattern, polyShow } from '@/content/modules/polynomials/patterns'
 import { csRuleIdFor, gradeExtremum, gradeOpens, type QuadraticsAnswer } from '@/content/modules/quadratics'
 import { getModule } from '@/content/registry'
 import type { RuleCard } from '@/content/types'
@@ -182,6 +183,16 @@ function FormBody({ instance, attempt, flags, templateTitle, completion, finish,
   const grade = feedback?.kind === 'grade' ? feedback.grade : null
   const mistake = grade?.verdict === 'mistake' ? grade.mistake : null
   const { card, related } = useRuleCards(instance.moduleId, answer, mistake)
+  // The same feedback in the phone composer, one line above her input.
+  const composerVerdict = useMemo<LineVerdict | null>(() => {
+    if (!feedback) return null
+    if (feedback.kind === 'same') return { tone: 'info', text: 'That is the line above, written again. Change one thing, then check it.' }
+    const g = feedback.grade
+    if (g.verdict === 'invalid' || g.verdict === 'unsupported') return { tone: 'info', text: g.message }
+    if (g.verdict === 'mistake') return patternVerdict(polyGradePattern(g), g.witness)
+    if (g.verdict === 'wrong') return patternVerdict(null, g.message)
+    return KEPT
+  }, [feedback])
   const total = Math.max(1, answer.path.length - 1)
   const progress: ProgressLine = {
     stage: done ? total : Math.min(steps.length, total - 1),
@@ -201,6 +212,7 @@ function FormBody({ instance, attempt, flags, templateTitle, completion, finish,
       progress={progress}
       completion={completion}
       tutorVerdict={grade ? verdictFromPoly([grade], feedback?.text) : undefined}
+      lineVerdict={composerVerdict}
       nudgeText="Still here? Type the next line of your work below. The hint button is right there."
       keymap={{ onHint: hint.advance, onUndo: undo }}
       statement={<Statement answer={answer} />}
