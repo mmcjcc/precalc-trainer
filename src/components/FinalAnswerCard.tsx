@@ -2,7 +2,11 @@ import { useId, useMemo, useRef, useState, type FormEvent, type RefObject } from
 import { parseSetBuilder, setToLatex } from '@/notation'
 import { gradeFinalAnswer, previewInterval, type FieldResult, type FinalAnswerGrade, type FinalAnswerTarget } from '@/problem/inequality'
 import { Katex } from './Katex'
+import { keysWith } from './keypadKeys'
+import { MathTextInput } from './MathTextInput'
 import { NumberLineSet } from './NumberLineSet'
+import type { StripKey } from './symbolStrip'
+import { useMathKeypadOn } from './useMathKeypad'
 
 type Props = {
   target: FinalAnswerTarget
@@ -16,6 +20,24 @@ type Props = {
 
 const INTERVAL_TOKENS = ['(', ')', '[', ']', ',', 'inf', '-inf', 'U', '{', '}']
 const BUILDER_TOKENS = ['{x |', '}', '<', '<=', '>', '>=', 'or', '=']
+
+/**
+ * On a touch screen the math keypad replaces the token buttons and the phone keyboard. Its context
+ * row offers the same tokens; joining words come with spaces (the keypad has no space bar).
+ */
+const INTERVAL_KEYPAD: readonly StripKey[] = [
+  ...keysWith(['[', ']', '∞']),
+  { label: '−∞', insert: '-inf', caret: 0, name: 'minus infinity' },
+  ...keysWith(['∪', '{ }']),
+]
+
+function builderKeypad(variable: string): StripKey[] {
+  return [
+    { label: `{${variable} | }`, insert: `{${variable} | }`, caret: -1, name: `the set of ${variable} such that` },
+    { label: '}', insert: '}', caret: 0, name: 'close brace' },
+    ...keysWith(['<', '≤', '>', '≥', 'or']),
+  ]
+}
 
 function StatusLine({ r, id }: { r: FieldResult; id: string }) {
   if (r.status === 'empty' || !r.message) return null
@@ -56,6 +78,9 @@ export function FinalAnswerCard({ target, initial, onGrade, done = false, variab
   const localRef = useRef<HTMLInputElement | null>(null)
   const builderRef = useRef<HTMLInputElement | null>(null)
   const intervalEl = inputRef ?? localRef
+  const keypadOn = useMathKeypadOn()
+  const intervalBox = useMemo(() => ({ keys: INTERVAL_KEYPAD }), [])
+  const builderBox = useMemo(() => ({ keys: builderKeypad(variable), vars: [variable] }), [variable])
 
   const preview = useMemo(() => previewInterval(interval), [interval])
   const builderPreview = useMemo(() => {
@@ -95,8 +120,9 @@ export function FinalAnswerCard({ target, initial, onGrade, done = false, variab
           <div className="flex min-h-10 items-center rounded-lg bg-navy-50 px-3 py-1.5 text-navy">
             {preview ? <Katex tex={setToLatex(preview, 'interval')} /> : <span className="text-sm text-navy/50">{interval.trim() ? '…' : 'like (-inf, -2] U (5, inf)'}</span>}
           </div>
-          <input
+          <MathTextInput
             ref={intervalEl}
+            keypad={intervalBox}
             id={`${id}-interval`}
             type="text"
             value={interval}
@@ -116,19 +142,21 @@ export function FinalAnswerCard({ target, initial, onGrade, done = false, variab
             aria-describedby={`${id}-interval-status`}
             className="min-h-12 w-full rounded-xl border-2 border-navy-100 bg-white px-3 py-2 font-mono text-[max(16px,1rem)] text-ink outline-none focus:border-navy disabled:bg-navy-50"
           />
-          <div className="flex flex-wrap gap-1.5" role="group" aria-label="Interval symbols">
-            {INTERVAL_TOKENS.map((t) => (
-              <button
-                key={t}
-                type="button"
-                disabled={done}
-                onClick={() => insertAtCaret(intervalEl.current, interval, t, (v) => { setInterval(v); setGrade(null) })}
-                className="min-h-10 min-w-10 rounded-lg border border-navy-100 bg-white px-2 font-mono text-sm text-navy hover:bg-navy-50"
-              >
-                {t === 'U' ? '∪' : t === 'inf' ? '∞' : t === '-inf' ? '−∞' : t}
-              </button>
-            ))}
-          </div>
+          {!keypadOn && (
+            <div className="flex flex-wrap gap-1.5" role="group" aria-label="Interval symbols">
+              {INTERVAL_TOKENS.map((t) => (
+                <button
+                  key={t}
+                  type="button"
+                  disabled={done}
+                  onClick={() => insertAtCaret(intervalEl.current, interval, t, (v) => { setInterval(v); setGrade(null) })}
+                  className="min-h-10 min-w-10 rounded-lg border border-navy-100 bg-white px-2 font-mono text-sm text-navy hover:bg-navy-50"
+                >
+                  {t === 'U' ? '∪' : t === 'inf' ? '∞' : t === '-inf' ? '−∞' : t}
+                </button>
+              ))}
+            </div>
+          )}
           {intervalStatus && <StatusLine r={intervalStatus} id={`${id}-interval-status`} />}
           <div aria-live="off">
             {preview ? (
@@ -148,8 +176,9 @@ export function FinalAnswerCard({ target, initial, onGrade, done = false, variab
           <div className="flex min-h-10 items-center rounded-lg bg-navy-50 px-3 py-1.5 text-navy">
             {builderPreview ? <Katex tex={setToLatex(builderPreview, 'builder')} /> : <span className="text-sm text-navy/50">{builder.trim() ? '…' : `like {${variable} | ${variable} <= -2 or ${variable} > 5}`}</span>}
           </div>
-          <input
+          <MathTextInput
             ref={builderRef}
+            keypad={builderBox}
             id={`${id}-builder`}
             type="text"
             value={builder}
@@ -169,19 +198,21 @@ export function FinalAnswerCard({ target, initial, onGrade, done = false, variab
             aria-describedby={`${id}-builder-status`}
             className="min-h-12 w-full rounded-xl border-2 border-navy-100 bg-white px-3 py-2 font-mono text-[max(16px,1rem)] text-ink outline-none focus:border-navy disabled:bg-navy-50"
           />
-          <div className="flex flex-wrap gap-1.5" role="group" aria-label="Set-builder symbols">
-            {BUILDER_TOKENS.map((t) => (
-              <button
-                key={t}
-                type="button"
-                disabled={done}
-                onClick={() => insertAtCaret(builderRef.current, builder, t.replace(/x/g, variable), (v) => { setBuilder(v); setGrade(null) })}
-                className="min-h-10 min-w-10 rounded-lg border border-navy-100 bg-white px-2 font-mono text-sm text-navy hover:bg-navy-50"
-              >
-                {t === '<=' ? '≤' : t === '>=' ? '≥' : t.replace(/x/g, variable)}
-              </button>
-            ))}
-          </div>
+          {!keypadOn && (
+            <div className="flex flex-wrap gap-1.5" role="group" aria-label="Set-builder symbols">
+              {BUILDER_TOKENS.map((t) => (
+                <button
+                  key={t}
+                  type="button"
+                  disabled={done}
+                  onClick={() => insertAtCaret(builderRef.current, builder, t.replace(/x/g, variable), (v) => { setBuilder(v); setGrade(null) })}
+                  className="min-h-10 min-w-10 rounded-lg border border-navy-100 bg-white px-2 font-mono text-sm text-navy hover:bg-navy-50"
+                >
+                  {t === '<=' ? '≤' : t === '>=' ? '≥' : t.replace(/x/g, variable)}
+                </button>
+              ))}
+            </div>
+          )}
           {builderStatus && <StatusLine r={builderStatus} id={`${id}-builder-status`} />}
         </div>
       )}

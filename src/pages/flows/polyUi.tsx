@@ -6,6 +6,7 @@
 import type { Ref } from 'react'
 import { polyGradePattern } from '@/content/modules/polynomials/patterns'
 import type { PolyGrade, SquareLineGrade } from '@/engine'
+import { MathTextInput, type KeypadBox } from '@/components/MathTextInput'
 import { SigFigCorrect, SigFigRejection } from '@/components/SigFigFeedback'
 import { useStore } from '@/store'
 import type { PatternHit } from '@/shared/types'
@@ -87,7 +88,8 @@ const TEXT_BOX =
 
 /**
  * One labelled answer box (48 px tall, a 16 px font so phones do not zoom). `hint` is the line under the
- * box. Never a number input: answers are exact text such as "-5/4" or "(3, -5)".
+ * box. Never a number input: answers are exact text such as "-5/4" or "(3, -5)". With `keypad`, a math
+ * box: on a touch screen it opens the math keypad, with those keys in its context row.
  */
 export function PolyTextBox({
   id,
@@ -99,6 +101,7 @@ export function PolyTextBox({
   invalid,
   onChange,
   inputRef,
+  keypad,
 }: {
   id: string
   label: string
@@ -109,13 +112,15 @@ export function PolyTextBox({
   invalid: boolean
   onChange: (v: string) => void
   inputRef?: Ref<HTMLInputElement>
+  keypad?: KeypadBox
 }) {
   return (
     <div>
       <label htmlFor={id} className="block text-sm font-semibold text-navy">
         {label}
       </label>
-      <input
+      <MathTextInput
+        keypad={keypad}
         ref={inputRef}
         id={id}
         type="text"

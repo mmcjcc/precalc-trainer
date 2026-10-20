@@ -1,5 +1,7 @@
 import { useMemo, useRef, useState } from 'react'
 import { Katex } from '@/components/Katex'
+import { KEYPAD_SETS } from '@/components/keypadKeys'
+import { MathTextInput } from '@/components/MathTextInput'
 import { SigFigCorrect, SigFigExplanation, SigFigRejection } from '@/components/SigFigFeedback'
 import { getModule } from '@/content/registry'
 import { PW_RULE_IDS } from '@/content/modules/piecewiseRate/rules'
@@ -150,6 +152,9 @@ function GradeView({ grade }: { grade: TransformGrade | null }) {
   )
 }
 
+/** A value or a rate is a number ("undefined" is a word: the keypad's abc key). */
+const NUMBER_BOX = { keys: KEYPAD_SETS.number }
+
 function ValueField({
   value,
   onChange,
@@ -178,7 +183,8 @@ function ValueField({
         {label}
       </label>
       <div className="flex gap-2">
-        <input
+        <MathTextInput
+          keypad={NUMBER_BOX}
           id="pw-value"
           type="text"
           value={value}

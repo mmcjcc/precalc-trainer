@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent, type KeyboardEvent, type ReactNode } from 'react'
 import { GraphPanel } from '@/components/GraphPanel'
 import { Katex } from '@/components/Katex'
+import { KEYPAD_SETS } from '@/components/keypadKeys'
 import { SigFigCorrect, SigFigExplanation, SigFigRejection } from '@/components/SigFigFeedback'
 import { gradeScStage, SC_KEYS, SC_RULE_FOR, type ScGrade, type SignChartsAnswer } from '@/content/modules/signCharts'
 import { math } from '@/content/modules/signCharts/model'
@@ -369,6 +370,7 @@ function Body({ instance, attempt, flags, templateTitle, completion, finish, ans
                     invalid={Boolean(invalid)}
                     onChange={(v) => update(key, v)}
                     inputRef={register(key)}
+                    keypad={{ keys: s.id === 'solution' ? KEYPAD_SETS.interval : KEYPAD_SETS.number }}
                   />
                 )}
                 <button type="submit" className="min-h-12 rounded-xl bg-navy px-4 font-semibold text-white hover:bg-navy-600">

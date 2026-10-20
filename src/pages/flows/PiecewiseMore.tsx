@@ -1,7 +1,10 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { GraphPanel } from '@/components/GraphPanel'
 import { Katex } from '@/components/Katex'
+import { KEYPAD_SETS } from '@/components/keypadKeys'
+import { MathTextInput } from '@/components/MathTextInput'
 import { SigFigCorrect, SigFigExplanation, SigFigRejection } from '@/components/SigFigFeedback'
+import { FUNCTION_KEYS } from '@/components/symbolStrip'
 import { gradeK, gradePwSet, type PwGrade } from '@/content/modules/piecewiseRate/grade'
 import { PW_RULE_IDS } from '@/content/modules/piecewiseRate/rules'
 import { gradeWrite, type WriteRow } from '@/content/modules/piecewiseRate/write'
@@ -43,6 +46,11 @@ const CARD: Partial<Record<ErrorPatternId, string>> = {
 
 const BOX =
   'min-h-12 w-full min-w-0 flex-1 rounded-xl border-2 border-navy-100 bg-white px-3 py-2 font-mono text-[max(16px,1rem)] text-ink outline-none focus:border-navy disabled:bg-navy-50'
+
+/** Math-keypad keys: k and a read value are numbers; a piece is a formula in x and a condition on x. */
+const NUMBER_BOX = { keys: KEYPAD_SETS.number }
+const FORMULA_BOX = { keys: FUNCTION_KEYS }
+const CONDITION_BOX = { keys: KEYPAD_SETS.condition }
 
 function enginePieces(answer: PiecewiseAnswer): PiecewisePiece[] {
   return (answer.pieces ?? []).map((p) => ({
@@ -303,7 +311,8 @@ function PartField({
         {part.label}
       </label>
       <div className="flex gap-2">
-        <input
+        <MathTextInput
+          keypad={NUMBER_BOX}
           id={`pw-${part.key}`}
           type="text"
           value={value}
@@ -352,7 +361,8 @@ function WriteRows({
             <label htmlFor={`pw-f${i}`} className="block text-sm font-semibold text-navy">
               Formula for piece {i + 1}
             </label>
-            <input
+            <MathTextInput
+              keypad={FORMULA_BOX}
               id={`pw-f${i}`}
               type="text"
               value={entries[`f${i}`] ?? ''}
@@ -370,7 +380,8 @@ function WriteRows({
             <label htmlFor={`pw-c${i}`} className="block text-sm font-semibold text-navy">
               Interval for piece {i + 1}
             </label>
-            <input
+            <MathTextInput
+              keypad={CONDITION_BOX}
               id={`pw-c${i}`}
               type="text"
               value={entries[`c${i}`] ?? ''}

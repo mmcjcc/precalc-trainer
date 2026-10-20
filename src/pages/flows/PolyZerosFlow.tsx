@@ -2,6 +2,8 @@ import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent, type
 import { GraphPanel } from '@/components/GraphPanel'
 import { Katex } from '@/components/Katex'
 import { MathInput } from '@/components/MathInput'
+import { KEYPAD_SETS } from '@/components/keypadKeys'
+import { MathTextInput } from '@/components/MathTextInput'
 import { SigFigExplanation } from '@/components/SigFigFeedback'
 import { FUNCTION_KEYS } from '@/components/symbolStrip'
 import { polyShow } from '@/content/modules/polynomials/patterns'
@@ -333,8 +335,9 @@ function Body({ instance, attempt, flags, templateTitle, completion, finish, ans
                     <span aria-hidden className="font-mono">
                       x =
                     </span>
-                    <input
+                    <MathTextInput
                       ref={register(PZ_KEYS.zero(i))}
+                      keypad={{ keys: KEYPAD_SETS.radical }}
                       type="text"
                       aria-label={`Zero ${i + 1}`}
                       value={text(PZ_KEYS.zero(i))}
@@ -353,8 +356,9 @@ function Body({ instance, attempt, flags, templateTitle, completion, finish, ans
                 </label>
                 <label className="block text-sm font-semibold text-navy">
                   Multiplicity
-                  <input
+                  <MathTextInput
                     ref={register(PZ_KEYS.mult(i))}
+                    keypad={{ keys: KEYPAD_SETS.number }}
                     type="text"
                     aria-label={`Multiplicity of zero ${i + 1}`}
                     value={text(PZ_KEYS.mult(i))}
@@ -475,6 +479,7 @@ function Body({ instance, attempt, flags, templateTitle, completion, finish, ans
               invalid={flag === PZ_KEYS.candidates}
               onChange={(v) => update(PZ_KEYS.candidates, v)}
               inputRef={register(PZ_KEYS.candidates)}
+              keypad={{ keys: KEYPAD_SETS.plusMinus }}
             />
             {typed.trim() && (
               <p className="mt-1 break-words text-sm text-navy">
@@ -497,6 +502,7 @@ function Body({ instance, attempt, flags, templateTitle, completion, finish, ans
             invalid={flag === PZ_KEYS.rational}
             onChange={(v) => update(PZ_KEYS.rational, v)}
             inputRef={register(PZ_KEYS.rational)}
+            keypad={{ keys: KEYPAD_SETS.number }}
           />
         )
     }

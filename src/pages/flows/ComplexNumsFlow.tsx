@@ -3,6 +3,7 @@ import { Katex } from '@/components/Katex'
 import { SymbolStrip } from '@/components/MathSymbolStrip'
 import { SigFigCorrect, SigFigExplanation, SigFigRejection } from '@/components/SigFigFeedback'
 import { insertToken, type StripKey } from '@/components/symbolStrip'
+import { useMathKeypadOn } from '@/components/useMathKeypad'
 import { gradeCxStage, CX_KEYS, CX_RULE_FOR, type ComplexNumsAnswer, type CxGrade } from '@/content/modules/complexNums'
 import { cxToLatex, listToLatex } from '@/content/modules/complexNums/arith'
 import { parseCxAnswer } from '@/content/modules/complexNums/parse'
@@ -122,6 +123,7 @@ function Body({ instance, attempt, flags, templateTitle, completion, finish, ans
   const boxes = useRef(new Map<string, HTMLInputElement>())
   const stage = stages[passed]!
   const hint = useHintLadder(attempt, done, passed)
+  const keypadOn = useMathKeypadOn()
 
   const restoredFor = useRef<string | null>(attempt?.id ?? null)
   useEffect(() => {
@@ -262,8 +264,9 @@ function Body({ instance, attempt, flags, templateTitle, completion, finish, ans
                   invalid={Boolean(invalid)}
                   onChange={(v) => update(key, v)}
                   inputRef={register(key)}
+                  keypad={{ keys: COMPLEX_KEYS }}
                 />
-                <SymbolStrip onInsert={insert} keys={COMPLEX_KEYS} disabled={false} />
+                {!keypadOn && <SymbolStrip onInsert={insert} keys={COMPLEX_KEYS} disabled={false} />}
                 <button type="submit" className="min-h-12 rounded-xl bg-navy px-4 font-semibold text-white hover:bg-navy-600">
                   Check the answer
                 </button>

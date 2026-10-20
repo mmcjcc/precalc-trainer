@@ -46,6 +46,7 @@ export function normalizeSettings(raw: unknown): Settings {
   if (typeof src.testMode === 'boolean') settings.testMode = src.testMode
   if (typeof src.seenA2HS === 'boolean') settings.seenA2HS = src.seenA2HS
   if (typeof src.courseId === 'string' && src.courseId.length > 0) settings.courseId = src.courseId
+  if (typeof src.mathKeypad === 'boolean') settings.mathKeypad = src.mathKeypad
   if (isRecord(src.unitByCourse)) {
     const unitByCourse: Record<string, string> = {}
     for (const [key, value] of Object.entries(src.unitByCourse)) {
@@ -59,12 +60,17 @@ export function normalizeSettings(raw: unknown): Settings {
 /**
  * Settings after an import. Merge adds another device's work to this one, so this device keeps its
  * own settings and only takes a class or unit choice it does not have yet. Replace takes the file's
- * settings, except the two that belong to the device or the moment: test mode (imported silently, it
- * would keep later practice out of the mastery bars) and whether the add-to-home-screen card was
- * seen here.
+ * settings, except the ones that belong to the device or the moment: test mode (imported silently, it
+ * would keep later practice out of the mastery bars), whether the add-to-home-screen card was seen
+ * here, and the math keypad (a phone's choice, which a backup from a computer must not undo).
  */
 export function settingsAfterImport(current: Settings, imported: Settings, mode: ImportMode): Settings {
-  if (mode === 'replace') return { ...imported, testMode: current.testMode, seenA2HS: current.seenA2HS }
+  if (mode === 'replace') {
+    const next: Settings = { ...imported, testMode: current.testMode, seenA2HS: current.seenA2HS }
+    delete next.mathKeypad
+    if (current.mathKeypad !== undefined) next.mathKeypad = current.mathKeypad
+    return next
+  }
   const next: Settings = { ...current }
   const courseId = current.courseId ?? imported.courseId
   if (courseId) next.courseId = courseId

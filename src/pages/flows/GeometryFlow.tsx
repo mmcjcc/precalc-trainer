@@ -3,6 +3,7 @@ import { GeoFigure } from '@/components/GeoFigure'
 import { SigFigCorrect, SigFigExplanation, SigFigRejection } from '@/components/SigFigFeedback'
 import { SymbolStrip } from '@/components/MathSymbolStrip'
 import { insertToken, type StripKey } from '@/components/symbolStrip'
+import { useMathKeypadOn } from '@/components/useMathKeypad'
 import { GEO_KEYS, GEO_RULE_FOR, exampleShowsAnswer, gradeGeoStage, type GeoGrade, type GeometryAnswer } from '@/content/modules/geometry'
 import { stageDisplay } from '@/content/modules/geometry/grade'
 import { REASON_GROUPS, reasonLabel, reasonsInGroup, type ReasonId } from '@/content/modules/geometry/reasons'
@@ -32,6 +33,9 @@ const GEO_KEYS_STRIP: readonly StripKey[] = [
   { label: ')', insert: ')', caret: 0, name: 'close parenthesis' },
   { label: ',', insert: ',', caret: 0, name: 'comma' },
 ]
+
+/** A line is written as an equation in x and y (y = x + 1); the strip leaves the letters to the keyboard. */
+const LINE_VARS: readonly string[] = ['x', 'y']
 
 function Statement({ answer }: { answer: GeometryAnswer }) {
   return (
@@ -200,6 +204,7 @@ function Body({ instance, attempt, flags, templateTitle, completion, finish, ans
   const boxes = useRef(new Map<string, HTMLInputElement>())
   const stage = stages[passed]!
   const hint = useHintLadder(attempt, done, passed)
+  const keypadOn = useMathKeypadOn()
 
   const restoredFor = useRef<string | null>(attempt?.id ?? null)
   useEffect(() => {
@@ -355,8 +360,9 @@ function Body({ instance, attempt, flags, templateTitle, completion, finish, ans
                       invalid={Boolean(invalid)}
                       onChange={(v) => update(key, v)}
                       inputRef={register(key)}
+                      keypad={{ keys: GEO_KEYS_STRIP, vars: s.kind === 'line' ? LINE_VARS : undefined }}
                     />
-                    <SymbolStrip onInsert={insert} keys={GEO_KEYS_STRIP} disabled={false} />
+                    {!keypadOn && <SymbolStrip onInsert={insert} keys={GEO_KEYS_STRIP} disabled={false} />}
                   </>
                 )}
                 {(s.kind === 'choice' || s.kind === 'reason') && (

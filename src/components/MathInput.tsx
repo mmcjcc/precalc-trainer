@@ -13,7 +13,8 @@ import {
 import { toLatex } from '@/notation/toLatex'
 import { Katex } from './Katex'
 import { SymbolStrip } from './MathSymbolStrip'
-import { insertToken, type StripKey } from './symbolStrip'
+import { STRIP_KEYS, insertToken, type StripKey } from './symbolStrip'
+import { useMathKeypad } from './useMathKeypad'
 
 export interface InputError {
   message: string
@@ -45,7 +46,11 @@ type Props = {
   toTex?: (text: string) => string
   /** Hide the symbol strip (e.g. interval inputs that bring their own). */
   hideStrip?: boolean
-  /** Keys for the symbol strip when a problem needs its own set (defaults to the full strip). */
+  /**
+   * Keys for the symbol strip when a problem needs its own set (defaults to the full strip). On a
+   * touch screen the math keypad replaces the strip and the phone keyboard, with these keys in its
+   * context row.
+   */
   stripKeys?: readonly StripKey[]
 }
 
@@ -63,6 +68,7 @@ function useDebounced<T>(value: T, ms: number): T {
 /**
  * Math text input with symbol strip, debounced KaTeX preview (reserved height, last good render kept
  * at 50% on parse failure) and a parse-error line with the character position (UX-01/02/18).
+ * On a touch screen it is a math-keypad box: no strip, and the keypad instead of the phone keyboard.
  */
 export function MathInput({
   value,
@@ -90,13 +96,16 @@ export function MathInput({
   const innerRef = useRef<HTMLInputElement | null>(null)
   const selRef = useRef({ start: value.length, end: value.length })
   const [pendingCaret, setPendingCaret] = useState<{ pos: number; seq: number } | null>(null)
+  const keypad = useMathKeypad({ keys: stripKeys ?? STRIP_KEYS, disabled })
+  const keypadRef = keypad.ref
 
   const setRefs = useCallback(
     (el: HTMLInputElement | null) => {
       innerRef.current = el
       if (externalRef) externalRef.current = el
+      keypadRef(el)
     },
-    [externalRef],
+    [externalRef, keypadRef],
   )
 
   const cacheSelection = useCallback(() => {
@@ -202,8 +211,11 @@ export function MathInput({
           onMouseUp={cacheSelection}
           onTouchEnd={cacheSelection}
           onKeyDown={handleKeyDown}
+          onFocus={keypad.onFocus}
+          onBlur={keypad.onBlur}
+          onClick={keypad.onClick}
           placeholder={placeholder ?? 'Type the next line, like 3x <= 9'}
-          inputMode="text"
+          inputMode={keypad.inputMode}
           autoCapitalize="off"
           autoCorrect="off"
           autoComplete="off"
@@ -234,7 +246,7 @@ export function MathInput({
           {shownError.message}
         </p>
       )}
-      {!hideStrip && <SymbolStrip onInsert={insert} keys={stripKeys} disabled={disabled} />}
+      {!hideStrip && !keypad.on && <SymbolStrip onInsert={insert} keys={stripKeys} disabled={disabled} />}
     </form>
   )
 }

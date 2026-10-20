@@ -15,6 +15,11 @@ import {
 import { gradeParity, PARITY_REASONS, parityTable, type ParityAnswer, type ParityGrade } from '@/problem/evenOdd'
 import type { CheckValue } from '@/content/types'
 import { Katex } from './Katex'
+import { KEYPAD_SETS } from './keypadKeys'
+import { MathTextInput } from './MathTextInput'
+
+/** f(k) and f⁻¹(f(k)) are numbers (maybe negative, maybe a fraction): the math keypad on a touch screen. */
+const NUMBER_BOX = { keys: KEYPAD_SETS.number }
 
 function VerdictButton({ active, onClick, children, disabled }: { active: boolean; onClick: () => void; children: string; disabled?: boolean }) {
   return (
@@ -132,7 +137,8 @@ export function CheckItCard({ check, f, inverse, done = false, onResult }: Check
       <label htmlFor={`${id}-${key}`} className="block text-sm font-semibold text-navy">
         {label}
       </label>
-      <input
+      <MathTextInput
+        keypad={NUMBER_BOX}
         id={`${id}-${key}`}
         type="text"
         inputMode="numeric"
@@ -203,7 +209,8 @@ function NumberField({
       <label htmlFor={id} className="block text-sm font-semibold text-navy">
         {label}
       </label>
-      <input
+      <MathTextInput
+        keypad={NUMBER_BOX}
         id={id}
         type="text"
         inputMode="numeric"

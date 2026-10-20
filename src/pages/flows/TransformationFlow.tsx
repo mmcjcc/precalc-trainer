@@ -2,6 +2,8 @@ import { useMemo, useRef, useState, type FormEvent, type ReactNode } from 'react
 import { Katex } from '@/components/Katex'
 import { FUNCTION_KEYS } from '@/components/symbolStrip'
 import { MathInput } from '@/components/MathInput'
+import { KEYPAD_SETS } from '@/components/keypadKeys'
+import { MathTextInput } from '@/components/MathTextInput'
 import { SigFigCorrect, SigFigExplanation, SigFigRejection } from '@/components/SigFigFeedback'
 import { getModule } from '@/content/registry'
 import { TR_RULE_IDS } from '@/content/modules/transformations/rules'
@@ -415,6 +417,9 @@ function StepBuilder({
   )
 }
 
+/** Amounts, factors and points are numbers: the math keypad with no extra keys. */
+const NUMBER_BOX = { keys: KEYPAD_SETS.number }
+
 function StepFields({ step, index, disabled, onChange }: { step: UiStep; index: number; disabled: boolean; onChange: (step: UiStep) => void }) {
   const n = index + 1
   const select = 'min-h-11 rounded-lg border-2 border-navy-100 bg-white px-2 text-navy disabled:bg-navy-50'
@@ -430,7 +435,7 @@ function StepFields({ step, index, disabled, onChange }: { step: UiStep; index: 
           <option value="down">down</option>
         </select>
         <span className="text-sm text-navy">by</span>
-        <input aria-label={`Amount for step ${n}`} className={input} disabled={disabled} value={step.amount} inputMode="text" autoCapitalize="off" autoCorrect="off" spellCheck={false} placeholder="3" onChange={(e) => onChange({ ...step, amount: e.target.value })} />
+        <MathTextInput keypad={NUMBER_BOX} aria-label={`Amount for step ${n}`} className={input} disabled={disabled} value={step.amount} inputMode="text" autoCapitalize="off" autoCorrect="off" spellCheck={false} placeholder="3" onChange={(e) => onChange({ ...step, amount: e.target.value })} />
       </div>
     )
   }
@@ -446,7 +451,7 @@ function StepFields({ step, index, disabled, onChange }: { step: UiStep; index: 
           <option value="vertical">vertically</option>
         </select>
         <span className="text-sm text-navy">by</span>
-        <input aria-label={`Factor for step ${n}`} className={input} disabled={disabled} value={step.factor} inputMode="text" autoCapitalize="off" autoCorrect="off" spellCheck={false} placeholder="2" onChange={(e) => onChange({ ...step, factor: e.target.value })} />
+        <MathTextInput keypad={NUMBER_BOX} aria-label={`Factor for step ${n}`} className={input} disabled={disabled} value={step.factor} inputMode="text" autoCapitalize="off" autoCorrect="off" spellCheck={false} placeholder="2" onChange={(e) => onChange({ ...step, factor: e.target.value })} />
       </div>
     )
   }
@@ -473,7 +478,8 @@ function PointField({ value, onChange, onSubmit, disabled }: { value: string; on
         Point on g
       </label>
       <div className="flex gap-2">
-        <input
+        <MathTextInput
+          keypad={NUMBER_BOX}
           id="tr-point"
           type="text"
           value={value}

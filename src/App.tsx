@@ -1,5 +1,6 @@
 import { lazy, Suspense } from 'react'
 import { HashRouter, Link, Navigate, Route, Routes, useLocation, useParams } from 'react-router-dom'
+import { MathKeypad } from '@/components/MathKeypad'
 import { Toasts } from '@/components/Toast'
 import { Home } from '@/pages/Home'
 import { ModulePage } from '@/pages/Module'
@@ -142,6 +143,8 @@ export function AppShell() {
           </Routes>
         </Suspense>
       </main>
+      {/* One math keypad for every page; it only ever opens on a touch screen, for a math box. */}
+      <MathKeypad />
       <Toasts />
     </>
   )

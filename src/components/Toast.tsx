@@ -40,7 +40,7 @@ export function Toasts() {
     <div
       role="status"
       aria-live="polite"
-      className="pointer-events-none fixed inset-x-0 bottom-[max(1rem,env(safe-area-inset-bottom))] z-50 mx-auto flex w-full max-w-md flex-col gap-2 px-4"
+      className="toast-host pointer-events-none fixed inset-x-0 z-50 mx-auto flex w-full max-w-md flex-col gap-2 px-4"
     >
       {toasts.map((t) => (
         <ToastCard key={t.id} toast={t} />

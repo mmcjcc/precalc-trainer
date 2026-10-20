@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { A2HSCard } from '@/components/A2HSCard'
 import { BottomSheet } from '@/components/BottomSheet'
 import { isIosSafari, isStandalone } from '@/components/useBreakpoint'
+import { useCoarsePointer } from '@/components/useMathKeypad'
 import { CALC_LABEL, type CalcId } from '@/shared/types'
 import { useSettings, useStore } from '@/store'
 import { useTutorStatus } from '@/tutor/useTutorStatus'
@@ -73,6 +74,8 @@ export function SettingsPage() {
   const calcName = useId()
   const showA2HS = isIosSafari() && !isStandalone()
   const tutor = useTutorStatus()
+  // The math keypad only exists where the pointer is a finger, so only a touch screen offers the switch.
+  const touch = useCoarsePointer()
 
   function confirmReset() {
     resetProgress()
@@ -137,6 +140,14 @@ export function SettingsPage() {
             checked={settings.testMode}
             onChange={(on) => setSettings({ testMode: on })}
           />
+          {touch && (
+            <Switch
+              label="Math keypad"
+              description="Math answers open a keypad with the numbers, x, + − × ÷, powers and the symbols each problem uses, instead of the phone's keyboard. Its abc key brings the keyboard back for words like “no solution”. Off: the keyboard and the symbol strip."
+              checked={settings.mathKeypad !== false}
+              onChange={(on) => setSettings({ mathKeypad: on })}
+            />
+          )}
         </div>
       </section>
 

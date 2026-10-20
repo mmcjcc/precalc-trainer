@@ -3,6 +3,7 @@ import { Katex } from '@/components/Katex'
 import { SymbolStrip } from '@/components/MathSymbolStrip'
 import { SigFigCorrect, SigFigExplanation, SigFigRejection } from '@/components/SigFigFeedback'
 import { insertToken, LOG_KEYS, type StripKey } from '@/components/symbolStrip'
+import { useMathKeypadOn } from '@/components/useMathKeypad'
 import { LF_KEYS, lfRuleFor, type LogFormsAnswer } from '@/content/modules/logForms'
 import { getModule } from '@/content/registry'
 import type { RuleCard } from '@/content/types'
@@ -65,6 +66,7 @@ function Body({ instance, attempt, flags, templateTitle, completion, finish, ans
   const box = useRef<HTMLInputElement | null>(null)
   const hint = useHintLadder(attempt, done)
   const stage = answer.stages[0]!
+  const keypadOn = useMathKeypadOn()
 
   const restoredFor = useRef<string | null>(attempt?.id ?? null)
   useEffect(() => {
@@ -189,8 +191,9 @@ function Body({ instance, attempt, flags, templateTitle, completion, finish, ans
               invalid={Boolean(invalid)}
               onChange={(v) => store({ ...entries, [LF_KEYS.answer]: v })}
               inputRef={register}
+              keypad={{ keys: LOG_KEYS }}
             />
-            <SymbolStrip onInsert={insert} keys={LOG_KEYS} disabled={false} />
+            {!keypadOn && <SymbolStrip onInsert={insert} keys={LOG_KEYS} disabled={false} />}
             <button type="submit" className="min-h-12 rounded-xl bg-navy px-4 font-semibold text-white hover:bg-navy-600">
               Check the answer
             </button>

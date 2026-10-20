@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from 'react'
 import { Katex } from '@/components/Katex'
+import { KEYPAD_SETS } from '@/components/keypadKeys'
+import { MathTextInput } from '@/components/MathTextInput'
 import { SigFigExplanation } from '@/components/SigFigFeedback'
+import { FUNCTION_KEYS } from '@/components/symbolStrip'
 import { polyShow } from '@/content/modules/polynomials/patterns'
 import { SD_FIRST_KEY, SD_KEYS, gradeDivisionStage, sdRuleIdFor, type PolyDivisionAnswer, type PolyDivisionStageId } from '@/content/modules/polyDivision'
 import { getModule } from '@/content/registry'
@@ -14,6 +17,10 @@ import { recordPolyGrades } from './record'
 import type { FlowProps } from './types'
 
 type Entries = Record<string, string>
+
+/** Math-keypad keys: numbers (rows, cells, remainder, value) and the quotient, a polynomial in x. */
+const NUMBER_BOX = { keys: KEYPAD_SETS.number }
+const QUOTIENT_BOX = { keys: FUNCTION_KEYS }
 
 /** The last check: which part it was for, its graded parts, and the box flagged when it was not an attempt. */
 interface Feedback {
@@ -99,8 +106,9 @@ function Cell({
   register: (key: string) => (el: HTMLInputElement | null) => void
 }) {
   return (
-    <input
+    <MathTextInput
       ref={register(entryKey)}
+      keypad={NUMBER_BOX}
       type="text"
       aria-label={label}
       value={entries[entryKey] ?? ''}
@@ -318,6 +326,7 @@ function Body({ instance, attempt, flags, templateTitle, completion, finish, ans
             invalid={flag === SD_KEYS.row}
             onChange={(v) => update(SD_KEYS.row, v)}
             inputRef={register(SD_KEYS.row)}
+            keypad={NUMBER_BOX}
           />
         )
       case 'grid':
@@ -341,6 +350,7 @@ function Body({ instance, attempt, flags, templateTitle, completion, finish, ans
                 invalid={flag === SD_KEYS.quotient}
                 onChange={(v) => update(SD_KEYS.quotient, v)}
                 inputRef={register(SD_KEYS.quotient)}
+                keypad={QUOTIENT_BOX}
               />
               {quotientTex && (
                 <div className="mt-1 overflow-x-auto text-navy">
@@ -358,6 +368,7 @@ function Body({ instance, attempt, flags, templateTitle, completion, finish, ans
               invalid={flag === SD_KEYS.remainder}
               onChange={(v) => update(SD_KEYS.remainder, v)}
               inputRef={register(SD_KEYS.remainder)}
+              keypad={NUMBER_BOX}
             />
           </>
         )
@@ -373,6 +384,7 @@ function Body({ instance, attempt, flags, templateTitle, completion, finish, ans
             invalid={flag === SD_KEYS.bottomRow}
             onChange={(v) => update(SD_KEYS.bottomRow, v)}
             inputRef={register(SD_KEYS.bottomRow)}
+            keypad={NUMBER_BOX}
           />
         )
       case 'value':
@@ -387,6 +399,7 @@ function Body({ instance, attempt, flags, templateTitle, completion, finish, ans
             invalid={flag === SD_KEYS.value}
             onChange={(v) => update(SD_KEYS.value, v)}
             inputRef={register(SD_KEYS.value)}
+            keypad={NUMBER_BOX}
           />
         )
       case 'factor':

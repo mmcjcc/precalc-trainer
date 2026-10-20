@@ -1,6 +1,8 @@
 import { useDeferredValue, useId, useMemo, useState, type ReactNode } from 'react'
 import { Katex } from '@/components/Katex'
 import { MathInput } from '@/components/MathInput'
+import { MathTextInput } from '@/components/MathTextInput'
+import { STRIP_KEYS } from '@/components/symbolStrip'
 import { parseStatement, verifyStep } from '@/engine'
 import { toLatex } from '@/notation'
 import { CHIP_LABEL, type ParseError, type StepResult, type VarName } from '@/shared/types'
@@ -192,7 +194,8 @@ export function Sandbox() {
         <label htmlFor={prevId} className="block text-sm font-semibold text-navy">
           Current line
         </label>
-        <input
+        <MathTextInput
+          keypad={{ keys: STRIP_KEYS }}
           id={prevId}
           value={prev}
           onChange={(e) => setPrev(e.target.value)}

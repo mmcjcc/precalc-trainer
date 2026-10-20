@@ -9,6 +9,8 @@ import type { ProgressLine } from '@/problem/stepEngine'
 import { verdictFromGraph } from '@/problem/tutorContext'
 import { GraphPanel } from '@/components/GraphPanel'
 import { RuleCardView } from '@/components/HintPanel'
+import { KEYPAD_SETS } from '@/components/keypadKeys'
+import { MathTextInput } from '@/components/MathTextInput'
 import { SigFigCorrect, SigFigExplanation, SigFigRejection } from '@/components/SigFigFeedback'
 import { ProblemFrame } from './ProblemFrame'
 import { recordGraphFeatures } from './record'
@@ -233,7 +235,8 @@ function GraphFeaturesBody({ instance, attempt, flags, templateTitle, completion
                 <label htmlFor={`gf-${f.id}`} className="block text-sm font-semibold text-navy">
                   {f.label}
                 </label>
-                <input
+                <MathTextInput
+                  keypad={{ keys: wide ? KEYPAD_SETS.interval : KEYPAD_SETS.number }}
                   id={`gf-${f.id}`}
                   type="text"
                   inputMode="text"

@@ -3,7 +3,9 @@ import { GraphPanel } from '@/components/GraphPanel'
 import { Katex } from '@/components/Katex'
 import { SymbolStrip } from '@/components/MathSymbolStrip'
 import { SigFigCorrect, SigFigExplanation, SigFigRejection } from '@/components/SigFigFeedback'
+import { KEYPAD_SETS } from '@/components/keypadKeys'
 import { insertToken, LOG_KEYS, SET_ANSWER_KEYS, type StripKey } from '@/components/symbolStrip'
+import { useMathKeypadOn } from '@/components/useMathKeypad'
 import { gradeEgPart, type ExpLogGraphsAnswer } from '@/content/modules/expLogGraphs'
 import { gradeEmPart, type ExpModelsAnswer } from '@/content/modules/expModels'
 import type { PartGrade } from '@/content/modules/explog/parts'
@@ -55,6 +57,14 @@ function keysFor(part: ExpLogPart): readonly StripKey[] | null {
   if (part.kind === 'interval') return SET_ANSWER_KEYS
   if (part.kind === 'formula' || part.kind === 'exact' || part.kind === 'point') return LOG_KEYS
   return null
+}
+
+/** A range may be written as an inequality in y (y > -6); the strip only offers x. */
+const RANGE_VARS: readonly string[] = ['y']
+
+/** The math keypad's keys: the strip's, or for a strip-less part an asymptote's x and y, or a number's none. */
+function keypadKeysFor(part: ExpLogPart): readonly StripKey[] {
+  return keysFor(part) ?? (part.kind === 'line' ? KEYPAD_SETS.xy : KEYPAD_SETS.number)
 }
 
 function StageCard({ index, total, part, passed, children }: { index: number; total: number; part: ExpLogPart; passed: boolean; children: ReactNode }) {
@@ -193,6 +203,7 @@ function PartsBody({
   const boxes = useRef(new Map<string, HTMLInputElement>())
   const stage = stages[passed]!
   const hint = useHintLadder(attempt, done, passed)
+  const keypadOn = useMathKeypadOn()
 
   const restoredFor = useRef<string | null>(attempt?.id ?? null)
   useEffect(() => {
@@ -337,8 +348,19 @@ function PartsBody({
                     <Katex tex={preview} />
                   </div>
                 )}
-                <PolyTextBox id={`el-${s.id}`} label={s.label} hint={s.formatHint} placeholder="" value={value} disabled={false} invalid={Boolean(invalid)} onChange={(v) => update(s.id, v)} inputRef={register(s.id)} />
-                {keys && <SymbolStrip onInsert={(k) => insert(s.id, k)} keys={keys} disabled={false} />}
+                <PolyTextBox
+                  id={`el-${s.id}`}
+                  label={s.label}
+                  hint={s.formatHint}
+                  placeholder=""
+                  value={value}
+                  disabled={false}
+                  invalid={Boolean(invalid)}
+                  onChange={(v) => update(s.id, v)}
+                  inputRef={register(s.id)}
+                  keypad={{ keys: keypadKeysFor(s), vars: s.id === 'range' ? RANGE_VARS : undefined }}
+                />
+                {keys && !keypadOn && <SymbolStrip onInsert={(k) => insert(s.id, k)} keys={keys} disabled={false} />}
                 <button type="submit" className="min-h-12 rounded-xl bg-navy px-4 font-semibold text-white hover:bg-navy-600">
                   Check
                 </button>

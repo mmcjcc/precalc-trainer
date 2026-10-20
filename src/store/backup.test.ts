@@ -91,6 +91,22 @@ describe('backup app name', () => {
     expect(merged.unitByCourse).toEqual({ chemistry: 'ch5', precalc: 'unit2' })
   })
 
+  it('the math keypad belongs to the device: an import never changes it, and junk in a file is ignored', () => {
+    const fromComputer = JSON.stringify({ ...JSON.parse(oldFile), settings: { ...JSON.parse(oldFile).settings, mathKeypad: true } })
+    const parsed = parseBackup(fromComputer)
+    if (!parsed.ok) throw new Error(parsed.error)
+    expect(parsed.backup.settings.mathKeypad).toBe(true)
+    const phone: Settings = { ...DEFAULT_SETTINGS, mathKeypad: false }
+    expect(settingsAfterImport(phone, parsed.backup.settings, 'replace').mathKeypad).toBe(false)
+    expect(settingsAfterImport(phone, parsed.backup.settings, 'merge').mathKeypad).toBe(false)
+    // A device that never touched the switch keeps the default (absent = on).
+    expect('mathKeypad' in settingsAfterImport({ ...DEFAULT_SETTINGS }, parsed.backup.settings, 'replace')).toBe(false)
+    // Junk in the file is ignored.
+    const junk = parseBackup(JSON.stringify({ ...JSON.parse(oldFile), settings: { mathKeypad: 'yes' } }))
+    if (!junk.ok) throw new Error(junk.error)
+    expect('mathKeypad' in junk.backup.settings).toBe(false)
+  })
+
   it("replace takes the file's settings but never its test mode or its home-screen flag", () => {
     const parsed = parseBackup(oldFile)
     if (!parsed.ok) throw new Error(parsed.error)

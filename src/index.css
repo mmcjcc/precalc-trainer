@@ -58,6 +58,78 @@ input[type="text"], input[type="password"], input:not([type]), textarea { font-s
 .symbol-strip { scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; scrollbar-width: thin; }
 .symbol-strip > * { scroll-snap-align: start; }
 
+/* Math keypad (components/MathKeypad.tsx), touch screens only. While it is open, --keypad-h on <html> is
+   its height: the page keeps that much room at the bottom, scrolling a box into view stops above it, and
+   the sticky composer and the toasts sit on top of it. Closed, the variable is unset and nothing moves. */
+html { scroll-padding-bottom: var(--keypad-h, 0px); }
+body { padding-bottom: var(--keypad-h, 0px); }
+.math-keypad {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 35; /* over the composer (20) and the safe-area band (30), under a bottom sheet (40) and toasts */
+  background: var(--color-navy-50);
+  border-top: 1px solid var(--color-navy-100);
+  box-shadow: 0 -6px 18px rgb(47 60 126 / 0.12);
+  padding: 6px max(6px, env(safe-area-inset-right, 0px)) max(6px, env(safe-area-inset-bottom, 0px)) max(6px, env(safe-area-inset-left, 0px));
+  touch-action: manipulation;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.kp-inner { display: flex; flex-direction: column; gap: 5px; max-width: 36rem; margin: 0 auto; }
+.kp-context { display: flex; gap: 5px; overflow-x: auto; scroll-snap-type: x proximity; scrollbar-width: none; }
+.kp-context::-webkit-scrollbar { display: none; }
+.kp-context > * { flex: 0 0 auto; min-width: 44px; scroll-snap-align: start; }
+.kp-grid {
+  display: grid;
+  gap: 5px;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  grid-template-areas:
+    "var pow d7 d8 d9 div"
+    "lp rp d4 d5 d6 mul"
+    "comma sq d1 d2 d3 sub"
+    "abc hide d0 dot eq add"
+    "left right del check check check";
+}
+.kp-key { min-height: 44px; height: 46px; height: clamp(44px, 5.6dvh, 52px); }
+/* A phone on its side: three wide rows, so the keypad leaves room for the problem. */
+@media (orientation: landscape) and (max-height: 500px) {
+  .kp-inner { max-width: none; }
+  .kp-grid {
+    grid-template-columns: repeat(11, minmax(0, 1fr));
+    grid-template-areas:
+      "d1 d2 d3 d4 d5 d6 d7 d8 d9 d0 dot"
+      "var pow sq lp rp comma eq add sub mul div"
+      "abc hide left right del del check check check check check";
+  }
+  .kp-key { height: 44px; }
+}
+/* While a box is on the phone's keyboard (abc): one slim bar right above that keyboard, its 123 key bringing
+   the keypad back. Translated up with the visual viewport, so no safe-area padding (the keyboard covers it). */
+.kp-abc-bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 35;
+  background: var(--color-navy-50);
+  border-top: 1px solid var(--color-navy-100);
+  padding: 4px max(8px, env(safe-area-inset-right, 0px)) 4px max(8px, env(safe-area-inset-left, 0px));
+  touch-action: manipulation;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+/* The phone composer: sticky to the bottom of the screen, or to the top of the open keypad. */
+.composer-sticky {
+  bottom: var(--keypad-h, 0px);
+  padding-bottom: max(0.5rem, calc(env(safe-area-inset-bottom, 0px) - var(--keypad-h, 0px)));
+}
+.toast-host { bottom: calc(max(1rem, env(safe-area-inset-bottom, 0px)) + var(--keypad-h, 0px)); }
+
 /* Keycaps */
 kbd.keycap {
   display: inline-block;

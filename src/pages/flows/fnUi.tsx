@@ -5,7 +5,9 @@ import type { RuleCard } from '@/content/types'
 import { RuleCardView } from '@/components/HintPanel'
 import { SigFigCorrect, SigFigExplanation, SigFigRejection } from '@/components/SigFigFeedback'
 import { SymbolStrip } from '@/components/MathSymbolStrip'
+import { MathTextInput } from '@/components/MathTextInput'
 import { SET_ANSWER_KEYS, insertToken, type StripKey } from '@/components/symbolStrip'
+import { useMathKeypadOn } from '@/components/useMathKeypad'
 import { useStore, type Attempt } from '@/store'
 import type { PatternHit } from '@/shared/types'
 
@@ -128,6 +130,7 @@ export function SetAnswerField({
   const ref = useRef<HTMLInputElement>(null)
   const sel = useRef({ start: value.length, end: value.length })
   const [pending, setPending] = useState<{ pos: number; seq: number } | null>(null)
+  const keypadOn = useMathKeypadOn()
 
   function cache() {
     const el = ref.current
@@ -170,8 +173,9 @@ export function SetAnswerField({
         {label}
       </label>
       <div className="flex gap-2">
-        <input
+        <MathTextInput
           ref={ref}
+          keypad={{ keys: SET_ANSWER_KEYS, vars: [variable] }}
           id={inputId}
           type="text"
           value={value}
@@ -198,7 +202,7 @@ export function SetAnswerField({
       <p id={previewId} className={`min-h-5 text-sm ${reading?.ok ? 'text-navy' : 'text-navy/70'}`}>
         {reading ? (reading.ok ? `reads as ${reading.text}` : 'not readable yet') : 'Interval notation, set-builder, or “all real numbers except 3”.'}
       </p>
-      <SymbolStrip onInsert={insert} keys={SET_ANSWER_KEYS} disabled={disabled} />
+      {!keypadOn && <SymbolStrip onInsert={insert} keys={SET_ANSWER_KEYS} disabled={disabled} />}
     </form>
   )
 }

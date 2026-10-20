@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from 'react'
 import { GraphPanel } from '@/components/GraphPanel'
 import { Katex } from '@/components/Katex'
+import { KEYPAD_SETS } from '@/components/keypadKeys'
 import { SigFigCorrect, SigFigExplanation, SigFigRejection } from '@/components/SigFigFeedback'
+import type { StripKey } from '@/components/symbolStrip'
 import { gradeRfStage, RF_KEYS, RF_RULE_FOR, type RationalFnsAnswer, type RfGrade, type RfStageId } from '@/content/modules/rationalFns'
 import { math } from '@/content/modules/rationalFns/model'
 import { getModule } from '@/content/registry'
@@ -71,6 +73,17 @@ const BOX_HINT: Record<RfStageId, string> = {
   xint: 'Points on the x-axis, separated by commas. Type none if there are none.',
   yint: 'One point. Type none if there is none.',
   solution: 'A set, or the numbers separated by commas. Type no solution if there is none.',
+}
+
+/** Math-keypad context keys for each box (none, no solution: the keypad's abc key). */
+const KEYPAD_KEYS: Record<RfStageId, readonly StripKey[]> = {
+  domain: KEYPAD_SETS.interval,
+  va: KEYPAD_SETS.number,
+  holes: KEYPAD_SETS.number,
+  asymptote: KEYPAD_SETS.xy,
+  xint: KEYPAD_SETS.number,
+  yint: KEYPAD_SETS.number,
+  solution: KEYPAD_SETS.set,
 }
 
 function Statement({ answer }: { answer: RationalFnsAnswer }) {
@@ -285,6 +298,7 @@ function Body({ instance, attempt, flags, templateTitle, completion, finish, ans
                   invalid={Boolean(invalid)}
                   onChange={(v) => update(key, v)}
                   inputRef={register(key)}
+                  keypad={{ keys: KEYPAD_KEYS[s.id] }}
                 />
                 <button type="submit" className="min-h-12 rounded-xl bg-navy px-4 font-semibold text-white hover:bg-navy-600">
                   {CHECK_LABEL[s.id]}

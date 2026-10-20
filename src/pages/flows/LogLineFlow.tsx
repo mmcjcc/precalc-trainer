@@ -412,6 +412,7 @@ function Body({ instance, attempt, flags, templateTitle, completion, finish, mod
                 invalid={shownBox?.verdict === 'invalid' || shownBox?.verdict === 'unsupported'}
                 onChange={storeBox}
                 inputRef={answerRef}
+                keypad={{ keys: LOG_KEYS }}
               />
               <button
                 type="submit"

@@ -32,6 +32,11 @@ export interface Settings {
   courseId?: string
   /** Unit last chosen in each class, keyed by course id. Absent until she picks one. */
   unitByCourse?: Record<string, string>
+  /**
+   * "Math keypad": on a touch screen, math answers open the app's math keypad instead of the phone's
+   * keyboard. Absent means on; it never applies where the pointer is a mouse.
+   */
+  mathKeypad?: boolean
 }
 
 export interface Auth {

@@ -38,8 +38,10 @@ type Props = {
 }
 
 /**
- * Mobile composer: sticky to the visual viewport bottom on phones; a plain block on wider screens.
- * Put the live preview + MathInput inside.
+ * Mobile composer: sticky to the visual viewport bottom on phones (or to the top of the math keypad
+ * while it is open); a plain block on wider screens. Put the live preview + MathInput inside.
+ * The keypad treats it as one region, and after a Check scrolls the page to its end, where her newest
+ * line and its message are.
  */
 export function Composer({ children, toolbar, banner }: Props) {
   const bp = useBreakpoint()
@@ -47,9 +49,12 @@ export function Composer({ children, toolbar, banner }: Props) {
   const offset = useVisualViewportOffset(mobile)
   return (
     <div
+      data-keypad-region=""
+      data-keypad-scroll="end"
+      data-keypad-dock={mobile ? '' : undefined}
       className={
         mobile
-          ? 'sticky bottom-0 z-20 -mx-4 border-t border-navy-100 bg-white px-4 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]'
+          ? 'composer-sticky sticky z-20 -mx-4 border-t border-navy-100 bg-white px-4 pt-2'
           : 'rounded-2xl border border-navy-100 bg-white p-3'
       }
       style={mobile && offset ? { transform: `translateY(${offset}px)` } : undefined}
