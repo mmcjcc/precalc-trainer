@@ -27,6 +27,7 @@ import {
 } from './selectors'
 import { createFanOutStorage, PERSIST_NAME } from './storage'
 import { dayKey } from './time'
+import { attemptTouched } from './touched'
 import {
   EMPTY_STREAK,
   SCHEMA_VERSION,
@@ -49,6 +50,7 @@ export * from './selectors'
 export { compact } from './compaction'
 export { STORAGE_KEYS, saveReturnTo, takeReturnTo } from './storage'
 export { relativeDays, daysAgo, dayKey, isoWeekKey, startOfIsoWeek } from './time'
+export { attemptTouched } from './touched'
 export type { ImportMode } from './backup'
 
 // ---------------------------------------------------------------------------
@@ -218,7 +220,8 @@ export const useStore = create<StoreState>()(
         const now = input.now ?? Date.now()
         const prev = get().attempt
         const events = get().events.slice()
-        if (prev && (prev.problemId !== input.problemId || prev.difficulty !== input.difficulty)) {
+        // A problem she only opened is not an attempt: leaving it is not "unfinished".
+        if (prev && (prev.problemId !== input.problemId || prev.difficulty !== input.difficulty) && attemptTouched(prev, events)) {
           events.push({ t: 'problem_abandoned', at: now, attemptId: prev.id, skill: prev.skill })
         }
         const attempt: Attempt = {

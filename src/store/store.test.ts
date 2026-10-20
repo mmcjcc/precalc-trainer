@@ -73,12 +73,19 @@ describe('store persistence (pct.* keys)', () => {
     expect(JSON.parse(localStorage.getItem(STORAGE_KEYS.streak)!)).toMatchObject({ count: 1 })
   })
 
-  it('starting a different problem records problem_abandoned for the current one', () => {
+  it('starting a different problem records problem_abandoned for the current one when she worked on it', () => {
     start('inequalities/ineq.a@1/abc')
+    useStore.getState().acceptStep({ text: '3x <= 9' })
     start('inequalities/ineq.b@1/zzz')
-    const ev = useStore.getState().events
+    const ev = useStore.getState().events.filter((e) => e.t === 'problem_abandoned')
     expect(ev).toHaveLength(1)
     expect(ev[0]).toMatchObject({ t: 'problem_abandoned', skill: 'ineq.a' })
+  })
+
+  it('a problem she only opened is not an attempt: leaving it records nothing', () => {
+    start('inequalities/ineq.a@1/abc')
+    start('inequalities/ineq.b@1/zzz')
+    expect(useStore.getState().events).toEqual([])
   })
 
   it('undoStep pops the last step and puts its text back in the draft', () => {

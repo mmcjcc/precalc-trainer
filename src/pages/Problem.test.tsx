@@ -343,14 +343,15 @@ describe('review fixes: idle clock and nudge (F6, F13)', () => {
         vi.advanceTimersByTime(5 * 60_000)
       })
       expect(useStore.getState().attempt?.nudged).toBe(true)
-      expect(useStore.getState().attempt?.activeSecs).toBe(300)
+      // Five minutes without a touch: only the first three count (IDLE_CAP_MS).
+      expect(useStore.getState().attempt?.activeSecs).toBe(180)
       for (let i = 0; i < 36; i++) {
         act(() => {
           fireEvent.keyDown(window, { key: 'Shift' })
           vi.advanceTimersByTime(10_000)
         })
       }
-      expect(useStore.getState().attempt?.activeSecs).toBe(660)
+      expect(useStore.getState().attempt?.activeSecs).toBe(540)
       act(() => {
         vi.advanceTimersByTime(7_000)
       })
@@ -361,7 +362,7 @@ describe('review fixes: idle clock and nudge (F6, F13)', () => {
       type('Set-builder notation', answer.setBuilder)
       click('Check answer')
       expect(completeHeading()).toBeTruthy()
-      expect(events('problem_done')[0]).toMatchObject({ secs: 667 })
+      expect(events('problem_done')[0]).toMatchObject({ secs: 547 })
     } finally {
       vi.useRealTimers()
     }
@@ -411,6 +412,20 @@ describe('review fixes: attempt lifecycle (F7, F8)', () => {
       type('f(−x) line', answer.fNegX[0]!)
       click('Check f(−x)')
       expect(useStore.getState().attempt?.steps).toHaveLength(1)
+    } finally {
+      confirm.mockRestore()
+    }
+  })
+
+  it('opening another problem after only looking at one asks nothing and records nothing', () => {
+    const first = renderAt(problemPath('inequalities', 'ineq.linear', 12345))
+    first.unmount()
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false)
+    try {
+      renderAt(problemPath('inequalities', 'ineq.linear', 999))
+      expect(confirm).not.toHaveBeenCalled()
+      expect(useStore.getState().attempt?.problemId).toBe(generateProblem('inequalities', 'ineq.linear', 999, {}).id)
+      expect(events('problem_abandoned')).toEqual([])
     } finally {
       confirm.mockRestore()
     }

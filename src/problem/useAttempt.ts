@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import type { ProblemInstance } from '@/content/types'
-import { mastery, useStore, type Attempt, type ProblemSummary } from '@/store'
+import { attemptTouched, mastery, useStore, type Attempt, type ProblemSummary } from '@/store'
 import { problemPath } from './url'
 
 /** The stored attempt belongs to this page: same problem id AND same difficulty flags. */
@@ -57,7 +57,8 @@ export function useAttemptLifecycle(instance: ProblemInstance, flags: string, ac
       return
     }
     const askKey = `${instance.id}?${flags}`
-    if (current && asked.current !== askKey) {
+    // A problem she only opened is left without a word; only one with her work in it asks first.
+    if (current && asked.current !== askKey && attemptTouched(current, s.events)) {
       asked.current = askKey
       const leave = typeof window !== 'undefined' && typeof window.confirm === 'function'
         ? window.confirm('Leave the problem you were working on? It will count as unfinished.')
