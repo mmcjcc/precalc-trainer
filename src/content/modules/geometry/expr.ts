@@ -58,6 +58,33 @@ export function qText(q: Q): string {
   return ratToString(rat(q.n, q.d))
 }
 
+/** "2(30) + 10 = 70": the expression with x put in, then its value (the worked line for a measure). */
+export function atX(e: Lin, x: number): string {
+  const head = e.a === 1 ? `${x}` : `${e.a}(${x})`
+  const value = e.a * x + e.b
+  if (e.b === 0) return `${head} = ${value}`
+  return `${head} ${e.b < 0 ? MINUS : '+'} ${Math.abs(e.b)} = ${value}`
+}
+
+/**
+ * The algebra of a worked line, from the equation with like terms combined: "7x + 117 = 180, so 7x = 63 and
+ * x = 9". The x terms go to the side where they are positive ("3x + 10 = 5x − 30, so 2x = 40 and x = 20").
+ */
+export function solveText(left: Lin, right: Lin): string {
+  let a = left.a - right.a
+  let c = right.b - left.b
+  if (a < 0) {
+    a = -a
+    c = -c
+  }
+  const x = qText(solveEqual(left, right) ?? { n: 0, d: 1 })
+  const combined = `${formatLin(left)} = ${formatLin(right)}`
+  const isolated = `${a}x = ${showNum(c)}`
+  // "9x = 180" is already isolated: straight to x.
+  const isolate = a === 1 || isolated === combined ? '' : `${isolated} and `
+  return `${combined}, so ${isolate}x = ${x}`
+}
+
 export function qIs(q: Q, n: number): boolean {
   return q.d === 1 && q.n === n
 }
