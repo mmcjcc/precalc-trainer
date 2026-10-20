@@ -221,13 +221,15 @@ describe('a set on a wide screen, rewards off', () => {
 describe('leaving and resuming', () => {
   it('Start a set on Home; leave with work in it; Home offers Resume; the problem comes back with her work', { timeout: PAGE_TIMEOUT }, () => {
     installPointer(true)
+    // Home on Unit 1 (a set with no history starts from the unit Home shows).
+    useStore.getState().setSettings({ courseId: 'precalc', unitByCourse: { precalc: 'unit1' } })
     renderAt('/')
     fireEvent.click(screen.getByRole('button', { name: 'Start a set' }))
     expect(path()).toBe('/set')
     expect(breakSpy).not.toHaveBeenCalled()
     const set = loadActiveSet()!
     expect(set.problems).toHaveLength(3)
-    // No history: the first unit's first type.
+    // No history: the first type of the unit Home shows.
     expect(set.problems[0]!.templateId).toBe('nl.read')
 
     // A wrong check: she has work in it now.
