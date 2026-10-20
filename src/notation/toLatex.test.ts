@@ -21,3 +21,16 @@ describe('toLatex: a number times a power of a number keeps its dot', () => {
     expect(toLatex('x * 2')).toBe('x\\cdot 2')
   })
 })
+
+describe('toLatex: a function call raised to a power keeps its brackets', () => {
+  it('(log 1.08)^x never prints as log(1.08)^x, which reads as log(1.08^x)', () => {
+    expect(toLatex('log(1.08)^x')).toBe(String.raw`\left(\log\left(1.08\right)\right)^{x}`)
+    expect(toLatex('ln(x)^2')).toBe(String.raw`\left(\ln\left(x\right)\right)^{2}`)
+    // The other reading, a log of a power, has no outer brackets.
+    expect(toLatex('log(1.08^x)')).toBe(String.raw`\log\left(1.08^{x}\right)`)
+  })
+
+  it('an absolute value keeps its bars alone', () => {
+    expect(toLatex('abs(x)^2')).toBe(String.raw`\left|x\right|^{2}`)
+  })
+})

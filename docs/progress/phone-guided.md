@@ -157,3 +157,26 @@ words.ts}`, `src/session/summary.ts`, `src/pages/review/session.ts` (`isFirstTry
 row, §7).
 `src/store/compaction.ts` and `src/store/index.ts` hold NUL characters inside template strings (key separators, as
 committed); they were edited as text with the NULs kept, and git shows `compaction.ts` as binary, as before.
+
+## Review (Claude, 2026-10-20)
+
+Built by one Claude agent (about 0.63M tokens, 66 minutes). Read: the card builder and its sources, the twice rule,
+the flow wiring and the XP and mastery changes. Checked on the Android 16 emulator in a store-app build, on
+500 · 1.08^x = 1000: the Type | Pick switch with its caption; three cards (1.08^x = 2, and the named slips
+(500 · 1.08)^x = 1000 and 500 · 1.08^x = ln(1000)); a wrong pick named ("The number in front is not part of the
+base", Why?) and gone from the cards; the right picks kept as lines 1 and 2; "That was the last line of the path";
+the answer typed on the keypad (9.006); the finish sheet at +44 XP ("A line picked right +4": the line picked after a
+slip pays nothing) with "Picked lines count less, and a problem with a picked line does not move the ring".
+
+Changed in review:
+- The twice rule was keyed by the step's rule card, which every line of a problem shares, so a three-line problem in
+  Pick went pick, pick, type. The step type is now what the move does as the engine reads it
+  (`cardSources.ts` `stepTypeOf`: take_log, both_sides, rewrite), so "picked right twice: type it this time" follows
+  the kind of step across problems; the test now picks two both-sides lines in one problem and types the next
+  both-sides line in another.
+- Found on the emulator: a card for the slip (log 1.08)^x printed as log(1.08)^x, which reads as log(1.08^x), a right
+  step. The LaTeX printer now brackets a function call raised to a power, (log(1.08))^x, everywhere (|u|^2 keeps its
+  bars); tested in `notation/toLatex.test.ts`.
+
+Left: only exp/log equations offer cards; the wording "A part right first try" for the answer of a line-by-line
+problem could read "Answer right first try".

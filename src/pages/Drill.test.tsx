@@ -2,27 +2,39 @@
 /** The properties drill: four big choices on a phone, all fourteen chips on a wide screen. */
 import { fireEvent, render, screen, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
+import { generateDrill } from '@/content'
 import { installPointer, removePointer } from '@/components/keypadTesting'
 import { ALL_CHIPS } from '@/shared/types'
 import { resetStoreForTests } from '@/store'
 import { Drill, drillTex } from './Drill'
+
+// The drill draws a random set: pin its seed to one whose first question asks which property, so the tests never
+// depend on the luck of the draw (a set of ten can be all legal-or-illegal questions).
+const drawn = vi.hoisted(() => ({ seed: 1 }))
+vi.mock('@/content', async (importOriginal) => {
+  const real = await importOriginal<typeof import('@/content')>()
+  return { ...real, randomSeed: () => drawn.seed }
+})
+
+beforeAll(() => {
+  for (let seed = 1; seed < 1000; seed++) {
+    if (generateDrill(seed, 10)[0]?.question === 'which_property') {
+      drawn.seed = seed
+      return
+    }
+  }
+  throw new Error('no drill set starts with a which-property question')
+})
 
 afterEach(() => {
   removePointer()
   resetStoreForTests()
 })
 
-/** Answer legal-or-illegal questions until a which-property one comes up, and return its group of choices. */
+/** The first question is a which-property one (the pinned seed): its group of choices. */
 function reachPropertyQuestion(): HTMLElement {
-  for (let i = 0; i < 10; i++) {
-    const group = screen.queryByRole('group', { name: 'Properties' })
-    if (group) return group
-    fireEvent.click(screen.getByRole('button', { name: 'Legal' }))
-    fireEvent.click(screen.getByRole('button', { name: /^(Next|See the set score)$/ }))
-    if (screen.queryByRole('button', { name: '10 more' })) fireEvent.click(screen.getByRole('button', { name: '10 more' }))
-  }
-  throw new Error('no which-property question in ten tries')
+  return screen.getByRole('group', { name: 'Properties' })
 }
 
 function renderDrill() {

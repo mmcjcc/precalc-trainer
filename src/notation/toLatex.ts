@@ -135,9 +135,11 @@ export function nodeToLatex(node: MathNode): string {
     const [a, b] = nodeArgs(node)
     const base = a ? nodeToLatex(a) : ''
     const exp = b ? nodeToLatex(b) : ''
+    // A function call raised to a power keeps its brackets: log(1.08)^x is (log 1.08)^x, and printed bare it reads
+    // as log(1.08^x), the other thing (a guided card for that very slip looked like the right line). |u|^2 is clear.
     const needsParens =
       a !== undefined &&
-      (isSumLike(a) || isOp(a, '*') || isOp(a, '/') || isOp(a, '^') || isNegative(a))
+      (isSumLike(a) || isOp(a, '*') || isOp(a, '/') || isOp(a, '^') || isNegative(a) || (a.type === 'FunctionNode' && !isFn(a, 'abs')))
     return `${needsParens ? parens(base) : base}^{${exp}}`
   }
   if (isOp(node, '*')) {
