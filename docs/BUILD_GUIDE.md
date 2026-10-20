@@ -202,6 +202,12 @@ Screens/routes, keymap, mobile composer, localStorage schema, mastery definition
 `/`, `/m/:moduleId`, `/p/:moduleId/:templateId/:seed?d=…`, `/drill`, `/progress`, `/settings`,
 `/sandbox`. PIN gate reads `window.__PRECALC_CONFIG__.pinHash` (SHA-256 hex; empty = no gate). Settings shows a Sign out link when `signOutUrl` is set (the container sets it unless `AUTH_ALLOWLIST=off`).
 
+Every math answer box opts into the phone math keypad (touch screens only; desktop is unchanged): use
+`MathInput` (automatic), `PolyTextBox` with `keypad={{ keys, vars }}`, `MathTextInput` in place of a plain
+`<input>`, or `useMathKeypad` in your own component; a flow that renders `SymbolStrip` itself hides it when
+`useMathKeypadOn()` is true. Ready-made key sets: `KEYPAD_SETS` in `src/components/keypadKeys.ts`. See
+`docs/progress/phone-keypad.md`.
+
 Problem-page flows by kind:
 - **inequality**: worked column starts at `instance.start`; steps until progress says solved; then
   final answer: interval input + set-builder input (both required; cross-checked; patterns 1–3, 10).

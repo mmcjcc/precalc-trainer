@@ -95,8 +95,15 @@ function clampSel(value: string, a: number, b: number): [number, number] {
   return [start, end]
 }
 
-/** Insert a key at the caret, or over the selection: the strip's own insertion. */
+/**
+ * Insert a key at the caret, or over the selection: the strip's own insertion. One exception: a closing
+ * bracket typed just before the same closing bracket steps over it, as a code editor does. A function key
+ * (ln, √, log_) types its own ")", and she taps ")" to close it anyway; on the emulator that left
+ * "x ln(2)|))" with a stray bracket the parser rejected.
+ */
 export function insertKey(value: string, selStart: number, selEnd: number, key: StripKey): Insertion {
+  const closer = key.insert === ')' || key.insert === ']' || key.insert === '}'
+  if (closer && selStart === selEnd && value[selStart] === key.insert) return { value, caret: selStart + 1 }
   return insertToken(value, selStart, selEnd, key)
 }
 

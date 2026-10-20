@@ -98,6 +98,15 @@ describe('insertKey: the strip’s insertion', () => {
     expect(insertKey('', 0, 0, strip('log_', LOG_KEYS))).toEqual({ value: 'log_()', caret: 4 })
   })
 
+  it('a closing bracket just before the same bracket steps over it (ln, 7, then ")")', () => {
+    const typed = insertKey('ln()', 3, 3, grid('7'))
+    expect(typed).toEqual({ value: 'ln(7)', caret: 4 })
+    expect(insertKey(typed.value, typed.caret, typed.caret, grid('close parenthesis'))).toEqual({ value: 'ln(7)', caret: 5 })
+    // Anywhere else ")" is typed as usual.
+    expect(insertKey('(x+2', 4, 4, grid('close parenthesis'))).toEqual({ value: '(x+2)', caret: 5 })
+    expect(insertKey('ln(7)', 5, 5, grid('close parenthesis'))).toEqual({ value: 'ln(7))', caret: 6 })
+  })
+
   it('equals keeps one space on each side', () => {
     expect(insertKey('x ', 2, 2, grid('equals')).value).toBe('x = ')
     expect(insertKey('(x+2)ln(7)', 10, 10, grid('equals')).value).toBe('(x+2)ln(7) = ')

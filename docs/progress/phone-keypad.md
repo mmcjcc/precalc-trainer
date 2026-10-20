@@ -94,3 +94,15 @@ New: `src/components/keypadKeys.ts` (+ test), `keypadStore.ts`, `keypadDom.ts`, 
 Changed: `App.tsx`, `index.css`, `components/{MathInput,Composer,Toast,FinalAnswerCard,VerdictCards}.tsx`,
 `pages/Settings.tsx`, `pages/Sandbox.tsx`, `store/types.ts`, `store/backup.ts` (+ test), and the flows listed
 above.
+
+## Review (Claude, 2026-10-20)
+
+Built by one Claude agent (about 0.62M tokens, 80 minutes). Checked on the Android 16 emulator in a store-app build:
+- a math box no longer opens the phone keyboard and the extra-key strip is gone; a tap opens the keypad; the
+  problem stays on screen above the composer, and the line box and its message sit just above the keypad;
+- the first line of 7^(x+2) = 2^x typed with keypad taps only, previewed as (x + 2) ln(7) = x ln(2) (the parser
+  reads `xln(2)` as x·ln(2)), and Check on the keypad kept the line; the keypad stays up for the next line.
+
+Fixed in review: a function key (ln, √, log_) types its own ")", and she taps ")" to close it anyway; that left a
+stray bracket ("x ln(2)|))") the parser rejected. A closing bracket typed just before the same bracket now steps
+over it, as a code editor does (`insertKey`, tested).
