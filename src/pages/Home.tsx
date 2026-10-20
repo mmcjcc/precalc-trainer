@@ -133,8 +133,8 @@ function ContinueCard({ attempt }: { attempt: Attempt }) {
         {templateTitle(attempt.moduleId, attempt.templateId)}
       </h2>
       <p className="mt-1 text-sm text-navy/80">
-        {k === 0 ? 'No steps yet — the problem is waiting for your first line' : `${k} ${k === 1 ? 'step' : 'steps'} done`}
-        {Number.isFinite(last) ? ` · last worked on ${relativeDays(last)}` : ''}
+        {k === 0 ? 'Not started yet' : `${k} ${k === 1 ? 'step' : 'steps'} done`}
+        {Number.isFinite(last) ? ` · ${k === 0 ? 'opened' : 'last worked on'} ${relativeDays(last)}` : ''}
       </p>
       <Link
         to={href}
@@ -166,7 +166,8 @@ function WeakSpots({ course }: { course: CourseDef }) {
     let best: { title: string; rate: number } | null = null
     for (const { template } of entries) {
       const info = mastery(events, template.id)
-      if (info.rate === null || info.mastered) continue
+      // A type she gets right every time is not a weak spot, mastered or not.
+      if (info.rate === null || info.mastered || info.rate >= 1) continue
       if (!best || info.rate < best.rate) best = { title: template.title, rate: info.rate }
     }
     return best
