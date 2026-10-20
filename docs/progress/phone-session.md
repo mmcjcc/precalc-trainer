@@ -149,3 +149,36 @@ Changed: `src/App.tsx`, `src/index.css`, `src/pages/Home.tsx`, `src/pages/flows/
 LeaveProblemSheet.tsx}`, `src/pages/Review.tsx` (one line), `src/pages/review/session.ts` (two exports),
 `src/pages/Settings.tsx` (reset clears the set), `src/store/index.ts` (`leaveAttempt`), `src/components/A2HSCard.tsx`
 (`quiet`), `src/components/rewards/Finish.tsx` (exports `goalCaption`), `docs/BUILD_GUIDE.md` (§0 UI row, §7).
+
+## Review (Claude, 2026-10-20)
+
+Built by one Claude agent (about 0.54M tokens, 55 minutes), no rework of its design. Read in full: the set builder,
+the active set, the ad seam, the summary, the set runner, the tab bar and the app shell. Checked on the Android 16
+emulator in a store-app build with the fork's interstitial registered:
+- Home on a phone: "Math Trainer", the Today card, one big "Start a set" with "3 problems, about 5 minutes", the
+  classes as "Precalculus" and "Geometry", outlined secondary buttons, and the tab bar (Home, Drill, Progress,
+  Settings) above Android's gesture bar.
+- A whole set: the compact row (×, three dots, "1 of 3", ⋯) on a full-screen problem with no tab bar; a sign slip on
+  log(0.1) named and fixed; the finish sheet's "Next in set"; Skip from the ⋯ menu (a dashed dot); the last problem's
+  "See results"; the toast "A short ad, then your results"; AdMob's test interstitial; then "Set done +75 XP" with
+  "Caught and fixed 1 mistake", "Skipped", "Right first time", the goal ring and the ring that moved.
+- Leaving a set with × keeps it: Home shows "Your set · 2 of 3" and "Resume your set · 2 of 3"; a fresh set has
+  fresh problems.
+- The tab bar on Drill (the four big choices) and on a module page (Home marked).
+
+Changed in review:
+- Rule (c) took her in-progress types in the unit's order, so every set gave her the same first three types until
+  they were mastered, and the next set repeated the last one. Practiced and Solid types now go least recently
+  practiced first, so set after set goes round them; New types keep the unit's order (a test shows the rotation).
+- The store app's names moved upstream behind STORE so the fork merges cleanly: "Math Trainer" in the header and on
+  Home, its own Home paragraph, no add-to-home-screen card, no Sandbox tab.
+- Found on the emulator, fixed outside this phase's files: the drill's commutative and associative lines lost their
+  brackets ("(1 + x) + 8" and "1 + (x + 8)" both showed as "1 + x + 8"); a log sign slip's lesson ended with the
+  answer ("... log(0.1) = −1."), because the leak guard read the sentence's period as a decimal point (fixed for
+  what she sees beside a retry; problem generation keeps the old boundary, see below).
+- Store app only: the fork registers its interstitial at the set's end (`registerSetEndBreak` in src/ads), announced
+  "A short ad, then your results".
+
+Left for later: the exp/log generation-time leak checks have the same period blind spot; tightening them turns the
+graph-features problems away (their rule cards state general facts such as "passes through (0, 1)."), so that needs
+the content adjusted first.
