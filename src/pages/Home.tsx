@@ -372,6 +372,18 @@ function HomeScreen() {
     events,
   })
 
+  // The unit chips scroll sideways on a phone: bring the selected one into view (the row only, never the page).
+  const unitRow = useRef<HTMLDivElement>(null)
+  const shownUnit = selection?.unit.id
+  useEffect(() => {
+    const row = unitRow.current
+    const chip = row?.querySelector<HTMLElement>('[aria-pressed="true"]')
+    if (!row || !chip || row.scrollWidth <= row.clientWidth) return
+    const r = row.getBoundingClientRect()
+    const c = chip.getBoundingClientRect()
+    row.scrollLeft += c.left - r.left - (r.width - c.width) / 2
+  }, [shownUnit])
+
   if (!selection) {
     return <p className="text-navy">No classes are ready yet.</p>
   }
@@ -485,7 +497,7 @@ function HomeScreen() {
 
         <WeakSpots course={course} primary={!phone} />
 
-        <div role="group" aria-label={`${course.title} units`} className="flex flex-nowrap gap-2 overflow-x-auto py-1">
+        <div ref={unitRow} role="group" aria-label={`${course.title} units`} className="flex flex-nowrap gap-2 overflow-x-auto py-1">
           {course.units.map((u) => {
             const pressed = u.id === unit.id
             const empty = modulesInUnit(u).length === 0
