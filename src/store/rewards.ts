@@ -13,6 +13,9 @@
  * - a mistake squashed +50 (once per card), a problem type newly mastered +100 (once per type);
  * - a mastered type pays half (rounded up) until it is due for review again: two weeks after its last problem.
  * Hints never cost anything except the no-hints bonus.
+ * Guided mode: a line picked from the cards (`via: 'card'`) pays +4 instead when the first card she picked for it was
+ * the right one, and nothing after a wrong pick; a problem with a picked line stays out of the mastery window and the
+ * rings, as a timed one does (`inMasteryWindow`).
  *
  * Lines are `step_accepted` events (with the step's own first-try and revealed flags; an undone line pays nothing).
  * Parts are right `final_answer` events: the wrong checks since the attempt's last right one are the mistakes on it
@@ -20,7 +23,7 @@
  * boxes each time logs `part` (the inequality's interval and set-builder), so each box pays once.
  */
 import { STORE } from '@/edition'
-import { MASTERY_WINDOW, cancelledSteps } from './compaction'
+import { MASTERY_WINDOW, cancelledSteps, inMasteryWindow } from './compaction'
 import { MASTERY_THRESHOLD, windowMastered, type MasteryEntry } from './selectors'
 import { dayKey, daysBetweenKeys, startOfIsoWeek } from './time'
 import { emptyRewards, type DailyGoal, type DayMark, type Ev, type MistakeCardState, type RewardsState, type Settings } from './types'
@@ -29,6 +32,8 @@ const DAY_MS = 86_400_000
 
 export const XP = {
   firstTry: 10,
+  /** Guided mode: a line picked from the cards, the right card on the first pick. */
+  picked: 4,
   fixed: 5,
   finish: 20,
   noHints: 10,
@@ -79,6 +84,8 @@ export type AwardKind =
   | 'line'
   /** A line fixed after a named mistake on it. */
   | 'line_fixed'
+  /** A line picked from the cards (Guided mode), the right card on the first pick. */
+  | 'line_picked'
   /** A part right on the first try. */
   | 'part'
   /** A part fixed after a named mistake on it. */
@@ -127,6 +134,8 @@ interface AttemptTrack {
   namedAt: Set<number>
   /** A named rejection since the last accepted line (the even/odd columns share step indices). */
   namedSinceLine: boolean
+  /** Step indices with a wrong card picked (Guided mode): a picked line there pays nothing. */
+  pickedWrongAt: Set<number>
   /** The part being worked on: a wrong check and a named mistake since the last right one. */
   part: { wrong: boolean; named: boolean }
   /** Boxes a check grades every time (`final_answer.part`). */
@@ -182,6 +191,7 @@ function run(events: readonly Ev[], start: Pick<RewardsState, 'cards' | 'mastere
       t = {
         namedAt: new Set(),
         namedSinceLine: false,
+        pickedWrongAt: new Set(),
         part: { wrong: false, named: false },
         boxes: new Map(),
         anyWrong: false,
@@ -239,7 +249,7 @@ function run(events: readonly Ev[], start: Pick<RewardsState, 'cards' | 'mastere
         }
       }
     }
-    if (e.mode === 'normal') {
+    if (inMasteryWindow(e)) {
       const before = windowMastered(t.window)
       t.window.unshift({ firstTryRate: e.firstTryRate, revealed: e.revealed, finalCorrect: e.finalCorrect })
       if (t.window.length > MASTERY_WINDOW) t.window.pop()
@@ -263,6 +273,7 @@ function run(events: readonly Ev[], start: Pick<RewardsState, 'cards' | 'mastere
     if (!live) return
     switch (e.t) {
       case 'step_rejected': {
+        if (e.via === 'card') attemptOf(e.attemptId).pickedWrongAt.add(e.stepIdx)
         if (!e.pattern) break
         const t = attemptOf(e.attemptId)
         t.namedAt.add(e.stepIdx)
@@ -280,6 +291,11 @@ function run(events: readonly Ev[], start: Pick<RewardsState, 'cards' | 'mastere
         t.revealPending = false
         if (cancelled.has(i) || e.revealed) break
         const extra = { attemptId: e.attemptId, stepIdx: e.stepIdx }
+        if (e.via === 'card') {
+          // Picked: +4 when the first card she picked for this line was the right one, nothing after a wrong pick.
+          if (!t.pickedWrongAt.has(e.stepIdx)) pay('line_picked', XP.picked, e, extra, halfAt(e.skill, e.at))
+          break
+        }
         if (e.firstTry) pay('line', XP.firstTry, e, extra, halfAt(e.skill, e.at))
         else if (named) pay('line_fixed', XP.fixed, e, extra, halfAt(e.skill, e.at))
         break
@@ -714,7 +730,7 @@ export function skillRings(events: readonly Ev[]): Map<string, SkillRingInfo> {
   const windows = new Map<string, MasteryEntry[]>()
   for (let i = events.length - 1; i >= 0; i--) {
     const e = events[i]!
-    if (e.t !== 'problem_done' || e.mode !== 'normal') continue
+    if (!inMasteryWindow(e)) continue
     let w = windows.get(e.skill)
     if (!w) {
       w = []
@@ -751,6 +767,8 @@ export interface FinishInfo {
   squashed: string[]
   /** Her first finished problem today after three or more days away. */
   comeback: boolean
+  /** Some of its lines were picked from cards (Guided mode): it does not move the type's ring. */
+  picked: boolean
 }
 
 /** What one finished attempt earned and what it set off. */
@@ -783,5 +801,6 @@ export function finishInfo(view: RewardsView, events: readonly Ev[], rewards: Re
     mastered: awards.some((a) => a.kind === 'mastered'),
     squashed: awards.filter((a) => a.kind === 'squash').map((a) => a.pattern ?? ''),
     comeback,
+    picked: done?.t === 'problem_done' && (done.picked ?? 0) > 0,
   }
 }

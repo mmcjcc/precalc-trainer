@@ -596,3 +596,96 @@ describe('a finished problem', () => {
     expect(finishInfo(v3, shifted, emptyRewards(), 'z').comeback).toBe(false)
   })
 })
+
+describe('Guided mode: lines picked from cards', () => {
+  /** A line kept after its cards were shown. */
+  const picked = (attemptId: string, stepIdx: number, at: number, opts: { firstTry?: boolean; revealed?: boolean } = {}): Ev => ({
+    ...(accepted(attemptId, stepIdx, at, opts) as Extract<Ev, { t: 'step_accepted' }>),
+    via: 'card',
+  })
+  /** A wrong card picked: its named mistake. */
+  const wrongPick = (attemptId: string, stepIdx: number, at: number, pattern: string): Ev => ({
+    ...(rejected(attemptId, stepIdx, at, pattern) as Extract<Ev, { t: 'step_rejected' }>),
+    via: 'card',
+  })
+
+  it('a line picked right on the first pick +4 instead of +10; picked after a wrong pick 0; typed lines and the finish as before', () => {
+    const t = dayAt(0)
+    const events: Ev[] = [
+      picked('g', 0, t),
+      wrongPick('g', 1, t + 1, 'log_one_side'),
+      picked('g', 1, t + 2, { firstTry: false }),
+      accepted('g', 2, t + 3),
+      // A typed mistake, then the cards: the first card she picked was the right one.
+      rejected('g', 3, t + 4, 'log_sum_split'),
+      picked('g', 3, t + 5, { firstTry: false }),
+      // Typed after a wrong pick: a typed line fixed after a named mistake, as before.
+      wrongPick('g', 4, t + 6, 'log_power_as_power'),
+      accepted('g', 4, t + 7, { firstTry: false }),
+      done('g', t + 8, { steps: 5, picked: 3 }),
+    ]
+    expect(kinds(awardsOf(events))).toEqual([
+      ['line_picked', 4],
+      ['line', 10],
+      ['line_picked', 4],
+      ['line_fixed', 5],
+      ['finish', 20],
+      ['no_hints', 10],
+    ])
+    // The wrong picks are named mistakes: they make mistake cards like typed ones.
+    const cards = computeRewards(events, emptyRewards(), 60, NOW).cards.map((c) => [c.pattern, c.count])
+    expect(cards).toEqual(expect.arrayContaining([['log_one_side', 1], ['log_sum_split', 1], ['log_power_as_power', 1]]))
+  })
+
+  it('a picked line that was shown by the hint, or undone, pays nothing; one of a mastered type pays half (+2)', () => {
+    const t = dayAt(0)
+    expect(
+      kinds(
+        awardsOf([
+          hint('r', 0, t, 3),
+          picked('r', 0, t + 1, { firstTry: false, revealed: true }),
+          picked('u', 0, t + 2),
+          { t: 'step_undone', at: t + 3, attemptId: 'u', skill: S, stepIdx: 0 },
+        ]),
+      ),
+    ).toEqual([])
+    const events: Ev[] = []
+    for (let i = 0; i < 5; i++) events.push(accepted(`m${i}`, 0, dayAt(-10 + i)), done(`m${i}`, dayAt(-10 + i, 11)))
+    events.push(picked('p', 0, dayAt(-2)))
+    expect(awardsOf(events).filter((a) => a.attemptId === 'p').map((a) => [a.kind, a.xp, a.half])).toEqual([['line_picked', 2, true]])
+  })
+
+  it('a problem with a picked line stays out of the mastery window and the rings, as a timed one does; its XP and squashes count', () => {
+    const normal = (id: string, day: number): Ev[] => [accepted(id, 0, dayAt(day)), done(id, dayAt(day, 11))]
+    const events: Ev[] = [
+      rejected('x', 0, dayAt(-9), 'no_sign_flip'),
+      accepted('x', 0, dayAt(-9, 10, 1), { firstTry: false }),
+      done('x', dayAt(-9, 11)),
+      ...normal('n0', -8),
+      picked('p', 0, dayAt(-7)),
+      done('p', dayAt(-7, 11), { steps: 1, picked: 1 }),
+      ...normal('n1', -6),
+      ...normal('n2', -5),
+    ]
+    // Four normal problems and a picked one: not mastered, and the ring counts four.
+    expect(skillRing(events, S)).toMatchObject({ level: 'solid', count: 4, strong: 4 })
+    let awards = awardsOf(events)
+    expect(awards.filter((a) => a.kind === 'mastered')).toEqual([])
+    expect(awards.filter((a) => a.attemptId === 'p').map((a) => [a.kind, a.xp])).toEqual([
+      ['line_picked', 4],
+      ['finish', 20],
+      ['no_hints', 10],
+    ])
+    // The picked problem is one of the three clean finishes (n0, p, n1) that squash the mistake.
+    expect(awards.filter((a) => a.kind === 'squash').map((a) => a.attemptId)).toEqual(['n1'])
+    // A fifth normal problem masters the type: the window skipped the picked one.
+    events.push(...normal('n3', -1))
+    awards = awardsOf(events)
+    expect(awards.filter((a) => a.kind === 'mastered').map((a) => a.attemptId)).toEqual(['n3'])
+    expect(skillRing(events, S)).toMatchObject({ level: 'mastered', count: 5 })
+    // The finish sheet knows a problem was picked (its ring did not move).
+    const view = computeRewards(events, emptyRewards(), 60, NOW)
+    expect(finishInfo(view, events, emptyRewards(), 'p').picked).toBe(true)
+    expect(finishInfo(view, events, emptyRewards(), 'n3').picked).toBe(false)
+  })
+})

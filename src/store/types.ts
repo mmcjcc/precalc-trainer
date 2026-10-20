@@ -50,7 +50,16 @@ export interface Settings {
   dailyGoal?: DailyGoal
   /** "Vibrate": a light tick on a right line or part and when the goal is met (rewards on only). Absent means on. */
   vibrate?: boolean
+  /**
+   * Guided mode, on problem types that offer cards (exponential and log equations): 'pick' is "Pick: choose each
+   * next line from three (counts less)". Absent means 'type'. Belongs to the device, like the keypad: an import never
+   * changes it.
+   */
+  lineEntry?: LineEntry
 }
+
+/** How she writes each line where the problem offers cards: on the keypad, or picked from three cards. */
+export type LineEntry = 'type' | 'pick'
 
 export interface Auth {
   ok: boolean
@@ -78,6 +87,16 @@ export interface AttemptStep {
   propertyTag?: string
   /** Chip she picked, when she answered. */
   chip?: ChipId
+  /** Guided mode: kept after its cards were shown (picked, or typed with the right card in view). */
+  via?: 'card'
+}
+
+/** Guided mode: one line whose cards were shown (`Attempt.picks`). */
+export interface LinePicks {
+  /** Wrong cards she picked, by their text: they stay off the cards for the rest of the line. */
+  wrong: string[]
+  /** "Type it yourself instead": this line is on the keypad. */
+  typing?: boolean
 }
 
 export interface AttemptFinal {
@@ -179,6 +198,12 @@ export interface Attempt {
    * this field existed fall back to currentRejections.
    */
   rejectionsByIdx?: Record<string, number>
+  /**
+   * Guided mode, per line (keyed like `hintsUsed`, by step index): the cards were shown for that line. A line kept
+   * after its cards were shown counts as picked however she entered it, as a line kept after "Show the step" counts
+   * as shown. Not cleared by undo. Absent on attempts from before Guided mode.
+   */
+  picks?: Record<string, LinePicks>
   /** Foreground seconds spent (maintained by the workspace's idle clock). */
   activeSecs: number
   final?: AttemptFinal
@@ -202,8 +227,24 @@ export type Ev =
       firstTry: boolean
       revealed: boolean
       property: PropertyOutcome
+      /** Guided mode: the line was picked from cards (or typed after its cards were shown). Absent: typed. */
+      via?: 'card'
+      /**
+       * The step type, where a flow offers cards: what the path's step does, as the engine reads the move
+       * ("power_rule+take_log"). Two right picks of one type since she last typed one make her type the next
+       * (store/selectors.ts `typeThisTime`).
+       */
+      rule?: string
     })
-  | (EvBase & { t: 'step_rejected'; attemptId: string; skill: string; stepIdx: number; pattern?: string })
+  | (EvBase & {
+      t: 'step_rejected'
+      attemptId: string
+      skill: string
+      stepIdx: number
+      pattern?: string
+      /** Guided mode: a wrong card she picked (the pattern is its named mistake). */
+      via?: 'card'
+    })
   | (EvBase & { t: 'hint'; attemptId: string; skill: string; stepIdx: number; rung: 1 | 2 | 3 })
   | (EvBase & { t: 'step_undone'; attemptId: string; skill: string; stepIdx: number })
   | (EvBase & {
@@ -233,6 +274,11 @@ export type Ev =
       finalCorrect: boolean
       mode: AttemptMode
       secs: number
+      /**
+       * Guided mode: how many of its lines were picked from cards. Any: the problem stays out of the mastery window
+       * and the rings, as a timed one does (its XP and its mistake cards still count). Absent: none.
+       */
+      picked?: number
     })
   | (EvBase & { t: 'problem_abandoned'; attemptId: string; skill: string })
   | (EvBase & { t: 'drill_answer'; skill: string; correct: boolean; kind: 'property' | 'legal' })

@@ -66,11 +66,12 @@ export function awardLines(awards: readonly XpAward[], typeTitle: string): Award
   const fixed = awards.filter((a) => a.kind === 'line_fixed' || a.kind === 'part_fixed')
   group('fixed', (n) => (n === 1 ? 'Caught and fixed a mistake' : `Caught and fixed ${n} mistakes`), fixed)
   group('lines', (n) => (n === 1 ? 'A line right first try' : `${n} lines right first try`), kind('line'))
+  group('picked', (n) => (n === 1 ? 'A line picked right' : `${n} lines picked right`), kind('line_picked'))
   const parts = kind('part')
   for (const a of parts.filter((p) => p.part !== undefined)) group(`part ${a.part}`, () => `${a.part} right first try`, [a])
   const plain = parts.filter((p) => p.part === undefined)
   // A problem with one answer and nothing else to it: "Answer", not "part".
-  const single = plain.length === 1 && kind('line').length === 0 && fixed.length === 0
+  const single = plain.length === 1 && kind('line').length === 0 && kind('line_picked').length === 0 && fixed.length === 0
   group('parts', (n) => (single ? 'Answer right first try' : plural(n, 'A part right first try', `${n} parts right first try`)), plain)
   group('finish', () => 'Problem finished', kind('finish'))
   group('no_hints', () => 'No hints', kind('no_hints'))

@@ -315,3 +315,70 @@ describe('review fixes: step accounting (F2, F3, F5)', () => {
     expect(useStore.getState().events.find((e) => e.t === 'problem_done')).toMatchObject({ finalCorrect: true, firstTryRate: 1 })
   })
 })
+
+describe('Guided mode in the store', () => {
+  beforeEach(() => {
+    resetStoreForTests()
+    localStorage.clear()
+  })
+
+  const ofType = <T extends Ev['t']>(t: T) => useStore.getState().events.filter((e): e is Extract<Ev, { t: T }> => e.t === t)
+
+  it('a wrong card: step_rejected with its mistake and via card, the card off the line; the right card: via card and the step type', () => {
+    start()
+    const s = useStore.getState()
+    s.showCards()
+    s.rejectCard({ pattern: 'log_one_side', text: '3^x = log(13)' })
+    expect(useStore.getState().attempt?.picks).toEqual({ '0': { wrong: ['3^x = log(13)'] } })
+    expect(ofType('step_rejected')).toMatchObject([{ stepIdx: 0, pattern: 'log_one_side', via: 'card' }])
+    const step = useStore.getState().acceptStep({ text: 'x*log(3) = log(13)', via: 'card', rule: 'ee-convert' })
+    expect(step).toMatchObject({ via: 'card', firstTry: false })
+    expect(ofType('step_accepted')).toMatchObject([{ stepIdx: 0, via: 'card', rule: 'ee-convert', firstTry: false }])
+    // A typed line: no via; the step type when the flow gives one.
+    useStore.getState().acceptStep({ text: 'x = log(13)/log(3)', rule: 'ee-convert' })
+    const second = ofType('step_accepted')[1]!
+    expect('via' in second).toBe(false)
+    expect(second.rule).toBe('ee-convert')
+    // The finish counts the picked lines.
+    expect(useStore.getState().finishAttempt({})).toMatchObject({ steps: 2, picked: 1 })
+    expect(ofType('problem_done')[0]).toMatchObject({ picked: 1 })
+  })
+
+  it('a line typed after its cards were shown counts as picked; Type it yourself instead, and back; undo keeps it', () => {
+    start()
+    const s = useStore.getState()
+    s.showCards()
+    s.typeCardLine(true)
+    expect(useStore.getState().attempt?.picks?.['0']).toEqual({ wrong: [], typing: true })
+    s.typeCardLine(false)
+    expect(useStore.getState().attempt?.picks?.['0']).toEqual({ wrong: [] })
+    expect(useStore.getState().acceptStep({ text: 'x*log(3) = log(13)' })).toMatchObject({ via: 'card', firstTry: true })
+    useStore.getState().undoStep()
+    expect(useStore.getState().acceptStep({ text: 'x*log(3) = log(13)' })).toMatchObject({ via: 'card' })
+    // The next line had no cards: typed.
+    expect(useStore.getState().acceptStep({ text: 'x = log(13)/log(3)' })).not.toHaveProperty('via')
+    expect(useStore.getState().attempt?.picks).toEqual({ '0': { wrong: [] } })
+  })
+
+  it('a problem with no picked line has no picked field; the picks survive a reload; without an attempt nothing happens', () => {
+    start()
+    useStore.getState().showCards(1)
+    useStore.persist.rehydrate()
+    expect(useStore.getState().attempt?.picks).toEqual({ '1': { wrong: [] } })
+    useStore.getState().acceptStep({ text: 'x = 1' })
+    useStore.getState().finishAttempt({})
+    expect(ofType('problem_done')[0]).not.toHaveProperty('picked')
+    useStore.getState().showCards()
+    useStore.getState().rejectCard({ text: 'x = 2', pattern: 'log_one_side' })
+    useStore.getState().typeCardLine(true)
+    expect(useStore.getState().attempt).toBeNull()
+    expect(ofType('step_rejected')).toEqual([])
+  })
+
+  it('Type / Pick is remembered in settings', () => {
+    useStore.getState().setSettings({ lineEntry: 'pick' })
+    expect(JSON.parse(localStorage.getItem(STORAGE_KEYS.settings)!)).toMatchObject({ lineEntry: 'pick' })
+    useStore.persist.rehydrate()
+    expect(useStore.getState().settings.lineEntry).toBe('pick')
+  })
+})

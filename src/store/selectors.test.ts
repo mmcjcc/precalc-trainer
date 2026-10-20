@@ -8,8 +8,11 @@ import {
   mastery,
   moduleMastery,
   patternCounts,
+  PICKS_BEFORE_TYPING,
+  picksSinceTyped,
   pickWeakSpot,
   propertyAccuracy,
+  typeThisTime,
   weakSpotWeights,
 } from './selectors'
 import { dayKey, isoWeekKey, startOfIsoWeek } from './time'
@@ -77,6 +80,17 @@ describe('mastery(skill)', () => {
     expect(m.count).toBe(1)
     expect(m.rate).toBe(1)
     expect(m.lastAt).toBe(NOW - DAY)
+  })
+
+  it('excludes a problem with a line picked from cards (Guided mode), as it does a timed one', () => {
+    const four = [1, 2, 3, 4].map((i) => done('s', NOW - i * DAY, 1))
+    const withPicked = [...four, done('s', NOW, 1, { picked: 2 })]
+    const m = mastery(withPicked, 's')
+    expect(m.count).toBe(4)
+    expect(m.mastered).toBe(false)
+    expect(m.lastAt).toBe(NOW)
+    // picked: 0 (or absent) is a typed problem.
+    expect(mastery([...four, done('s', NOW, 1, { picked: 0 })], 's').mastered).toBe(true)
   })
 
   it('moduleMastery averages families with data and flags complete only when all are mastered', () => {
@@ -220,5 +234,54 @@ describe('F10: undone steps do not count in the rates', () => {
   it('an undo in another attempt or at another index cancels nothing', () => {
     const events: Ev[] = [acc(1, 0, true), undo(2, 0, 'other'), undo(3, 1)]
     expect(firstTryRate(events, {}, 's')).toMatchObject({ numerator: 1, denominator: 1 })
+  })
+})
+
+describe('Guided mode: a step type picked right twice is typed the next time', () => {
+  /** A kept line of step type `rule`: picked from cards, or typed. */
+  const line = (at: number, rule: string, how: 'card' | 'typed', opts: { attemptId?: string; stepIdx?: number; revealed?: boolean } = {}): Ev => ({
+    t: 'step_accepted',
+    at,
+    attemptId: opts.attemptId ?? `p${at}`,
+    skill: 'ee.exponential',
+    stepIdx: opts.stepIdx ?? 0,
+    firstTry: true,
+    revealed: opts.revealed ?? false,
+    property: 'skipped',
+    rule,
+    ...(how === 'card' ? { via: 'card' as const } : {}),
+  })
+
+  it('counts the right picks of one type since she last typed one; two make her type the next', () => {
+    expect(PICKS_BEFORE_TYPING).toBe(2)
+    const events: Ev[] = [line(1, 'ee-convert', 'card')]
+    expect(picksSinceTyped(events, 'ee-convert')).toBe(1)
+    expect(typeThisTime(events, 'ee-convert')).toBe(false)
+    // Another type's picks do not count toward this one.
+    events.push(line(2, 'ee-both-sides', 'card'))
+    expect(typeThisTime(events, 'ee-convert')).toBe(false)
+    events.push(line(3, 'ee-convert', 'card'))
+    expect(typeThisTime(events, 'ee-convert')).toBe(true)
+    expect(typeThisTime(events, 'ee-both-sides')).toBe(false)
+    // She types it: the count starts again.
+    events.push(line(4, 'ee-convert', 'typed'))
+    expect(picksSinceTyped(events, 'ee-convert')).toBe(0)
+    expect(typeThisTime(events, 'ee-convert')).toBe(false)
+    // No step type, no rule.
+    expect(typeThisTime(events, null)).toBe(false)
+  })
+
+  it('a line shown by the hint counts for neither; an undone pick does not count', () => {
+    const events: Ev[] = [
+      line(1, 'ee-convert', 'card'),
+      line(2, 'ee-convert', 'typed', { revealed: true }),
+      line(3, 'ee-convert', 'card', { attemptId: 'u', stepIdx: 1 }),
+      { t: 'step_undone', at: 4, attemptId: 'u', skill: 'ee.exponential', stepIdx: 1 },
+    ]
+    expect(picksSinceTyped(events, 'ee-convert')).toBe(1)
+    events.push(line(5, 'ee-convert', 'card', { revealed: true }))
+    expect(picksSinceTyped(events, 'ee-convert')).toBe(1)
+    events.push(line(6, 'ee-convert', 'card'))
+    expect(typeThisTime(events, 'ee-convert')).toBe(true)
   })
 })

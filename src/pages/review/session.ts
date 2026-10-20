@@ -131,10 +131,10 @@ export function slotEvents(events: readonly Ev[], attemptId: string | null): Ev[
   return events.filter((e) => 'attemptId' in e && e.attemptId === attemptId)
 }
 
-/** Finished with the answer right, every line right on the first try, nothing revealed. */
+/** Finished with the answer right, every line right on the first try, nothing revealed, no line picked from cards. */
 export function isFirstTryRight(slot: readonly Ev[]): boolean {
   const done = slot.find((e) => e.t === 'problem_done')
-  return done?.t === 'problem_done' && done.finalCorrect && done.firstTryRate === 1 && done.revealed === 0
+  return done?.t === 'problem_done' && done.finalCorrect && done.firstTryRate === 1 && done.revealed === 0 && !done.picked
 }
 
 /** Per topic, in the review's own order. Topics that were not in this set are left out. */

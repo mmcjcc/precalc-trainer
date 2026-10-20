@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { KEPT, stepVerdict, type LineVerdict } from '@/components/ComposerVerdict'
 import { Katex } from '@/components/Katex'
+import { notePress } from '@/components/keypadStore'
+import { LineCards, LineEntrySwitch } from '@/components/LineCards'
 import { MathInput } from '@/components/MathInput'
 import { SigFigCorrect, SigFigExplanation, SigFigRejection } from '@/components/SigFigFeedback'
 import { LOG_KEYS } from '@/components/symbolStrip'
@@ -12,10 +14,12 @@ import { anyShows, safeExample, safeLesson, safeWitness } from '@/content/module
 import { getModule } from '@/content/registry'
 import type { ProblemInstance } from '@/content/types'
 import { checkLogRewrite, checkLogStep, gradeLogEquation, patternHit, ERROR_PATTERNS, type LogGrade, type LogStepResult } from '@/engine'
+import { expLogStepContext, lineCardsFor, offersLineCards, stepTypeOf } from '@/problem/cardSources'
+import type { LineCard } from '@/problem/lineCards'
 import { counterexampleLines, hintView, liveParseError, safeLatex, type HintView, type ProgressLine } from '@/problem/stepEngine'
 import { verdictFromLog, verdictFromStep } from '@/problem/tutorContext'
 import type { Counterexample, PatternHit } from '@/shared/types'
-import { useStore } from '@/store'
+import { typeThisTime, useStore, type LineEntry } from '@/store'
 import { NotAnAttemptNotice, useHintLadder } from './hintLadder'
 import { PolyTextBox, savePolyEntries } from './polyUi'
 import { recordLogGrade } from './record'
@@ -26,7 +30,8 @@ type Mode = 'properties' | 'equations'
 
 type LineFeedback =
   | { kind: 'blocked'; message: string }
-  | { kind: 'rejected'; result: LogStepResult }
+  /** `picked`: the wrong card she picked (Guided mode); absent for a typed line. */
+  | { kind: 'rejected'; result: LogStepResult; picked?: string }
   | { kind: 'same' }
   | { kind: 'kept'; caveat: boolean; note: string }
 
@@ -92,6 +97,11 @@ function isBlocked(result: LogStepResult): boolean {
 /**
  * Expand, condense, or solve, one checked line at a time. Equations then take a final answer.
  * The third hint shows the next textbook line and marks it as shown.
+ *
+ * Guided mode (equations; docs/progress/phone-guided.md): with "Pick" on, each next line is picked from three cards
+ * (the path's next line and two of the engine's named slips of her line); a picked card goes through the checker as
+ * the same line typed would, so a wrong one shows that mistake's lesson. While she types, the hints (and so Stuck?)
+ * first offer the cards for one line. A step type picked right twice is typed the next time; the answer is typed.
  */
 function LogWork(props: FlowProps & { mode: Mode }) {
   const answer = props.instance.answer
@@ -140,6 +150,30 @@ function Body({ instance, attempt, flags, templateTitle, completion, finish, mod
   const rawView = useMemo(() => hintView(instance, lastText ?? start, false, null, solved), [instance, lastText, start, solved])
   const view = useMemo(() => visibleHint(rawView, forms), [rawView, forms])
 
+  // ---- Guided mode: the next line picked from cards ------------------------------------------------------------
+  const offers = equation !== null && offersLineCards(instance)
+  const lineEntry: LineEntry = useStore((s) => s.settings.lineEntry) === 'pick' ? 'pick' : 'type'
+  const picking = offers && lineEntry === 'pick'
+  const live = !done && !solved && attempt !== null
+  // The line she is writing (the hint and rejection key) and its cards' state on the attempt.
+  const lineKey = steps.length
+  const picks = attempt?.picks?.[String(lineKey)]
+  // The step type: what the path's next step does ("power_rule+take_log", cardSources.ts stepTypeOf). It keys the
+  // two-right-picks rule across problems; logged on every line.
+  const nextText = rawView.next?.text ?? null
+  const stepType = useMemo(() => (offers && nextText !== null ? stepTypeOf(instance, previous, nextText) : null), [offers, nextText, previous, instance])
+  const events = useStore((s) => s.events)
+  const mustType = useMemo(() => offers && typeThisTime(events, stepType), [offers, events, stepType])
+  const wantCards = offers && live && rawView.next !== null && (picks !== undefined || !mustType)
+  const cards = useMemo(() => (wantCards ? lineCardsFor(instance, previous, lineKey) : []), [wantCards, instance, previous, lineKey])
+  const cardsLeft = useMemo(() => cards.filter((c) => c.right || !(picks?.wrong ?? []).includes(c.text)), [cards, picks])
+  // Cards on the screen: this line's cards were shown (and she did not switch to typing it), or Pick is on.
+  const showingCards = cards.length > 0 && (picks ? !picks.typing : picking && !mustType)
+  // Once the cards are on the screen the line counts as picked, however she enters it.
+  useEffect(() => {
+    if (showingCards && !picks) useStore.getState().showCards(lineKey)
+  }, [showingCards, picks, lineKey])
+
   const restoredFor = useRef<string | null>(null)
   useEffect(() => {
     if (!attempt || restoredFor.current === attempt.id) return
@@ -179,12 +213,8 @@ function Body({ instance, attempt, flags, templateTitle, completion, finish, mod
 
   function checkLine(prev: string, next: string): LogStepResult {
     if (answer.type === 'logProperties') return checkLogRewrite(prev, next, { assumePositive: true, vars: answer.vars })
-    return checkLogStep(prev, next, {
-      original: answer.equation,
-      vars: ['x'],
-      seed: instance.seed,
-      ...(answer.places ? { decimal: { places: answer.places } } : {}),
-    })
+    // The context the cards are confirmed in too (cardSources.ts), so a card is judged as the same line typed.
+    return checkLogStep(prev, next, expLogStepContext(instance) ?? { vars: ['x'] })
   }
 
   const validate = useCallback(
@@ -195,26 +225,38 @@ function Body({ instance, attempt, flags, templateTitle, completion, finish, mod
     [answer],
   )
 
-  function acceptLine(text: string, revealed: boolean) {
+  function acceptLine(text: string, revealed: boolean, via?: 'card') {
     lastRejected.current = null
     const s = useStore.getState()
-    s.acceptStep({ text, latex: safeLatex(text), revealed: revealed || s.attempt?.final?.revealed === true })
+    s.acceptStep({
+      text,
+      latex: safeLatex(text),
+      revealed: revealed || s.attempt?.final?.revealed === true,
+      ...(via ? { via } : {}),
+      ...(stepType ? { rule: stepType } : {}),
+    })
     setDraftState('')
     s.setDraft('')
-    if (!solved) inputRef.current?.focus({ preventScroll: true })
+    if (!solved && !via) inputRef.current?.focus({ preventScroll: true })
   }
 
-  function submitLine() {
+  /** Check a line as her next one: typed (from the box), or a card she picked (`via`). */
+  function submitText(typed: string, via?: 'card') {
     if (done || solved || !attempt) return
-    const typed = draft.trim()
     const raw = checkLine(previous, typed)
     if (isBlocked(raw)) {
       setFeedback({ kind: 'blocked', message: blockedMessage(raw, forms) })
-      inputRef.current?.focus({ preventScroll: true })
+      if (!via) inputRef.current?.focus({ preventScroll: true })
       return
     }
     const result = visibleStep(raw, forms)
     if (!result.ok) {
+      if (via) {
+        // A wrong card: its named mistake, logged as a typed slip is, and the card leaves the line.
+        useStore.getState().rejectCard({ pattern: result.pattern?.id, text: typed, key: lineKey })
+        setFeedback({ kind: 'rejected', result, picked: typed })
+        return
+      }
       const sig = `${attempt.id} ${steps.length} ${squash(typed)}`
       if (lastRejected.current !== sig) {
         lastRejected.current = sig
@@ -233,11 +275,12 @@ function Body({ instance, attempt, flags, templateTitle, completion, finish, mod
       return
     }
     const caveat = result.caveat === 'extraneous_check'
-    acceptLine(text, false)
+    acceptLine(text, false, via)
     const note = caveat ? safeWitness(result.pattern?.witness ?? ERROR_PATTERNS.log_check_answers.lesson, forms) : ''
     setFeedback({ kind: 'kept', caveat, note })
-    // A line that already is the solution (ln(x) = 3 → x = e^3) goes into the answer box for her to check.
-    if (equation && !box.trim() && /^\s*x\s*=/.test(text)) {
+    // A line that already is the solution (ln(x) = 3 → x = e^3) goes into the answer box for her to check. Not a
+    // picked one: the answer is always typed.
+    if (!via && equation && !box.trim() && /^\s*x\s*=/.test(text)) {
       const g = gradeLogEquation(equation.equation, text, { vars: ['x'], ...(equation.places ? { decimal: { places: equation.places } } : {}) })
       if (g.verdict === 'correct') {
         storeBox(text)
@@ -257,6 +300,50 @@ function Body({ instance, attempt, flags, templateTitle, completion, finish, mod
     const stored = raw.normalized?.text || text
     acceptLine(stored, true)
     setFeedback({ kind: 'kept', caveat: raw.caveat === 'extraneous_check', note: '' })
+  }
+
+  function submitLine() {
+    submitText(draft.trim())
+  }
+
+  function pickCard(card: LineCard) {
+    if (!live) return
+    submitText(card.text, 'card')
+  }
+
+  /** "Type it yourself instead": this line goes on the keypad (it comes up with the box, as after a key press). */
+  const focusBoxNext = useRef(false)
+  function typeInstead() {
+    focusBoxNext.current = true
+    useStore.getState().typeCardLine(true, lineKey)
+  }
+  useEffect(() => {
+    if (!focusBoxNext.current || showingCards) return
+    focusBoxNext.current = false
+    const box = inputRef.current
+    if (!box) return
+    // After the box is mounted (autofocus comes before the keypad knows the box): focus that follows a press opens it.
+    notePress()
+    if (document.activeElement === box) box.blur()
+    box.focus({ preventScroll: true })
+  }, [showingCards])
+
+  /** Type / Pick, remembered for next time. A line whose cards are out follows the switch. */
+  function chooseEntry(next: LineEntry) {
+    const s = useStore.getState()
+    s.setSettings({ lineEntry: next })
+    if (picks) s.typeCardLine(next === 'type', lineKey)
+  }
+
+  // While she types, the hints (and so Stuck?) offer the cards for this one line first.
+  const pickOffer = !picking && live && cards.length > 0 && !picks ? () => useStore.getState().showCards(lineKey) : null
+  // Why a line is typed where she might expect cards.
+  let typedNote: string | null = null
+  if (offers && live && !showingCards) {
+    if (picks) typedNote = 'You saw the cards for this line, so it counts as a picked line.'
+    else if (picking && mustType) typedNote = 'You picked this one right twice: type it this time.'
+    else if (picking && rawView.next === null) typedNote = 'That was the last line of the path: write the solution in the answer box.'
+    else if (picking) typedNote = 'No cards for this line: type it.'
   }
 
   function storeBox(value: string) {
@@ -313,7 +400,7 @@ function Body({ instance, attempt, flags, templateTitle, completion, finish, mod
     solved: done,
     offPath: false,
   }
-  const lineVerdict = feedback?.kind === 'rejected' ? verdictFromStep(feedback.result, draft) : undefined
+  const lineVerdict = feedback?.kind === 'rejected' ? verdictFromStep(feedback.result, feedback.picked ?? draft) : undefined
   const boxVerdict = boxGrade ? verdictFromLog(boxGrade, box) : undefined
   // The same feedback in the phone composer, one line above her input.
   const composerVerdict = useMemo<LineVerdict | null>(() => {
@@ -342,8 +429,15 @@ function Body({ instance, attempt, flags, templateTitle, completion, finish, mod
       completion={completion}
       tutorVerdict={boxVerdict ?? lineVerdict}
       lineVerdict={composerVerdict}
-      nudgeText={equation ? 'Still here? Write the next line, then the solution in the answer box. The hint button is right there.' : 'Still here? Type the next line of your work below. The hint button is right there.'}
+      nudgeText={
+        showingCards
+          ? 'Still here? Pick the next line from the cards. The hint button is right there.'
+          : equation
+            ? 'Still here? Write the next line, then the solution in the answer box. The hint button is right there.'
+            : 'Still here? Type the next line of your work below. The hint button is right there.'
+      }
       keymap={{ onHint: hint.advance, onUndo: undo }}
+      pickLine={pickOffer}
       statement={
         <div className="space-y-2">
           <div className="overflow-x-auto">
@@ -363,19 +457,39 @@ function Body({ instance, attempt, flags, templateTitle, completion, finish, mod
       }
       composer={
         !done && !solved ? (
-          <MathInput
-            value={draft}
-            onChange={setDraft}
-            onSubmit={submitLine}
-            validate={validate}
-            inputRef={inputRef}
-            autoFocus
-            label="Next line"
-            submitLabel="Check this line"
-            placeholder="next line of your work"
-            stripKeys={LOG_KEYS}
-            toTex={safeLatex}
-          />
+          showingCards ? (
+            <LineCards key={lineKey} cards={cardsLeft} onPick={pickCard} onType={typeInstead} />
+          ) : (
+            <>
+              {typedNote && (
+                <p className="mb-2 text-sm text-navy/80" data-typed-note="">
+                  {typedNote}
+                </p>
+              )}
+              <MathInput
+                value={draft}
+                onChange={setDraft}
+                onSubmit={submitLine}
+                validate={validate}
+                inputRef={inputRef}
+                autoFocus
+                label="Next line"
+                submitLabel="Check this line"
+                placeholder="next line of your work"
+                stripKeys={LOG_KEYS}
+                toTex={safeLatex}
+              />
+              {picks?.typing && cards.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => useStore.getState().typeCardLine(false, lineKey)}
+                  className="mt-2 min-h-11 rounded-lg px-2 text-sm font-semibold text-navy underline hover:bg-navy-50"
+                >
+                  Back to the cards
+                </button>
+              )}
+            </>
+          )
         ) : undefined
       }
     >
@@ -383,6 +497,7 @@ function Body({ instance, attempt, flags, templateTitle, completion, finish, mod
         <h2 id="log-work-title" className="font-semibold text-navy">
           Your work
         </h2>
+        {offers && !done && <LineEntrySwitch value={lineEntry} onChange={chooseEntry} />}
         <p className="text-xs text-navy/70">
           {mode === 'properties'
             ? 'One line at a time. A line is kept when it is still equal to the original, and the variables stay positive.'
@@ -391,6 +506,12 @@ function Body({ instance, attempt, flags, templateTitle, completion, finish, mod
         <WorkedColumn start={start} steps={steps} onUndo={undo} canUndo={canUndo} />
         {feedback?.kind === 'same' && <NotAnAttemptNotice messages={['That is the line above, written again. Change one thing, then check the new line.']} />}
         {feedback?.kind === 'blocked' && <NotAnAttemptNotice messages={[feedback.message]} />}
+        {feedback?.kind === 'rejected' && feedback.picked && (
+          <p className="flex flex-wrap items-center gap-2 text-sm text-navy" data-picked-line="">
+            <span>You picked</span>
+            <Katex tex={safeLatex(feedback.picked)} ariaLabel={feedback.picked} />
+          </p>
+        )}
         {feedback?.kind === 'rejected' && <RejectionCard result={feedback.result} />}
         {feedback?.kind === 'kept' && !feedback.caveat && !done && (
           <p role="status" className="text-sm text-navy">

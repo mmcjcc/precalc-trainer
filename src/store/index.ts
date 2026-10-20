@@ -40,6 +40,7 @@ import {
   type AttemptStep,
   type Ev,
   type HintRung,
+  type LinePicks,
   type PersistedState,
   type PropertyOutcome,
   type RewardsState,
@@ -88,6 +89,10 @@ export interface AcceptStepInput {
   revealed?: boolean
   /** Hint-ladder / rejection key for this step (default: the step index). */
   hintKey?: number
+  /** Guided mode: picked from the cards. A line whose cards were shown (`showCards`) counts as picked anyway. */
+  via?: 'card'
+  /** The step type (the path step's rule card), logged where the flow offers cards. */
+  rule?: string
   now?: number
 }
 
@@ -108,6 +113,8 @@ export interface ProblemSummary {
   secs: number
   streak: number
   mode: AttemptMode
+  /** Lines picked from cards (Guided mode): any keeps the problem out of the mastery window. */
+  picked: number
 }
 
 interface Transient {
@@ -127,6 +134,15 @@ interface Actions {
   answerProperty: (stepIdx: number, outcome: 'correct' | 'wrong', chip?: ChipId) => void
   /** `key`: the ladder key the rejection counts against (default: the next step index). */
   rejectStep: (pattern?: string, now?: number, key?: number) => void
+  /**
+   * Guided mode: the cards for this line are on the screen (`key`: the line, default the next step index). From now on
+   * the line counts as picked however she enters it.
+   */
+  showCards: (key?: number) => void
+  /** Guided mode: a wrong card picked: `step_rejected` with its named mistake and `via: 'card'`; it leaves the cards. */
+  rejectCard: (input: { pattern?: string; text: string; key?: number; now?: number }) => void
+  /** Guided mode: "Type it yourself instead" (true) or back to the cards (false), for a line whose cards were shown. */
+  typeCardLine: (typing: boolean, key?: number) => void
   undoStep: () => AttemptStep | null
   useHint: (stepIdx: number, rung: 1 | 2 | 3, now?: number) => void
   /** Debounced 500 ms; flushed by acceptStep/finish/abandon. */
@@ -286,6 +302,8 @@ export const useStore = create<StoreState>()(
         // Rung 3 ("Show the step") marks the step shown whether or not "Use this line" was clicked.
         const revealed = Boolean(input.revealed) || (a.hintsUsed[key] ?? 0) >= 3
         const tries = a.rejectionsByIdx ? (a.rejectionsByIdx[key] ?? 0) : a.currentRejections
+        // Guided mode: a line kept after its cards were shown counts as picked, however she entered it.
+        const via = input.via ?? (a.picks?.[key] ? ('card' as const) : undefined)
         const step: AttemptStep = {
           idx: a.steps.length,
           text: input.text,
@@ -295,6 +313,7 @@ export const useStore = create<StoreState>()(
           revealed,
           property: s.settings.askProperty === 'off' ? 'off' : 'skipped',
           propertyTag: input.propertyTag,
+          ...(via ? { via } : {}),
         }
         const ev: Ev = {
           t: 'step_accepted',
@@ -305,6 +324,8 @@ export const useStore = create<StoreState>()(
           firstTry: step.firstTry,
           revealed: step.revealed,
           property: step.property,
+          ...(via ? { via } : {}),
+          ...(input.rule ? { rule: input.rule } : {}),
         }
         set({
           attempt: touch({ ...a, steps: [...a.steps, step], draft: '', currentRejections: 0 }, now),
@@ -338,6 +359,36 @@ export const useStore = create<StoreState>()(
         const k = String(key ?? a.steps.length)
         const rejectionsByIdx = { ...a.rejectionsByIdx, [k]: (a.rejectionsByIdx?.[k] ?? 0) + 1 }
         set({ attempt: touch({ ...a, currentRejections: a.currentRejections + 1, rejectionsByIdx }, now), events: [...s.events, ev] })
+      },
+
+      showCards: (key) => {
+        const a = get().attempt
+        if (!a) return
+        const k = String(key ?? a.steps.length)
+        if (a.picks?.[k]) return
+        set({ attempt: { ...a, picks: { ...a.picks, [k]: { wrong: [] } } } })
+      },
+
+      rejectCard: ({ pattern, text, key, now = Date.now() }) => {
+        const s = get()
+        const a = s.attempt
+        if (!a) return
+        const ev: Ev = { t: 'step_rejected', at: now, attemptId: a.id, skill: a.skill, stepIdx: a.steps.length, pattern, via: 'card' }
+        const k = String(key ?? a.steps.length)
+        const rejectionsByIdx = { ...a.rejectionsByIdx, [k]: (a.rejectionsByIdx?.[k] ?? 0) + 1 }
+        const line: LinePicks = a.picks?.[k] ?? { wrong: [] }
+        const picks = { ...a.picks, [k]: { ...line, wrong: line.wrong.includes(text) ? line.wrong : [...line.wrong, text] } }
+        set({ attempt: touch({ ...a, currentRejections: a.currentRejections + 1, rejectionsByIdx, picks }, now), events: [...s.events, ev] })
+      },
+
+      typeCardLine: (typing, key) => {
+        const a = get().attempt
+        if (!a) return
+        const k = String(key ?? a.steps.length)
+        const line = a.picks?.[k]
+        if (!line || Boolean(line.typing) === typing) return
+        const next: LinePicks = { wrong: line.wrong, ...(typing ? { typing: true } : {}) }
+        set({ attempt: { ...a, picks: { ...a.picks, [k]: next } } })
       },
 
       undoStep: () => {
@@ -436,6 +487,7 @@ export const useStore = create<StoreState>()(
         // Decided by the attempt: one wrong final answer / verdict / check anywhere makes it false.
         const finalCorrect = (input.finalCorrect ?? a.final?.correct ?? true) && !a.final?.everWrong
         const secs = Math.round(a.activeSecs + (input.secs ?? 0))
+        const picked = a.steps.filter((st) => st.via === 'card').length
         const ev: Ev = {
           t: 'problem_done',
           at: now,
@@ -450,10 +502,11 @@ export const useStore = create<StoreState>()(
           finalCorrect,
           mode: a.mode,
           secs,
+          ...(picked > 0 ? { picked } : {}),
         }
         const streak = a.mode === 'normal' ? bumpStreak(s.streak, dayKey(now)) : s.streak
         set({ attempt: null, events: [...s.events, ev], streak })
-        return { skill: a.skill, steps, firstTry, hints, revealed, finalCorrect, secs, streak: currentStreak(streak, now), mode: a.mode }
+        return { skill: a.skill, steps, firstTry, hints, revealed, finalCorrect, secs, streak: currentStreak(streak, now), mode: a.mode, picked }
       },
 
       abandonAttempt: (now = Date.now()) => {

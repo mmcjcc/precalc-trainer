@@ -2,7 +2,7 @@
  * Derived views over the event log + weekly counters. Pure functions; hooks in ./index.ts wrap
  * them with useMemo. Definitions: docs/research/ux-mobile-progress.md "Derived selectors".
  */
-import { MASTERY_WINDOW, cancelledSteps } from './compaction'
+import { MASTERY_WINDOW, cancelledSteps, inMasteryWindow } from './compaction'
 import { dayKey, daysBetweenKeys, startOfIsoWeek } from './time'
 import type { Ev, Streak, Weekly, WeeklySkill } from './types'
 
@@ -24,7 +24,8 @@ export const MASTERY_THRESHOLD = 0.8
 export type MasteryEntry = Pick<Extract<Ev, { t: 'problem_done' }>, 'firstTryRate' | 'revealed' | 'finalCorrect'>
 
 /**
- * The mastery rule on the window of finished problems, most recent first (normal mode, at most MASTERY_WINDOW):
+ * The mastery rule on the window of finished problems, most recent first (normal mode with no line picked from
+ * cards, `inMasteryWindow`; at most MASTERY_WINDOW):
  * the window is full, the mean first-try rate is at least 0.8, nothing was revealed and every final answer was right.
  * The rewards (store/rewards.ts) read the same rule.
  */
@@ -49,7 +50,7 @@ export function mastery(events: Ev[], skill: string): MasteryInfo {
     const e = events[i]!
     if (!('skill' in e) || e.skill !== skill) continue
     if (lastAt === null || e.at > lastAt) lastAt = e.at
-    if (e.t === 'problem_done' && e.mode === 'normal' && done.length < MASTERY_WINDOW) done.push(e)
+    if (inMasteryWindow(e) && done.length < MASTERY_WINDOW) done.push(e)
   }
   if (done.length === 0) return { rate: null, mastered: false, count: 0, lastAt, window: MASTERY_WINDOW }
   const rate = done.reduce((s, e) => s + e.firstTryRate, 0) / done.length
@@ -267,6 +268,33 @@ export function weakSpotWeights(events: Ev[], skills: string[]): WeightedSkill[]
     else weight = Math.max(0.05, 1 - info.rate)
     return { skill, weight, info }
   })
+}
+
+// ---------------------------------------------------------------------------
+// Guided mode: a step type picked right twice is typed the next time
+// ---------------------------------------------------------------------------
+
+/** Right picks of one step type, since she last typed one herself, that make her type the next one. */
+export const PICKS_BEFORE_TYPING = 2
+
+/**
+ * Lines of this step type (`step_accepted.rule`, the engine's reading of the path step's move) picked from cards since she last typed
+ * one herself. A typed line of the type starts the count again; a line shown by the hint ("Show the step") and an
+ * undone line count for neither.
+ */
+export function picksSinceTyped(events: readonly Ev[], rule: string): number {
+  const cancelled = cancelledSteps(events)
+  let n = 0
+  events.forEach((e, i) => {
+    if (e.t !== 'step_accepted' || e.rule !== rule || e.revealed || cancelled.has(i)) return
+    n = e.via === 'card' ? n + 1 : 0
+  })
+  return n
+}
+
+/** She has picked this step type right twice since she last typed one: she types it this time (no cards). */
+export function typeThisTime(events: readonly Ev[], rule: string | null | undefined): boolean {
+  return Boolean(rule) && picksSinceTyped(events, rule!) >= PICKS_BEFORE_TYPING
 }
 
 /** Pick one skill by weight using a unit random `u` in [0,1). */

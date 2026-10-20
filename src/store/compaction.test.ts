@@ -105,3 +105,38 @@ describe('F10: compaction skips undone steps', () => {
     expect(r.events).toHaveLength(0)
   })
 })
+
+describe('Guided mode in the compaction', () => {
+  it('a problem with picked lines is not one of the five kept for the window; picked lines and wrong picks fold as lines and mistakes', () => {
+    const events: Ev[] = []
+    for (let i = 0; i < 7; i++) {
+      // The picked one is in a week of its own.
+      const at = i === 6 ? NOW - 80 * DAY : NOW - (100 - i) * DAY
+      if (i === 6) {
+        events.push(ev(at, 's', { t: 'step_rejected', attemptId: `a${i}`, stepIdx: 0, pattern: 'log_one_side', via: 'card' } as never))
+        events.push(ev(at, 's', { t: 'step_accepted', attemptId: `a${i}`, stepIdx: 0, firstTry: false, revealed: false, property: 'skipped', via: 'card', rule: 'ee-convert' } as never))
+      }
+      events.push({
+        t: 'problem_done',
+        at,
+        attemptId: `a${i}`,
+        skill: 's',
+        moduleId: 'expLogEquations',
+        steps: 1,
+        firstTryRate: 1,
+        hints: 0,
+        revealed: 0,
+        finalCorrect: true,
+        mode: 'normal',
+        secs: 60,
+        // The latest one had a line picked from cards.
+        ...(i === 6 ? { picked: 1 } : {}),
+      })
+    }
+    const r = compact(events, {}, NOW)
+    const kept = r.events.filter((e) => e.t === 'problem_done')
+    expect(kept.map((e) => e.attemptId)).toEqual(['a1', 'a2', 'a3', 'a4', 'a5'])
+    const week = r.weekly[isoWeekKey(NOW - 80 * DAY)]!['s']!
+    expect(week).toMatchObject({ steps: 1, firstTry: 0, done: 1, patterns: { log_one_side: 1 } })
+  })
+})

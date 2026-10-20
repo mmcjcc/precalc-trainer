@@ -20,6 +20,8 @@ export type SetOutcome =
   | { kind: 'fixed'; mistakes: number }
   /** Finished, with a step or the answer shown and no mistake caught. */
   | { kind: 'shown' }
+  /** Finished with no mistake caught, with `lines` lines picked from cards (Guided mode). */
+  | { kind: 'picked'; lines: number }
   /** Finished, but its record is not in the log any more. */
   | { kind: 'finished' }
   /** Neither finished nor skipped. */
@@ -63,7 +65,11 @@ function outcomeOf(set: ActiveSet, index: number, events: readonly Ev[]): SetOut
   if (!finished) return status === 'done' ? { kind: 'finished' } : { kind: 'open' }
   if (isFirstTryRight(slot)) return { kind: 'firstTry' }
   const mistakes = slot.filter((e) => e.t === 'step_rejected' || (e.t === 'final_answer' && !e.correct)).length
-  return mistakes > 0 ? { kind: 'fixed', mistakes } : { kind: 'shown' }
+  if (mistakes > 0) return { kind: 'fixed', mistakes }
+  // Picked lines are not "right first time" (Guided mode): she chose them from cards.
+  const done = slot.find((e) => e.t === 'problem_done')
+  const picked = done?.t === 'problem_done' ? (done.picked ?? 0) : 0
+  return picked > 0 ? { kind: 'picked', lines: picked } : { kind: 'shown' }
 }
 
 /** Each problem of the set, in the set's order. */
@@ -85,6 +91,8 @@ export function outcomeWords(outcome: SetOutcome): string {
       return outcome.mistakes === 1 ? 'Caught and fixed 1 mistake' : `Caught and fixed ${outcome.mistakes} mistakes`
     case 'shown':
       return 'Finished, with a step shown'
+    case 'picked':
+      return outcome.lines === 1 ? 'Finished, with a line picked' : `Finished, with ${outcome.lines} lines picked`
     case 'finished':
       return 'Finished'
     case 'open':

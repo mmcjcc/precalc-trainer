@@ -84,6 +84,11 @@ export function FinishRewards({ data, templateTitle, size = 'card' }: { data: Fi
           problem of it.
         </p>
       )}
+      {data.info.picked && (
+        <p className="text-xs text-navy/70" data-picked-note="">
+          Picked lines count less, and a problem with a picked line does not move the ring. Type every line to move it.
+        </p>
+      )}
       {cheer.length > 0 && (
         <ul aria-label="Cheers" className="space-y-2">
           {cheer.map((c) => (

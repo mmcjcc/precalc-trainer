@@ -180,3 +180,54 @@ describe('the rewards in a backup', () => {
     expect('dailyGoal' in junk.backup.settings || 'rewards' in junk.backup.settings).toBe(false)
   })
 })
+
+describe('Guided mode in a backup', () => {
+  const att = 'expLogEquations/ee.exponential@1/1#k1'
+  const events: Ev[] = [
+    { t: 'step_rejected', at: 10, attemptId: att, skill: 'ee.exponential', stepIdx: 0, pattern: 'log_one_side', via: 'card' },
+    { t: 'step_accepted', at: 11, attemptId: att, skill: 'ee.exponential', stepIdx: 0, firstTry: false, revealed: false, property: 'skipped', via: 'card', rule: 'ee-convert' },
+    { t: 'step_accepted', at: 12, attemptId: att, skill: 'ee.exponential', stepIdx: 1, firstTry: true, revealed: false, property: 'skipped', rule: 'ee-convert' },
+    { t: 'final_answer', at: 13, attemptId: att, skill: 'ee.exponential', correct: true, via: 'text' },
+    {
+      t: 'problem_done',
+      at: 14,
+      attemptId: att,
+      skill: 'ee.exponential',
+      moduleId: 'expLogEquations',
+      steps: 2,
+      firstTryRate: 0.5,
+      hints: 0,
+      revealed: 0,
+      finalCorrect: true,
+      mode: 'normal',
+      secs: 50,
+      picked: 1,
+    },
+  ]
+  const file = (settings: Settings = { ...DEFAULT_SETTINGS, lineEntry: 'pick' }) =>
+    JSON.stringify(buildBackup({ settings, events, weekly: {}, streak: { lastDay: '', count: 0 } }))
+
+  it('events with via card (and the step type, and picked) survive export and import, replace and merge', () => {
+    const replaced = importBackup({ events: [], weekly: {}, streak: { lastDay: '', count: 0 } }, file(), 'replace')
+    if (!replaced.ok) throw new Error(replaced.error)
+    expect(replaced.events).toEqual(events)
+    // Merge into a device that already has the first two: nothing twice, the rest added as they were.
+    const merged = importBackup({ events: events.slice(0, 2), weekly: {}, streak: { lastDay: '', count: 0 } }, file(), 'merge')
+    if (!merged.ok) throw new Error(merged.error)
+    expect(merged.added).toBe(3)
+    expect(merged.events).toEqual(events)
+  })
+
+  it('Type / Pick belongs to the device: kept through a replace and a merge; junk is dropped', () => {
+    const parsed = parseBackup(file())
+    if (!parsed.ok) throw new Error(parsed.error)
+    expect(parsed.backup.settings.lineEntry).toBe('pick')
+    expect(settingsAfterImport({ ...DEFAULT_SETTINGS, lineEntry: 'type' }, parsed.backup.settings, 'replace').lineEntry).toBe('type')
+    expect('lineEntry' in settingsAfterImport({ ...DEFAULT_SETTINGS }, parsed.backup.settings, 'replace')).toBe(false)
+    expect(settingsAfterImport({ ...DEFAULT_SETTINGS, lineEntry: 'pick' }, { ...DEFAULT_SETTINGS }, 'replace').lineEntry).toBe('pick')
+    expect(settingsAfterImport({ ...DEFAULT_SETTINGS }, parsed.backup.settings, 'merge').lineEntry).toBeUndefined()
+    const junk = parseBackup(JSON.stringify({ ...JSON.parse(oldFile), settings: { lineEntry: 'swipe' } }))
+    if (!junk.ok) throw new Error(junk.error)
+    expect('lineEntry' in junk.backup.settings).toBe(false)
+  })
+})

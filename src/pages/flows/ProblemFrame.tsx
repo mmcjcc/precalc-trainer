@@ -25,6 +25,7 @@ import { KeymapHelp } from '@/components/KeymapHelp'
 import { notePress, useKeypadStore } from '@/components/keypadStore'
 import { isNativeApp } from '@/components/nativeApp'
 import { PageLayout, RailToolbar, type RailPanel } from '@/components/PageLayout'
+import { PickLineOffer } from '@/components/LineCards'
 import { FinishRewards, FinishSheet, useFinish } from '@/components/rewards/Finish'
 import { StuckProvider, type StuckApi } from '@/components/Stuck'
 import { useBreakpoint } from '@/components/useBreakpoint'
@@ -75,6 +76,11 @@ type Props = {
    * (the work list, where the full card is, sits behind the composer and the keypad there).
    */
   lineVerdict?: LineVerdict | null
+  /**
+   * Guided mode, while she types a line that has cards: the hints offer "Pick the next line" first (so Stuck? does),
+   * and this shows the cards for that one line. Null or absent: not offered (no cards, or she is picking already).
+   */
+  pickLine?: (() => void) | null
   children: ReactNode
 }
 
@@ -135,7 +141,7 @@ function holdsFigure(card: HTMLElement | null): boolean {
  * In a set (pages/SetPage.tsx) the set's progress is in the phone's header and in the completion area on a wide
  * screen, and the main button stays in the set: "Next in set", then "See results".
  */
-export function ProblemFrame({ instance, attempt, flags, templateTitle, progress, hints, composer, completion, keymap, statement, graphCaption, nudgeText, tutorVerdict, graphFooter, lineVerdict, children }: Props) {
+export function ProblemFrame({ instance, attempt, flags, templateTitle, progress, hints, composer, completion, keymap, statement, graphCaption, nudgeText, tutorVerdict, graphFooter, lineVerdict, pickLine, children }: Props) {
   const navigate = useNavigate()
   const review = useReviewChrome()
   const set = useSetChrome()
@@ -198,8 +204,24 @@ export function ProblemFrame({ instance, attempt, flags, templateTitle, progress
     },
   ]
   const tutorStatus = tutor.status?.configured ? tutor.status : null
+  // Guided mode: "Pick the next line" comes first in the hints. Taking it closes the sheet (the keypad stays down:
+  // the cards take the box's place) and shows the cards for this line.
+  const offerPick = !completion && pickLine ? pickLine : null
+  const takePick = useCallback(() => {
+    keypadReturns.current = false
+    setOpenPanel(null)
+    offerPick?.()
+  }, [offerPick])
+  const hintsContent = offerPick ? (
+    <div className="space-y-3">
+      <PickLineOffer onPick={takePick} />
+      {hints}
+    </div>
+  ) : (
+    hints
+  )
   const rail: RailPanel[] = [
-    { id: 'hints', title: 'Hints', content: hints },
+    { id: 'hints', title: 'Hints', content: hintsContent },
     ...answerPanels.filter((p) => (p.id === 'graph' ? hasGraph : hasCalc)),
     { id: 'rules', title: 'Rule cards', short: 'Rules', content: <RuleCardsPanel cards={mod.ruleCards} /> },
     ...(tutorStatus
@@ -478,6 +500,13 @@ export function ProblemFrame({ instance, attempt, flags, templateTitle, progress
                 {completionLine}
                 {completion.newlyMastered && <span className="font-semibold"> · {templateTitle} newly mastered</span>}
               </p>
+              {/* With rewards on, the rewards say it beside the ring. */}
+              {!finishData && completion.summary.picked > 0 && (
+                <p className="text-sm text-navy/80" data-picked-note="">
+                  {completion.summary.picked === 1 ? 'You picked a line from cards' : `You picked ${completion.summary.picked} lines from cards`}, so this
+                  problem does not count toward mastery. Type every line to count it.
+                </p>
+              )}
               {finishData && !phone && <FinishRewards data={finishData} templateTitle={templateTitle} />}
               {/* A wide screen shows the set's progress here; a phone has it in its header. */}
               {set && !phone && <SetDots index={set.index} total={set.total} status={set.status} prefix="Your set ·" />}

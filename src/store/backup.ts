@@ -69,6 +69,7 @@ export function normalizeSettings(raw: unknown): Settings {
   if (typeof src.rewards === 'boolean') settings.rewards = src.rewards
   if (isDailyGoal(src.dailyGoal)) settings.dailyGoal = src.dailyGoal
   if (typeof src.vibrate === 'boolean') settings.vibrate = src.vibrate
+  if (src.lineEntry === 'type' || src.lineEntry === 'pick') settings.lineEntry = src.lineEntry
   if (isRecord(src.unitByCourse)) {
     const unitByCourse: Record<string, string> = {}
     for (const [key, value] of Object.entries(src.unitByCourse)) {
@@ -80,23 +81,26 @@ export function normalizeSettings(raw: unknown): Settings {
 }
 
 /** Settings that belong to the device: an import keeps this device's value (or its absence, the default). */
-const DEVICE_SETTINGS = ['mathKeypad', 'rewards', 'vibrate'] as const
+const DEVICE_SETTINGS = ['mathKeypad', 'rewards', 'vibrate', 'lineEntry'] as const
 
 /**
  * Settings after an import. Merge adds another device's work to this one, so this device keeps its
  * own settings and only takes a class or unit choice it does not have yet. Replace takes the file's
  * settings (the daily goal among them), except the ones that belong to the device or the moment: test mode
  * (imported silently, it would keep later practice out of the mastery bars), whether the add-to-home-screen
- * card was seen here, the math keypad (a phone's choice, which a backup from a computer must not undo), and the
- * rewards and vibrate switches (the store app and the family web app start with rewards on and off).
+ * card was seen here, the math keypad (a phone's choice, which a backup from a computer must not undo), the
+ * rewards and vibrate switches (the store app and the family web app start with rewards on and off), and Guided
+ * mode's Type / Pick choice (picking is a phone's way to write lines).
  */
 export function settingsAfterImport(current: Settings, imported: Settings, mode: ImportMode): Settings {
   if (mode === 'replace') {
     const next: Settings = { ...imported, testMode: current.testMode, seenA2HS: current.seenA2HS }
-    for (const key of DEVICE_SETTINGS) {
+    const keep = <K extends (typeof DEVICE_SETTINGS)[number]>(key: K) => {
       delete next[key]
-      if (current[key] !== undefined) next[key] = current[key]
+      const mine = current[key]
+      if (mine !== undefined) next[key] = mine
     }
+    for (const key of DEVICE_SETTINGS) keep(key)
     return next
   }
   const next: Settings = { ...current }
