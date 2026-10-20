@@ -1,10 +1,10 @@
 /**
  * App store: Zustand + persist, fanned out into `pct.*` localStorage keys (see ./storage.ts).
  *
- * Persisted: meta, settings, auth, attempt (current), events (append-only), weekly, streak.
+ * Persisted: meta, settings, auth, attempt (current), events (append-only), weekly, streak, rewards.
  * Transient: toasts, hydrated, storageOk.
  *
- * Selectors are pure functions in ./selectors.ts; the hooks at the bottom memoize them.
+ * Selectors are pure functions in ./selectors.ts and ./rewards.ts; the hooks at the bottom memoize them.
  */
 import { useMemo } from 'react'
 import { create } from 'zustand'
@@ -13,6 +13,7 @@ import { useShallow } from 'zustand/react/shallow'
 import type { ChipId } from '@/shared/types'
 import { buildBackup, importBackup, normalizeSettings, settingsAfterImport, type ImportMode } from './backup'
 import { compact } from './compaction'
+import { computeRewards, dailyGoalOf, foldRewards, normalizeRewards, rewardsOn, settleDays, type RewardsView } from './rewards'
 import {
   bumpStreak,
   currentStreak,
@@ -26,12 +27,13 @@ import {
   propertyAccuracy,
 } from './selectors'
 import { createFanOutStorage, PERSIST_NAME } from './storage'
-import { dayKey } from './time'
+import { SIXTY_DAYS_MS, dayKey } from './time'
 import { attemptTouched } from './touched'
 import {
   EMPTY_STREAK,
   SCHEMA_VERSION,
   defaultPersisted,
+  emptyRewards,
   type Attempt,
   type AttemptFinal,
   type AttemptMode,
@@ -40,6 +42,7 @@ import {
   type HintRung,
   type PersistedState,
   type PropertyOutcome,
+  type RewardsState,
   type Settings,
   type Streak,
   type Weekly,
@@ -47,6 +50,7 @@ import {
 
 export * from './types'
 export * from './selectors'
+export * from './rewards'
 export { compact } from './compaction'
 export { STORAGE_KEYS, saveReturnTo, takeReturnTo } from './storage'
 export { relativeDays, daysAgo, dayKey, isoWeekKey, startOfIsoWeek } from './time'
@@ -129,7 +133,8 @@ interface Actions {
   setDraft: (text: string) => void
   flushDraft: () => void
   setFinal: (patch: Partial<AttemptFinal>) => void
-  recordFinalAnswer: (input: { correct: boolean; pattern?: string; via?: 'builder' | 'text'; now?: number }) => void
+  /** `part`: which box, for a check that grades several boxes each time (see `final_answer.part`). */
+  recordFinalAnswer: (input: { correct: boolean; pattern?: string; via?: 'builder' | 'text'; part?: string; now?: number }) => void
   setNudged: () => void
   setSwapped: (swapped?: boolean) => void
   addActiveSecs: (secs: number) => void
@@ -141,6 +146,7 @@ interface Actions {
   resetProgress: () => void
   exportJson: () => string
   importJson: (text: string, mode: ImportMode) => { ok: true; added: number } | { ok: false; error: string }
+  /** Settle the rewards' days (store/rewards.ts `settleDays`), then fold and delete events older than 60 days. */
   compactNow: (now?: number) => number
   // transient
   toast: (message: string, opts?: { tone?: ToastTone; detail?: string }) => number
@@ -186,7 +192,13 @@ function mergePersisted(persisted: unknown, current: StoreState): StoreState {
     events,
     weekly,
     streak,
+    rewards: normalizeRewards(p.rewards),
   }
+}
+
+/** The rewards slice with the days settled under the goal in `settings` (a new object only when something changed). */
+function settled(s: Pick<PersistedState, 'rewards' | 'events' | 'settings'>, now: number): RewardsState {
+  return settleDays(s.rewards, s.events, dailyGoalOf(s.settings), now)
 }
 
 function touch(attempt: Attempt, now: number): Attempt {
@@ -211,7 +223,14 @@ export const useStore = create<StoreState>()(
       toasts: [],
 
       // --- settings / auth --------------------------------------------------
-      setSettings: (patch) => set((s) => ({ settings: { ...s.settings, ...patch } })),
+      setSettings: (patch) =>
+        set((s) => {
+          const settings = { ...s.settings, ...patch }
+          // A new daily goal applies from today: the days before keep how they went under the old one.
+          if (dailyGoalOf(settings) === dailyGoalOf(s.settings)) return { settings }
+          const rewards = settled(s, Date.now())
+          return rewards === s.rewards ? { settings } : { settings, rewards }
+        }),
       unlock: () => set({ auth: { ok: true } }),
       lock: () => set({ auth: { ok: false } }),
 
@@ -368,11 +387,11 @@ export const useStore = create<StoreState>()(
         set({ attempt: { ...a, final: { ...a.final, ...patch } } })
       },
 
-      recordFinalAnswer: ({ correct, pattern, via, now = Date.now() }) => {
+      recordFinalAnswer: ({ correct, pattern, via, part, now = Date.now() }) => {
         const s = get()
         const a = s.attempt
         if (!a) return
-        const ev: Ev = { t: 'final_answer', at: now, attemptId: a.id, skill: a.skill, correct, pattern, via }
+        const ev: Ev = { t: 'final_answer', at: now, attemptId: a.id, skill: a.skill, correct, pattern, via, ...(part !== undefined ? { part } : {}) }
         const final: AttemptFinal = {
           ...a.final,
           correct,
@@ -452,7 +471,7 @@ export const useStore = create<StoreState>()(
       resetProgress: () => {
         if (draftTimer) clearTimeout(draftTimer)
         pendingDraft = null
-        set({ attempt: null, events: [], weekly: {}, streak: { ...EMPTY_STREAK } })
+        set({ attempt: null, events: [], weekly: {}, streak: { ...EMPTY_STREAK }, rewards: emptyRewards() })
       },
 
       exportJson: () => {
@@ -467,14 +486,21 @@ export const useStore = create<StoreState>()(
         const s = get()
         const r = importBackup(s, text, mode)
         if (!r.ok) return { ok: false, error: r.error }
-        set({ events: r.events, weekly: r.weekly, streak: r.streak, settings: settingsAfterImport(s.settings, r.settings, mode) })
+        const settings = settingsAfterImport(s.settings, r.settings, mode)
+        // The imported log is read again from where the slice stopped settling (a merge goes back to the earlier one).
+        const rewards = settled({ rewards: r.rewards, events: r.events, settings }, Date.now())
+        set({ events: r.events, weekly: r.weekly, streak: r.streak, settings, rewards })
         return { ok: true, added: r.added }
       },
 
       compactNow: (now = Date.now()) => {
         const s = get()
+        // The days are settled before any event goes (and on every start, so a past day keeps how it went).
+        let rewards = settled(s, now)
         const r = compact(s.events, s.weekly, now)
-        if (r.folded > 0) set({ events: r.events, weekly: r.weekly })
+        if (r.folded > 0) rewards = foldRewards(rewards, s.events, now - SIXTY_DAYS_MS)
+        if (r.folded > 0) set({ events: r.events, weekly: r.weekly, rewards })
+        else if (rewards !== s.rewards) set({ rewards })
         return r.folded
       },
 
@@ -508,6 +534,7 @@ export const useStore = create<StoreState>()(
         events: s.events,
         weekly: s.weekly,
         streak: s.streak,
+        rewards: s.rewards,
       }),
       merge: (persisted, current) => mergePersisted(persisted, current),
       migrate: (persisted) => persisted as PersistedState, // v1 is the first schema; add steps here.
@@ -589,4 +616,28 @@ export function useDrillAccuracy(kind?: 'property' | 'legal') {
 export function useStreak(): number {
   const streak = useStore((s) => s.streak)
   return useMemo(() => currentStreak(streak), [streak])
+}
+
+/** "Rewards (XP, daily goal, streak)" is on (the edition's default until she sets it). */
+export const useRewardsOn = (): boolean => useStore((s) => rewardsOn(s.settings))
+
+let viewCache: { events: Ev[]; rewards: RewardsState; goal: number; day: string; view: RewardsView } | null = null
+
+/**
+ * The rewards view of a store state (XP, today, streak, cards), cached on the last state it was asked for: Home, the
+ * finish sheet and the vibrate ticks all read the same one.
+ */
+export function rewardsViewOf(s: Pick<PersistedState, 'events' | 'rewards' | 'settings'>, now = Date.now()): RewardsView {
+  const goal = dailyGoalOf(s.settings)
+  const day = dayKey(now)
+  const c = viewCache
+  if (c && c.events === s.events && c.rewards === s.rewards && c.goal === goal && c.day === day) return c.view
+  const view = computeRewards(s.events, s.rewards, goal, now)
+  viewCache = { events: s.events, rewards: s.rewards, goal, day, view }
+  return view
+}
+
+export function useRewards(): RewardsView {
+  const { events, rewards, settings } = useStore(useShallow((s) => ({ events: s.events, rewards: s.rewards, settings: s.settings })))
+  return useMemo(() => rewardsViewOf({ events, rewards, settings }), [events, rewards, settings])
 }

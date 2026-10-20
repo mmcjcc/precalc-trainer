@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { BACKUP_APP_ID, LEGACY_BACKUP_APP_ID, buildBackup, importBackup, parseBackup, settingsAfterImport } from './backup'
-import { DEFAULT_SETTINGS, type Ev, type Settings } from './types'
+import { DEFAULT_SETTINGS, emptyRewards, type Ev, type RewardsState, type Settings } from './types'
 
 const oldFile = JSON.stringify({
   app: LEGACY_BACKUP_APP_ID,
@@ -116,5 +116,67 @@ describe('backup app name', () => {
     expect(replaced.courseId).toBe('chemistry')
     expect(replaced.testMode).toBe(false)
     expect(replaced.seenA2HS).toBe(false)
+  })
+})
+
+describe('the rewards in a backup', () => {
+  const rewards: RewardsState = {
+    days: { '2026-07-01': 1, '2026-07-02': 2 },
+    settledThrough: '2026-09-15',
+    foldedThrough: Date.UTC(2026, 6, 18),
+    cards: {
+      'no_sign_flip|ineq.linear': { pattern: 'no_sign_flip', skill: 'ineq.linear', count: 4, firstAt: 1, lastAt: 9, lastAttempt: 'a', clean: 2 },
+    },
+    mastered: { 'ineq.linear': 5 },
+  }
+  const file = () =>
+    JSON.stringify(
+      buildBackup({
+        settings: { ...DEFAULT_SETTINGS, rewards: true, dailyGoal: 100, vibrate: false },
+        events: [],
+        weekly: {},
+        streak: { lastDay: '', count: 0 },
+        rewards,
+      }),
+    )
+
+  it('round trip: the slice comes back as it went out, and replace takes it', () => {
+    const parsed = parseBackup(file())
+    if (!parsed.ok) throw new Error(parsed.error)
+    expect(parsed.backup.rewards).toEqual(rewards)
+    expect(parsed.backup.settings).toMatchObject({ rewards: true, dailyGoal: 100, vibrate: false })
+    const replaced = importBackup({ events: [], weekly: {}, streak: { lastDay: '', count: 0 }, rewards: emptyRewards() }, file(), 'replace')
+    if (!replaced.ok) throw new Error(replaced.error)
+    expect(replaced.rewards).toEqual(rewards)
+  })
+
+  it('a file from before the rewards imports with an empty slice; merge keeps this device’s days and adds the file’s', () => {
+    const parsed = parseBackup(oldFile)
+    if (!parsed.ok) throw new Error(parsed.error)
+    expect(parsed.backup.rewards).toEqual(emptyRewards())
+    const mine: RewardsState = { ...emptyRewards(), days: { '2026-07-02': 1, '2026-09-01': 1 }, settledThrough: '2026-09-10' }
+    const merged = importBackup({ events: [], weekly: {}, streak: { lastDay: '', count: 0 }, rewards: mine }, file(), 'merge')
+    if (!merged.ok) throw new Error(merged.error)
+    expect(merged.rewards.days).toEqual({ '2026-07-01': 1, '2026-07-02': 2, '2026-09-01': 1 })
+    expect(merged.rewards.settledThrough).toBe('2026-09-10')
+    expect(merged.rewards.cards['no_sign_flip|ineq.linear']).toMatchObject({ count: 4, clean: 2 })
+  })
+
+  it('the daily goal travels with a replace; the rewards and vibrate switches belong to the device', () => {
+    const parsed = parseBackup(file())
+    if (!parsed.ok) throw new Error(parsed.error)
+    const phone: Settings = { ...DEFAULT_SETTINGS, rewards: false, vibrate: true }
+    const replaced = settingsAfterImport(phone, parsed.backup.settings, 'replace')
+    expect(replaced).toMatchObject({ dailyGoal: 100, rewards: false, vibrate: true })
+    // A device that never touched the switches keeps its edition's default (absent).
+    const fresh = settingsAfterImport({ ...DEFAULT_SETTINGS }, parsed.backup.settings, 'replace')
+    expect('rewards' in fresh || 'vibrate' in fresh).toBe(false)
+    expect(fresh.dailyGoal).toBe(100)
+    // Merge keeps this device's goal.
+    expect(settingsAfterImport({ ...DEFAULT_SETTINGS, dailyGoal: 30 }, parsed.backup.settings, 'merge').dailyGoal).toBe(30)
+    // Junk is dropped.
+    const junk = parseBackup(JSON.stringify({ ...JSON.parse(oldFile), settings: { dailyGoal: 45, rewards: 'yes' } }))
+    if (!junk.ok) throw new Error(junk.error)
+    expect('dailyGoal' in junk.backup.settings || 'rewards' in junk.backup.settings).toBe(false)
   })
 })

@@ -1,7 +1,11 @@
 import { Fragment, useId, useMemo, useRef, useState, type ChangeEvent } from 'react'
-import { allTemplates, COURSES, courseOfModule, courseOfSkill } from '@/content'
+import { allTemplates, COURSES, courseOfModule, courseOfSkill, modulesInUnit, unitsWithModules } from '@/content'
 import { ERROR_PATTERNS } from '@/engine'
 import type { ErrorPatternId } from '@/shared/types'
+import { MistakeCardList } from '@/components/rewards/MistakeCards'
+import { SkillRing } from '@/components/rewards/Rings'
+import { RING_WORD } from '@/components/rewards/words'
+import { useBreakpoint } from '@/components/useBreakpoint'
 import {
   dayKey,
   firstTryRate,
@@ -10,16 +14,20 @@ import {
   mastery,
   propertyAccuracy,
   relativeDays,
+  skillRings,
   startOfIsoWeek,
   useDrillAccuracy,
   useEvents,
   useHabits,
+  useRewards,
+  useRewardsOn,
   useStore,
   useStreak,
   useWeekly,
   type Ev,
   type ImportMode,
   type RatioInfo,
+  type SkillRingInfo,
   type Weekly,
 } from '@/store'
 
@@ -368,6 +376,92 @@ function PatternTables() {
   )
 }
 
+const NEW_RING: SkillRingInfo = { level: 'new', fill: 0, strong: 0, count: 0 }
+
+/**
+ * Rewards on: a ring per problem type, grouped by class and unit (registered modules only), from the last-five
+ * mastery rule: New, Practiced, Solid (three of the last five went well), Mastered.
+ */
+function ProblemTypeRings() {
+  const events = useEvents()
+  const rings = useMemo(() => skillRings(events), [events])
+  const groups = useMemo(
+    () =>
+      COURSES.map((course) => ({
+        course,
+        units: unitsWithModules(course).map((unit) => ({
+          unit,
+          templates: modulesInUnit(unit).flatMap((module) => module.templates),
+        })),
+      })).filter((g) => g.units.length > 0),
+    [],
+  )
+  return (
+    <>
+      {groups.map(({ course, units }) => (
+        <section key={course.id} aria-labelledby={`progress-rings-${course.id}`} className="space-y-3">
+          <h3 id={`progress-rings-${course.id}`} className="text-lg font-semibold text-navy">
+            {course.title}
+          </h3>
+          {units.map(({ unit, templates }) => {
+            const mastered = templates.filter((t) => rings.get(t.id)?.level === 'mastered').length
+            return (
+              <div key={unit.id} className="space-y-2 rounded-2xl border border-navy-100 bg-white p-3">
+                <h4 className="text-sm font-semibold text-navy">
+                  {unit.label} · {unit.title}{' '}
+                  <span className="font-normal text-navy/70">
+                    · {mastered} of {templates.length} mastered
+                  </span>
+                </h4>
+                <ul aria-label={`${unit.label} problem types`} className="grid grid-cols-3 gap-x-2 gap-y-3 sm:grid-cols-4 lg:grid-cols-6">
+                  {templates.map((t) => {
+                    const ring = rings.get(t.id) ?? NEW_RING
+                    return (
+                      <li key={t.id} className="flex flex-col items-center gap-1 text-center" data-skill={t.id}>
+                        <SkillRing ring={ring} title={t.title} />
+                        <span aria-hidden className="line-clamp-2 text-xs font-medium text-navy">
+                          {t.title}
+                        </span>
+                        <span aria-hidden className={`text-[11px] ${ring.level === 'mastered' ? 'font-semibold text-ok' : 'text-navy/70'}`}>
+                          {RING_WORD[ring.level]}
+                        </span>
+                      </li>
+                    )
+                  })}
+                </ul>
+              </div>
+            )
+          })}
+        </section>
+      ))}
+    </>
+  )
+}
+
+/** Rewards on: every mistake card, the open ones first (closest to squashed), then the squashed ones. */
+function MistakeCollection() {
+  const { cards } = useRewards()
+  if (cards.length === 0) {
+    return (
+      <p className="rounded-2xl border border-navy-100 bg-white p-4 text-navy/80">
+        No mistakes caught yet. When the checker names one, it gets a card here; three clean problems of that type squash
+        it.
+      </p>
+    )
+  }
+  const open = cards.filter((c) => !c.squashed)
+  const squashed = cards.filter((c) => c.squashed)
+  return (
+    <div className="space-y-3">
+      <p className="text-sm text-navy">
+        {open.length} caught · {squashed.length} squashed
+      </p>
+      {open.length > 0 && <MistakeCardList cards={open} practice label="Caught" />}
+      {squashed.length > 0 && <MistakeCardList cards={squashed} label="Squashed" />}
+    </div>
+  )
+}
+
 function DrillRows() {
   const property = useDrillAccuracy('property')
   const legal = useDrillAccuracy('legal')
@@ -624,11 +718,24 @@ function BackupSection() {
   )
 }
 
+/** With rewards on, the streak is the goal streak (days in a row she met her daily goal). */
+function useShownStreak(rewards: boolean): { days: number; note: string } {
+  const dayStreak = useStreak()
+  const view = useRewards()
+  return rewards
+    ? { days: view.streak.days, note: `days in a row you met your daily goal · ${view.streak.weekMet} of 7 this week` }
+    : { days: dayStreak, note: 'days in a row with a finished problem' }
+}
+
 export function ProgressPage() {
-  const streak = useStreak()
+  const rewards = useRewardsOn()
+  const phone = useBreakpoint() === 'mobile'
+  const streak = useShownStreak(rewards)
   const habits = useHabits()
   const drill = useDrillAccuracy()
   const minutes = Math.round(habits.secs / 60)
+  // On a phone the rings and the mistake collection take the tables' place; a wide screen keeps them below.
+  const tables = !rewards || !phone
 
   return (
     <div className="mx-auto max-w-5xl space-y-6">
@@ -641,7 +748,7 @@ export function ProgressPage() {
       </header>
 
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-        <Stat label="Day streak" value={String(streak)} note="days in a row with a finished problem" />
+        <Stat label="Day streak" value={String(streak.days)} note={streak.note} />
         <Stat label="Finished" value={String(habits.done)} note={minutes > 0 ? `about ${minutes} min of focused work` : 'problems worked to the end'} />
         <Stat label="Left unfinished" value={String(habits.abandoned)} note="problems started and set aside" />
         <Stat
@@ -651,19 +758,47 @@ export function ProgressPage() {
         />
       </div>
 
-      <section aria-labelledby="progress-skills" className="space-y-2">
-        <h2 id="progress-skills" className="text-lg font-semibold text-navy">
-          By problem type
-        </h2>
-        <SkillTables />
-      </section>
+      {rewards && (
+        <section aria-labelledby="progress-rings" className="space-y-3">
+          <div>
+            <h2 id="progress-rings" className="text-lg font-semibold text-navy">
+              Problem types
+            </h2>
+            <p className="mt-0.5 max-w-2xl text-sm text-navy/80">
+              Each ring fills a fifth for each of your last five problems of that type that went well: most lines right the
+              first time, nothing shown, the answer right. Three is Solid; all five is Mastered.
+            </p>
+          </div>
+          <ProblemTypeRings />
+        </section>
+      )}
 
-      <section aria-labelledby="progress-patterns" className="space-y-2">
-        <h2 id="progress-patterns" className="text-lg font-semibold text-navy">
-          Error patterns
-        </h2>
-        <PatternTables />
-      </section>
+      {tables && (
+        <section aria-labelledby="progress-skills" className="space-y-2">
+          <h2 id="progress-skills" className="text-lg font-semibold text-navy">
+            By problem type
+          </h2>
+          <SkillTables />
+        </section>
+      )}
+
+      {rewards && (
+        <section aria-labelledby="progress-mistakes" className="space-y-2">
+          <h2 id="progress-mistakes" className="text-lg font-semibold text-navy">
+            Mistake collection
+          </h2>
+          <MistakeCollection />
+        </section>
+      )}
+
+      {tables && (
+        <section aria-labelledby="progress-patterns" className="space-y-2">
+          <h2 id="progress-patterns" className="text-lg font-semibold text-navy">
+            Error patterns
+          </h2>
+          <PatternTables />
+        </section>
+      )}
 
       <div className="grid gap-4 md:grid-cols-2">
         <section aria-labelledby="progress-habits" className="rounded-2xl border border-navy-100 bg-white p-4">
@@ -681,7 +816,7 @@ export function ProgressPage() {
             </div>
             <div className="flex flex-wrap justify-between gap-2 py-2">
               <dt className="text-navy">Day streak</dt>
-              <dd className="font-semibold text-navy">{streak}</dd>
+              <dd className="font-semibold text-navy">{streak.days}</dd>
             </div>
           </dl>
         </section>

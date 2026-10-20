@@ -20,6 +20,20 @@ export interface MasteryInfo {
 
 export const MASTERY_THRESHOLD = 0.8
 
+/** What the mastery rule reads from one finished problem. */
+export type MasteryEntry = Pick<Extract<Ev, { t: 'problem_done' }>, 'firstTryRate' | 'revealed' | 'finalCorrect'>
+
+/**
+ * The mastery rule on the window of finished problems, most recent first (normal mode, at most MASTERY_WINDOW):
+ * the window is full, the mean first-try rate is at least 0.8, nothing was revealed and every final answer was right.
+ * The rewards (store/rewards.ts) read the same rule.
+ */
+export function windowMastered(done: readonly MasteryEntry[]): boolean {
+  if (done.length < MASTERY_WINDOW) return false
+  const rate = done.reduce((s, e) => s + e.firstTryRate, 0) / done.length
+  return rate >= MASTERY_THRESHOLD && done.every((e) => e.revealed === 0 && e.finalCorrect)
+}
+
 function skillBuckets(weekly: Weekly, skill?: string): WeeklySkill[] {
   const out: WeeklySkill[] = []
   for (const skills of Object.values(weekly)) {
@@ -39,11 +53,7 @@ export function mastery(events: Ev[], skill: string): MasteryInfo {
   }
   if (done.length === 0) return { rate: null, mastered: false, count: 0, lastAt, window: MASTERY_WINDOW }
   const rate = done.reduce((s, e) => s + e.firstTryRate, 0) / done.length
-  const mastered =
-    done.length >= MASTERY_WINDOW &&
-    rate >= MASTERY_THRESHOLD &&
-    done.every((e) => e.revealed === 0 && e.finalCorrect)
-  return { rate, mastered, count: done.length, lastAt, window: MASTERY_WINDOW }
+  return { rate, mastered: windowMastered(done), count: done.length, lastAt, window: MASTERY_WINDOW }
 }
 
 export interface ModuleMastery {

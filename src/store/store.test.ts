@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { STORAGE_KEYS, resetStoreForTests, useStore } from './index'
+import { STORAGE_KEYS, dayKey, emptyRewards, resetStoreForTests, rewardsViewOf, useStore, type Ev } from './index'
 
 function start(problemId = 'inequalities/ineq.a@1/abc') {
   return useStore.getState().startAttempt({
@@ -156,6 +156,99 @@ describe('store persistence (pct.* keys)', () => {
     expect(s.events).toHaveLength(1)
     expect(s.auth.ok).toBe(true)
     expect(s.hydrated).toBe(true)
+  })
+})
+
+describe('the rewards slice in the store (pct.rewards)', () => {
+  beforeEach(() => {
+    resetStoreForTests()
+    localStorage.clear()
+  })
+
+  /** Local time `offset` days from today at `hour`. */
+  function dayAt(offset: number, hour = 9): number {
+    const d = new Date()
+    return new Date(d.getFullYear(), d.getMonth(), d.getDate() + offset, hour).getTime()
+  }
+  let n = 0
+  /** Two timed finishes (30 XP each): the default goal of 60. */
+  function goalDay(offset: number, finishes = 2): Ev[] {
+    return Array.from({ length: finishes }, (_, i) => {
+      n += 1
+      return {
+        t: 'problem_done',
+        at: dayAt(offset) + i * 60_000,
+        attemptId: `w${n}`,
+        skill: 'warmup',
+        moduleId: 'm',
+        steps: 0,
+        firstTryRate: 1,
+        hints: 0,
+        revealed: 0,
+        finalCorrect: true,
+        mode: 'timed',
+        secs: 30,
+      } satisfies Ev
+    })
+  }
+
+  it('compactNow settles the days before the old events go: a 70-day streak stays 70', () => {
+    const events: Ev[] = []
+    for (let d = -69; d <= 0; d++) events.push(...goalDay(d))
+    useStore.setState({ events })
+    const now = dayAt(0, 18)
+    expect(rewardsViewOf(useStore.getState(), now).streak.days).toBe(70)
+    const folded = useStore.getState().compactNow(now)
+    expect(folded).toBeGreaterThan(0)
+    const s = useStore.getState()
+    expect(s.events.length).toBeLessThan(events.length)
+    expect(s.rewards.settledThrough).toBe(dayKey(dayAt(-1)))
+    expect(s.rewards.foldedThrough).toBeGreaterThan(0)
+    expect(rewardsViewOf(s, now).streak.days).toBe(70)
+    expect(JSON.parse(localStorage.getItem(STORAGE_KEYS.rewards)!).settledThrough).toBe(dayKey(dayAt(-1)))
+  })
+
+  it('a new daily goal applies from today: the days before keep how they went', () => {
+    useStore.setState({ events: [...goalDay(-2), ...goalDay(-1), ...goalDay(0, 1)] }) // 60, 60, 30
+    useStore.getState().setSettings({ dailyGoal: 30 })
+    expect(rewardsViewOf(useStore.getState()).streak.days).toBe(3)
+    useStore.getState().setSettings({ dailyGoal: 100 })
+    const view = rewardsViewOf(useStore.getState())
+    expect(view.streak.days).toBe(3) // today's 30 met the goal it had then
+    expect(view.today).toMatchObject({ xp: 30, target: 100 })
+    // Unrelated settings leave the slice alone.
+    const before = useStore.getState().rewards
+    useStore.getState().setSettings({ calculator: 'nspire' })
+    expect(useStore.getState().rewards).toBe(before)
+  })
+
+  it('export → reset → import brings the rewards back; the streak and the cards read the same', () => {
+    const events: Ev[] = [...goalDay(-3), ...goalDay(-2), ...goalDay(-1)]
+    events.push({ t: 'step_rejected', at: dayAt(-1, 10), attemptId: 'x', skill: 'ineq.linear', stepIdx: 0, pattern: 'no_sign_flip' })
+    useStore.setState({ events })
+    useStore.getState().compactNow()
+    const before = rewardsViewOf(useStore.getState())
+    expect(before.streak.days).toBe(3)
+    const json = useStore.getState().exportJson()
+    expect(JSON.parse(json).rewards.settledThrough).toBe(dayKey(dayAt(-1)))
+    useStore.getState().resetProgress()
+    expect(useStore.getState().rewards).toEqual(emptyRewards())
+    expect(useStore.getState().importJson(json, 'replace')).toMatchObject({ ok: true })
+    const after = rewardsViewOf(useStore.getState())
+    expect(after.streak).toEqual(before.streak)
+    expect(after.cards).toEqual(before.cards)
+    // A merge of the same file adds nothing and changes nothing.
+    expect(useStore.getState().importJson(json, 'merge')).toEqual({ ok: true, added: 0 })
+    expect(rewardsViewOf(useStore.getState()).streak).toEqual(before.streak)
+  })
+
+  it('a final answer logs its box only when the flow names one', () => {
+    start()
+    useStore.getState().recordFinalAnswer({ correct: true, via: 'text' })
+    useStore.getState().recordFinalAnswer({ correct: true, via: 'text', part: 'Interval notation' })
+    const finals = useStore.getState().events.filter((e) => e.t === 'final_answer')
+    expect('part' in finals[0]!).toBe(false)
+    expect(finals[1]).toMatchObject({ part: 'Interval notation' })
   })
 })
 

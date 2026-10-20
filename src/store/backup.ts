@@ -1,5 +1,18 @@
 /** Export/import of progress as JSON (she uses a phone AND a desktop). Pure. */
-import { DEFAULT_SETTINGS, EMPTY_STREAK, SCHEMA_VERSION, type Ev, type PersistedState, type Settings, type Streak, type Weekly, type WeeklySkill } from './types'
+import { isDailyGoal, mergeRewards, normalizeRewards } from './rewards'
+import {
+  DEFAULT_SETTINGS,
+  EMPTY_STREAK,
+  SCHEMA_VERSION,
+  emptyRewards,
+  type Ev,
+  type PersistedState,
+  type RewardsState,
+  type Settings,
+  type Streak,
+  type Weekly,
+  type WeeklySkill,
+} from './types'
 
 /** Written on every new export. */
 export const BACKUP_APP_ID = 'math-science-trainer'
@@ -14,9 +27,14 @@ export interface BackupFile {
   events: Ev[]
   weekly: Weekly
   streak: Streak
+  /** The rewards' slice (days met, folded mistake cards and masteries). Absent in a file from before the rewards. */
+  rewards: RewardsState
 }
 
-export function buildBackup(state: Pick<PersistedState, 'settings' | 'events' | 'weekly' | 'streak'>, now = Date.now()): BackupFile {
+export function buildBackup(
+  state: Pick<PersistedState, 'settings' | 'events' | 'weekly' | 'streak'> & { rewards?: RewardsState },
+  now = Date.now(),
+): BackupFile {
   return {
     app: BACKUP_APP_ID,
     schemaVersion: SCHEMA_VERSION,
@@ -25,13 +43,14 @@ export function buildBackup(state: Pick<PersistedState, 'settings' | 'events' | 
     events: state.events,
     weekly: state.weekly,
     streak: state.streak,
+    rewards: state.rewards ?? emptyRewards(),
   }
 }
 
 export type ImportMode = 'merge' | 'replace'
 
 export type ImportResult =
-  | { ok: true; events: Ev[]; weekly: Weekly; streak: Streak; settings: Settings; added: number }
+  | { ok: true; events: Ev[]; weekly: Weekly; streak: Streak; rewards: RewardsState; settings: Settings; added: number }
   | { ok: false; error: string }
 
 /**
@@ -47,6 +66,9 @@ export function normalizeSettings(raw: unknown): Settings {
   if (typeof src.seenA2HS === 'boolean') settings.seenA2HS = src.seenA2HS
   if (typeof src.courseId === 'string' && src.courseId.length > 0) settings.courseId = src.courseId
   if (typeof src.mathKeypad === 'boolean') settings.mathKeypad = src.mathKeypad
+  if (typeof src.rewards === 'boolean') settings.rewards = src.rewards
+  if (isDailyGoal(src.dailyGoal)) settings.dailyGoal = src.dailyGoal
+  if (typeof src.vibrate === 'boolean') settings.vibrate = src.vibrate
   if (isRecord(src.unitByCourse)) {
     const unitByCourse: Record<string, string> = {}
     for (const [key, value] of Object.entries(src.unitByCourse)) {
@@ -57,18 +79,24 @@ export function normalizeSettings(raw: unknown): Settings {
   return settings
 }
 
+/** Settings that belong to the device: an import keeps this device's value (or its absence, the default). */
+const DEVICE_SETTINGS = ['mathKeypad', 'rewards', 'vibrate'] as const
+
 /**
  * Settings after an import. Merge adds another device's work to this one, so this device keeps its
  * own settings and only takes a class or unit choice it does not have yet. Replace takes the file's
- * settings, except the ones that belong to the device or the moment: test mode (imported silently, it
- * would keep later practice out of the mastery bars), whether the add-to-home-screen card was seen
- * here, and the math keypad (a phone's choice, which a backup from a computer must not undo).
+ * settings (the daily goal among them), except the ones that belong to the device or the moment: test mode
+ * (imported silently, it would keep later practice out of the mastery bars), whether the add-to-home-screen
+ * card was seen here, the math keypad (a phone's choice, which a backup from a computer must not undo), and the
+ * rewards and vibrate switches (the store app and the family web app start with rewards on and off).
  */
 export function settingsAfterImport(current: Settings, imported: Settings, mode: ImportMode): Settings {
   if (mode === 'replace') {
     const next: Settings = { ...imported, testMode: current.testMode, seenA2HS: current.seenA2HS }
-    delete next.mathKeypad
-    if (current.mathKeypad !== undefined) next.mathKeypad = current.mathKeypad
+    for (const key of DEVICE_SETTINGS) {
+      delete next[key]
+      if (current[key] !== undefined) next[key] = current[key]
+    }
     return next
   }
   const next: Settings = { ...current }
@@ -154,12 +182,18 @@ export function parseBackup(text: string): { ok: true; backup: BackupFile } | { 
       events,
       weekly,
       streak,
+      rewards: normalizeRewards(raw.rewards),
     },
   }
 }
 
+/**
+ * The progress after an import. Replace takes the file's; merge adds the file's events this device does not have,
+ * and merges the weekly counters, the streak and the rewards' slice (the caller settles the rewards' days again
+ * over the merged log).
+ */
 export function importBackup(
-  current: Pick<PersistedState, 'events' | 'weekly' | 'streak'>,
+  current: Pick<PersistedState, 'events' | 'weekly' | 'streak'> & { rewards?: RewardsState },
   text: string,
   mode: ImportMode,
 ): ImportResult {
@@ -172,6 +206,7 @@ export function importBackup(
       events: b.events.slice().sort((x, y) => x.at - y.at),
       weekly: b.weekly,
       streak: b.streak,
+      rewards: b.rewards,
       settings: b.settings,
       added: b.events.length,
     }
@@ -188,5 +223,6 @@ export function importBackup(
   }
   events.sort((x, y) => x.at - y.at)
   const streak = b.streak.lastDay > current.streak.lastDay ? b.streak : current.streak
-  return { ok: true, events, weekly: mergeWeekly(current.weekly, b.weekly), streak, settings: b.settings, added }
+  const rewards = mergeRewards(current.rewards ?? emptyRewards(), b.rewards)
+  return { ok: true, events, weekly: mergeWeekly(current.weekly, b.weekly), streak, rewards, settings: b.settings, added }
 }

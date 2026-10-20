@@ -2,13 +2,17 @@ import { useCallback, useId, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { A2HSCard } from '@/components/A2HSCard'
 import { BottomSheet } from '@/components/BottomSheet'
+import { canVibrate } from '@/components/rewards/haptics'
 import { isIosSafari, isStandalone } from '@/components/useBreakpoint'
 import { useCoarsePointer } from '@/components/useMathKeypad'
 import { CALC_LABEL, type CalcId } from '@/shared/types'
-import { useSettings, useStore } from '@/store'
+import { DAILY_GOALS, dailyGoalOf, rewardsOn, useSettings, useStore, vibrateOn, type DailyGoal } from '@/store'
 import { useTutorStatus } from '@/tutor/useTutorStatus'
 
 const CALC_IDS = Object.keys(CALC_LABEL) as CalcId[]
+
+/** About how many problems each daily goal takes. */
+const GOAL_WORDS: Record<DailyGoal, string> = { 30: 'about 1 problem', 60: 'about 3 problems', 100: 'about 5 problems' }
 
 function Switch({
   label,
@@ -76,6 +80,9 @@ export function SettingsPage() {
   const tutor = useTutorStatus()
   // The math keypad only exists where the pointer is a finger, so only a touch screen offers the switch.
   const touch = useCoarsePointer()
+  const goalName = useId()
+  const rewards = rewardsOn(settings)
+  const goal = dailyGoalOf(settings)
 
   function confirmReset() {
     resetProgress()
@@ -151,6 +158,61 @@ export function SettingsPage() {
         </div>
       </section>
 
+      <section aria-labelledby="settings-rewards" className="rounded-2xl border border-navy-100 bg-white px-4 py-2">
+        <h2 id="settings-rewards" className="pt-2 font-semibold text-navy">
+          Rewards
+        </h2>
+        <div className="divide-y divide-navy-100">
+          <Switch
+            label="Rewards (XP, daily goal, streak)"
+            description="XP for every line and problem, a daily goal, a streak that a day off now and then does not break, and a collection of the mistakes you catch and squash. Off: none of it shows anywhere."
+            checked={rewards}
+            onChange={(on) => setSettings({ rewards: on })}
+          />
+          {rewards && (
+            <fieldset className="py-3">
+              <legend className="font-semibold text-navy">Daily goal</legend>
+              <p className="mt-0.5 text-sm text-navy/80">A new goal counts from today; the days before keep the goal they had.</p>
+              <div className="mt-2 inline-flex flex-wrap rounded-xl border border-navy-100 bg-white p-0.5">
+                {DAILY_GOALS.map((g) => {
+                  const checked = goal === g
+                  return (
+                    <label
+                      key={g}
+                      className={`flex min-h-11 cursor-pointer flex-col justify-center rounded-lg px-3 py-1 text-sm has-[:focus-visible]:outline-3 has-[:focus-visible]:outline-gold ${
+                        checked ? 'bg-navy text-white' : 'text-navy hover:bg-navy-50'
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name={goalName}
+                        value={g}
+                        checked={checked}
+                        onChange={() => setSettings({ dailyGoal: g })}
+                        className="sr-only"
+                      />
+                      <span className="font-semibold">
+                        {checked && <span aria-hidden>✓ </span>}
+                        {g} XP
+                      </span>
+                      <span className={`text-xs ${checked ? 'text-white/85' : 'text-navy/70'}`}>{GOAL_WORDS[g]}</span>
+                    </label>
+                  )
+                })}
+              </div>
+            </fieldset>
+          )}
+          {rewards && touch && canVibrate() && (
+            <Switch
+              label="Vibrate"
+              description="A light tick when a line or a part is right, and when you meet your goal."
+              checked={vibrateOn(settings)}
+              onChange={(on) => setSettings({ vibrate: on })}
+            />
+          )}
+        </div>
+      </section>
+
       <section aria-labelledby="settings-device" className="space-y-3 rounded-2xl border border-navy-100 bg-white p-4">
         <h2 id="settings-device" className="font-semibold text-navy">
           Your progress lives on this device
@@ -208,8 +270,8 @@ export function SettingsPage() {
           Reset progress
         </h2>
         <p className="mt-0.5 text-sm text-navy/80">
-          Clears mastery, error patterns, streak, drill scores and any unfinished problem on this device. Your settings
-          stay.
+          Clears mastery, error patterns, streak, drill scores{rewards ? ', XP and the mistake collection' : ''} and any
+          unfinished problem on this device. Your settings stay.
         </p>
         <button
           type="button"

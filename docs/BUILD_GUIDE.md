@@ -14,7 +14,7 @@ disagree, research wins** (the spec's random-sampling equivalence test is vacuou
 | Notation | `src/notation` | Exact rational solution sets; interval and set-builder parsers with pattern lessons; `compareAnswerSet` / `crossCheck`; LaTeX and calculator formatting. |
 | Content | `src/content/modules` | 5 modules: number line (1 template), inequalities (4), even/odd (2), inverses (6: linear, cube root, fraction coefficient, rational, Möbius, quadratic not one-to-one), properties drill (twin-pair bank), difference quotient (4: linear, quadratic, rational, radical; see docs/progress/diff-quotient.md). Tests push every canonical path, and the solve-first alternative for inverses, through the context engine for 25 seeds. |
 | Calculator panels | `src/content/calc` | TI-84 Plus CE and TI-Nspire CX II for 11 problem families, expression / k / f(k) / twin substituted. |
-| Store | `src/store` | Append-only event log with weekly compaction, attempt resume, selectors (mastery, first-try, hint rate, property accuracy, pattern counts, habits, streak, weak spots), export/import. |
+| Store | `src/store` | Append-only event log with weekly compaction, attempt resume, selectors (mastery, first-try, hint rate, property accuracy, pattern counts, habits, streak, weak spots), rewards (`rewards.ts`: XP, daily goal, goal streak, mistake cards, type rings; slice `pct.rewards`), export/import. |
 | UI | `src/App.tsx`, `src/pages`, `src/pages/flows`, `src/problem`, `src/components` | Complete. `pages/Problem.tsx` dispatches to the inequality, number-line, even/odd and inverse flows; Home, Module, Progress, Settings, Drill, Sandbox and the PIN gate. Graph and calculator panels stay behind a reveal button until the problem is complete (they show the answer). On phones the panel toolbar sits in the composer, or at the top when a screen has no composer. The first-spike demo UI is removed. |
 | Deploy | `Dockerfile`, `nginx.conf`, `docker/`, `.github/workflows`, `deploy/azure.md` | Written. The image builds and passes `deploy/smoke.sh` in GitHub Actions (Docker is not installed on the dev box). On Azure it runs behind Container Apps sign-in with Google plus an email allowlist in nginx (`docker/25-allowlist.sh`, `deploy/azure-setup.sh`). |
 
@@ -216,6 +216,14 @@ passes `lineVerdict` (`engineVerdict(engine)` for a step engine, else its own `L
 `<StuckChip />` under itself. On every screen, leaving a problem with her work in it is asked in the app's own sheet
 (`useAttemptLifecycle` returns `{ attempt, leaveQuestion }`; the Problem page shows `LeaveProblemSheet`), and the
 completion card replaces the completion toast. See `docs/progress/phone-screen.md`.
+
+Rewards (Settings "Rewards (XP, daily goal, streak)": on by default in the store app, off in the family app): XP, the
+daily goal, the streak with rest days and the mistake collection are pure functions of the event log in
+`store/rewards.ts`, shown by `components/rewards/*` on the phone's finish sheet (the completion card on a wide screen),
+the top of Home and Progress. A line is a `step_accepted`; a part is a right `final_answer` (the wrong checks since the
+last right one are its mistakes), so a check that grades several boxes every time logs `part` on each record. The slice
+`pct.rewards` keeps what the 60-day compaction deletes; `compactNow` settles and folds it first. See
+`docs/progress/phone-rewards.md`.
 
 Problem-page flows by kind:
 - **inequality**: worked column starts at `instance.start`; steps until progress says solved; then

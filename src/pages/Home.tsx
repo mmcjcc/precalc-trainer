@@ -2,6 +2,7 @@ import { useCallback, useEffect, useId, useMemo, useRef, type KeyboardEvent } fr
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { A2HSCard } from '@/components/A2HSCard'
 import { MasteryBar } from '@/components/MasteryBar'
+import { TodayCard } from '@/components/rewards/TodayCard'
 import {
   COURSES,
   courseOfModule,
@@ -27,6 +28,7 @@ import {
   useDrillAccuracy,
   useEvents,
   useModuleMastery,
+  useRewardsOn,
   useSettings,
   useStore,
   weakSpotWeights,
@@ -313,6 +315,7 @@ export function Home() {
   const events = useEvents()
   const settings = useSettings()
   const setSettings = useStore((s) => s.setSettings)
+  const rewards = useRewardsOn()
   const navigate = useNavigate()
   const { courseId: routeCourseId, unitId: routeUnitId } = useParams()
   const tabRefs = useRef<Record<string, HTMLButtonElement | null>>({})
@@ -403,6 +406,7 @@ export function Home() {
         </p>
       </header>
 
+      {rewards && <TodayCard />}
       <A2HSCard />
       {attempt && <ContinueCard attempt={attempt} />}
 

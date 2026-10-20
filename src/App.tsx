@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect } from 'react'
 import { HashRouter, Link, Navigate, Route, Routes, useLocation, useNavigationType, useParams } from 'react-router-dom'
 import { MathKeypad } from '@/components/MathKeypad'
+import { useRewardTicks } from '@/components/rewards/haptics'
 import { Toasts } from '@/components/Toast'
 import { Home } from '@/pages/Home'
 import { ModulePage } from '@/pages/Module'
@@ -123,6 +124,8 @@ function ScrollToTopOnNavigate() {
 export function AppShell() {
   const unlocked = useStore((s) => s.auth.ok)
   const pinHash = configuredPinHash()
+  // Rewards on and "Vibrate" on: a light tick on a right line or part, and when the goal is met.
+  useRewardTicks()
 
   if (pinHash && !unlocked) {
     return (

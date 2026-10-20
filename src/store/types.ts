@@ -20,6 +20,9 @@ export interface Meta {
 
 export type AskProperty = 'always' | 'off'
 
+/** Daily goal in XP (Settings): about 1, 3 or 5 problems. */
+export type DailyGoal = 30 | 60 | 100
+
 export interface Settings {
   calculator: CalcId
   askProperty: AskProperty
@@ -37,6 +40,16 @@ export interface Settings {
    * keyboard. Absent means on; it never applies where the pointer is a mouse.
    */
   mathKeypad?: boolean
+  /**
+   * "Rewards (XP, daily goal, streak)". Absent means the edition's default: on in the store app, off in the family
+   * web app. Off: no XP, goal, streak or mistake cards anywhere (the day streak stays as it was). Belongs to the
+   * device, like the keypad: an import never changes it.
+   */
+  rewards?: boolean
+  /** Daily goal in XP. Absent means 60. */
+  dailyGoal?: DailyGoal
+  /** "Vibrate": a light tick on a right line or part and when the goal is met (rewards on only). Absent means on. */
+  vibrate?: boolean
 }
 
 export interface Auth {
@@ -200,6 +213,11 @@ export type Ev =
       correct: boolean
       pattern?: string
       via?: 'builder' | 'text'
+      /**
+       * Which box of a check that grades several boxes each time (the inequality's "Interval" and "Set-builder"), so
+       * the rewards pay a box once. Absent: one check is one part (the parts flows check one part at a time).
+       */
+      part?: string
     })
   | (EvBase & {
       t: 'problem_done'
@@ -253,6 +271,48 @@ export interface Streak {
 }
 
 // ---------------------------------------------------------------------------
+// pct.rewards (what the 60-day compaction would take from the rewards; see store/rewards.ts)
+// ---------------------------------------------------------------------------
+
+/** A day she met her daily goal: 1 the goal, 2 twice the goal (which mends the day before). */
+export type DayMark = 1 | 2
+
+/** A named mistake in one problem type, as of `RewardsState.foldedThrough`. */
+export interface MistakeCardState {
+  /** Catalog pattern id. */
+  pattern: string
+  /** Problem type (skill) it was made in. */
+  skill: string
+  /** Times she made it. */
+  count: number
+  firstAt: number
+  lastAt: number
+  /** Attempt of the latest time: finishing that attempt never counts as a clean problem. */
+  lastAttempt: string
+  /** Finished problems of this type since the latest time, without this mistake (three squash it). */
+  clean: number
+  /** When it was first squashed: the +50 XP is paid once. */
+  squashedAt?: number
+}
+
+export interface RewardsState {
+  /** Local days ('YYYY-MM-DD') she met her goal. Never lowered: raising the goal does not undo a day. */
+  days: Record<string, DayMark>
+  /** Days up to and including this one are settled: `days` alone says how they went. '' = none yet. */
+  settledThrough: string
+  /** Events before this time (epoch ms) are folded into `cards` and `mastered` (the compaction deletes them). */
+  foldedThrough: number
+  /** Mistake cards folded from compacted events, by `${pattern}|${skill}`. */
+  cards: Record<string, MistakeCardState>
+  /** Problem types first mastered before `foldedThrough`: when (the +100 XP is paid once). */
+  mastered: Record<string, number>
+}
+
+export function emptyRewards(): RewardsState {
+  return { days: {}, settledThrough: '', foldedThrough: 0, cards: {}, mastered: {} }
+}
+
+// ---------------------------------------------------------------------------
 // Everything that is persisted
 // ---------------------------------------------------------------------------
 
@@ -264,6 +324,7 @@ export interface PersistedState {
   events: Ev[]
   weekly: Weekly
   streak: Streak
+  rewards: RewardsState
 }
 
 export type PersistedSlice = keyof PersistedState
@@ -302,5 +363,6 @@ export function defaultPersisted(now = Date.now()): PersistedState {
     events: [],
     weekly: {},
     streak: { ...EMPTY_STREAK },
+    rewards: emptyRewards(),
   }
 }

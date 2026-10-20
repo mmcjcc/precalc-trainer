@@ -5,7 +5,7 @@ import { getModule } from '@/content/registry'
 import { randomSeed } from '@/content/rng'
 import type { ProblemInstance } from '@/content/types'
 import { toLatex } from '@/notation'
-import { useStore, type Attempt } from '@/store'
+import { useRewardsOn, useStore, type Attempt } from '@/store'
 import type { TutorVerdict } from '@/shared/tutor'
 import { problemPath } from '@/problem/url'
 import { useReviewChrome } from '@/pages/review/chrome'
@@ -22,6 +22,7 @@ import { KeymapHelp } from '@/components/KeymapHelp'
 import { notePress, useKeypadStore } from '@/components/keypadStore'
 import { isNativeApp } from '@/components/nativeApp'
 import { PageLayout, RailToolbar, type RailPanel } from '@/components/PageLayout'
+import { FinishRewards, FinishSheet, useFinish } from '@/components/rewards/Finish'
 import { StuckProvider, type StuckApi } from '@/components/Stuck'
 import { useBreakpoint } from '@/components/useBreakpoint'
 import { useKeymap } from '@/components/useKeymap'
@@ -353,6 +354,19 @@ export function ProblemFrame({ instance, attempt, flags, templateTitle, progress
     if (card && typeof card.scrollIntoView === 'function') card.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
   }, [completion])
   const native = isNativeApp()
+  // Rewards on: a phone gets the finish sheet in the card's place (closing it leaves a small card); a wide screen
+  // shows the same rewards inside the card. Rewards off: the card as it was.
+  const rewardsOn = useRewardsOn()
+  const finishData = useFinish(rewardsOn && completion ? attempt?.id : undefined, instance.skill)
+  const phoneFinish = phone && finishData !== null
+  const [sheetClosedFor, setSheetClosedFor] = useState<Completion | null>(null)
+  const sheetOpen = phoneFinish && completion !== null && sheetClosedFor !== completion
+  const nextRef = useRef<HTMLButtonElement>(null)
+  const closeFinish = useCallback(() => {
+    setSheetClosedFor(completion)
+    // The sheet hands focus back to the box she was in, which is done now: the card's Next button takes it.
+    setTimeout(() => nextRef.current?.focus({ preventScroll: false }), 0)
+  }, [completion])
 
   async function copyLink() {
     const url = `${window.location.origin}${window.location.pathname}#${problemPath(instance.moduleId, instance.templateId, instance.seed, flags)}`
@@ -370,10 +384,12 @@ export function ProblemFrame({ instance, attempt, flags, templateTitle, progress
   }
 
   const nextHref = problemPath(instance.moduleId, instance.templateId, randomSeed(), flags)
+  const goNext = () => (review ? review.onNext() : navigate(nextHref))
   const statementNode = statement ?? <Katex tex={toLatex(instance.statementText)} display />
   const completionTitle = completion ? (completion.summary.finalCorrect ? 'Problem complete' : 'Problem finished') : ''
+  // With rewards on the streak is the goal streak (Home and the sheet show it), so the old day streak is left out.
   const completionLine = completion
-    ? `${completion.summary.steps > 0 ? `${completion.summary.steps} steps · ${completion.summary.firstTry} first-try · ` : ''}${completion.summary.hints} ${completion.summary.hints === 1 ? 'hint' : 'hints'}${completion.summary.revealed > 0 ? ` · ${completion.summary.revealed} shown` : ''}${completion.summary.streak > 0 ? ` · day streak ${completion.summary.streak}` : ''}`
+    ? `${completion.summary.steps > 0 ? `${completion.summary.steps} steps · ${completion.summary.firstTry} first-try · ` : ''}${completion.summary.hints} ${completion.summary.hints === 1 ? 'hint' : 'hints'}${completion.summary.revealed > 0 ? ` · ${completion.summary.revealed} shown` : ''}${completion.summary.streak > 0 && !finishData ? ` · day streak ${completion.summary.streak}` : ''}`
     : ''
   const spoken = completion ? completionWords(completion.summary, completion.newlyMastered, templateTitle) : null
   const announcement = spoken ? `${spoken.message}. ${spoken.detail}` : ''
@@ -433,24 +449,29 @@ export function ProblemFrame({ instance, attempt, flags, templateTitle, progress
 
           {children}
 
-          {completion && (
+          {completion && !sheetOpen && (
             <section ref={completionRef} data-completion-card="" className="space-y-3 rounded-2xl border border-ok bg-ok-100 p-4" aria-labelledby="completion-title">
               <h2 id="completion-title" className="font-semibold text-navy">
                 <span aria-hidden>✓ </span>
                 {completionTitle}
               </h2>
               <p className="text-sm text-navy">
+                {phoneFinish && <span className="font-semibold">+{finishData.info.total} XP · </span>}
                 {completionLine}
                 {completion.newlyMastered && <span className="font-semibold"> · {templateTitle} newly mastered</span>}
               </p>
+              {finishData && !phone && <FinishRewards data={finishData} templateTitle={templateTitle} />}
               <div className="flex flex-wrap items-center gap-2">
-                {review ? (
-                  <button type="button" onClick={review.onNext} className="min-h-11 rounded-xl bg-navy px-4 font-semibold text-white hover:bg-navy-600">
-                    Next
-                  </button>
-                ) : (
-                  <button type="button" onClick={() => navigate(nextHref)} className="min-h-11 rounded-xl bg-navy px-4 font-semibold text-white hover:bg-navy-600">
-                    Next problem
+                <button ref={nextRef} type="button" onClick={goNext} className="min-h-11 rounded-xl bg-navy px-4 font-semibold text-white hover:bg-navy-600">
+                  {review ? 'Next' : 'Next problem'}
+                </button>
+                {phoneFinish && (
+                  <button
+                    type="button"
+                    onClick={() => setSheetClosedFor(null)}
+                    className="min-h-11 rounded-xl border border-navy-100 bg-white px-4 font-semibold text-navy hover:bg-navy-50"
+                  >
+                    See what you earned
                   </button>
                 )}
                 {/* Inside the phone app a link to one of its pages opens nowhere else, so it is not offered there. */}
@@ -462,6 +483,11 @@ export function ProblemFrame({ instance, attempt, flags, templateTitle, progress
                 <Link to={`/m/${instance.moduleId}`} className="min-h-11 rounded-xl px-3 py-2.5 font-semibold text-navy underline">
                   Back to {mod.title}
                 </Link>
+                {finishData && (
+                  <Link to="/" className="min-h-11 rounded-xl px-3 py-2.5 font-semibold text-navy underline">
+                    Done for today
+                  </Link>
+                )}
                 {!native && (
                   <span role="status" className="text-sm text-navy/70">
                     {copied === 'ok' ? 'Link copied' : copied === 'fail' ? 'Could not copy — copy the address bar' : ''}
@@ -469,6 +495,17 @@ export function ProblemFrame({ instance, attempt, flags, templateTitle, progress
                 )}
               </div>
             </section>
+          )}
+          {completion && phoneFinish && (
+            <FinishSheet
+              open={sheetOpen}
+              onClose={closeFinish}
+              title={completionTitle}
+              data={finishData}
+              templateTitle={templateTitle}
+              nextLabel={review ? 'Next' : 'Next problem'}
+              onNext={goNext}
+            />
           )}
           {/* Says "Problem complete" to a screen reader in the toast's words, as the toast did before the card took its
               place. A plain live region (no status role), always on the page so the words are announced when they arrive. */}

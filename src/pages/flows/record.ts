@@ -20,7 +20,8 @@ import type { AtomGrade, SigFigGrade, SigFigTapGrade } from '@/shared/types'
  * Store the typed interval / set-builder answers and log one final_answer event per graded input.
  * A field that failed to parse with a named notation pattern (dropped ∪, backwards interval, bracket
  * on ∞, bracket point, empty interval) is logged as a wrong answer with that pattern, so Progress
- * counts the slip; pattern-less syntax errors stay unlogged.
+ * counts the slip; pattern-less syntax errors stay unlogged. Each record names its box (`part`), since a
+ * check grades both boxes every time: the rewards pay each box once. The two boxes disagreeing names neither.
  */
 export function recordSetAnswer(grade: FinalAnswerGrade, texts: { interval: string; set: string }): void {
   const s = useStore.getState()
@@ -29,19 +30,22 @@ export function recordSetAnswer(grade: FinalAnswerGrade, texts: { interval: stri
     s.recordFinalAnswer({ correct: false, pattern: grade.mismatch.id, via: 'text' })
     return
   }
-  const records: { correct: boolean; pattern?: string }[] = []
-  const fields: [FieldResult, boolean | undefined][] = [
-    [grade.interval, grade.graded.interval],
-    [grade.setBuilder, grade.graded.setBuilder],
+  const records: { correct: boolean; pattern?: string; part: string }[] = []
+  const fields: [FieldResult, boolean | undefined, string][] = [
+    [grade.interval, grade.graded.interval, SET_ANSWER_PARTS.interval],
+    [grade.setBuilder, grade.graded.setBuilder, SET_ANSWER_PARTS.setBuilder],
   ]
-  for (const [field, graded] of fields) {
-    if (graded) records.push({ correct: field.status === 'ok', pattern: field.pattern?.id })
-    else if (field.status === 'parse' && field.pattern) records.push({ correct: false, pattern: field.pattern.id })
+  for (const [field, graded, part] of fields) {
+    if (graded) records.push({ correct: field.status === 'ok', pattern: field.pattern?.id, part })
+    else if (field.status === 'parse' && field.pattern) records.push({ correct: false, pattern: field.pattern.id, part })
   }
   // Wrong ones first: the attempt's first-check result reads the first record of a check.
   records.sort((a, b) => Number(a.correct) - Number(b.correct))
-  for (const r of records) s.recordFinalAnswer({ correct: r.correct, pattern: r.pattern, via: 'text' })
+  for (const r of records) s.recordFinalAnswer({ correct: r.correct, pattern: r.pattern, via: 'text', part: r.part })
 }
+
+/** The boxes of the solution-set answer, as `final_answer.part` names them (the finish sheet shows these words). */
+export const SET_ANSWER_PARTS = { interval: 'Interval notation', setBuilder: 'Set-builder notation' } as const
 
 /**
  * Log one final_answer event for a typed significant-figures answer (final or intermediate), with
