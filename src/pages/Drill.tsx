@@ -23,6 +23,17 @@ function tex(text: string): string {
   }
 }
 
+/**
+ * Order and grouping are the whole question for these two ("(1 + x) + 8" becoming "1 + (x + 8)"), and the LaTeX
+ * printer drops brackets that do not change the value, which showed the same line twice. Their lines are plain
+ * sums, valid TeX as written, so they keep their brackets.
+ */
+const AS_WRITTEN: ReadonlySet<ChipId> = new Set<ChipId>(['commutative', 'associative'])
+
+export function drillTex(item: { chip?: ChipId }, text: string): string {
+  return item.chip && AS_WRITTEN.has(item.chip) ? text : tex(text)
+}
+
 function Feedback({ item, answer }: { item: DrillItem; answer: Answer }) {
   const chip = item.chip ? CHIP_LABEL[item.chip] : null
   let headline: string
@@ -165,9 +176,9 @@ export function Drill() {
           </h2>
           <div className="rounded-2xl border border-navy-100 bg-white p-4">
             <p className="text-sm text-navy/80">{relation ? 'Old line' : 'Old expression'}</p>
-            <Katex tex={tex(item.before)} display />
+            <Katex tex={drillTex(item, item.before)} display />
             <p className="mt-2 text-sm text-navy/80">{relation ? 'New line' : 'New expression'}</p>
-            <Katex tex={tex(item.after)} display />
+            <Katex tex={drillTex(item, item.after)} display />
           </div>
 
           {item.question === 'which_property' ? (

@@ -6,7 +6,7 @@ import { afterEach, describe, expect, it } from 'vitest'
 import { installPointer, removePointer } from '@/components/keypadTesting'
 import { ALL_CHIPS } from '@/shared/types'
 import { resetStoreForTests } from '@/store'
-import { Drill } from './Drill'
+import { Drill, drillTex } from './Drill'
 
 afterEach(() => {
   removePointer()
@@ -50,5 +50,15 @@ describe('Properties drill', () => {
     renderDrill()
     const group = reachPropertyQuestion()
     expect(within(group).getAllByRole('button')).toHaveLength(ALL_CHIPS.length)
+  })
+})
+
+describe('the drill’s lines', () => {
+  it('keep their brackets when order or grouping is the question', () => {
+    expect(drillTex({ chip: 'associative' }, '(1 + x) + 8')).toBe('(1 + x) + 8')
+    expect(drillTex({ chip: 'associative' }, '1 + (x + 8)')).toBe('1 + (x + 8)')
+    expect(drillTex({ chip: 'commutative' }, '(x + 1) + 8')).toBe('(x + 1) + 8')
+    // Elsewhere the usual printer, which drops brackets that change nothing.
+    expect(drillTex({ chip: 'distribute' }, '(1 + x) + 8')).not.toContain('(')
   })
 })
