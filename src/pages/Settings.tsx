@@ -145,7 +145,7 @@ export function SettingsPage() {
           Your progress lives on this device
         </h2>
         <p className="text-sm text-navy/80">
-          Mastery, error patterns and your streak are saved in this browser only — nothing is sent to a server. Using a
+          Mastery, error patterns and your streak are saved on this device only — nothing is sent to a server. Using a
           phone and a computer? Export a backup on one and import it on the other from the{' '}
           <Link to="/progress" className="font-semibold text-navy underline">
             Progress page

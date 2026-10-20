@@ -1,5 +1,5 @@
-import { lazy, Suspense } from 'react'
-import { HashRouter, Link, Navigate, Route, Routes, useLocation, useParams } from 'react-router-dom'
+import { lazy, Suspense, useEffect } from 'react'
+import { HashRouter, Link, Navigate, Route, Routes, useLocation, useNavigationType, useParams } from 'react-router-dom'
 import { Toasts } from '@/components/Toast'
 import { Home } from '@/pages/Home'
 import { ModulePage } from '@/pages/Module'
@@ -104,6 +104,20 @@ function LegacyGeneratedRedirect() {
   return <Navigate to={`/p/${moduleId}/${templateId}/${seed}${search}`} replace />
 }
 
+/**
+ * A new page opens at its top. Without this, a page opened from far down another one (Settings to Privacy,
+ * a module card to its problem) opened scrolled to the middle, which on a phone hides its title and its
+ * problem. Back (a POP) keeps whatever position the browser restores.
+ */
+function ScrollToTopOnNavigate() {
+  const { pathname } = useLocation()
+  const type = useNavigationType()
+  useEffect(() => {
+    if (type !== 'POP') window.scrollTo(0, 0)
+  }, [pathname, type])
+  return null
+}
+
 /** Everything inside the router: PIN gate, header, routes, toast host. Tests mount this in a MemoryRouter. */
 export function AppShell() {
   const unlocked = useStore((s) => s.auth.ok)
@@ -120,6 +134,7 @@ export function AppShell() {
 
   return (
     <>
+      <ScrollToTopOnNavigate />
       <SkipLink />
       <Header />
       <main id="main" tabIndex={-1} className="mx-auto w-full max-w-6xl flex-1 px-4 pb-24 pt-6 outline-none">
