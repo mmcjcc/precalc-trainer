@@ -68,9 +68,10 @@ export function setSizeFor(course: CourseDef): number {
 
 /**
  * The unit of her most recent problem in this class: the latest event that names an attempt (a line, a check, a
- * hint, a finished or a left problem) of one of the class's types. With none, the class's first unit with problems.
+ * hint, a finished or a left problem) of one of the class's types. With none, `startUnit` (the unit Home shows, the
+ * first-run picker's choice) when it is one of the class's, else the class's first unit with problems.
  */
-export function workingUnit(types: readonly ClassType[], events: readonly Ev[]): string | null {
+export function workingUnit(types: readonly ClassType[], events: readonly Ev[], startUnit?: string | null): string | null {
   const unitOf = new Map(types.map((t) => [t.templateId, t.unitId]))
   let unit: string | null = null
   let at = Number.NEGATIVE_INFINITY
@@ -83,7 +84,9 @@ export function workingUnit(types: readonly ClassType[], events: readonly Ev[]):
       at = e.at
     }
   }
-  return unit ?? types[0]?.unitId ?? null
+  if (unit) return unit
+  if (startUnit && types.some((t) => t.unitId === startUnit)) return startUnit
+  return types[0]?.unitId ?? null
 }
 
 /** The units of the class in the order (c) and (d) visit them: the working unit, the ones after it, then the ones before. */
@@ -112,6 +115,8 @@ export interface PickInput {
   now: number
   /** Default `SET_SIZE`. */
   size?: number
+  /** With no history in the class, the unit to start from (Home's unit); else the class's first. */
+  startUnit?: string | null
 }
 
 export interface PickResult {
@@ -151,7 +156,7 @@ export function pickSetTypes(input: PickInput): PickResult {
 
   // (c) The working unit, then (d) the next units: types not mastered yet. Practiced and Solid first, the one she
   // practiced longest ago first (ties: the unit's order), then New ones in the unit's order.
-  const unitId = workingUnit(types, events)
+  const unitId = workingUnit(types, events, input.startUnit)
   const tour = unitTour(types, unitId)
   tour.forEach((unit, i) => {
     const open = types.filter((t) => t.unitId === unit && free(t) && level(t.templateId) !== 'mastered')
@@ -197,6 +202,8 @@ export interface BuildSetInput {
   /** Seeds each problem (`mixSeed(seed, position)`): a fresh random seed gives fresh problems. */
   seed: number
   size?: number
+  /** With no history in the class, the unit to start from (Home's unit). */
+  startUnit?: string | null
 }
 
 /** A set of problems for her from this class. Pure. */
@@ -207,6 +214,7 @@ export function buildSet(input: BuildSetInput): BuiltSet {
     rewards: input.rewards,
     now: input.now,
     size: input.size,
+    startUnit: input.startUnit,
   })
   const seed = input.seed >>> 0 || 1
   return {

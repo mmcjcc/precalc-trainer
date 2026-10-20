@@ -164,6 +164,16 @@ describe('pickSetTypes: the rules in order', () => {
     expect(workingUnit(TYPES, [])).toBe('u1')
   })
 
+  it('(c) with no history in the class: the unit Home shows (startUnit), when it is one of the class’s', () => {
+    expect(workingUnit(TYPES, [], 'u2')).toBe('u2')
+    expect(ids(pickSetTypes({ types: TYPES, events: [], rewards: emptyRewards(), now: NOW, startUnit: 'u2' }))).toEqual(['b1', 'b2', 'b3'])
+    // A unit of another class, or none: the class's first unit.
+    expect(workingUnit(TYPES, [], 'zz')).toBe('u1')
+    expect(workingUnit(TYPES, [], null)).toBe('u1')
+    // Her own history wins over it.
+    expect(workingUnit(TYPES, [done('c1', NOW - DAY)], 'u2')).toBe('u3')
+  })
+
   it('(d) still short: the next unit, the same way', () => {
     const events = [...mastered('b1', NOW - 2 * DAY), ...mastered('b2', NOW - DAY)]
     const r = pick(events)
