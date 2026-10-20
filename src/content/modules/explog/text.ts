@@ -65,28 +65,42 @@ export function roundPlaces(value: number, places: number): string {
   return rounded.toFixed(places)
 }
 
+export interface ShowsOptions {
+  /**
+   * A period after the answer ends a sentence unless a digit follows: "log(0.1) = −1." shows "−1", and "−1.5" does
+   * not. The guards on what she sees beside a retry (safeWitness, safeExample, safeLesson) use it: the engine's
+   * witnesses end with the right value, as in "...a negative power of the base: log(0.1) = −1.". Problem generation
+   * does not yet: its general rule-card facts ("passes through (0, 1).") would turn every graph problem away.
+   */
+  sentenceEnd?: boolean
+}
+
 /**
  * True when `example` contains `answerText` as a whole token, on either side of an arrow.
  * Letters and underscores are boundaries, so "log_29" does not contain "29", but "31^" contains "31".
  */
-export function exampleShowsAnswer(example: string, answerText: string): boolean {
+export function exampleShowsAnswer(example: string, answerText: string, opts: ShowsOptions = {}): boolean {
   const minus = (s: string) => s.replace(/[−–]/g, '-')
   const tight = (s: string) => minus(s).replace(/\s+/g, '')
   const ans = tight(answerText)
   if (!ans) return false
   const escaped = ans.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-  const token = new RegExp(`(?<![\\d./A-Za-z_])${escaped}(?![\\d./A-Za-z])`)
+  const after = opts.sentenceEnd ? '(?![\\d/A-Za-z]|\\.\\d)' : '(?![\\d./A-Za-z])'
+  const token = new RegExp(`(?<![\\d./A-Za-z_])${escaped}${after}`)
   if (token.test(tight(example))) return true
   // Spaces are a boundary too. Stripping them would glue "is 7/3" into "is7/3" and hide the number.
   const looseAns = minus(answerText).replace(/\s+/g, ' ').trim()
   if (!looseAns) return false
   const looseEsc = looseAns.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/ /g, '\\s+')
-  return new RegExp(`(?<![\\d./A-Za-z_])${looseEsc}(?![\\d./A-Za-z])`).test(minus(example))
+  return new RegExp(`(?<![\\d./A-Za-z_])${looseEsc}${after}`).test(minus(example))
 }
 
-export function anyShows(texts: readonly string[], forms: readonly string[]): boolean {
-  return forms.some((form) => form.length > 0 && texts.some((text) => exampleShowsAnswer(text, form)))
+export function anyShows(texts: readonly string[], forms: readonly string[], opts: ShowsOptions = {}): boolean {
+  return forms.some((form) => form.length > 0 && texts.some((text) => exampleShowsAnswer(text, form, opts)))
 }
+
+/** What she sees beside a retry: an answer that ends a sentence counts too. */
+const BESIDE_A_RETRY: ShowsOptions = { sentenceEnd: true }
 
 /** Terminating decimal of a lowest-terms fraction ("3/2" → "1.5"), else null. */
 export function terminatingDecimal(answer: string): string | null {
@@ -127,20 +141,20 @@ export function catalogExample(id: string): string {
  * correct, replace it: the engine's witness for several slips repeats the right value.
  */
 export function safeWitness(witness: string, forms: readonly string[]): string {
-  if (!witness || anyShows([witness], forms)) {
+  if (!witness || anyShows([witness], forms, BESIDE_A_RETRY)) {
     return 'That matches a named slip. The rule card shows the same kind of mistake on different numbers.'
   }
   return witness
 }
 
 export function safeExample(example: string, forms: readonly string[]): string {
-  if (!example || anyShows([example], forms)) return ''
+  if (!example || anyShows([example], forms, BESIDE_A_RETRY)) return ''
   return example
 }
 
 /** A catalog lesson shown beside a retry. If it spells this problem's answer, use a number-free line. */
 export function safeLesson(lesson: string, forms: readonly string[]): string {
-  if (!lesson || anyShows([lesson], forms)) {
+  if (!lesson || anyShows([lesson], forms, BESIDE_A_RETRY)) {
     return 'Look at the rule card: the same kind of mistake, on different numbers.'
   }
   return lesson
