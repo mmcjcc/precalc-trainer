@@ -55,13 +55,8 @@ export function whole(q: Q | null): number | null {
   return q && q.d === 1 ? q.n : null
 }
 
-/** "3(5) − 7 = 8", "11 + 8 = 19": an expression evaluated at x, as she would write it. */
-export function atX(e: Lin, x: number): string {
-  const head = e.a === 1 ? `${x}` : `${e.a}(${x})`
-  const value = e.a * x + e.b
-  if (e.b === 0) return `${head} = ${value}`
-  return `${head} ${e.b < 0 ? '−' : '+'} ${Math.abs(e.b)} = ${value}`
-}
+// An expression evaluated at x, as she would write it ("3(5) − 7 = 8"): shared with unit 3, so it lives in expr.ts.
+export { atX } from './expr'
 
 /** a·x + b with value `value` at x, trying the coefficients in the order given. */
 export function fit(value: number, x: number, a: number): Lin {

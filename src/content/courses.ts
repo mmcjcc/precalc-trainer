@@ -10,6 +10,7 @@
  *
  * Home shows a unit's modules in `ModuleDef.order`, not in the order written below.
  */
+import { STORE } from '@/edition'
 import type { ModuleDef } from './types'
 import { getModule, hasModule, MODULES } from './registry'
 
@@ -26,7 +27,7 @@ export interface UnitDef {
 
 export interface CourseDef {
   id: string
-  /** Class name, e.g. "Honors Precalculus". */
+  /** Class name, e.g. "Honors Precalculus" (the store app, for any class, says "Precalculus"). */
   title: string
   /** Compact name, e.g. the module-page eyebrow. */
   short: string
@@ -41,7 +42,7 @@ export interface CourseDef {
 export const COURSES: readonly CourseDef[] = [
   {
     id: 'precalc',
-    title: 'Honors Precalculus',
+    title: STORE ? 'Precalculus' : 'Honors Precalculus',
     short: 'Precalculus',
     units: [
       {
@@ -117,7 +118,7 @@ export const COURSES: readonly CourseDef[] = [
   },
   {
     id: 'geometry',
-    title: 'Honors Geometry',
+    title: STORE ? 'Geometry' : 'Honors Geometry',
     short: 'Geometry',
     units: [
       {

@@ -9,7 +9,7 @@ import { ERROR_PATTERNS } from '@/engine'
 import { makeRng } from '@/content/rng'
 import { rat, ratAdd, ratMul, ratSub, ratToString, type Rational } from '@/notation'
 import type { GeoBuilt } from './build'
-import { angleLabel, fitExpr, fitTwo, formatLin, lin, qText, solveEqual, type Lin } from './expr'
+import { angleLabel, atX, fitExpr, fitTwo, formatLin, lin, qText, showNum, solveEqual, solveText, type Lin } from './expr'
 import { containsAnswer, exampleShowsAnswer, gradeGeoStage, isGeoMistake, stageDisplay } from './grade'
 import { formatLine, readLine, slopeCoefficient } from './lines'
 import { PARALLEL_RULES, POLYGON_RULES, UNIT3_RULE_FOR, UNIT3_RULE_IDS } from './unit3Rules'
@@ -304,6 +304,23 @@ function leakOf(answer: GeometryAnswer, cards: RuleCard[]): string | null {
   return null
 }
 
+/** A term of a sum in a worked line: "(2x + 12)", "3x", or "41" for a measure the problem gives. */
+function term(e: Lin): string {
+  return e.a === 0 || e.b === 0 ? formatLin(e) : `(${formatLin(e)})`
+}
+
+/** "m∠3 = 2x + 10 = 2(30) + 10 = 70°": the asked measure with x put in. */
+function measureLine(name: string, e: Lin, x: number): string {
+  return e.a === 0 ? `${name} = ${showNum(e.b)}°.` : `${name} = ${formatLin(e)} = ${atX(e, x)}°.`
+}
+
+/** What the worked line calls a pair of congruent angles at two parallel lines. */
+const CONGRUENT_PAIR: Partial<Record<Rel, string>> = {
+  corr: 'corresponding angles',
+  'alt-int': 'alternate interior angles',
+  'alt-ext': 'alternate exterior angles',
+}
+
 function pack(
   question: GeometryAnswer['question'],
   prompt: string,
@@ -573,7 +590,14 @@ function finishSolve(spec: SolveSpec, seed: number): GeoBuilt {
   const traps: Draft[] = [{ id, stage: 'x', text: qText(wrong), witness }]
   const prompt = `Lines m and n are parallel and are cut by a transversal. ∠${spec.a} = (${formatLin(spec.left)})° and ∠${spec.b} = (${formatLin(spec.right)})°. Find x, then m∠${spec.ask}.`
   const figure = transversalFigure(theta, 0, true, `${LINES_ARIA} parallel, marked with arrows, and cut by transversal t. ${NUMBERING}`)
-  const xReveal = [`The equation from the two angles gives x = ${spec.x}.`]
+  const pairSum = lin(spec.left.a + spec.right.a, spec.left.b + spec.right.b)
+  const pairName = CONGRUENT_PAIR[classifyBank(spec.a, spec.b)]
+  const xReveal = [
+    sameSide
+      ? `∠${spec.a} and ∠${spec.b} are same-side interior angles, so they add to 180°: ${term(spec.left)} + ${term(spec.right)} = 180. Combine like terms: ${solveText(pairSum, lin(0, 180))}.`
+      : `∠${spec.a} and ∠${spec.b} are ${pairName ?? 'a matching pair'}, so they are congruent: ${solveText(spec.left, spec.right)}.`,
+  ]
+  const resultReveal = measureLine(`m∠${spec.ask}`, askedExpr, spec.x)
   const stages = [
     numberStage('x', 'x', X_HINT, String(spec.x), 'Write the equation the two positions call for, then solve it.', sameSide ? UNIT3_RULE_IDS.parallelAngles : UNIT3_RULE_IDS.parallelAngles, xReveal, traps),
     numberStage(
@@ -583,11 +607,11 @@ function finishSolve(spec: SolveSpec, seed: number): GeoBuilt {
       String(asked.n),
       'Put the value of x into the expression this part asks for.',
       UNIT3_RULE_IDS.parallelAngles,
-      [`m∠${spec.ask} uses the x you found.`],
+      [resultReveal],
       [],
     ),
   ]
-  return pack('parallelSolve', prompt, figure, stages, [evalAt(spec.left, xRat).n, evalAt(spec.right, xRat).n], [`x = ${spec.x}.`, `m∠${spec.ask} = ${asked.n}.`], seed, 'Parallel lines', TYPE, PARALLEL_RULES, {
+  return pack('parallelSolve', prompt, figure, stages, [evalAt(spec.left, xRat).n, evalAt(spec.right, xRat).n], [...xReveal, resultReveal], seed, 'Parallel lines', TYPE, PARALLEL_RULES, {
     a: spec.a,
     b: spec.b,
     rel: rel,
@@ -1284,11 +1308,14 @@ function finishTriangleSum(angles: [number, number, number], exprs: [Lin, Lin, L
   }
   const prompt = `In △ABC, m∠A = (${formatLin(exprs[0])})°, m∠B = (${formatLin(exprs[1])})°, and m∠C = (${formatLin(exprs[2])})°. Find x, then m∠${names[ask]}.`
   const figure = triangleFigure(angles[0], angles[1], angles[2], labels)
+  const sum = lin(exprs[0].a + exprs[1].a + exprs[2].a, exprs[0].b + exprs[1].b + exprs[2].b)
+  const xReveal = `The three angles of a triangle add to 180°: ${exprs.map(term).join(' + ')} = 180. Combine like terms: ${solveText(sum, lin(0, 180))}.`
+  const resultReveal = measureLine(`m∠${names[ask]}`, exprs[ask], x)
   const stages = [
-    numberStage('x', 'x', X_HINT, String(x), 'The three angles of a triangle make one straight angle.', UNIT3_RULE_IDS.triangle, [`The three expressions add to a straight angle, so x = ${x}.`], traps),
-    numberStage('result', `m∠${names[ask]}`, DEG_HINT, String(asked), 'Put the value of x into the expression for this angle.', UNIT3_RULE_IDS.triangle, [`m∠${names[ask]} uses the x you found.`], []),
+    numberStage('x', 'x', X_HINT, String(x), 'The three angles of a triangle make one straight angle.', UNIT3_RULE_IDS.triangle, [xReveal], traps),
+    numberStage('result', `m∠${names[ask]}`, DEG_HINT, String(asked), 'Put the value of x into the expression for this angle.', UNIT3_RULE_IDS.triangle, [resultReveal], []),
   ]
-  return pack('triangleAngles', prompt, figure, stages, [...angles], [`x = ${x}.`, `m∠${names[ask]} = ${asked}.`], seed, 'Triangle angles', TYPE, POLYGON_RULES, { kind: 'sum' })
+  return pack('triangleAngles', prompt, figure, stages, [...angles], [xReveal, resultReveal], seed, 'Triangle angles', TYPE, POLYGON_RULES, { kind: 'sum' })
 }
 
 function finishExterior(remote1: Lin, remote2: Lin, exterior: Lin, x: number, seed: number): GeoBuilt {
@@ -1326,11 +1353,15 @@ function finishExterior(remote1: Lin, remote2: Lin, exterior: Lin, x: number, se
     B: angleLabel(remote2),
     E: angleLabel(exterior),
   })
+  const remoteSum = lin(remote1.a + remote2.a, remote1.b + remote2.b)
+  const xReveal = `The exterior angle equals the two remote interior angles together: ${formatLin(exterior)} = ${term(remote1)} + ${term(remote2)}. Combine like terms: ${solveText(exterior, remoteSum)}.`
+  // The figure extends BC through C to D, so the exterior angle at C is ∠ACD.
+  const resultReveal = measureLine('m∠ACD', exterior, x)
   const stages = [
-    numberStage('x', 'x', X_HINT, String(x), 'The exterior angle equals the two interior angles that are not beside it.', UNIT3_RULE_IDS.triangle, [`The exterior equals the two remote angles, so x = ${x}.`], traps),
-    numberStage('result', 'The exterior angle', DEG_HINT, String(E.n), 'Put the value of x into the exterior angle.', UNIT3_RULE_IDS.triangle, ['The exterior angle uses the x you found.'], []),
+    numberStage('x', 'x', X_HINT, String(x), 'The exterior angle equals the two interior angles that are not beside it.', UNIT3_RULE_IDS.triangle, [xReveal], traps),
+    numberStage('result', 'The exterior angle', DEG_HINT, String(E.n), 'Put the value of x into the exterior angle.', UNIT3_RULE_IDS.triangle, [resultReveal], []),
   ]
-  return pack('triangleAngles', prompt, figure, stages, [A.n, B.n, C, E.n], [`x = ${x}.`, `The exterior angle is ${E.n}°.`], seed, 'Exterior angle', TYPE, POLYGON_RULES, { kind: 'exterior' })
+  return pack('triangleAngles', prompt, figure, stages, [A.n, B.n, C, E.n], [xReveal, resultReveal], seed, 'Exterior angle', TYPE, POLYGON_RULES, { kind: 'exterior' })
 }
 
 export function drawTriangleAngles(seed: number): GeoBuilt {
