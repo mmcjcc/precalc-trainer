@@ -42,6 +42,7 @@ import {
   type Ev,
 } from '@/store'
 import { useTutorStatus } from '@/tutor/useTutorStatus'
+import { Welcome } from './Welcome'
 
 function percent(rate: number): string {
   return `${Math.round(rate * 100)}%`
@@ -309,7 +310,17 @@ function ModuleCard({ module, primary }: { module: ModuleDef; primary: boolean }
   )
 }
 
+/**
+ * Home, or for someone new to the store app (no class chosen, nothing done yet) the first-run picker: which class,
+ * then which unit (pages/Welcome.tsx). A /c/... link chooses the class itself, so it never shows the picker.
+ */
 export function Home() {
+  const { courseId: routeCourseId } = useParams()
+  const firstRun = useStore((s) => STORE && s.settings.courseId === undefined && s.events.length === 0 && s.attempt === null)
+  return firstRun && !routeCourseId ? <Welcome /> : <HomeScreen />
+}
+
+function HomeScreen() {
   const attempt = useAttempt()
   const events = useEvents()
   const settings = useSettings()
@@ -361,6 +372,18 @@ export function Home() {
     events,
   })
 
+  // The unit chips scroll sideways on a phone: bring the selected one into view (the row only, never the page).
+  const unitRow = useRef<HTMLDivElement>(null)
+  const shownUnit = selection?.unit.id
+  useEffect(() => {
+    const row = unitRow.current
+    const chip = row?.querySelector<HTMLElement>('[aria-pressed="true"]')
+    if (!row || !chip || row.scrollWidth <= row.clientWidth) return
+    const r = row.getBoundingClientRect()
+    const c = chip.getBoundingClientRect()
+    row.scrollLeft += c.left - r.left - (r.width - c.width) / 2
+  }, [shownUnit])
+
   if (!selection) {
     return <p className="text-navy">No classes are ready yet.</p>
   }
@@ -405,7 +428,8 @@ export function Home() {
   const setCount = setSizeFor(course)
   /** "Start a set": three problems for her from the selected class. It starts something, so no break here. */
   function startASet() {
-    if (startSet(course)) navigate('/set')
+    // With no history in this class, the set comes from the unit Home shows (the first-run picker's choice).
+    if (startSet(course, unit.id)) navigate('/set')
   }
   // The unfinished problem has a card of its own unless it is the set problem she is on ("Resume your set" is that).
   const attemptInSet = Boolean(
@@ -473,7 +497,7 @@ export function Home() {
 
         <WeakSpots course={course} primary={!phone} />
 
-        <div role="group" aria-label={`${course.title} units`} className="flex flex-nowrap gap-2 overflow-x-auto py-1">
+        <div ref={unitRow} role="group" aria-label={`${course.title} units`} className="flex flex-nowrap gap-2 overflow-x-auto py-1">
           {course.units.map((u) => {
             const pressed = u.id === unit.id
             const empty = modulesInUnit(u).length === 0

@@ -20,6 +20,8 @@ beforeEach(() => {
 
 describe('the store app', () => {
   it('shows the rewards on Home by default, and the Settings switch can turn them off', { timeout: 120_000 }, () => {
+    // A class chosen (a brand-new user first sees the class picker, pages/Welcome.tsx).
+    useStore.getState().setSettings({ courseId: 'precalc' })
     const { unmount } = render(
       <MemoryRouter>
         <Home />

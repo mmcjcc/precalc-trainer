@@ -16,10 +16,12 @@ export function warnSetNotSaved(): void {
  * "Another set" on the results. It starts something, so it never calls the set's break. Null when the class has no
  * problem types.
  */
-export function startSet(course: CourseDef): ActiveSet | null {
+export function startSet(course: CourseDef, startUnit?: string): ActiveSet | null {
   const s = useStore.getState()
   const now = Date.now()
-  const built = buildSet({ course, events: s.events, rewards: s.rewards, now, seed: randomSeed() })
+  // With no history in the class: the unit Home shows, else the one she last chose there.
+  const unit = startUnit ?? s.settings.unitByCourse?.[course.id] ?? null
+  const built = buildSet({ course, events: s.events, rewards: s.rewards, now, seed: randomSeed(), startUnit: unit })
   if (built.problems.length === 0) return null
   const set = newActiveSet(built, { now, timed: s.settings.testMode })
   if (!saveActiveSet(set)) warnSetNotSaved()
