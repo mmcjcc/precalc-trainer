@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Katex } from '@/components/Katex'
+import { useBreakpoint } from '@/components/useBreakpoint'
 import { generateDrill, randomSeed, type DrillItem } from '@/content'
 import { toLatex } from '@/notation'
 import { ALL_CHIPS, CHIP_LABEL, type ChipId } from '@/shared/types'
 import { useStore } from '@/store'
+import { propertyChoices } from './drillChoices'
 
 const SET_SIZE = 10
 
@@ -82,6 +84,9 @@ export function Drill() {
   const [score, setScore] = useState({ right: 0, total: 0, setRight: 0 })
   const nextRef = useRef<HTMLButtonElement>(null)
   const item: DrillItem | undefined = items[index]
+  // A phone gets four big choices (src/pages/drillChoices.ts); a wide screen keeps all fourteen chips.
+  const phone = useBreakpoint() === 'mobile'
+  const choices = phone && item?.chip ? propertyChoices(item.id, item.chip) : ALL_CHIPS
 
   useEffect(() => {
     if (answer) nextRef.current?.focus()
@@ -166,8 +171,8 @@ export function Drill() {
           </div>
 
           {item.question === 'which_property' ? (
-            <div role="group" aria-label="Properties" className="flex flex-wrap gap-2">
-              {ALL_CHIPS.map((id) => {
+            <div role="group" aria-label="Properties" className={phone ? 'grid gap-2' : 'flex flex-wrap gap-2'}>
+              {choices.map((id) => {
                 const st = stateOf(id)
                 return (
                   <button
@@ -175,7 +180,7 @@ export function Drill() {
                     type="button"
                     onClick={() => submit(id)}
                     disabled={answer !== null}
-                    className={choiceClass(st)}
+                    className={phone ? `${choiceClass(st)} min-h-12 w-full text-base` : choiceClass(st)}
                   >
                     <ChoiceMark state={st} />
                     {CHIP_LABEL[id]}
