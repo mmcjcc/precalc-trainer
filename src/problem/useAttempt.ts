@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import type { ProblemInstance } from '@/content/types'
 import { attemptTouched, mastery, useStore, type Attempt, type ProblemSummary } from '@/store'
+import { attemptResolves } from './attemptResolves'
 import { problemPath } from './url'
 
 /** The stored attempt belongs to this page: same problem id AND same difficulty flags. */
@@ -75,6 +76,12 @@ export function useAttemptLifecycle(instance: ProblemInstance, flags: string, ac
         tone: 'info',
         detail: 'The lines you saved were for the older version of this problem, so they would not fit the new one.',
       })
+      return
+    }
+    // A saved attempt whose problem this build cannot open (a module or template renamed or retired): "Back to it"
+    // would only bounce Home, so it does not ask. This problem replaces it; her events stay (attemptResolves.ts).
+    if (current && !attemptResolves(current)) {
+      start()
       return
     }
     // A problem she only opened is left without a word; only one with her work in it asks first.

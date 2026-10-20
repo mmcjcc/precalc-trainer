@@ -23,6 +23,7 @@ import {
 } from '@/content'
 import { loadReview } from '@/pages/review/session'
 import { startSet } from '@/pages/set/startSet'
+import { attemptResolves } from '@/problem/attemptResolves'
 import { defaultKnobs, flagsFromKnobs, problemPath } from '@/problem/url'
 import { loadActiveSet, resumePosition, resumeSet, sameSetProblem, setFinished, type ActiveSet } from '@/session/activeSet'
 import { setSizeFor } from '@/session/buildSet'
@@ -459,7 +460,8 @@ function HomeScreen() {
       {activeSet && resumed && (
         <ResumeSetCard position={resumePosition(activeSet)} total={activeSet.problems.length} status={resumed.status} primary={!phone} />
       )}
-      {attempt && !attemptInSet && <ContinueCard attempt={attempt} primary={!phone} />}
+      {/* A saved attempt this build cannot open (a retired module or template) is not offered (attemptResolves.ts). */}
+      {attempt && !attemptInSet && attemptResolves(attempt) && <ContinueCard attempt={attempt} primary={!phone} />}
       {/* An installed phone app has no "add to home screen" step. */}
       {!STORE && <A2HSCard quiet={phone} />}
 
