@@ -96,3 +96,17 @@ HintPanel}.tsx`, the composer flows (`Inequality`, `Inverse`, `DiffQuotient`, `L
 in `hintLadder.tsx`, `fnUi.tsx`, `AtomFlow.tsx`, `ElectronFlow.tsx`, `GraphFeaturesFlow.tsx`, `SigFigFlow.tsx`,
 `index.css`, `vite-env.d.ts`, `docs/BUILD_GUIDE.md` (§7), and two tests (`Problem.test.tsx` F7/F8,
 `GraphFeaturesFlow.test.tsx` harness).
+
+## Review (Claude, 2026-10-20)
+
+Built by one Claude agent (about 0.66M tokens, 85 minutes), no rework. Checked on the Android 16 emulator in a
+store-app build, on 7^(x+2) = 2^x with the keypad:
+- the compact header (close, title, a progress dot), one line of instructions, START on one line in the work list;
+- with the keypad up and the card scrolled away, the equation pinned in the gold strip at the top;
+- a wrong line ("x + 2 = x"): the verdict in the composer just above the box, her line selected for retyping, Why?
+  opening the full lesson in a sheet (the keypad steps aside and comes back when the sheet closes), Stuck? opening
+  the hints with the first nudge shown;
+- opening another problem with work in this one: the in-app "Unfinished problem" sheet, showing which problem it is
+  about, with "Back to it" and "Leave".
+Follow-up in the store app only: Android's Back now closes an open keypad before it leaves the page (the fork's
+src/native/backButton.ts).
