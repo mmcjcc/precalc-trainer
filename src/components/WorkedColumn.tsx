@@ -33,7 +33,7 @@ export function WorkedColumn({ start, steps, onUndo, canUndo = false, afterLast,
     <ol className="space-y-2" aria-label="Worked steps">
       {start !== null && (
         <li className="flex items-start gap-3 rounded-xl border border-navy-100 bg-navy-50 px-3 py-2">
-          <span className="mt-1 w-6 shrink-0 text-xs font-semibold uppercase tracking-wide text-navy/50">{startLabel}</span>
+          <span className="mt-1 w-12 shrink-0 text-xs font-semibold uppercase tracking-wide text-navy/50">{startLabel}</span>
           <div className="min-w-0 flex-1 overflow-x-auto text-navy">
             <Katex tex={tex(start)} />
           </div>
@@ -44,7 +44,7 @@ export function WorkedColumn({ start, steps, onUndo, canUndo = false, afterLast,
         return (
           <li key={`${s.idx}-${s.text}`} className="rounded-xl border border-navy-100 bg-white px-3 py-2">
             <div className="flex items-start gap-3">
-              <span className="mt-1 w-6 shrink-0 text-sm text-navy/50">{i + 1}</span>
+              <span className="mt-1 w-12 shrink-0 text-sm text-navy/50">{i + 1}</span>
               <div className="min-w-0 flex-1 overflow-x-auto text-navy">
                 <Katex tex={s.latex || tex(s.text)} />
                 <div className="mt-1 flex flex-wrap items-center gap-2 text-xs">
