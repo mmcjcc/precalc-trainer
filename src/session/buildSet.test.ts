@@ -129,11 +129,21 @@ describe('pickSetTypes: the rules in order', () => {
     expect(r.unitId).toBe('u2')
   })
 
-  it('(c) the working unit: types not mastered yet, Practiced and Solid before New, in the unit’s order', () => {
+  it('(c) the working unit: types not mastered yet, Practiced and Solid (least recently practiced first) before New', () => {
     const events = [practiced('a2', NOW - 3 * DAY), ...solid('a4', NOW - 2 * DAY), ...mastered('a3', NOW - DAY)]
     const r = pick(events)
     expect(ids(r)).toEqual(['a2', 'a4', 'a1'])
     expect(picks(r)).toEqual(['unit', 'unit', 'unit'])
+  })
+
+  it('(c) goes round her Practiced and Solid types, least recently practiced first, so a set never repeats the last one', () => {
+    // a1 was practiced most recently, a4 longest ago.
+    const events = [practiced('a4', NOW - 4 * DAY), practiced('a2', NOW - 3 * DAY), practiced('a3', NOW - 2 * DAY), practiced('a1', NOW - DAY)]
+    const first = pick(events)
+    expect(ids(first)).toEqual(['a4', 'a2', 'a3'])
+    // She does that set: the next one starts with a1, then the set she just did, oldest first.
+    const after = [...events, practiced('a4', NOW - 3 * HOUR), practiced('a2', NOW - 2 * HOUR), practiced('a3', NOW - HOUR)]
+    expect(ids(pick(after))).toEqual(['a1', 'a4', 'a2'])
   })
 
   it('(c) the working unit is the unit of her most recent problem in this class (any line, check or finish)', () => {

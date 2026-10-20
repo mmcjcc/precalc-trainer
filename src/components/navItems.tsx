@@ -1,7 +1,8 @@
 /**
  * The app's destinations: the top navigation on a wide screen and the bottom tab bar on a phone show the same ones
- * (Ask only while the tutor is configured).
+ * (Ask only while the tutor is configured; no Sandbox in the store app, which has no engine playground).
  */
+import { STORE } from '@/edition'
 
 export type NavIcon = 'home' | 'ask' | 'drill' | 'progress' | 'settings' | 'sandbox'
 
@@ -19,7 +20,7 @@ const REST: NavItem[] = [
   { to: '/drill', label: 'Drill', icon: 'drill' },
   { to: '/progress', label: 'Progress', icon: 'progress' },
   { to: '/settings', label: 'Settings', icon: 'settings' },
-  { to: '/sandbox', label: 'Sandbox', icon: 'sandbox' },
+  ...(STORE ? [] : [{ to: '/sandbox', label: 'Sandbox', icon: 'sandbox' } as const]),
 ]
 
 export function navItems(askOn: boolean): NavItem[] {

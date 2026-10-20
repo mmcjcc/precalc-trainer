@@ -14,6 +14,7 @@ import { ProgressPage } from '@/pages/Progress'
 import { SettingsPage } from '@/pages/Settings'
 import { TutorLogPage } from '@/pages/TutorLog'
 import { useStore } from '@/store'
+import { STORE } from '@/edition'
 import { useTutorStatus } from '@/tutor/useTutorStatus'
 
 // Heavy routes (KaTeX, the workspace flows, the engine playground) load on demand.
@@ -49,7 +50,7 @@ function Header({ items }: { items: readonly NavItem[] }) {
     <header className="border-b border-navy-100 bg-white">
       <div className="mx-auto flex w-full max-w-6xl flex-wrap items-center justify-between gap-x-4 px-4 py-1">
         <Link to="/" className="flex min-h-11 items-center font-semibold text-navy">
-          Math & Science Trainer
+          {STORE ? 'Math Trainer' : 'Math & Science Trainer'}
         </Link>
         <nav aria-label="Main" className="-mx-2 max-w-full overflow-x-auto">
           <ul className="flex items-center gap-0.5">

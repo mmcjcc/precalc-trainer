@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState, type KeyboardEvent } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { A2HSCard } from '@/components/A2HSCard'
+import { STORE } from '@/edition'
 import { MasteryBar } from '@/components/MasteryBar'
 import { TodayCard } from '@/components/rewards/TodayCard'
 import { ResumeSetCard, StartSetButton } from '@/components/set/TodaySet'
@@ -415,11 +416,12 @@ export function Home() {
   return (
     <div className={`mx-auto max-w-4xl ${phone ? 'space-y-4' : 'space-y-6'}`}>
       <header className="space-y-2">
-        <h1 className={`${phone ? 'text-2xl' : 'text-3xl'} font-semibold text-navy`}>Math & Science Trainer</h1>
+        <h1 className={`${phone ? 'text-2xl' : 'text-3xl'} font-semibold text-navy`}>{STORE ? 'Math Trainer' : 'Math & Science Trainer'}</h1>
         {!phone && (
           <p className="max-w-2xl text-navy/80">
-            Practice that checks your work as you go. In math, every line is checked against the one before it; in
-            science, every answer is checked with its units and figures. A mistake gets named the moment it happens.
+            {STORE
+              ? 'Practice that checks your work as you go. Every line is checked against the one before it, and a mistake gets named the moment it happens.'
+              : 'Practice that checks your work as you go. In math, every line is checked against the one before it; in science, every answer is checked with its units and figures. A mistake gets named the moment it happens.'}
           </p>
         )}
       </header>
@@ -434,7 +436,8 @@ export function Home() {
         <ResumeSetCard position={resumePosition(activeSet)} total={activeSet.problems.length} status={resumed.status} primary={!phone} />
       )}
       {attempt && !attemptInSet && <ContinueCard attempt={attempt} primary={!phone} />}
-      <A2HSCard quiet={phone} />
+      {/* An installed phone app has no "add to home screen" step. */}
+      {!STORE && <A2HSCard quiet={phone} />}
 
       <div className="space-y-3">
         <div

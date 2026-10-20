@@ -8,8 +8,10 @@
  * (b) a mastered type that is due for review (two weeks or more since its last problem: `REVIEW_AFTER_MS`, the rule
  *     that pays it in full again), the one waiting longest, if any;
  * (c) the unit she is working in (the unit of her most recent problem in this class; with no history, the class's
- *     first unit with problems): its types that are not mastered yet, Practiced and Solid before New, each group in
- *     the unit's order (Home's module order, then each module's own order);
+ *     first unit with problems): its types that are not mastered yet, Practiced and Solid before New. The Practiced
+ *     and Solid ones go least recently practiced first, so set after set goes round her types (spaced practice) instead
+ *     of giving her the same three, or the last set's, again; the New ones go in the unit's order (Home's module
+ *     order, then each module's own order);
  * (d) still short: the next unit, the same way (then the units after it, then the ones before it);
  * still short (nearly every type of the class mastered): mastered types, the working unit's first.
  * A mastered type that is not due never comes back through (c) or (d): (b) is how mastered types come back.
@@ -147,12 +149,17 @@ export function pickSetTypes(input: PickInput): PickResult {
     .sort((x, y) => x.at - y.at)
   take(due[0]?.t, 'review')
 
-  // (c) The working unit, then (d) the next units: types not mastered yet, Practiced and Solid before New.
+  // (c) The working unit, then (d) the next units: types not mastered yet. Practiced and Solid first, the one she
+  // practiced longest ago first (ties: the unit's order), then New ones in the unit's order.
   const unitId = workingUnit(types, events)
   const tour = unitTour(types, unitId)
   tour.forEach((unit, i) => {
     const open = types.filter((t) => t.unitId === unit && free(t) && level(t.templateId) !== 'mastered')
-    const started = open.filter((t) => level(t.templateId) !== 'new')
+    const started = open
+      .filter((t) => level(t.templateId) !== 'new')
+      .map((t, order) => ({ t, order, at: last.get(t.templateId) ?? Number.NEGATIVE_INFINITY }))
+      .sort((x, y) => x.at - y.at || x.order - y.order)
+      .map((x) => x.t)
     const fresh = open.filter((t) => level(t.templateId) === 'new')
     for (const t of [...started, ...fresh]) take(t, i === 0 ? 'unit' : 'next')
   })
