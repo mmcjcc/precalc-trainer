@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import type { ProgressLine } from '@/problem/stepEngine'
+import type { SetSlotStatus } from '@/session/activeSet'
+import { SetDots, SetSkipMenu } from '@/components/set/SetProgress'
 
 /** Words that carry no meaning of their own in an instruction ("Find the …", "Write it in …"). */
 const FILLER = new Set(
@@ -79,10 +81,20 @@ export function ProgressDots({ progress }: { progress: ProgressLine }) {
   )
 }
 
+/** A set's row in the phone header: its progress, and the ⋯ menu that skips the problem. */
+export interface PhoneHeaderSet {
+  /** The slot she is on (0-based). */
+  index: number
+  total: number
+  status: readonly SetSlotStatus[]
+  /** Skip the problem she is on; absent once it is finished. */
+  onSkip?: () => void
+}
+
 /**
  * The phone's problem header: one row with a close button (back to the module page), the title on one line, and
  * the progress dots; then the instructions as one short line, only when they add to the title (a tap shows all
- * of them).
+ * of them). In a set, a row above it carries the close button, the set's dots ("2 of 3") and the ⋯ menu (Skip).
  */
 export function PhoneHeader({
   title,
@@ -90,27 +102,41 @@ export function PhoneHeader({
   closeTo,
   closeLabel,
   progress,
+  set,
 }: {
   title: string
   instructions: string
   closeTo: string
   closeLabel: string
   progress?: ProgressLine | null
+  set?: PhoneHeaderSet
 }) {
   const [open, setOpen] = useState(false)
   const extra = extraInstructions(title, instructions)
+  const close = (
+    <Link
+      to={closeTo}
+      aria-label={closeLabel}
+      className="-ml-2 flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-navy hover:bg-navy-50"
+    >
+      <span aria-hidden className="text-2xl leading-none">
+        ×
+      </span>
+    </Link>
+  )
   return (
     <div className="space-y-1">
+      {set && (
+        <div className="flex items-center gap-2" data-set-header="">
+          {close}
+          <div className="min-w-0 flex-1">
+            <SetDots index={set.index} total={set.total} status={set.status} />
+          </div>
+          {set.onSkip && <SetSkipMenu index={set.index} total={set.total} onSkip={set.onSkip} trigger="icon" />}
+        </div>
+      )}
       <div className="flex items-center gap-2">
-        <Link
-          to={closeTo}
-          aria-label={closeLabel}
-          className="-ml-2 flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-navy hover:bg-navy-50"
-        >
-          <span aria-hidden className="text-2xl leading-none">
-            ×
-          </span>
-        </Link>
+        {!set && close}
         <h1 className="min-w-0 flex-1 truncate text-lg font-semibold text-navy">{title}</h1>
         {progress && <ProgressDots progress={progress} />}
       </div>

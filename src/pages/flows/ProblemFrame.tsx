@@ -9,9 +9,12 @@ import { useRewardsOn, useStore, type Attempt } from '@/store'
 import type { TutorVerdict } from '@/shared/tutor'
 import { problemPath } from '@/problem/url'
 import { useReviewChrome } from '@/pages/review/chrome'
+import { useSetChrome } from '@/pages/set/chrome'
+import { SetDots, SetSkipMenu } from '@/components/set/SetProgress'
 import { useIdleNudge } from '@/problem/useIdleNudge'
 import { completionWords, type Completion } from '@/problem/useAttempt'
 import type { ProgressLine } from '@/problem/stepEngine'
+import { useFullScreenPage } from '@/components/appChrome'
 import { BottomSheet } from '@/components/BottomSheet'
 import { CalcPanel } from '@/components/CalcPanel'
 import { Composer } from '@/components/Composer'
@@ -127,13 +130,18 @@ function holdsFigure(card: HTMLElement | null): boolean {
  * Shared problem-page chrome: header, progress line, rail [Hints, Graph it, Calculator, Rule
  * cards], mobile composer, keymap, idle nudge, completion card. On a phone (below 768 px, where the composer is
  * sticky and the rail is a row of sheets) the header is one compact row, the problem stays pinned at the top once
- * its card scrolls away, the composer shows the verdict about her line, and "Stuck?" opens the next hint.
+ * its card scrolls away, the composer shows the verdict about her line, and "Stuck?" opens the next hint. A phone
+ * shows a problem full screen: no tab bar, no top navigation (the app shell decides; see components/appChrome.ts).
+ * In a set (pages/SetPage.tsx) the set's progress is in the phone's header and in the completion area on a wide
+ * screen, and the main button stays in the set: "Next in set", then "See results".
  */
 export function ProblemFrame({ instance, attempt, flags, templateTitle, progress, hints, composer, completion, keymap, statement, graphCaption, nudgeText, tutorVerdict, graphFooter, lineVerdict, children }: Props) {
   const navigate = useNavigate()
   const review = useReviewChrome()
+  const set = useSetChrome()
   const bp = useBreakpoint()
   const phone = bp === 'mobile'
+  useFullScreenPage()
   const mod = getModule(instance.moduleId)
   const tutor = useTutorStatus()
   const [openPanel, setOpenPanel] = useState<string | null>(null)
@@ -384,7 +392,10 @@ export function ProblemFrame({ instance, attempt, flags, templateTitle, progress
   }
 
   const nextHref = problemPath(instance.moduleId, instance.templateId, randomSeed(), flags)
-  const goNext = () => (review ? review.onNext() : navigate(nextHref))
+  const goNext = () => (set ? set.onNext() : review ? review.onNext() : navigate(nextHref))
+  const nextLabel = set ? set.nextLabel : review ? 'Next' : 'Next problem'
+  // A set's slot she can still skip: the problem she is on, not finished yet.
+  const skip = set && !completion && set.status[set.index] === 'pending' ? set.onSkip : undefined
   const statementNode = statement ?? <Katex tex={toLatex(instance.statementText)} display />
   const completionTitle = completion ? (completion.summary.finalCorrect ? 'Problem complete' : 'Problem finished') : ''
   // With rewards on the streak is the goal streak (Home and the sheet show it), so the old day streak is left out.
@@ -406,9 +417,10 @@ export function ProblemFrame({ instance, attempt, flags, templateTitle, progress
                 <PhoneHeader
                   title={instance.title}
                   instructions={instance.instructions}
-                  closeTo={`/m/${instance.moduleId}`}
-                  closeLabel={`Close, back to ${mod.title}`}
+                  closeTo={set ? '/' : `/m/${instance.moduleId}`}
+                  closeLabel={set ? 'Close, back to Home. Your set is kept.' : `Close, back to ${mod.title}`}
                   progress={progress}
+                  set={set ? { index: set.index, total: set.total, status: set.status, onSkip: skip } : undefined}
                 />
                 <div ref={cardRef} tabIndex={-1} className="problem-card rounded-2xl bg-gold-100 px-4 py-3 text-navy outline-none">
                   {statementNode}
@@ -423,6 +435,12 @@ export function ProblemFrame({ instance, attempt, flags, templateTitle, progress
             </>
           ) : (
             <header className="space-y-1">
+              {set && (
+                <div className="mb-2 flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-navy-100 bg-white px-4 py-2" data-set-bar="">
+                  <SetDots index={set.index} total={set.total} status={set.status} prefix="Your set ·" />
+                  {skip && <SetSkipMenu index={set.index} total={set.total} onSkip={skip} trigger="text" />}
+                </div>
+              )}
               <p className="text-xs font-semibold uppercase tracking-wide text-coral-700">
                 <Link to={`/m/${instance.moduleId}`} className="hover:underline">
                   {mod.title}
@@ -461,9 +479,11 @@ export function ProblemFrame({ instance, attempt, flags, templateTitle, progress
                 {completion.newlyMastered && <span className="font-semibold"> · {templateTitle} newly mastered</span>}
               </p>
               {finishData && !phone && <FinishRewards data={finishData} templateTitle={templateTitle} />}
+              {/* A wide screen shows the set's progress here; a phone has it in its header. */}
+              {set && !phone && <SetDots index={set.index} total={set.total} status={set.status} prefix="Your set ·" />}
               <div className="flex flex-wrap items-center gap-2">
                 <button ref={nextRef} type="button" onClick={goNext} className="min-h-11 rounded-xl bg-navy px-4 font-semibold text-white hover:bg-navy-600">
-                  {review ? 'Next' : 'Next problem'}
+                  {nextLabel}
                 </button>
                 {phoneFinish && (
                   <button
@@ -480,9 +500,12 @@ export function ProblemFrame({ instance, attempt, flags, templateTitle, progress
                     Copy link
                   </button>
                 )}
-                <Link to={`/m/${instance.moduleId}`} className="min-h-11 rounded-xl px-3 py-2.5 font-semibold text-navy underline">
-                  Back to {mod.title}
-                </Link>
+                {/* In a set the way on is the set's button; leaving for the module page would leave the set. */}
+                {!set && (
+                  <Link to={`/m/${instance.moduleId}`} className="min-h-11 rounded-xl px-3 py-2.5 font-semibold text-navy underline">
+                    Back to {mod.title}
+                  </Link>
+                )}
                 {finishData && (
                   <Link to="/" className="min-h-11 rounded-xl px-3 py-2.5 font-semibold text-navy underline">
                     Done for today
@@ -503,7 +526,7 @@ export function ProblemFrame({ instance, attempt, flags, templateTitle, progress
               title={completionTitle}
               data={finishData}
               templateTitle={templateTitle}
-              nextLabel={review ? 'Next' : 'Next problem'}
+              nextLabel={nextLabel}
               onNext={goNext}
             />
           )}

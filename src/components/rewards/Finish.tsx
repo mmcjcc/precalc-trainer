@@ -39,7 +39,8 @@ function cheers(info: FinishInfo): string[] {
   return out
 }
 
-function goalCaption(today: TodayView): string {
+/** The line under the goal ring: what is left to the goal (or the double goal), or that it is met. */
+export function goalCaption(today: TodayView): string {
   const left = Math.max(0, today.target - today.xp)
   if (today.target > today.goal && left > 0) return `${left} XP to a double goal`
   return today.xp >= today.target ? 'Today’s goal: met' : `${left} XP to today’s goal`

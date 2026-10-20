@@ -4,8 +4,9 @@ import { isIosSafari, isStandalone } from './useBreakpoint'
 /**
  * One-time "Add to Home Screen" card for iOS Safari (UX-10): Safari deletes localStorage after
  * 7 days without a visit unless the app is installed. Shown once; dismiss sets settings.seenA2HS.
+ * `quiet` outlines its button, where the page keeps the filled look for one main action (a phone's Home).
  */
-export function A2HSCard({ force = false }: { force?: boolean }) {
+export function A2HSCard({ force = false, quiet = false }: { force?: boolean; quiet?: boolean }) {
   const settings = useSettings()
   const setSettings = useStore((s) => s.setSettings)
   const show = force || (isIosSafari() && !isStandalone() && !settings.seenA2HS)
@@ -30,7 +31,9 @@ export function A2HSCard({ force = false }: { force?: boolean }) {
         <button
           type="button"
           onClick={() => setSettings({ seenA2HS: true })}
-          className="mt-3 min-h-11 rounded-xl bg-navy px-4 text-sm font-semibold text-white hover:bg-navy-600"
+          className={`mt-3 min-h-11 rounded-xl px-4 text-sm font-semibold ${
+            quiet ? 'border border-navy-100 bg-white text-navy hover:bg-navy-50' : 'bg-navy text-white hover:bg-navy-600'
+          }`}
         >
           Got it
         </button>

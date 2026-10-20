@@ -1,8 +1,12 @@
 import { lazy, Suspense, useEffect } from 'react'
 import { HashRouter, Link, Navigate, Route, Routes, useLocation, useNavigationType, useParams } from 'react-router-dom'
+import { isFullScreenPath, useFullScreenPageShown } from '@/components/appChrome'
 import { MathKeypad } from '@/components/MathKeypad'
+import { isNavActive, navItems, type NavItem } from '@/components/navItems'
 import { useRewardTicks } from '@/components/rewards/haptics'
+import { TabBar } from '@/components/TabBar'
 import { Toasts } from '@/components/Toast'
+import { useBreakpoint } from '@/components/useBreakpoint'
 import { Home } from '@/pages/Home'
 import { ModulePage } from '@/pages/Module'
 import { PinPage } from '@/pages/Pin'
@@ -15,17 +19,10 @@ import { useTutorStatus } from '@/tutor/useTutorStatus'
 // Heavy routes (KaTeX, the workspace flows, the engine playground) load on demand.
 const ProblemPage = lazy(() => import('./pages/Problem'))
 const ReviewPage = lazy(() => import('./pages/Review'))
+const SetPage = lazy(() => import('./pages/SetPage'))
 const DrillPage = lazy(() => import('./pages/Drill'))
 const SandboxPage = lazy(() => import('./pages/Sandbox'))
 const AskPage = lazy(() => import('./pages/AskAnything'))
-
-const NAV: { to: string; label: string; end?: boolean }[] = [
-  { to: '/', label: 'Home', end: true },
-  { to: '/drill', label: 'Drill' },
-  { to: '/progress', label: 'Progress' },
-  { to: '/settings', label: 'Settings' },
-  { to: '/sandbox', label: 'Sandbox' },
-]
 
 /** SHA-256 hex from public/config.js (regenerated from APP_PIN in the container). Empty = no gate. */
 function configuredPinHash(): string {
@@ -45,19 +42,9 @@ function SkipLink() {
   )
 }
 
-/** Home stays current on `/` and on a class deep link (`/c/...`). Other items match their path. */
-function isNavActive(pathname: string, to: string, end?: boolean): boolean {
-  if (to === '/' && (pathname === '/c' || pathname.startsWith('/c/'))) return true
-  if (end || to === '/') return pathname === to
-  return pathname === to || pathname.startsWith(`${to}/`)
-}
-
-function Header() {
+/** The top navigation (wide screens): the app's name and its destinations as text links. */
+function Header({ items }: { items: readonly NavItem[] }) {
   const { pathname } = useLocation()
-  const tutor = useTutorStatus()
-  const items = tutor.status?.configured
-    ? [NAV[0], { to: '/ask', label: 'Ask' }, ...NAV.slice(1)]
-    : NAV
   return (
     <header className="border-b border-navy-100 bg-white">
       <div className="mx-auto flex w-full max-w-6xl flex-wrap items-center justify-between gap-x-4 px-4 py-1">
@@ -120,7 +107,58 @@ function ScrollToTopOnNavigate() {
   return null
 }
 
-/** Everything inside the router: PIN gate, header, routes, toast host. Tests mount this in a MemoryRouter. */
+/**
+ * The unlocked app: navigation, routes, keypad, toasts. Wide screens keep the top navigation on every page. On a
+ * phone the top navigation gives way to a bottom tab bar on menu screens (Home, Drill, Progress, Settings, Ask, the
+ * class and module pages...), and a problem screen or a running set has neither: it is full screen with its own
+ * compact header.
+ */
+function UnlockedShell() {
+  const { pathname } = useLocation()
+  const tutor = useTutorStatus()
+  const items = navItems(Boolean(tutor.status?.configured))
+  const phone = useBreakpoint() === 'mobile'
+  const fullScreenPage = useFullScreenPageShown()
+  const tabs = phone && !fullScreenPage && !isFullScreenPath(pathname)
+  return (
+    <>
+      <ScrollToTopOnNavigate />
+      <SkipLink />
+      {!phone && <Header items={items} />}
+      <main
+        id="main"
+        tabIndex={-1}
+        className={`mx-auto w-full max-w-6xl flex-1 px-4 outline-none ${phone ? 'pt-4' : 'pt-6'} ${tabs ? 'pb-6' : 'pb-24'}`}
+      >
+        <Suspense fallback={<Loading />}>
+          <Routes>
+            <Route path="/" element={<Home />} />
+            <Route path="/c/:courseId/:unitId" element={<Home />} />
+            <Route path="/c/:courseId" element={<Home />} />
+            <Route path="/m/:moduleId" element={<ModulePage />} />
+            <Route path="/p/:moduleId/:templateId/:seed" element={<ProblemPage />} />
+            <Route path="/g/:moduleId/:templateId/:seed" element={<LegacyGeneratedRedirect />} />
+            <Route path="/review/:reviewId" element={<ReviewPage />} />
+            <Route path="/set" element={<SetPage />} />
+            <Route path="/drill" element={<DrillPage />} />
+            <Route path="/progress" element={<ProgressPage />} />
+            <Route path="/settings" element={<SettingsPage />} />
+            <Route path="/ask" element={<AskPage />} />
+            <Route path="/tutor-log" element={<TutorLogPage />} />
+            <Route path="/sandbox" element={<SandboxPage />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </Suspense>
+      </main>
+      {tabs && <TabBar items={items} />}
+      {/* One math keypad for every page; it only ever opens on a touch screen, for a math box. */}
+      <MathKeypad />
+      <Toasts />
+    </>
+  )
+}
+
+/** Everything inside the router: PIN gate, navigation, routes, toast host. Tests mount this in a MemoryRouter. */
 export function AppShell() {
   const unlocked = useStore((s) => s.auth.ok)
   const pinHash = configuredPinHash()
@@ -136,36 +174,7 @@ export function AppShell() {
     )
   }
 
-  return (
-    <>
-      <ScrollToTopOnNavigate />
-      <SkipLink />
-      <Header />
-      <main id="main" tabIndex={-1} className="mx-auto w-full max-w-6xl flex-1 px-4 pb-24 pt-6 outline-none">
-        <Suspense fallback={<Loading />}>
-          <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/c/:courseId/:unitId" element={<Home />} />
-            <Route path="/c/:courseId" element={<Home />} />
-            <Route path="/m/:moduleId" element={<ModulePage />} />
-            <Route path="/p/:moduleId/:templateId/:seed" element={<ProblemPage />} />
-            <Route path="/g/:moduleId/:templateId/:seed" element={<LegacyGeneratedRedirect />} />
-            <Route path="/review/:reviewId" element={<ReviewPage />} />
-            <Route path="/drill" element={<DrillPage />} />
-            <Route path="/progress" element={<ProgressPage />} />
-            <Route path="/settings" element={<SettingsPage />} />
-            <Route path="/ask" element={<AskPage />} />
-            <Route path="/tutor-log" element={<TutorLogPage />} />
-            <Route path="/sandbox" element={<SandboxPage />} />
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
-        </Suspense>
-      </main>
-      {/* One math keypad for every page; it only ever opens on a touch screen, for a math box. */}
-      <MathKeypad />
-      <Toasts />
-    </>
-  )
+  return <UnlockedShell />
 }
 
 export default function App() {

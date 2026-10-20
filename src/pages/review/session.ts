@@ -125,12 +125,14 @@ function catalogTitle(id: string): string {
   return id in ERROR_PATTERNS ? ERROR_PATTERNS[id as ErrorPatternId].title : id.replace(/_/g, ' ')
 }
 
-function slotEvents(events: Ev[], attemptId: string | null): Ev[] {
+/** One attempt's events (none without an attempt). The set summary (session/summary.ts) reads them too. */
+export function slotEvents(events: readonly Ev[], attemptId: string | null): Ev[] {
   if (!attemptId) return []
   return events.filter((e) => 'attemptId' in e && e.attemptId === attemptId)
 }
 
-function isFirstTryRight(slot: Ev[]): boolean {
+/** Finished with the answer right, every line right on the first try, nothing revealed. */
+export function isFirstTryRight(slot: readonly Ev[]): boolean {
   const done = slot.find((e) => e.t === 'problem_done')
   return done?.t === 'problem_done' && done.finalCorrect && done.firstTryRate === 1 && done.revealed === 0
 }

@@ -1,8 +1,10 @@
-import { useCallback, useEffect, useId, useMemo, useRef, type KeyboardEvent } from 'react'
+import { useCallback, useEffect, useId, useMemo, useRef, useState, type KeyboardEvent } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { A2HSCard } from '@/components/A2HSCard'
 import { MasteryBar } from '@/components/MasteryBar'
 import { TodayCard } from '@/components/rewards/TodayCard'
+import { ResumeSetCard, StartSetButton } from '@/components/set/TodaySet'
+import { useBreakpoint } from '@/components/useBreakpoint'
 import {
   COURSES,
   courseOfModule,
@@ -19,7 +21,10 @@ import {
   type UnitDef,
 } from '@/content'
 import { loadReview } from '@/pages/review/session'
+import { startSet } from '@/pages/set/startSet'
 import { defaultKnobs, flagsFromKnobs, problemPath } from '@/problem/url'
+import { loadActiveSet, resumePosition, resumeSet, sameSetProblem, setFinished, type ActiveSet } from '@/session/activeSet'
+import { setSizeFor } from '@/session/buildSet'
 import {
   mastery,
   pickWeakSpot,
@@ -39,6 +44,14 @@ import { useTutorStatus } from '@/tutor/useTutorStatus'
 
 function percent(rate: number): string {
   return `${Math.round(rate * 100)}%`
+}
+
+/**
+ * An action's look: filled (primary) or outlined. A phone's Home has one primary action, "Start a set"; there every
+ * other action is outlined. A wide screen keeps its filled buttons.
+ */
+function actionLook(primary: boolean): string {
+  return primary ? 'bg-navy text-white hover:bg-navy-600' : 'border border-navy-100 bg-white text-navy hover:bg-navy-50'
 }
 
 /** A fresh seed with the template's default difficulty. */
@@ -123,7 +136,7 @@ function courseTemplates(course: CourseDef): { module: ModuleDef; template: Temp
   return out
 }
 
-function ContinueCard({ attempt }: { attempt: Attempt }) {
+function ContinueCard({ attempt, primary }: { attempt: Attempt; primary: boolean }) {
   const k = attempt.steps.length
   const href = problemPath(attempt.moduleId, attempt.templateId, attempt.seed, attempt.difficulty)
   const last = Date.parse(attempt.lastActiveAt)
@@ -138,10 +151,7 @@ function ContinueCard({ attempt }: { attempt: Attempt }) {
         {k === 0 ? 'Not started yet' : `${k} ${k === 1 ? 'step' : 'steps'} done`}
         {Number.isFinite(last) ? ` · ${k === 0 ? 'opened' : 'last worked on'} ${relativeDays(last)}` : ''}
       </p>
-      <Link
-        to={href}
-        className="mt-3 inline-flex min-h-11 items-center gap-1 rounded-xl bg-navy px-4 font-semibold text-white hover:bg-navy-600"
-      >
+      <Link to={href} className={`mt-3 inline-flex min-h-11 items-center gap-1 rounded-xl px-4 font-semibold ${actionLook(primary)}`}>
         Continue <span aria-hidden>→</span>
       </Link>
     </section>
@@ -159,7 +169,7 @@ function AskAnythingCard() {
   )
 }
 
-function WeakSpots({ course }: { course: CourseDef }) {
+function WeakSpots({ course, primary }: { course: CourseDef; primary: boolean }) {
   const events = useEvents()
   const navigate = useNavigate()
   const entries = useMemo(() => courseTemplates(course), [course])
@@ -197,11 +207,7 @@ function WeakSpots({ course }: { course: CourseDef }) {
           ? `Picks a problem type at random from ${course.title}, leaning toward the ones that trip you up. Right now that's ${weakest.title} (${percent(weakest.rate)} first-try lately).`
           : `Picks a problem type at random from ${course.title}, leaning toward the ones that trip you up. Types you haven't tried yet get a fair share too.`}
       </p>
-      <button
-        type="button"
-        onClick={go}
-        className="mt-3 min-h-11 rounded-xl bg-navy px-4 font-semibold text-white hover:bg-navy-600"
-      >
+      <button type="button" onClick={go} className={`mt-3 min-h-11 rounded-xl px-4 font-semibold ${actionLook(primary)}`}>
         Practice weak spots
       </button>
     </section>
@@ -224,7 +230,7 @@ function DrillSummary() {
   )
 }
 
-function ReviewCard({ reviewId, unitLabel }: { reviewId: string; unitLabel: string }) {
+function ReviewCard({ reviewId, unitLabel, primary }: { reviewId: string; unitLabel: string; primary: boolean }) {
   const review = getReview(reviewId)
   const session = useMemo(() => (review ? loadReview(review.id) : null), [review])
   const titleId = useId()
@@ -246,17 +252,14 @@ function ReviewCard({ reviewId, unitLabel }: { reviewId: string; unitLabel: stri
         One mixed set from the unit. Every topic that fits comes up, then extra problems lean toward the ones that have
         been giving you trouble.
       </p>
-      <Link
-        to={`/review/${review.id}`}
-        className="mt-3 inline-flex min-h-11 items-center rounded-xl bg-navy px-4 font-semibold text-white hover:bg-navy-600"
-      >
+      <Link to={`/review/${review.id}`} className={`mt-3 inline-flex min-h-11 items-center rounded-xl px-4 font-semibold ${actionLook(primary)}`}>
         {label} <span aria-hidden>→</span>
       </Link>
     </section>
   )
 }
 
-function ModuleCard({ module }: { module: ModuleDef }) {
+function ModuleCard({ module, primary }: { module: ModuleDef; primary: boolean }) {
   const navigate = useNavigate()
   const skills = useMemo(() => module.templates.map((t) => t.id), [module])
   const m = useModuleMastery(skills)
@@ -290,12 +293,7 @@ function ModuleCard({ module }: { module: ModuleDef }) {
         )}
       </div>
       <div className="mt-auto flex flex-wrap gap-2 pt-4">
-        <button
-          type="button"
-          onClick={random}
-          aria-describedby={titleId}
-          className="min-h-11 rounded-xl bg-navy px-4 text-sm font-semibold text-white hover:bg-navy-600"
-        >
+        <button type="button" onClick={random} aria-describedby={titleId} className={`min-h-11 rounded-xl px-4 text-sm font-semibold ${actionLook(primary)}`}>
           Random problem
         </button>
         <Link
@@ -319,6 +317,13 @@ export function Home() {
   const navigate = useNavigate()
   const { courseId: routeCourseId, unitId: routeUnitId } = useParams()
   const tabRefs = useRef<Record<string, HTMLButtonElement | null>>({})
+  // On a phone Home is a Today screen: a short title, one primary action ("Start a set"), Resume, then the lists.
+  const phone = useBreakpoint() === 'mobile'
+  // The set she left (read once per visit: the set page is where it changes).
+  const [activeSet] = useState<ActiveSet | null>(() => {
+    const set = loadActiveSet()
+    return set && !setFinished(set) ? set : null
+  })
 
   const remember = useCallback(
     (courseId: string, unitId: string) => {
@@ -396,19 +401,40 @@ export function Home() {
     tabRefs.current[id]?.focus()
   }
 
+  const setCount = setSizeFor(course)
+  /** "Start a set": three problems for her from the selected class. It starts something, so no break here. */
+  function startASet() {
+    if (startSet(course)) navigate('/set')
+  }
+  // The unfinished problem has a card of its own unless it is the set problem she is on ("Resume your set" is that).
+  const attemptInSet = Boolean(
+    activeSet && attempt && activeSet.status[activeSet.index] === 'pending' && sameSetProblem(attempt, activeSet.problems[activeSet.index]!),
+  )
+  const resumed = activeSet ? resumeSet(activeSet) : null
+
   return (
-    <div className="mx-auto max-w-4xl space-y-6">
+    <div className={`mx-auto max-w-4xl ${phone ? 'space-y-4' : 'space-y-6'}`}>
       <header className="space-y-2">
-        <h1 className="text-3xl font-semibold text-navy">Math & Science Trainer</h1>
-        <p className="max-w-2xl text-navy/80">
-          Practice that checks your work as you go. In math, every line is checked against the one before it; in
-          science, every answer is checked with its units and figures. A mistake gets named the moment it happens.
-        </p>
+        <h1 className={`${phone ? 'text-2xl' : 'text-3xl'} font-semibold text-navy`}>Math & Science Trainer</h1>
+        {!phone && (
+          <p className="max-w-2xl text-navy/80">
+            Practice that checks your work as you go. In math, every line is checked against the one before it; in
+            science, every answer is checked with its units and figures. A mistake gets named the moment it happens.
+          </p>
+        )}
       </header>
 
       {rewards && <TodayCard />}
-      <A2HSCard />
-      {attempt && <ContinueCard attempt={attempt} />}
+      {setCount > 0 && (
+        <div className={phone ? undefined : 'max-w-sm'}>
+          <StartSetButton count={setCount} onStart={startASet} />
+        </div>
+      )}
+      {activeSet && resumed && (
+        <ResumeSetCard position={resumePosition(activeSet)} total={activeSet.problems.length} status={resumed.status} primary={!phone} />
+      )}
+      {attempt && !attemptInSet && <ContinueCard attempt={attempt} primary={!phone} />}
+      <A2HSCard quiet={phone} />
 
       <div className="space-y-3">
         <div
@@ -442,7 +468,7 @@ export function Home() {
 
         <AskAnythingCard />
 
-        <WeakSpots course={course} />
+        <WeakSpots course={course} primary={!phone} />
 
         <div role="group" aria-label={`${course.title} units`} className="flex flex-nowrap gap-2 overflow-x-auto py-1">
           {course.units.map((u) => {
@@ -470,12 +496,12 @@ export function Home() {
         </div>
       </div>
 
-      {reviewId && <ReviewCard reviewId={reviewId} unitLabel={unit.label} />}
+      {reviewId && <ReviewCard reviewId={reviewId} unitLabel={unit.label} primary={!phone} />}
 
       {modules.length > 0 ? (
         <div className="grid gap-4 sm:grid-cols-2">
           {modules.map((m) => (
-            <ModuleCard key={m.id} module={m} />
+            <ModuleCard key={m.id} module={m} primary={!phone} />
           ))}
         </div>
       ) : (

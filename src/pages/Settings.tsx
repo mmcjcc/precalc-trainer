@@ -5,6 +5,7 @@ import { BottomSheet } from '@/components/BottomSheet'
 import { canVibrate } from '@/components/rewards/haptics'
 import { isIosSafari, isStandalone } from '@/components/useBreakpoint'
 import { useCoarsePointer } from '@/components/useMathKeypad'
+import { clearActiveSet } from '@/session/activeSet'
 import { CALC_LABEL, type CalcId } from '@/shared/types'
 import { DAILY_GOALS, dailyGoalOf, rewardsOn, useSettings, useStore, vibrateOn, type DailyGoal } from '@/store'
 import { useTutorStatus } from '@/tutor/useTutorStatus'
@@ -87,6 +88,8 @@ export function SettingsPage() {
 
   function confirmReset() {
     resetProgress()
+    // A set in progress names attempts that are gone now: a fresh start has no set to resume.
+    clearActiveSet()
     setConfirmOpen(false)
     toast('Progress reset.', { tone: 'info', detail: 'Fresh start — every mastery bar is back to “not started”.' })
   }

@@ -60,9 +60,11 @@ input[type="text"], input[type="password"], input:not([type]), textarea { font-s
 
 /* Math keypad (components/MathKeypad.tsx), touch screens only. While it is open, --keypad-h on <html> is
    its height: the page keeps that much room at the bottom, scrolling a box into view stops above it, and
-   the sticky composer and the toasts sit on top of it. Closed, the variable is unset and nothing moves. */
-html { scroll-padding-bottom: var(--keypad-h, 0px); }
-body { padding-bottom: var(--keypad-h, 0px); }
+   the sticky composer and the toasts sit on top of it. Closed, the variable is unset and nothing moves.
+   The phone's bottom tab bar (components/TabBar.tsx) keeps its room the same way with --tabbar-h; the keypad opens
+   over the bar, so the room is the larger of the two. */
+html { scroll-padding-bottom: max(var(--keypad-h, 0px), var(--tabbar-h, 0px)); }
+body { padding-bottom: max(var(--keypad-h, 0px), var(--tabbar-h, 0px)); }
 .math-keypad {
   position: fixed;
   left: 0;
@@ -128,7 +130,22 @@ body { padding-bottom: var(--keypad-h, 0px); }
   bottom: var(--keypad-h, 0px);
   padding-bottom: max(0.5rem, calc(env(safe-area-inset-bottom, 0px) - var(--keypad-h, 0px)));
 }
-.toast-host { bottom: calc(max(1rem, env(safe-area-inset-bottom, 0px)) + var(--keypad-h, 0px)); }
+.toast-host { bottom: calc(max(1rem, env(safe-area-inset-bottom, 0px)) + max(var(--keypad-h, 0px), var(--tabbar-h, 0px))); }
+
+/* Bottom tab bar (components/TabBar.tsx): a phone's menu screens only. Fixed to the bottom and painted over the white
+   band under the navigation bar (z-31, over #root::after), its own padding keeping the tabs above that bar and clear
+   of a notch on its side. Under the keypad (35), a bottom sheet (40) and the toasts (50). */
+.tab-bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 31;
+  background: #fff;
+  border-top: 1px solid var(--color-navy-100);
+  box-shadow: 0 -4px 12px rgb(47 60 126 / 0.06);
+  padding: 0 max(4px, env(safe-area-inset-right, 0px)) env(safe-area-inset-bottom, 0px) max(4px, env(safe-area-inset-left, 0px));
+}
 
 /* Phone problem screen (pages/flows/ProblemFrame.tsx). Once the gold problem card scrolls out of view, a slim strip
    pins the problem to the top of the screen, right under the status bar (z-30, like the safe-area bands, which it

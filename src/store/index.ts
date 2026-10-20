@@ -140,6 +140,11 @@ interface Actions {
   addActiveSecs: (secs: number) => void
   finishAttempt: (input?: FinishAttemptInput) => ProblemSummary | null
   abandonAttempt: (now?: number) => void
+  /**
+   * Leave the open attempt without starting another (a problem skipped in a set): `problem_abandoned` when she has
+   * done anything in it, as when another problem starts; nothing at all when she only opened it.
+   */
+  leaveAttempt: (now?: number) => void
   // drill
   recordDrillAnswer: (skill: string, correct: boolean, kind: 'property' | 'legal', now?: number) => void
   // maintenance
@@ -459,6 +464,19 @@ export const useStore = create<StoreState>()(
         pendingDraft = null
         const ev: Ev = { t: 'problem_abandoned', at: now, attemptId: a.id, skill: a.skill }
         set({ attempt: null, events: [...s.events, ev] })
+      },
+
+      leaveAttempt: (now = Date.now()) => {
+        // A draft typed in the last moments counts as work: put it on the attempt before deciding.
+        get().flushDraft()
+        const s = get()
+        const a = s.attempt
+        if (!a) return
+        if (attemptTouched(a, s.events)) {
+          s.abandonAttempt(now)
+          return
+        }
+        set({ attempt: null })
       },
 
       // --- drill ------------------------------------------------------------

@@ -9,6 +9,7 @@ import {
   type ReviewDef,
 } from '@/content'
 import { randomSeed, seedToBase36 } from '@/content/rng'
+import { useFullScreenPage } from '@/components/appChrome'
 import { useAttempt, useEvents, useSettings, useStore, type Attempt } from '@/store'
 import { buildReviewSet } from './review/buildReview'
 import { ReviewChromeProvider } from './review/chrome'
@@ -238,6 +239,8 @@ function Bar({
 }
 
 function InProgress({ session, onSession }: { session: ReviewSession; onSession: (next: ReviewSession) => void }) {
+  // A running set: on a phone, full screen (no tab bar, no top navigation), its own bar on top.
+  useFullScreenPage()
   const attempt = useAttempt()
   const events = useEvents()
   const index = session.index
