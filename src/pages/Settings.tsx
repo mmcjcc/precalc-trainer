@@ -12,7 +12,8 @@ import { useTutorStatus } from '@/tutor/useTutorStatus'
 const CALC_IDS = Object.keys(CALC_LABEL) as CalcId[]
 
 /** About how many problems each daily goal takes. */
-const GOAL_WORDS: Record<DailyGoal, string> = { 30: 'about 1 problem', 60: 'about 3 problems', 100: 'about 5 problems' }
+// A clean problem pays 40 to 70 XP (a line +10, finishing +20, no hints +10), one with slips less.
+const GOAL_WORDS: Record<DailyGoal, string> = { 30: 'about 1 problem', 60: '1 or 2 problems', 100: '2 or 3 problems' }
 
 function Switch({
   label,
@@ -173,13 +174,13 @@ export function SettingsPage() {
             <fieldset className="py-3">
               <legend className="font-semibold text-navy">Daily goal</legend>
               <p className="mt-0.5 text-sm text-navy/80">A new goal counts from today; the days before keep the goal they had.</p>
-              <div className="mt-2 inline-flex flex-wrap rounded-xl border border-navy-100 bg-white p-0.5">
+              <div className="mt-2 grid max-w-md grid-cols-3 gap-0.5 rounded-xl border border-navy-100 bg-white p-0.5">
                 {DAILY_GOALS.map((g) => {
                   const checked = goal === g
                   return (
                     <label
                       key={g}
-                      className={`flex min-h-11 cursor-pointer flex-col justify-center rounded-lg px-3 py-1 text-sm has-[:focus-visible]:outline-3 has-[:focus-visible]:outline-gold ${
+                      className={`flex min-h-11 cursor-pointer flex-col items-center justify-center rounded-lg px-2 py-1 text-center text-sm has-[:focus-visible]:outline-3 has-[:focus-visible]:outline-gold ${
                         checked ? 'bg-navy text-white' : 'text-navy hover:bg-navy-50'
                       }`}
                     >

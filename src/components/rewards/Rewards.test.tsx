@@ -323,6 +323,13 @@ describe('Progress', () => {
     expect(itemsOf(within(mistakes).getByRole('list', { name: 'Caught' }))[0]).toContain('2 of 3')
     expect(screen.queryByRole('region', { name: 'By problem type' })).toBeNull()
     expect(screen.queryByRole('region', { name: 'Error patterns' })).toBeNull()
+    // The short, actionable collection comes before the rings; a unit she has worked in is open, the rest are one line.
+    expect(mistakes.compareDocumentPosition(rings) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    const linear = within(rings).getByRole('img', { name: `${LINEAR_TITLE}: Solid: 3 of the last 5 went well` }).closest('details')!
+    expect(linear.open).toBe(true)
+    const units = [...rings.querySelectorAll('details')]
+    expect(units.filter((d) => d.open)).toEqual([linear])
+    expect(units.length).toBeGreaterThan(5)
   })
 
   it('rewards on (wide screen): the rings, and the tables below them', { timeout: PAGE_TIMEOUT }, () => {

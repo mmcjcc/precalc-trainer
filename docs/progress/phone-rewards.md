@@ -91,3 +91,32 @@ Finish.tsx, haptics.ts, Rewards.test.tsx, StoreEdition.test.tsx}`, `docs/progres
 Changed: `src/store/{types.ts, index.ts, backup.ts (+ test), selectors.ts, storage.ts, store.test.ts}`,
 `src/pages/{Home.tsx, Progress.tsx, Settings.tsx}`, `src/pages/flows/{ProblemFrame.tsx, record.ts}`, `src/App.tsx`,
 `docs/BUILD_GUIDE.md` (§0 store row, §7).
+
+## Review (Claude, 2026-10-20)
+
+Built by one Claude agent (about 0.54M tokens, 66 minutes). Read in full: `store/rewards.ts` (the XP walk, the
+parts and boxes, the streak with rest days and the double-goal mend, settle / fold / merge, the rings, the finish
+info) and the record helpers in `record.ts` (each check logs one record; the set answer is the only one that grades
+two boxes every time, and it names them). No counting bugs found. Checked on the Android 16 emulator in a store-app
+build:
+- Home: the Today card (goal ring "10 of 60 XP", "Meet today's goal to start a streak · 0 of 7 this week", the week's
+  dots, an empty "Mistakes to squash");
+- finishing log₁₆ 128 = 7/4 with the keypad: the finish sheet with "+40 XP" (Answer right first try +10, Problem
+  finished +20, No hints +10), the goal ring at 50 of 60, the type's ring going New → Practiced 1/5, Next problem and
+  Done for today;
+- Progress and Settings (the switch on by default in the store app, the goal, Vibrate).
+
+Changed in review:
+- Progress on a phone opened with about ten screens of empty "New" rings before the mistake collection. The
+  collection now comes first, and each unit is a fold-out that opens by itself once she has finished a problem in it
+  (the others are one line each); the test checks both.
+- Settings said 60 XP is "about 3 problems", but a clean problem pays 40 to 70 XP (a line +10, finishing +20, no
+  hints +10). Now "about 1 problem", "1 or 2 problems", "2 or 3 problems", and the three goals sit in three equal
+  columns instead of wrapping onto two rows.
+- Store app only: `android.permission.VIBRATE` in the fork's manifest (a normal permission, no prompt), so the ticks
+  work inside the WebView.
+
+Seen and left: the emulator's "about 1195 min of focused work" is its old data from before the idle cap (phase 1),
+not a new count. The parts flows still do not name their parts on the finish sheet, as the builder noted.
+
+Verification after the review changes: typecheck clean; the whole suite, 229 files and 4210 tests, passes.

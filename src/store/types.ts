@@ -20,7 +20,7 @@ export interface Meta {
 
 export type AskProperty = 'always' | 'off'
 
-/** Daily goal in XP (Settings): about 1, 3 or 5 problems. */
+/** Daily goal in XP (Settings): about 1, 1 or 2, or 2 or 3 problems (a clean problem pays 40 to 70). */
 export type DailyGoal = 30 | 60 | 100
 
 export interface Settings {

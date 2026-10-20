@@ -405,15 +405,23 @@ function ProblemTypeRings() {
           </h3>
           {units.map(({ unit, templates }) => {
             const mastered = templates.filter((t) => rings.get(t.id)?.level === 'mastered').length
+            // A unit opens by itself once she has finished a problem in it; the rest stay one line each, so a
+            // phone does not scroll through screens of empty rings to reach her mistakes.
+            const started = templates.some((t) => rings.has(t.id))
             return (
-              <div key={unit.id} className="space-y-2 rounded-2xl border border-navy-100 bg-white p-3">
-                <h4 className="text-sm font-semibold text-navy">
-                  {unit.label} · {unit.title}{' '}
-                  <span className="font-normal text-navy/70">
-                    · {mastered} of {templates.length} mastered
-                  </span>
-                </h4>
-                <ul aria-label={`${unit.label} problem types`} className="grid grid-cols-3 gap-x-2 gap-y-3 sm:grid-cols-4 lg:grid-cols-6">
+              <details key={unit.id} open={started} data-unit={unit.id} className="group rounded-2xl border border-navy-100 bg-white p-3">
+                <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 [&::-webkit-details-marker]:hidden">
+                  <h4 className="min-w-0 flex-1 text-sm font-semibold text-navy">
+                    {unit.label} · {unit.title}{' '}
+                    <span className="font-normal text-navy/70">
+                      · {mastered} of {templates.length} mastered
+                    </span>
+                  </h4>
+                  <svg aria-hidden="true" viewBox="0 0 20 20" className="h-5 w-5 shrink-0 text-navy/60 transition-transform group-open:rotate-90">
+                    <path d="M7 4l6 6-6 6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </summary>
+                <ul aria-label={`${unit.label} problem types`} className="mt-2 grid grid-cols-3 gap-x-2 gap-y-3 sm:grid-cols-4 lg:grid-cols-6">
                   {templates.map((t) => {
                     const ring = rings.get(t.id) ?? NEW_RING
                     return (
@@ -429,7 +437,7 @@ function ProblemTypeRings() {
                     )
                   })}
                 </ul>
-              </div>
+              </details>
             )
           })}
         </section>
@@ -758,6 +766,16 @@ export function ProgressPage() {
         />
       </div>
 
+      {/* The mistake collection first: it is short and each card has a Practice button; the rings can be long. */}
+      {rewards && (
+        <section aria-labelledby="progress-mistakes" className="space-y-2">
+          <h2 id="progress-mistakes" className="text-lg font-semibold text-navy">
+            Mistake collection
+          </h2>
+          <MistakeCollection />
+        </section>
+      )}
+
       {rewards && (
         <section aria-labelledby="progress-rings" className="space-y-3">
           <div>
@@ -766,7 +784,7 @@ export function ProgressPage() {
             </h2>
             <p className="mt-0.5 max-w-2xl text-sm text-navy/80">
               Each ring fills a fifth for each of your last five problems of that type that went well: most lines right the
-              first time, nothing shown, the answer right. Three is Solid; all five is Mastered.
+              first time, nothing shown, the answer right. Three is Solid; all five is Mastered. Tap a unit to open it.
             </p>
           </div>
           <ProblemTypeRings />
@@ -779,15 +797,6 @@ export function ProgressPage() {
             By problem type
           </h2>
           <SkillTables />
-        </section>
-      )}
-
-      {rewards && (
-        <section aria-labelledby="progress-mistakes" className="space-y-2">
-          <h2 id="progress-mistakes" className="text-lg font-semibold text-navy">
-            Mistake collection
-          </h2>
-          <MistakeCollection />
         </section>
       )}
 
