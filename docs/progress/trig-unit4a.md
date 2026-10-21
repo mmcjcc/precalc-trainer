@@ -207,3 +207,38 @@ Changed: `src/shared/types.ts` (22 `trig_` ids, module ids `angleMeasure` and `u
 statement, worked lines, answer). Tests changed: `keypadKeys.test.ts` (the trig set), `courses.test.ts` (Unit 4),
 `generators.test.ts` (43 modules), `Home.test.tsx` (a first visit now lands on Unit 4), `tutorContext.test.ts` (one
 case for both kinds).
+
+## Review (Claude, 2026-10-21)
+
+Built by one Claude agent (about 0.87M tokens, 2 hours, 354 tool calls). Read the design notes, the engine API, the
+reader's verdicts and the flow; checked the math independently and the screens on the Android emulator in a store-app
+build.
+
+- **Answers, independently:** 3000 problems (500 per template) re-solved from the words and math of the prompt the
+  student reads (not from the figure or the engine), with floating point and mathjs only: conversions (exact and
+  rounded), coterminal angles, the quadrant and the reference angle in the angle's own unit, arc lengths and sector
+  areas, the six functions at special angles, r and the ratios of a point, and the parts each prompt asks for. No
+  mismatch. 36 of them also checked by hand.
+- **The reader, by hand:** equal forms are right (−sqrt(3)/2, −(1/2)√3, 0.5, 2/4, 10π/12, 5/6π, "r = 10",
+  "cos θ = 3/5", units after an arc); calculator decimals, a root in the denominator, √100 and a sum not combined are a
+  note that logs nothing; the slips are named (sign, sin/cos swapped, tan upside down, reciprocal, π dropped, r not
+  rooted, degrees in the arc formula, the coterminal angle as the reference angle, the negative direction); 0 for a
+  value that does not exist is named, and undefined, undef, DNE, none and "no value" are all right.
+- **On the emulator:** Unit 4 on the module pages; the exact-value screen with its figure (240° in Quadrant III), the
+  trig keypad (π, √, °, undefined, the six functions), "−√3" named as the quadrant's sign with ASTC, then √3 right,
+  +35 XP and the reference angle drawn in gold; the sector and point figures; the quadrant choice.
+
+Changed in review:
+- The figure drew the angle in standard position, so "Where does the terminal side of 29π/6 lie?" was answered by the
+  picture. Until she has answered the quadrant, the figure is the unit circle and its axes (and says so); the angle
+  then appears, and the reference angle still waits for its own answer.
+- A point's label went diagonally outward, the way the ray runs on past the point, so the arrowhead covered "(−3, 4)".
+  It now sits across the ray on the side away from the x-axis, as far out as it is wide; a test renders 196 points.
+- The arc calculator panel said where π is on keys without π, and offered "Check your exact answer" on a rounded
+  answer.
+- The trig Check buttons get the phone juice's chunky press, and a test now fails on any flow's submit button
+  without it.
+
+Left: "½" typed as one character is not read (the keypad has no such key); the exact-value format hint says "type
+the word for that" instead of naming "undefined" (the keypad has the key, and every common word is accepted); the
+figure shows the quadrant on exact-value problems, which helps with the sign (as a sketch would).
