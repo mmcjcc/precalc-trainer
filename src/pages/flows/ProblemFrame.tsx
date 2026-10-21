@@ -604,7 +604,7 @@ export function ProblemFrame({ instance, attempt, flags, templateTitle, progress
                 nudge && (
                   <div role="status" className="mb-2 flex items-center justify-between gap-2 rounded-xl bg-gold-100 px-3 py-2 text-sm text-navy">
                     <span>{nudge}</span>
-                    <button type="button" onClick={() => setNudge(null)} className="min-h-8 rounded px-2 text-navy/70 underline">
+                    <button type="button" onClick={() => setNudge(null)} className="min-h-8 shrink-0 rounded px-2 text-navy/70 underline">
                       Dismiss
                     </button>
                   </div>
@@ -639,7 +639,7 @@ export function ProblemFrame({ instance, attempt, flags, templateTitle, progress
           {!composer && nudge && !completion && (
             <div role="status" className="flex items-center justify-between gap-2 rounded-xl bg-gold-100 px-3 py-2 text-sm text-navy">
               <span>{nudge}</span>
-              <button type="button" onClick={() => setNudge(null)} className="min-h-8 rounded px-2 text-navy/70 underline">
+              <button type="button" onClick={() => setNudge(null)} className="min-h-8 shrink-0 rounded px-2 text-navy/70 underline">
                 Dismiss
               </button>
             </div>

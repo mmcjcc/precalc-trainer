@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { KEPT, stepVerdict, type LineVerdict } from '@/components/ComposerVerdict'
 import { Katex } from '@/components/Katex'
-import { notePress } from '@/components/keypadStore'
+import { notePress, useKeypadStore } from '@/components/keypadStore'
 import { LineCards, LineEntrySwitch } from '@/components/LineCards'
 import { MathInput } from '@/components/MathInput'
 import { SigFigCorrect, SigFigExplanation, SigFigRejection } from '@/components/SigFigFeedback'
@@ -33,7 +33,8 @@ type LineFeedback =
   /** `picked`: the wrong card she picked (Guided mode); absent for a typed line. */
   | { kind: 'rejected'; result: LogStepResult; picked?: string }
   | { kind: 'same' }
-  | { kind: 'kept'; caveat: boolean; note: string }
+  /** `toBox`: the line, put in the answer box for her to check (a line that already is the solution). */
+  | { kind: 'kept'; caveat: boolean; note: string; toBox?: string }
 
 const squash = (text: string) => text.replace(/\s+/g, '')
 
@@ -277,16 +278,19 @@ function Body({ instance, attempt, flags, templateTitle, completion, finish, mod
     const caveat = result.caveat === 'extraneous_check'
     acceptLine(text, false, via)
     const note = caveat ? safeWitness(result.pattern?.witness ?? ERROR_PATTERNS.log_check_answers.lesson, forms) : ''
-    setFeedback({ kind: 'kept', caveat, note })
-    // A line that already is the solution (ln(x) = 3 → x = e^3) goes into the answer box for her to check. Not a
-    // picked one: the answer is always typed.
+    // A line that already is the solution (ln(x) = 3 → x = e^3) goes into the answer box for her to check, and the
+    // composer offers that check where she is (on a phone the box is out of sight, under the work). Not a picked one:
+    // the answer is always typed.
+    let toBox: string | undefined
     if (!via && equation && !box.trim() && /^\s*x\s*=/.test(text)) {
       const g = gradeLogEquation(equation.equation, text, { vars: ['x'], ...(equation.places ? { decimal: { places: equation.places } } : {}) })
       if (g.verdict === 'correct') {
         storeBox(text)
+        toBox = text
         answerRef.current?.focus({ preventScroll: true })
       }
     }
+    setFeedback({ kind: 'kept', caveat, note, ...(toBox !== undefined ? { toBox } : {}) })
   }
 
   function useRevealedLine() {
@@ -337,13 +341,33 @@ function Body({ instance, attempt, flags, templateTitle, completion, finish, mod
 
   // While she types, the hints (and so Stuck?) offer the cards for this one line first.
   const pickOffer = !picking && live && cards.length > 0 && !picks ? () => useStore.getState().showCards(lineKey) : null
-  // Why a line is typed where she might expect cards.
+  // Her last line went into the answer box and is still there as it was: the composer offers the check.
+  const filledBox = feedback?.kind === 'kept' ? feedback.toBox : undefined
+  const answerReady = live && filledBox !== undefined && squash(box) === squash(filledBox)
+  // Why a line is typed where she might expect cards; at the end of the path, the way to the answer box.
   let typedNote: string | null = null
-  if (offers && live && !showingCards) {
+  let toAnswer = false
+  if (offers && live && !showingCards && !answerReady) {
     if (picks) typedNote = 'You saw the cards for this line, so it counts as a picked line.'
     else if (picking && mustType) typedNote = 'You picked this one right twice: type it this time.'
-    else if (picking && rawView.next === null) typedNote = 'That was the last line of the path: write the solution in the answer box.'
-    else if (picking) typedNote = 'No cards for this line: type it.'
+    else if (picking && rawView.next === null) {
+      typedNote = 'That was the last line of the path: write the solution in the answer box.'
+      toAnswer = true
+    } else if (picking) typedNote = 'No cards for this line: type it.'
+  }
+
+  /**
+   * "Go to the answer box": the box takes the focus as after a tap, so on a phone the keypad opens on it and brings it
+   * into view above the composer. Where no keypad takes it (a computer), it scrolls into view here.
+   */
+  function goToAnswer() {
+    const el = answerRef.current
+    if (!el || el.disabled) return
+    notePress()
+    el.focus({ preventScroll: true })
+    if (useKeypadStore.getState().target?.el !== el && typeof el.scrollIntoView === 'function') {
+      el.scrollIntoView({ block: 'center', behavior: 'smooth' })
+    }
   }
 
   function storeBox(value: string) {
@@ -354,6 +378,11 @@ function Body({ instance, attempt, flags, templateTitle, completion, finish, mod
 
   function submitAnswer(e: FormEvent) {
     e.preventDefault()
+    checkAnswer()
+  }
+
+  /** Check what is in the answer box: its own Check button, or "Check my answer" in the composer. */
+  function checkAnswer() {
     if (done || !equation || steps.length === 0) return
     const grade = gradeLogEquation(equation.equation, box, {
       vars: ['x'],
@@ -461,9 +490,29 @@ function Body({ instance, attempt, flags, templateTitle, completion, finish, mod
             <LineCards key={lineKey} cards={cardsLeft} onPick={pickCard} onType={typeInstead} />
           ) : (
             <>
+              {answerReady && (
+                <div className="mb-2 space-y-2 rounded-xl border border-navy-100 bg-navy-50 px-3 py-2" data-answer-ready="">
+                  <p className="text-sm text-navy">Your last line is in the answer box.</p>
+                  <button
+                    type="button"
+                    onClick={checkAnswer}
+                    className="btn-chunky min-h-12 w-full rounded-xl bg-navy px-4 font-semibold text-white hover:bg-navy-600"
+                  >
+                    Check my answer
+                  </button>
+                </div>
+              )}
               {typedNote && (
                 <p className="mb-2 text-sm text-navy/80" data-typed-note="">
                   {typedNote}
+                  {toAnswer && answerOpen && (
+                    <>
+                      {' '}
+                      <button type="button" onClick={goToAnswer} className="min-h-11 rounded-lg px-1 font-semibold text-navy underline hover:bg-navy-50">
+                        Go to the answer box
+                      </button>
+                    </>
+                  )}
                 </p>
               )}
               <MathInput
@@ -516,7 +565,7 @@ function Body({ instance, attempt, flags, templateTitle, completion, finish, mod
         {feedback?.kind === 'kept' && !feedback.caveat && !done && (
           <p role="status" className="text-sm text-navy">
             <span aria-hidden>✓ </span>
-            Kept. That line still says the same thing.
+            Kept. That line still says the same thing.{feedback.toBox !== undefined && ' It is in the answer box below.'}
           </p>
         )}
         {feedback?.kind === 'kept' && feedback.caveat && (
