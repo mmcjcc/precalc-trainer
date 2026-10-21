@@ -440,7 +440,7 @@ function AtomBody({ instance, attempt, flags, templateTitle, completion, finish,
                   )}
                 </p>
               )}
-              <button type="submit" disabled={done} className="min-h-11 rounded-xl bg-navy px-4 font-semibold text-white hover:bg-navy-600 disabled:opacity-50">
+              <button type="submit" disabled={done} className="btn-chunky min-h-11 rounded-xl bg-navy px-4 font-semibold text-white hover:bg-navy-600 disabled:opacity-50">
                 Check answer
               </button>
             </form>

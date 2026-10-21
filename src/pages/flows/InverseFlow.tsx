@@ -210,7 +210,7 @@ function InverseBody({ instance, attempt, flags, templateTitle, completion, fini
             />
           )}
           {found && !check && !done && (
-            <button type="button" onClick={() => finish()} className="min-h-11 rounded-xl bg-navy px-4 font-semibold text-white hover:bg-navy-600">
+            <button type="button" onClick={() => finish()} className="btn-chunky min-h-11 rounded-xl bg-navy px-4 font-semibold text-white hover:bg-navy-600">
               Finish
             </button>
           )}

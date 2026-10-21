@@ -8,6 +8,7 @@ import { isFirstTryRight, slotEvents } from '@/pages/review/session'
 import { knobsFromFlags } from '@/problem/url'
 import type { ModuleId } from '@/shared/types'
 import { skillRing, type SkillRingInfo, type XpAward } from '@/store/rewards'
+import { dayKey } from '@/store/time'
 import type { Ev } from '@/store/types'
 import type { ActiveSet } from './activeSet'
 
@@ -110,17 +111,20 @@ export interface SetRing {
 export interface SetRewards {
   /** The sum of the awards of the set's attempts (a problem she skipped keeps what its lines earned). */
   xp: number
+  /** The part of `xp` earned today (where today's goal ring sweeps from: today's XP without it). */
+  xpToday: number
   /** The problem types whose ring moved with this set: before the set and now. */
   rings: SetRing[]
   /** The mistakes this set squashed: pattern and problem type. */
   squashed: { pattern: string; skill: string }[]
 }
 
-/** The set's rewards from the awards of the whole log (`RewardsView.awards`). */
-export function setRewards(set: ActiveSet, events: readonly Ev[], awards: readonly XpAward[]): SetRewards {
+/** The set's rewards from the awards of the whole log (`RewardsView.awards`); `today` is the local day ('YYYY-MM-DD'). */
+export function setRewards(set: ActiveSet, events: readonly Ev[], awards: readonly XpAward[], today = dayKey(Date.now())): SetRewards {
   const ids = new Set(set.attemptIds.filter((id): id is string => id !== null))
   const mine = awards.filter((a) => a.attemptId !== undefined && ids.has(a.attemptId))
   const xp = mine.reduce((sum, a) => sum + a.xp, 0)
+  const xpToday = mine.filter((a) => a.day === today).reduce((sum, a) => sum + a.xp, 0)
   const squashed = mine.filter((a) => a.kind === 'squash').map((a) => ({ pattern: a.pattern ?? '', skill: a.skill }))
   const before = events.filter((e) => !(e.t === 'problem_done' && ids.has(e.attemptId)))
   const rings: SetRing[] = []
@@ -130,5 +134,5 @@ export function setRewards(set: ActiveSet, events: readonly Ev[], awards: readon
     const now = skillRing(events, p.templateId)
     if (was.level !== now.level || was.fill !== now.fill) rings.push({ skill: p.templateId, title: typeTitleOf(p.moduleId, p.templateId), before: was, after: now })
   })
-  return { xp, rings, squashed }
+  return { xp, xpToday, rings, squashed }
 }

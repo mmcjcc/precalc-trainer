@@ -22,7 +22,7 @@ export function StartSetButton({ count, onStart }: { count: number; onStart: () 
         onClick={onStart}
         aria-describedby={lineId}
         data-primary-action=""
-        className="flex min-h-14 w-full items-center justify-center gap-2 rounded-2xl bg-navy px-4 text-lg font-semibold text-white shadow-sm hover:bg-navy-600"
+        className="btn-chunky flex min-h-14 w-full items-center justify-center gap-2 rounded-2xl bg-navy px-4 text-lg font-semibold text-white hover:bg-navy-600"
       >
         Start a set <span aria-hidden>→</span>
       </button>

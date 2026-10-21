@@ -1,7 +1,8 @@
-import type { ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 import { toLatex } from '@/notation'
 import { CHIP_LABEL } from '@/shared/types'
 import type { AttemptStep } from '@/store'
+import { useMotionAllowed } from './juice/motion'
 import { Katex } from './Katex'
 
 type Props = {
@@ -24,11 +25,30 @@ function tex(text: string): string {
   }
 }
 
+const keyOf = (s: AttemptStep) => `${s.idx}-${s.text}`
+
+/**
+ * The lines kept while this column is on screen, one at a time (a line she just kept, not lines restored with a saved
+ * problem): each flashes green once and its check pops (none under reduced motion, none for a line the hint showed).
+ */
+function useJustKept(steps: AttemptStep[]): ReadonlySet<string> {
+  const [track, setTrack] = useState<{ len: number; kept: ReadonlySet<string> }>(() => ({ len: steps.length, kept: new Set() }))
+  if (steps.length !== track.len) {
+    const last = steps[steps.length - 1]
+    const one = steps.length === track.len + 1 && last !== undefined
+    setTrack({ len: steps.length, kept: one ? new Set([...track.kept, keyOf(last)]) : track.kept })
+  }
+  return track.kept
+}
+
 /**
  * The worked column: numbered accepted lines with ✓ + the word, a "revealed" tag for rung-3 lines,
- * the property she named, and Undo on the last row only (UX-15).
+ * the property she named, and Undo on the last row only (UX-15). A line she just kept flashes green and its check
+ * pops; the row carries its step (`data-kept-step`) so the rewards' "+10" can rise from it (components/juice).
  */
 export function WorkedColumn({ start, steps, onUndo, canUndo = false, afterLast, startLabel = 'start' }: Props) {
+  const motion = useMotionAllowed()
+  const justKept = useJustKept(steps)
   return (
     <ol className="space-y-2" aria-label="Worked steps">
       {start !== null && (
@@ -41,8 +61,10 @@ export function WorkedColumn({ start, steps, onUndo, canUndo = false, afterLast,
       )}
       {steps.map((s, i) => {
         const last = i === steps.length - 1
+        const key = keyOf(s)
+        const juice = motion && !s.revealed && justKept.has(key)
         return (
-          <li key={`${s.idx}-${s.text}`} className="rounded-xl border border-navy-100 bg-white px-3 py-2">
+          <li key={key} data-kept-step={s.idx} className={`rounded-xl border border-navy-100 bg-white px-3 py-2 ${juice ? 'juice-kept' : ''}`}>
             <div className="flex items-start gap-3">
               <span className="mt-1 w-12 shrink-0 text-sm text-navy/50">{i + 1}</span>
               <div className="min-w-0 flex-1 overflow-x-auto text-navy">
@@ -57,8 +79,10 @@ export function WorkedColumn({ start, steps, onUndo, canUndo = false, afterLast,
                   )}
                 </div>
               </div>
-              <span className="flex shrink-0 items-center gap-1 text-sm font-semibold text-ok">
-                <span aria-hidden>✓</span>
+              <span className="flex shrink-0 items-center gap-1 text-sm font-semibold text-ok" data-kept-check="">
+                <span aria-hidden className={juice ? 'juice-pop' : undefined}>
+                  ✓
+                </span>
                 <span className="sr-only">accepted</span>
               </span>
               {last && canUndo && onUndo && (

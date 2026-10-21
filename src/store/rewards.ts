@@ -24,6 +24,7 @@
  */
 import { STORE } from '@/edition'
 import { MASTERY_WINDOW, cancelledSteps, inMasteryWindow } from './compaction'
+import { mergeMilestones, normalizeMilestones } from './milestones'
 import { MASTERY_THRESHOLD, windowMastered, type MasteryEntry } from './selectors'
 import { dayKey, daysBetweenKeys, startOfIsoWeek } from './time'
 import { emptyRewards, type DailyGoal, type DayMark, type Ev, type MistakeCardState, type RewardsState, type Settings } from './types'
@@ -646,7 +647,11 @@ export function mergeRewards(a: RewardsState, b: RewardsState): RewardsState {
   }
   const mastered: Record<string, number> = { ...a.mastered }
   for (const [skill, at] of Object.entries(b.mastered)) if (mastered[skill] === undefined || at < mastered[skill]!) mastered[skill] = at
-  return { days, settledThrough, foldedThrough: Math.min(a.foldedThrough, b.foldedThrough), cards, mastered }
+  const merged: RewardsState = { days, settledThrough, foldedThrough: Math.min(a.foldedThrough, b.foldedThrough), cards, mastered }
+  // A streak milestone celebrated on either device is not celebrated again.
+  const milestones = mergeMilestones(a.milestones, b.milestones)
+  if (milestones.length > 0) merged.milestones = milestones
+  return merged
 }
 
 const DAY_RE = /^\d{4}-\d{2}-\d{2}$/
@@ -695,6 +700,8 @@ export function normalizeRewards(raw: unknown): RewardsState {
   if (isRecord(raw.mastered)) {
     for (const [skill, at] of Object.entries(raw.mastered)) if (skill && finite(at)) out.mastered[skill] = at
   }
+  const milestones = normalizeMilestones(raw.milestones)
+  if (milestones) out.milestones = milestones
   return out
 }
 

@@ -5,7 +5,10 @@ import { getModule } from '@/content/registry'
 import { randomSeed } from '@/content/rng'
 import type { ProblemInstance } from '@/content/types'
 import { toLatex } from '@/notation'
-import { useRewardsOn, useStore, type Attempt } from '@/store'
+import { useEvents, useRewardsOn, useStore, type Attempt } from '@/store'
+import { comboOf, comboScope, COMBO_SHOWS_AT } from '@/session/combo'
+import { ComboPill } from '@/components/juice/ComboPill'
+import { burstConfetti } from '@/components/juice/Confetti'
 import type { TutorVerdict } from '@/shared/tutor'
 import { problemPath } from '@/problem/url'
 import { useReviewChrome } from '@/pages/review/chrome'
@@ -397,6 +400,21 @@ export function ProblemFrame({ instance, attempt, flags, templateTitle, progress
     // The sheet hands focus back to the box she was in, which is done now: the card's Next button takes it.
     setTimeout(() => nextRef.current?.focus({ preventScroll: false }), 0)
   }, [completion])
+  // A type newly mastered: confetti over the finish (rewards on or off; none under reduced motion).
+  useEffect(() => {
+    if (completion?.newlyMastered) burstConfetti({ count: 64 })
+  }, [completion])
+
+  // ---- the combo pill (rewards on): right lines and parts in a row, carried across a running set -------------
+  const events = useEvents()
+  const comboIds = set?.attemptIds
+  const comboSetIndex = set?.index
+  const combo = useMemo(() => {
+    if (!rewardsOn || completion || !attempt) return 0
+    const scope = comboScope(attempt.id, comboIds && comboSetIndex !== undefined ? { index: comboSetIndex, attemptIds: comboIds } : null)
+    return comboOf(events, scope)
+  }, [rewardsOn, completion, attempt, comboIds, comboSetIndex, events])
+  const comboPill = combo >= COMBO_SHOWS_AT ? <ComboPill count={combo} /> : null
 
   async function copyLink() {
     const url = `${window.location.origin}${window.location.pathname}#${problemPath(instance.moduleId, instance.templateId, instance.seed, flags)}`
@@ -489,6 +507,13 @@ export function ProblemFrame({ instance, attempt, flags, templateTitle, progress
 
           {children}
 
+          {/* Without a composer, the combo pill waits at the bottom of the screen, above the keypad. */}
+          {!composerOpen && comboPill && (
+            <div className="combo-dock" data-combo-row="">
+              {comboPill}
+            </div>
+          )}
+
           {completion && !sheetOpen && (
             <section ref={completionRef} data-completion-card="" className="space-y-3 rounded-2xl border border-ok bg-ok-100 p-4" aria-labelledby="completion-title">
               <h2 id="completion-title" className="font-semibold text-navy">
@@ -511,7 +536,7 @@ export function ProblemFrame({ instance, attempt, flags, templateTitle, progress
               {/* A wide screen shows the set's progress here; a phone has it in its header. */}
               {set && !phone && <SetDots index={set.index} total={set.total} status={set.status} prefix="Your set ·" />}
               <div className="flex flex-wrap items-center gap-2">
-                <button ref={nextRef} type="button" onClick={goNext} className="min-h-11 rounded-xl bg-navy px-4 font-semibold text-white hover:bg-navy-600">
+                <button ref={nextRef} type="button" onClick={goNext} className="btn-chunky min-h-11 rounded-xl bg-navy px-4 font-semibold text-white hover:bg-navy-600">
                   {nextLabel}
                 </button>
                 {phoneFinish && (
@@ -579,17 +604,26 @@ export function ProblemFrame({ instance, attempt, flags, templateTitle, progress
                 )
               }
               status={
-                phone ? (
-                  <ComposerStatus
-                    verdict={lineVerdict ?? null}
-                    onWhy={() => {
-                      if (!why) return
-                      rememberKeypad()
-                      setSheet({ kind: 'why', why })
-                    }}
-                    onStuck={hintsOpen ? stuck : null}
-                  />
-                ) : undefined
+                <>
+                  {/* The combo pill: right above the verdict line on a phone, at the top of the box under the work
+                      list on a wide screen. */}
+                  {comboPill && (
+                    <div className="mb-1.5 flex justify-end" data-combo-row="">
+                      {comboPill}
+                    </div>
+                  )}
+                  {phone && (
+                    <ComposerStatus
+                      verdict={lineVerdict ?? null}
+                      onWhy={() => {
+                        if (!why) return
+                        rememberKeypad()
+                        setSheet({ kind: 'why', why })
+                      }}
+                      onStuck={hintsOpen ? stuck : null}
+                    />
+                  )}
+                </>
               }
             >
               {composer}

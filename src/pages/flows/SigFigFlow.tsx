@@ -339,7 +339,7 @@ function SigFigBody({ instance, attempt, flags, templateTitle, completion, finis
             {tapGrade && !tapGrade.correct && <SigFigRejection message={tapGrade.message} patterns={tapGrade.patterns} />}
             {tapGrade?.correct && <SigFigCorrect message={tapGrade.message} />}
             {!done && (
-              <button type="button" onClick={submitTaps} className="min-h-11 rounded-xl bg-navy px-4 font-semibold text-white hover:bg-navy-600">
+              <button type="button" onClick={submitTaps} className="btn-chunky min-h-11 rounded-xl bg-navy px-4 font-semibold text-white hover:bg-navy-600">
                 Check
               </button>
             )}
@@ -391,7 +391,7 @@ function SigFigBody({ instance, attempt, flags, templateTitle, completion, finis
                     aria-invalid={interError ? true : undefined}
                     className="min-h-12 w-24 rounded-xl border-2 border-navy-100 bg-white px-3 py-2 font-mono text-[max(18px,1.125rem)] text-ink outline-none focus:border-navy disabled:bg-navy-50"
                   />
-                  <button type="submit" disabled={done} className="min-h-11 rounded-xl bg-navy px-4 font-semibold text-white hover:bg-navy-600 disabled:opacity-50">
+                  <button type="submit" disabled={done} className="btn-chunky min-h-11 rounded-xl bg-navy px-4 font-semibold text-white hover:bg-navy-600 disabled:opacity-50">
                     Check
                   </button>
                 </div>

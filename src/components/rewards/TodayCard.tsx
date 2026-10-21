@@ -1,5 +1,6 @@
-import { useId } from 'react'
+import { useEffect, useId, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { StreakFlame } from '@/components/juice/Flame'
 import { openCards, useRewards, type StreakView, type WeekDayState } from '@/store'
 import { MistakeCardList } from './MistakeCards'
 import { GoalRing } from './Rings'
@@ -51,15 +52,23 @@ export function streakLine(streak: StreakView): string {
   return `${run} · ${streak.weekMet} of 7 this week`
 }
 
+/** Today's XP the last time the Today card was on screen (this session): the ring sweeps on from there. */
+let lastSeen: { day: string; xp: number } | null = null
+
 /**
- * The top of Home with rewards on: today's goal ring, the streak with "N of 7 this week" and the week's days, the
- * rest days saved, and her top three open mistake cards (each opens a problem of its type).
+ * The top of Home with rewards on: today's goal ring (sweeping on from where it stood when she last saw it), the
+ * streak's flame (bigger with the streak, lit once today's goal is met) with "N of 7 this week" and the week's days,
+ * the rest days saved, and her top three open mistake cards (each opens a problem of its type).
  */
 export function TodayCard() {
   const view = useRewards()
   const titleId = useId()
   const mistakesId = useId()
   const { today, streak } = view
+  const [from] = useState(() => (lastSeen && lastSeen.day === today.day && lastSeen.xp < today.xp ? lastSeen.xp : undefined))
+  useEffect(() => {
+    lastSeen = { day: today.day, xp: today.xp }
+  }, [today.day, today.xp])
   const open = openCards(view.cards)
   const left = Math.max(0, today.target - today.xp)
   const goalLine = streak.repairToday
@@ -70,13 +79,16 @@ export function TodayCard() {
   return (
     <section aria-labelledby={titleId} data-rewards-today="" className="rounded-2xl border border-navy-100 bg-white p-4">
       <div className="flex items-center gap-4">
-        <GoalRing xp={today.xp} target={today.target} />
+        <GoalRing xp={today.xp} target={today.target} from={from} />
         <div className="min-w-0 flex-1 space-y-1.5">
           <h2 id={titleId} className="text-lg font-semibold text-navy">
             Today
           </h2>
           <p className="text-sm text-navy">{goalLine}</p>
-          <p className="text-sm font-semibold text-navy">{streakLine(streak)}</p>
+          <p className="flex items-center gap-1.5 text-sm font-semibold text-navy" data-streak-line="">
+            <StreakFlame days={streak.days} lit={today.met} day={today.day} />
+            {streakLine(streak)}
+          </p>
           <WeekDots week={streak.week} />
           {streak.days > 0 && streak.restDays > 0 && (
             <p className="text-xs text-navy/70">

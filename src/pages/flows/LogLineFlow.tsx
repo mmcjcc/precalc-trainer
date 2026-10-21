@@ -554,7 +554,7 @@ function Body({ instance, attempt, flags, templateTitle, completion, finish, mod
               <button
                 type="submit"
                 disabled={!answerOpen}
-                className="min-h-12 rounded-xl bg-navy px-4 font-semibold text-white hover:bg-navy-600 disabled:opacity-50"
+                className="btn-chunky min-h-12 rounded-xl bg-navy px-4 font-semibold text-white hover:bg-navy-600 disabled:opacity-50"
               >
                 Check the answer
               </button>

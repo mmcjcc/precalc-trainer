@@ -11,6 +11,8 @@ export interface SetChrome {
   index: number
   total: number
   status: readonly SetSlotStatus[]
+  /** Each slot's attempt, once opened: the combo (session/combo.ts) carries across the set's problems. */
+  attemptIds?: readonly (string | null)[]
   /** "Next in set", or "See results" on the last problem. */
   nextLabel: string
   /** The main button once the problem is finished: the next problem, or the results (the set's one break). */

@@ -229,7 +229,7 @@ export function MathInput({
           <button
             type="submit"
             disabled={disabled}
-            className="min-h-12 shrink-0 rounded-xl bg-navy px-4 font-semibold text-white hover:bg-navy-600 disabled:opacity-50"
+            className="btn-chunky min-h-12 shrink-0 rounded-xl bg-navy px-4 font-semibold text-white hover:bg-navy-600 disabled:opacity-50"
           >
             {submitLabel}
           </button>

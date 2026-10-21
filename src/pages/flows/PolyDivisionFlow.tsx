@@ -443,7 +443,7 @@ function Body({ instance, attempt, flags, templateTitle, completion, finish, ans
             {open ? (
               <form onSubmit={check} noValidate className="space-y-4">
                 {inputs(s.id, false)}
-                <button type="submit" className="min-h-12 rounded-xl bg-navy px-4 font-semibold text-white hover:bg-navy-600">
+                <button type="submit" className="btn-chunky min-h-12 rounded-xl bg-navy px-4 font-semibold text-white hover:bg-navy-600">
                   {CHECK_LABEL[s.id]}
                 </button>
               </form>

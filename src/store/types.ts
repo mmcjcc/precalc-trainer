@@ -51,6 +51,12 @@ export interface Settings {
   /** "Vibrate": a light tick on a right line or part and when the goal is met (rewards on only). Absent means on. */
   vibrate?: boolean
   /**
+   * "Sounds": a chime on a right line or part (it climbs with the combo), a soft note for a slip, a short tune at a
+   * finish (components/juice/sounds.ts). Absent means the edition's default: on in the store app, off in the family web
+   * app. Works with rewards on or off. Belongs to the device, like Vibrate: an import never changes it.
+   */
+  sounds?: boolean
+  /**
    * Guided mode, on problem types that offer cards (exponential and log equations): 'pick' is "Pick: choose each
    * next line from three (counts less)". Absent means 'type'. Belongs to the device, like the keypad: an import never
    * changes it.
@@ -352,6 +358,11 @@ export interface RewardsState {
   cards: Record<string, MistakeCardState>
   /** Problem types first mastered before `foldedThrough`: when (the +100 XP is paid once). */
   mastered: Record<string, number>
+  /**
+   * Streak milestones (7, 30, 100 days) already celebrated, so each celebration happens once (store/milestones.ts).
+   * Absent: none yet (a slice or a backup from before the celebrations).
+   */
+  milestones?: number[]
 }
 
 export function emptyRewards(): RewardsState {

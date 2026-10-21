@@ -251,7 +251,7 @@ function CompositionBody({ instance, attempt, flags, templateTitle, completion, 
               showSubmit={false}
             />
             {!done && (
-              <button type="button" onClick={submitDecompose} className="min-h-11 rounded-xl bg-navy px-4 font-semibold text-white hover:bg-navy-600">
+              <button type="button" onClick={submitDecompose} className="btn-chunky min-h-11 rounded-xl bg-navy px-4 font-semibold text-white hover:bg-navy-600">
                 Check
               </button>
             )}

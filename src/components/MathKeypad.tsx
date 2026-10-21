@@ -40,7 +40,7 @@ const TONE = {
   letter: 'border-navy-100 bg-white px-1 font-mono text-xl italic',
   context: 'border-navy-100 bg-white px-2.5 font-mono text-base',
   control: 'border-navy-100 bg-navy-100 px-1 text-sm font-semibold',
-  check: 'border-navy bg-navy px-2 text-base font-semibold text-white active:text-navy',
+  check: 'btn-chunky border-navy bg-navy px-2 text-base font-semibold text-white active:text-navy',
 } as const
 
 const REPEAT_AFTER_MS = 450

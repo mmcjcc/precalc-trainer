@@ -169,11 +169,12 @@ function SetRun({ set, onSet }: { set: ActiveSet; onSet: (next: ActiveSet) => vo
       index,
       total,
       status: set.status,
+      attemptIds: set.attemptIds,
       nextLabel: last ? 'See results' : 'Next in set',
       onNext: last ? seeResults : next,
       onSkip: skip,
     }),
-    [index, total, set.status, last, seeResults, next, skip],
+    [index, total, set.status, set.attemptIds, last, seeResults, next, skip],
   )
 
   const status = set.status[index]
@@ -224,7 +225,7 @@ function SettledSlot({ set, chrome }: { set: ActiveSet; chrome: SetChrome }) {
           {skipped ? 'It counts as skipped, not as wrong.' : 'Your work on it is saved with the set.'}
           {last ? ' That was the last problem in your set.' : ''}
         </p>
-        <button type="button" onClick={chrome.onNext} className="min-h-14 w-full rounded-2xl bg-navy px-4 text-lg font-semibold text-white hover:bg-navy-600">
+        <button type="button" onClick={chrome.onNext} className="btn-chunky min-h-14 w-full rounded-2xl bg-navy px-4 text-lg font-semibold text-white hover:bg-navy-600">
           {chrome.nextLabel}
         </button>
       </section>
@@ -237,7 +238,7 @@ function SetResults({ set, onAnother, onDone }: { set: ActiveSet; onAnother: () 
   const rewardsOn = useRewardsOn()
   const view = useRewards()
   const lines = useMemo(() => summarizeSet(set, events), [set, events])
-  const rewards = useMemo(() => (rewardsOn ? setRewards(set, events, view.awards) : null), [rewardsOn, set, events, view.awards])
+  const rewards = useMemo(() => (rewardsOn ? setRewards(set, events, view.awards, view.today.day) : null), [rewardsOn, set, events, view.awards, view.today.day])
   return <SetSummary lines={lines} rewards={rewards} today={rewardsOn ? view.today : null} onAnother={onAnother} onDone={onDone} />
 }
 

@@ -2,6 +2,8 @@ import { lazy, Suspense, useEffect } from 'react'
 import { HashRouter, Link, Navigate, Route, Routes, useLocation, useNavigationType, useParams } from 'react-router-dom'
 import { isFullScreenPath, useFullScreenPageShown } from '@/components/appChrome'
 import { MathKeypad } from '@/components/MathKeypad'
+import { JuiceLayers } from '@/components/juice/JuiceLayers'
+import { useJuice } from '@/components/juice/useJuice'
 import { isNavActive, navItems, type NavItem } from '@/components/navItems'
 import { useRewardTicks } from '@/components/rewards/haptics'
 import { TabBar } from '@/components/TabBar'
@@ -155,6 +157,8 @@ function UnlockedShell() {
       {/* One math keypad for every page; it only ever opens on a touch screen, for a math box. */}
       <MathKeypad />
       <Toasts />
+      {/* Confetti, the "+10" floats and the streak milestone banner (components/juice). */}
+      <JuiceLayers />
     </>
   )
 }
@@ -165,6 +169,8 @@ export function AppShell() {
   const pinHash = configuredPinHash()
   // Rewards on and "Vibrate" on: a light tick on a right line or part, and when the goal is met.
   useRewardTicks()
+  // Sounds (the chime, the nope, the arpeggio...), the "+10" floats, the goal's confetti and the streak milestones.
+  useJuice()
 
   if (pinHash && !unlocked) {
     return (

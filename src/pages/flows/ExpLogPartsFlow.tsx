@@ -333,7 +333,7 @@ function PartsBody({
               open ? (
                 <form onSubmit={submit} noValidate className="space-y-4">
                   <PolyChoice legend={s.label} name={`el-${s.id}`} options={s.choices ?? []} value={value} disabled={false} onChange={(v) => update(s.id, v)} firstRef={register(s.id)} />
-                  <button type="submit" className="min-h-12 rounded-xl bg-navy px-4 font-semibold text-white hover:bg-navy-600">
+                  <button type="submit" className="btn-chunky min-h-12 rounded-xl bg-navy px-4 font-semibold text-white hover:bg-navy-600">
                     Check
                   </button>
                   {shown && <GradeNote grade={shown.grade} />}
@@ -361,7 +361,7 @@ function PartsBody({
                   keypad={{ keys: keypadKeysFor(s), vars: s.id === 'range' ? RANGE_VARS : undefined }}
                 />
                 {keys && !keypadOn && <SymbolStrip onInsert={(k) => insert(s.id, k)} keys={keys} disabled={false} />}
-                <button type="submit" className="min-h-12 rounded-xl bg-navy px-4 font-semibold text-white hover:bg-navy-600">
+                <button type="submit" className="btn-chunky min-h-12 rounded-xl bg-navy px-4 font-semibold text-white hover:bg-navy-600">
                   Check
                 </button>
                 {shown && <GradeNote grade={shown.grade} />}
