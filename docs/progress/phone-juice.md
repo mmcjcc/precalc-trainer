@@ -157,3 +157,26 @@ button's class in `src/pages/flows/{AtomFlow, ComplexNumsFlow, CompositionFlow, 
 ExpLogPartsFlow, GeometryFlow, GraphFeaturesFlow, InverseFlow, LogFormsFlow, LogLineFlow, NomenclatureFlow, PeriodicFlow,
 PiecewiseMore, PiecewiseRateFlow, PolyDivisionFlow, PolyZerosFlow, QuadraticsFlow, RationalFnsFlow, SigFigFlow,
 SignChartsFlow, TransformationFlow}.tsx` and `fnUi.tsx`, `docs/BUILD_GUIDE.md` (§0 UI row, §7).
+
+## Review (Claude, 2026-10-21)
+
+Built by one Claude agent. Read: the combo rules, the moment subscriber (`useJuice`), the sounds (one AudioContext made
+in the first tap, asleep after 30 s without a sound and while the app is in the background), the floats, the confetti,
+the milestones slice with its backup merge, and the store and backup after the merge with main (the step guide's flag
+and the sounds switch are both kept). Checked on the Android 16 emulator in a store-app build (this branch merged into
+the fork):
+- the chunky buttons press down; the Web Audio stream starts on the first tap (AAudio in logcat);
+- a right picked line flashes green and "+4" rises from its check (caught through the WebView's DevTools: the float is
+  made at the check, 18 px, green, gone in a second);
+- three right lines in a row: "3 in a row!" with the flame, above Stuck?;
+- a finish: the confetti and the XP counting up.
+
+Changed in review: nothing in the juice. Found on the emulator while testing it (not the juice): a typed line that
+already is the solution went into the answer box out of sight under the work, and the composer still asked for the
+next line. Fixed in the next commit (phone-guided.md, "Follow-up").
+
+Left: the "+4" is small and quick (18 px, 1 s) and could be bigger; on a phone the composer grows tall when a nudge, the
+combo pill, Stuck? and a note stack up, and with the keypad open the work above it is almost hidden (for the phone
+layout pass).
+
+Whole suite on the merged branch: 257 files, 4409 tests, all pass.
