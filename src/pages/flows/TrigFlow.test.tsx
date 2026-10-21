@@ -79,7 +79,10 @@ describe.each(TEMPLATES)('%s %s on the screen', (module, templateId) => {
       // The prompt's words are on the page, its math is drawn by KaTeX, and the figure is there with its words.
       for (const piece of pieces(a.prompt).filter((x) => !x.tex && x.text.trim().length > 3)) expect(view.container.textContent).toContain(piece.text.trim())
       expect(view.container.querySelectorAll('.katex').length).toBeGreaterThan(0)
-      expect(screen.getAllByRole('img', { name: a.figure.ariaLabel }).length).toBeGreaterThan(0)
+      // Where she is asked where the terminal side lies, the angle is drawn (and described) once she has said.
+      const waits = a.stages.some((s) => s.id === 'quadrant')
+      const figureName = waits ? /drawn once you have said where its terminal side lies/ : a.figure.ariaLabel
+      expect(screen.getAllByRole('img', { name: figureName }).length).toBeGreaterThan(0)
       expect(screen.queryByRole('heading', { name: 'The answer, worked out' })).toBeNull()
       let named = false
       for (const [i, part] of a.stages.entries()) {
@@ -192,7 +195,7 @@ describe('the trig screens', () => {
   )
 
   it(
-    'the reference angle appears on the figure only once she has answered it',
+    'the angle appears on the figure once she has said where it lies, and the reference angle once she has answered it',
     () => {
       let found: ReturnType<typeof load> | null = null
       for (let from = 1; from < 200 && !found; from++) {
@@ -202,9 +205,16 @@ describe('the trig screens', () => {
       const { a, path } = found!
       const view = renderAt(path)
       const figureRef = () => view.container.querySelector('[data-trig="reference"]')
+      const terminal = () => view.container.querySelector('[data-trig="terminal"]')
+      // Drawn, the angle would answer the quadrant: the unit circle and its axes only.
+      expect(terminal()).toBeNull()
+      expect(view.container.querySelector('[data-trig="unit-circle"]')).not.toBeNull()
+      expect(view.container.querySelector('[data-trig="angle-arc"], [data-trig="spiral"]')).toBeNull()
+      expect(screen.getByRole('img').getAttribute('aria-label')).toMatch(/drawn once you have said where its terminal side lies/)
       expect(figureRef()).toBeNull()
       enter(a.stages[0]!, a.stages[0]!.answerText)
       click('Check')
+      expect(terminal()).not.toBeNull()
       expect(figureRef()).toBeNull()
       enter(a.stages[1]!, a.stages[1]!.answerText)
       click('Check')

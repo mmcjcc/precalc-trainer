@@ -169,13 +169,13 @@ function previewTex(part: TrigPart, value: string): string {
   return r.tex
 }
 
-function TrigStatement({ answer, showReference }: { answer: TrigAnswer; showReference: boolean }) {
+function TrigStatement({ answer, showReference, showAngle }: { answer: TrigAnswer; showReference: boolean; showAngle: boolean }) {
   return (
     <div className="space-y-2">
       <p className="text-navy">
         <TexText text={answer.prompt} />
       </p>
-      <TrigFigure spec={answer.figure} showReference={showReference} />
+      <TrigFigure spec={answer.figure} showReference={showReference} showAngle={showAngle} />
     </div>
   )
 }
@@ -309,6 +309,9 @@ function TrigPartsBody({ instance, attempt, flags, templateTitle, completion, fi
   // The reference angle is drawn once she has answered its part, or once the problem is done.
   const referenceIndex = stages.findIndex((s) => s.id === 'reference')
   const showReference = done || (referenceIndex >= 0 && passed > referenceIndex)
+  // Where she is asked where the terminal side lies, the angle itself waits for that answer: drawn, it shows the quadrant.
+  const quadrantIndex = stages.findIndex((s) => s.id === 'quadrant')
+  const showAngle = done || quadrantIndex < 0 || passed > quadrantIndex
 
   const progress: ProgressLine = {
     stage: done ? stages.length : passed,
@@ -329,7 +332,7 @@ function TrigPartsBody({ instance, attempt, flags, templateTitle, completion, fi
       tutorVerdict={shown ? verdictFromTrigPart(shown.grade, entries[stage.id] ?? '') : undefined}
       nudgeText="Still here? The part that is open is waiting for you below. The hint button is right there."
       keymap={{ onHint: hint.advance }}
-      statement={<TrigStatement answer={answer} showReference={showReference} />}
+      statement={<TrigStatement answer={answer} showReference={showReference} showAngle={showAngle} />}
       hints={<TrigHintLadder rung={hint.rung} nudge={stage.nudge} card={card} related={related} explanation={stage.reveal} onAdvance={hint.advance} disabled={done} />}
     >
       {stages.map((s, i) => {

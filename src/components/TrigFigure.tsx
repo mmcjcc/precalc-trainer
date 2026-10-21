@@ -3,7 +3,8 @@
  * than once, an arrow showing which way it turns), axes with a point on the terminal side, or a circle with a central
  * angle and its arc or sector. It fills its container, uses the app's colour tokens, and describes itself in words.
  * The reference angle is drawn only when `showReference` is set: the flow sets it once she has answered it, or
- * finished.
+ * finished. Where a problem asks where the terminal side lies, the flow leaves `showAngle` off until she has answered
+ * that: the unit circle and its axes only, since the drawn angle would show the quadrant.
  */
 import { useId } from 'react'
 import type { TrigFigureSpec } from '@/content/types'
@@ -208,17 +209,25 @@ function SectorFigure({ spec }: { spec: TrigFigureSpec }) {
   )
 }
 
-export function TrigFigure({ spec, showReference = false }: { spec: TrigFigureSpec; showReference?: boolean }) {
+export function TrigFigure({ spec, showReference = false, showAngle = true }: { spec: TrigFigureSpec; showReference?: boolean; showAngle?: boolean }) {
   const marker = `trig-arrow-${useId().replace(/:/g, '')}`
+  const hidden = spec.kind === 'circle' && !showAngle
+  const ariaLabel = hidden ? `The unit circle and its axes. The angle ${spec.label} is drawn once you have said where its terminal side lies.` : spec.ariaLabel
   return (
     <div className="mx-auto w-full max-w-[320px] overflow-hidden">
-      <svg role="img" aria-label={spec.ariaLabel} viewBox={`0 0 ${VW} ${VH}`} width="100%" className="block h-auto max-w-full">
+      <svg role="img" aria-label={ariaLabel} viewBox={`0 0 ${VW} ${VH}`} width="100%" className="block h-auto max-w-full">
         <defs>
           <marker id={marker} markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto-start-reverse">
             <path d="M0,0 L8,3 L0,6 Z" fill={NAVY} />
           </marker>
         </defs>
-        {spec.kind === 'circle' && <CircleFigure spec={spec} showReference={showReference} marker={marker} />}
+        {hidden && (
+          <>
+            <circle data-trig="unit-circle" cx={CX} cy={CY} r={R} fill="none" stroke={NAVY} strokeOpacity={0.35} strokeWidth={1.5} />
+            <Axes marker={marker} />
+          </>
+        )}
+        {spec.kind === 'circle' && !hidden && <CircleFigure spec={spec} showReference={showReference} marker={marker} />}
         {spec.kind === 'point' && <PointFigure spec={spec} marker={marker} />}
         {spec.kind === 'sector' && <SectorFigure spec={spec} />}
       </svg>
