@@ -23,6 +23,8 @@ import { TR_PATTERN } from '@/content/modules/transformations/patterns'
 import type { GeometryQuestion, ProblemInstance } from '@/content/types'
 import { logFormsWork } from '@/content/modules/logForms'
 import { partsWork, type PartGrade } from '@/content/modules/explog/parts'
+import { trigWork, type TrigPartGrade } from '@/content/modules/trig/parts'
+import { plain as trigPlain } from '@/content/modules/trig/text'
 import { ERROR_PATTERNS } from '@/engine'
 import type { OpsGrade } from '@/content/modules/functionOps/ops'
 import type { DescriptionGrade, EconfigGrade, FunctionGrade, LogGrade, NmGrade, PolyGrade, SquareLineGrade, TransformGrade } from '@/engine'
@@ -364,6 +366,25 @@ export function verdictFromExpLogPart(grade: PartGrade, herText?: string): Tutor
   })
 }
 
+/**
+ * One part of an angle or unit-circle problem (precalculus Unit 4). The mistake id is already a trig_ catalog id.
+ * Unreadable input, and an answer in a form that is not asked for (not simplest radical form, a calculator decimal,
+ * the wrong unit), is a parse error: nothing was graded.
+ */
+export function verdictFromTrigPart(grade: TrigPartGrade, herText?: string): TutorVerdict | null {
+  const line = herText?.trim() ? herText.trim() : undefined
+  if (grade.verdict === 'correct') return withMessage('correct', grade.message, line)
+  if (grade.verdict === 'wrong') return withMessage('wrong', grade.message, line)
+  if (grade.verdict === 'invalid') return withMessage('parse_error', grade.message, line)
+  const info = ERROR_PATTERNS[grade.mistake]
+  return withMessage('wrong', grade.witness, line, {
+    id: grade.mistake,
+    title: clip(info.title, 200),
+    lesson: clip(info.lesson, TUTOR_LIMITS.field),
+    witness: clip(grade.witness, TUTOR_LIMITS.field),
+  })
+}
+
 /** Operations with functions. The mistake id is already an op_ catalog id. */
 export function verdictFromOps(grade: OpsGrade): TutorVerdict {
   if (grade.verdict === 'correct') return withMessage('correct', grade.message)
@@ -464,6 +485,12 @@ function workOf(instance: ProblemInstance, attempt: Attempt | null): string[] {
   // Graphs and inverses, and growth and decay word problems: her boxes, part by part.
   if (instance.answer.type === 'expLogGraphs' || instance.answer.type === 'expModels') {
     return partsWork(instance.answer.stages, attempt.final?.polyEntries)
+      .slice(0, TUTOR_LIMITS.lines)
+      .map((line) => clip(line, TUTOR_LIMITS.line))
+  }
+  // Angles and the unit circle: her boxes, part by part (a quadrant by its name).
+  if (instance.answer.type === 'angleMeasure' || instance.answer.type === 'unitCircle') {
+    return trigWork(instance.answer.stages, attempt.final?.polyEntries)
       .slice(0, TUTOR_LIMITS.lines)
       .map((line) => clip(line, TUTOR_LIMITS.line))
   }
@@ -592,6 +619,9 @@ function statementOf(instance: ProblemInstance): string {
     text = answer.matchMode === 'equation' ? `${answer.prompt}${candidates}` : `${answer.fnName}(x) = ${answer.f}. ${answer.prompt}${candidates}`
   } else if (answer.type === 'expModels') {
     text = answer.prompt
+  } else if (answer.type === 'angleMeasure' || answer.type === 'unitCircle') {
+    // The prompt as words (its KaTeX read back), and the figure, which the tutor cannot see.
+    text = `${trigPlain(answer.prompt)} Figure: ${answer.figure.ariaLabel}`
   } else if (answer.type === 'geometry') {
     assertGeometryQuestion(answer.question)
     const lines = answer.lines?.length ? ` Lines: ${answer.lines.join(' | ')}` : ''
@@ -635,6 +665,8 @@ function canonicalOf(instance: ProblemInstance): string[] {
     answer.type === 'nomenclature'
   ) {
     lines = answer.reveal
+  } else if (answer.type === 'angleMeasure' || answer.type === 'unitCircle') {
+    lines = answer.reveal.map(trigPlain)
   }
   return lines.slice(0, TUTOR_LIMITS.lines).map((line) => clip(line, TUTOR_LIMITS.line))
 }
@@ -669,6 +701,8 @@ function answerOf(instance: ProblemInstance): string | undefined {
     case 'expLogEquations':
     case 'expLogGraphs':
     case 'expModels':
+    case 'angleMeasure':
+    case 'unitCircle':
     case 'geometry':
     case 'periodic':
     case 'nomenclature':

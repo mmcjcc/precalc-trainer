@@ -17,7 +17,7 @@ import type {
   VarName,
 } from '@/shared/types'
 
-export type ProblemKind = 'inequality' | 'numberLine' | 'evenOdd' | 'inverse' | 'drill' | 'sigFigs' | 'atoms' | 'diffQuotient' | 'graphFeatures' | 'domainRange' | 'composition' | 'functionOps' | 'transformations' | 'piecewiseRate' | 'electrons' | 'periodic' | 'quadratics' | 'polyDivision' | 'polyZeros' | 'rationalFns' | 'signCharts' | 'complexNums' | 'logForms' | 'logProperties' | 'expLogEquations' | 'expLogGraphs' | 'expModels' | 'geometry' | 'nomenclature'
+export type ProblemKind = 'inequality' | 'numberLine' | 'evenOdd' | 'inverse' | 'drill' | 'sigFigs' | 'atoms' | 'diffQuotient' | 'graphFeatures' | 'domainRange' | 'composition' | 'functionOps' | 'transformations' | 'piecewiseRate' | 'electrons' | 'periodic' | 'quadratics' | 'polyDivision' | 'polyZeros' | 'rationalFns' | 'signCharts' | 'complexNums' | 'logForms' | 'logProperties' | 'expLogEquations' | 'expLogGraphs' | 'expModels' | 'angleMeasure' | 'unitCircle' | 'geometry' | 'nomenclature'
 
 /** Which chemical-nomenclature screen this problem is (CK-12 chapter 7). */
 export type NomenclatureQuestion = 'ion' | 'ionicFormula' | 'ionicName' | 'ionicFromName' | 'molecular' | 'acid' | 'hydrate' | 'classify'
@@ -126,6 +126,93 @@ export interface ExpLogPart {
   /** exact and decimal: the right value in app syntax, for gradeLogValue. Two when two are right (the exact k or the rounded k). */
   closedForms?: string[]
   traps: ExpLogPartTrap[]
+}
+
+/** Precalculus Unit 4. Converting units, coterminal angles, the quadrant and reference angle, arcs and sectors. */
+export type AngleMeasureQuestion = 'convert' | 'coterminal' | 'reference' | 'arc'
+
+/** Precalculus Unit 4. An exact value at a special angle, or the ratios of a point on the terminal side. */
+export type UnitCircleQuestion = 'exact' | 'point'
+
+/**
+ * How one part of a trig problem is answered and read (engine/trig's reader and grader):
+ *  - angle: an exact angle, in degrees (a number, the ° optional) or in radians (a multiple of π);
+ *  - value: an exact value or the word for no value: a trig value, r, an exact arc length or area (with π);
+ *  - decimal: a number rounded the way the problem asks;
+ *  - choice: one of the listed options (where the terminal side lies).
+ */
+export type TrigPartKind = 'angle' | 'value' | 'decimal' | 'choice'
+
+/** What the core's grader checks for a part. Exact values are kept as she would type them and read back exactly. */
+export type TrigPartCheck =
+  /** `deg` is the angle in degrees as a fraction ("150", "45/2"); `unit` is the unit the answer is asked in. */
+  | { kind: 'angle'; unit: 'deg' | 'rad'; deg: string }
+  /** `value` as typed ("√3/2", "-2", "4π", "undefined"); `fn` the function the box is for; `units` words after it. */
+  | { kind: 'value'; value: string; fn?: 'sin' | 'cos' | 'tan' | 'csc' | 'sec' | 'cot'; units?: string[] }
+  | { kind: 'decimal'; value: number; places: number; unit?: 'deg' | 'rad'; units?: string[] }
+  | { kind: 'choice' }
+
+/** A slip named on one part, computed by the core for this problem. */
+export interface TrigPartTrap {
+  id: ErrorPatternId
+  /** What the slip gives, as she would type it (a choice's value on a choice part). Never the right answer. */
+  text: string
+  /** decimal parts: the slip's value before rounding. */
+  value?: number
+  /** The sentence about her answer. It never states this problem's answer. */
+  witness: string
+}
+
+/**
+ * One part of a trig problem, answered and checked on its own. Text fields marked "math" may hold KaTeX between
+ * dollar signs ("Find the reference angle of $\frac{7\pi}{6}$."); the flow draws them, and `trig/text.ts` `plain`
+ * reads them as words.
+ */
+export interface TrigPart {
+  /** 'answer', 'quadrant', 'reference', 'r', 'sin', 'cos', 'tan', 'csc', 'sec', 'cot'. */
+  id: string
+  kind: TrigPartKind
+  /** Card title and box label, plain text: "Reference angle", "sin θ". */
+  label: string
+  /** The question (math). */
+  ask: string
+  /** Under the box, plain text. No answer a template can generate. */
+  formatHint: string
+  /** choice: the options, in the order shown. */
+  choices?: { value: string; label: string }[]
+  /** Hint rung 1 (math): the rule, not this problem's answer. */
+  nudge: string
+  ruleCard: RuleCardId
+  /** Hint rung 3 and the worked lines of this part (math). May state the answer. */
+  reveal: string[]
+  /** The answer as she would type it (a choice's value). */
+  answerText: string
+  /** Other spellings of the answer that grade right: for the self-check and the leak checks. */
+  forms: string[]
+  check: TrigPartCheck
+  /** The note for a plain wrong answer: what to look at, never the answer. */
+  wrongNote: string
+  traps: TrigPartTrap[]
+}
+
+/**
+ * A trig figure, drawn by components/TrigFigure: the unit circle with the angle in standard position, axes with a
+ * point on the terminal side, or a circle with a central angle (arc or sector). Labels are what the problem gives.
+ */
+export interface TrigFigureSpec {
+  kind: 'circle' | 'point' | 'sector'
+  /** The angle in degrees (a decimal for a plain number of radians); negative turns clockwise. */
+  deg: number
+  /** The angle's label, display text: "5π/6", "−225°", "2.5". */
+  label: string
+  /** point: the point on the terminal side and its label "(−3, 4)". */
+  point?: { x: number; y: number; label: string }
+  /** sector: the radius label ("24 in") and whether the arc or the area is the question. */
+  sector?: { radiusLabel: string; shade: 'arc' | 'area' }
+  /** The reference angle (degrees) and its label. The flow draws it only once she has answered it, or finished. */
+  reference?: { deg: number; label: string }
+  /** Words for a screen reader and the tutor. Describes the picture, never an answer. */
+  ariaLabel: string
 }
 
 /**
@@ -1402,6 +1489,24 @@ export type AnswerSpec =
       trapStage: string
       trapAnswer: string
     }
+  | ({
+      /**
+       * Angles and radian measure (precalculus Unit 4): converting between degrees and radians (exact, or rounded),
+       * the coterminal angle in one turn, where the terminal side lies and the reference angle, arc length and sector
+       * area. Grade a part with the module's `gradeAmPart` (engine/trig). Named mistakes are the trig_ ids.
+       */
+      type: 'angleMeasure'
+      question: AngleMeasureQuestion
+    } & TrigAnswerFields)
+  | ({
+      /**
+       * The unit circle and the trig functions of any angle (precalculus Unit 4): the exact value of one of the six
+       * functions at a special angle, or r and the ratios of a point on the terminal side. Grade a part with the
+       * module's `gradeUcPart` (engine/trig). Named mistakes are the trig_ ids.
+       */
+      type: 'unitCircle'
+      question: UnitCircleQuestion
+    } & TrigAnswerFields)
   | {
       type: 'drill'
       question: 'which_property' | 'legal_or_illegal'
@@ -1410,6 +1515,31 @@ export type AnswerSpec =
       patternId?: ErrorPatternId
       lesson: string
     }
+
+/** What both trig arms of `AnswerSpec` carry. */
+export interface TrigAnswerFields {
+  /** The problem in one or two sentences (math). No method and no trap. */
+  prompt: string
+  figure: TrigFigureSpec
+  stages: TrigPart[]
+  expectedDisplay: string
+  nudge: string
+  ruleCard: RuleCardId
+  ruleCards: RuleCardId[]
+  /** Every part's worked lines (math). May state the answers. */
+  reveal: string[]
+  /** The named mistake this seed promises, when one is possible (a quadrantal angle's location has none). */
+  trap?: ErrorPatternId
+  /** The part it is promised on. */
+  trapStage?: string
+  /** What that slip gives, as she would type it. Never the right answer. */
+  trapAnswer?: string
+}
+
+/** The two trig arms of `AnswerSpec`. */
+export type AngleMeasureAnswer = Extract<AnswerSpec, { type: 'angleMeasure' }>
+export type UnitCircleAnswer = Extract<AnswerSpec, { type: 'unitCircle' }>
+export type TrigAnswer = AngleMeasureAnswer | UnitCircleAnswer
 
 /** The geometry arm of `AnswerSpec`, named so the flow and the generators share it. */
 export type GeometryAnswer = Extract<AnswerSpec, { type: 'geometry' }>

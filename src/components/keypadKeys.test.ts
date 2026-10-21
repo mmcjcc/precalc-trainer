@@ -76,6 +76,22 @@ describe('keypadLayout: the grid letter and the context row from a box’s strip
     expect(labels(keypadLayout(KEYPAD_SETS.xy).context)).toEqual(['y'])
   })
 
+  it('angles and the unit circle: π, √, °, undefined, then the six functions, in one context row', () => {
+    const { primary, context } = keypadLayout(KEYPAD_SETS.trig)
+    expect(primary.insert).toBe('x')
+    expect(labels(context)).toEqual(['π', '√', '°', 'undefined', 'sin', 'cos', 'tan', 'csc', 'sec', 'cot'])
+    expect(insertKey('', 0, 0, strip('π'))).toEqual({ value: 'pi', caret: 2 })
+    const keys = allKeys(keypadLayout(KEYPAD_SETS.trig))
+    const undef = context.find((k) => k.label === 'undefined')!
+    // The word goes in with one tap and comes out with one tap.
+    expect(insertKey('', 0, 0, undef)).toEqual({ value: 'undefined', caret: 9 })
+    expect(deleteBackward('undefined', 9, 9, keys)).toEqual({ value: '', caret: 0 })
+    const sin = context.find((k) => k.label === 'sin')!
+    expect(insertKey('', 0, 0, sin)).toEqual({ value: 'sin()', caret: 4 })
+    expect(deleteBackward('sin()', 4, 4, keys)).toEqual({ value: '', caret: 0 })
+    expect(insertKey('150', 3, 3, context.find((k) => k.label === '°')!)).toEqual({ value: '150°', caret: 4 })
+  })
+
   it('a strip comma is the grid comma', () => {
     const geo: StripKey[] = [strip('√'), { label: '°', insert: '°', caret: 0, name: 'degrees' }, strip('('), { label: ',', insert: ',', caret: 0, name: 'comma' }]
     expect(labels(keypadLayout(geo).context)).toEqual(['√', '°'])

@@ -206,4 +206,19 @@ export const KEYPAD_SETS = {
   condition: keysWith(['<', '≤', '>', '≥', '∞']),
   /** Equations and points in x and y (asymptotes, intercepts). */
   xy: [letterKey('x'), letterKey('y')] as readonly StripKey[],
+  /**
+   * Angles and the unit circle: π, √, the degree sign and the word for a value that does not exist first (the
+   * answers use them), then the six functions (a name she may write before her answer, "sin θ = …").
+   */
+  trig: [
+    ...keysWith(['π', '√']),
+    { label: '°', insert: '°', caret: 0, name: 'degrees' },
+    { label: 'undefined', insert: 'undefined', caret: 0, name: 'undefined' },
+    { label: 'sin', insert: 'sin()', caret: -1, name: 'sine' },
+    { label: 'cos', insert: 'cos()', caret: -1, name: 'cosine' },
+    { label: 'tan', insert: 'tan()', caret: -1, name: 'tangent' },
+    { label: 'csc', insert: 'csc()', caret: -1, name: 'cosecant' },
+    { label: 'sec', insert: 'sec()', caret: -1, name: 'secant' },
+    { label: 'cot', insert: 'cot()', caret: -1, name: 'cotangent' },
+  ] as readonly StripKey[],
 } as const

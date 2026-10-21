@@ -2427,6 +2427,141 @@ export const ERROR_PATTERNS: Record<ErrorPatternId, ErrorPatternInfo> = {
     lesson: 'Slope is the change in y divided by the change in x: (y₂ − y₁)/(x₂ − x₁). Dividing the change in x by the change in y gives the reciprocal, which is a different slope.',
     example: 'a rise of 1 over a run of 4: 4 ✗ → 1/4',
   },
+  // --- precalculus Unit 4, trigonometric functions (engine/trig; content/modules/angleMeasure, unitCircle). Answers
+  // there are angles, π-multiples and the special values, so examples use letters (d, k, θ, x, y, r) and numbers are
+  // written as words: no example or lesson can show a generated answer.
+  trig_conversion_inverted: {
+    id: 'trig_conversion_inverted',
+    title: 'Degrees to radians: π goes on top',
+    lesson: 'A half turn is both 180° and π radians, so the factor is π/180 going from degrees to radians and 180/π going back. Turned upside down, the factor makes the angle grow when it should shrink, or the other way round.',
+    example: 'd° to radians: d·180/π ✗ → d·π/180',
+  },
+  trig_pi_dropped: {
+    id: 'trig_pi_dropped',
+    title: 'Keep the π in a radian measure',
+    lesson: 'An angle in degrees times π/180 is a number times π, and the π stays in the answer: it is what makes the number an angle. Dropped, the angle is about a third of its size.',
+    example: 'kπ/n radians: k/n ✗ → kπ/n',
+  },
+  trig_pi_kept: {
+    id: 'trig_pi_kept',
+    title: 'The π cancels in degrees',
+    lesson: 'Radians to degrees multiplies by 180/π, so the π of the angle cancels with the π underneath. An angle in degrees has no π in it.',
+    example: 'kπ · 180/π: 180kπ ✗ → 180k degrees',
+  },
+  trig_coterminal_half_turn: {
+    id: 'trig_coterminal_half_turn',
+    title: 'A full turn is 360°, not 180°',
+    lesson: 'Coterminal angles share a terminal side, so they differ by whole turns: 360°, or 2π, each time. A step of 180°, or π, is half a turn and lands on the opposite side of the circle.',
+    example: 'θ − 180° ✗ → θ − 360°',
+  },
+  trig_coterminal_short: {
+    id: 'trig_coterminal_short',
+    title: 'Keep turning until it is in range',
+    lesson: 'Add or subtract whole turns until the angle is at least zero and less than one full turn. An angle more than one turn away needs more than one turn.',
+    example: 'θ + 360° is still negative ✗ → add another 360°',
+  },
+  trig_negative_direction: {
+    id: 'trig_negative_direction',
+    title: 'A negative angle turns clockwise',
+    lesson: 'Angles are measured from the positive x-axis: positive ones turn counterclockwise and negative ones turn clockwise. So −θ ends on the mirror image of θ across the x-axis, not on θ itself.',
+    example: '−θ drawn counterclockwise ✗ → −θ drawn clockwise',
+  },
+  trig_reference_from_y_axis: {
+    id: 'trig_reference_from_y_axis',
+    title: 'Measure the reference angle to the x-axis',
+    lesson: 'The reference angle is the acute angle between the terminal side and the x-axis, never the y-axis. Measured to the y-axis you get the other acute angle of the triangle.',
+    example: 'measured to the y-axis: 90° − α ✗ → α, measured to the x-axis',
+  },
+  trig_reference_wrong_way: {
+    id: 'trig_reference_wrong_way',
+    title: 'A reference angle is acute and positive',
+    lesson: 'Measure to the nearest part of the x-axis: 180° − θ in Quadrant II, θ − 180° in Quadrant III, and 360° − θ in Quadrant IV. A negative answer, or one bigger than a right angle, means the subtraction went the wrong way.',
+    example: 'Quadrant III: 180° − θ ✗ → θ − 180°',
+  },
+  trig_reference_is_coterminal: {
+    id: 'trig_reference_is_coterminal',
+    title: 'Go on to the x-axis',
+    lesson: 'Finding where the terminal side lands is the first step, not the answer. The reference angle is the acute angle from that side to the nearest part of the x-axis.',
+    example: 'θ in Quadrant II: θ ✗ → 180° − θ',
+  },
+  trig_sign_quadrant: {
+    id: 'trig_sign_quadrant',
+    title: 'The quadrant decides the sign',
+    lesson: 'The reference angle gives the size of the value, and the quadrant gives its sign. All six are positive in Quadrant I, sine and cosecant in II, tangent and cotangent in III, cosine and secant in IV: All Students Take Calculus.',
+    example: 'cos θ in Quadrant II: +a ✗ → −a',
+  },
+  trig_sin_cos_swapped: {
+    id: 'trig_sin_cos_swapped',
+    title: 'cos is x, sin is y',
+    lesson: 'The point on the unit circle at θ is (cos θ, sin θ): cosine is the x-coordinate and sine is the y-coordinate, in alphabetical order. For any point (x, y) at distance r, sin θ = y/r and cos θ = x/r.',
+    example: 'point (x, y): sin θ = x/r ✗ → sin θ = y/r',
+  },
+  trig_tan_inverted: {
+    id: 'trig_tan_inverted',
+    title: 'tan θ is y over x',
+    lesson: 'tan θ = sin θ / cos θ = y/x, with y on top. Its reciprocal, x/y, is cot θ.',
+    example: 'tan θ = x/y ✗ → tan θ = y/x',
+  },
+  trig_reciprocal_mixed: {
+    id: 'trig_reciprocal_mixed',
+    title: 'csc goes with sin, sec goes with cos',
+    lesson: 'csc θ is one over sin θ and sec θ is one over cos θ: each pair has exactly one "co" in it. Crossing them gives the other function’s value.',
+    example: 'csc θ = r/x ✗ → csc θ = r/y',
+  },
+  trig_reciprocal_missing: {
+    id: 'trig_reciprocal_missing',
+    title: 'csc, sec and cot are reciprocals',
+    lesson: 'csc θ is one over sin θ, sec θ is one over cos θ and cot θ is one over tan θ. Find sin, cos or tan first, then flip it over.',
+    example: 'csc θ = y/r ✗ → csc θ = r/y',
+  },
+  trig_zero_for_undefined: {
+    id: 'trig_zero_for_undefined',
+    title: 'Zero on the bottom: no value',
+    lesson: 'A ratio with zero on the bottom has no value at all, so tan, sec, csc or cot can fail to exist where the point is on an axis. Zero is the value only when the zero is on top.',
+    example: 'y/x with x zero: zero ✗ → no value',
+  },
+  trig_undefined_for_zero: {
+    id: 'trig_undefined_for_zero',
+    title: 'Zero on top is a value',
+    lesson: 'A ratio with zero on top and a number underneath is zero, a real value. Only a zero on the bottom leaves a ratio with no value.',
+    example: 'y/x with y zero: no value ✗ → zero',
+  },
+  trig_r_left_out: {
+    id: 'trig_r_left_out',
+    title: 'Divide by r',
+    lesson: 'On the unit circle r is one, so sin θ = y and cos θ = x there. For any other point on the terminal side, divide by its distance from the origin: sin θ = y/r and cos θ = x/r.',
+    example: 'sin θ = y ✗ → sin θ = y/r',
+  },
+  trig_r_not_rooted: {
+    id: 'trig_r_not_rooted',
+    title: 'r is a square root',
+    lesson: 'r = √(x² + y²): add the squares, then take the square root. x² + y² by itself is r², the square of the distance.',
+    example: 'r = x² + y² ✗ → r = √(x² + y²)',
+  },
+  trig_arc_degrees: {
+    id: 'trig_arc_degrees',
+    title: 'Use radians in s = rθ and A = ½r²θ',
+    lesson: 'The formulas s = rθ and A = ½r²θ only work with θ in radians. Change degrees to radians first, multiplying by π/180, or the answer comes out far too big.',
+    example: 'r·θ with θ in degrees ✗ → r·θ·π/180',
+  },
+  trig_sector_no_half: {
+    id: 'trig_sector_no_half',
+    title: 'A sector’s area has a ½',
+    lesson: 'A sector is the fraction θ/(2π) of the circle’s area πr², which works out to A = ½r²θ. Without the ½ the area is doubled.',
+    example: 'r²θ ✗ → ½r²θ',
+  },
+  trig_sector_r_not_squared: {
+    id: 'trig_sector_r_not_squared',
+    title: 'Square the radius',
+    lesson: 'In A = ½r²θ the radius is squared, as in the circle’s area πr². With r instead of r², the answer is a length, not an area.',
+    example: '½rθ ✗ → ½r²θ',
+  },
+  trig_arc_sector_swapped: {
+    id: 'trig_arc_sector_swapped',
+    title: 'Arc length or sector area?',
+    lesson: 'Arc length s = rθ is a distance along the circle, in units like cm. Sector area A = ½r²θ is the slice, in square units like cm². Read which one the problem asks for.',
+    example: 'arc length: ½r²θ ✗ → rθ',
+  },
   // --- behavioral (ui) ---
   abandoned: {
     id: 'abandoned',

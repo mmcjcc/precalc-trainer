@@ -77,6 +77,12 @@ export const COURSES: readonly CourseDef[] = [
         title: 'Exponential and logarithmic functions',
         moduleIds: ['logForms', 'logProperties', 'expLogEquations', 'expLogGraphs', 'expModels'],
       },
+      {
+        id: 'unit4',
+        label: 'Unit 4',
+        title: 'Trigonometric functions',
+        moduleIds: ['angleMeasure', 'unitCircle'],
+      },
     ],
   },
   {

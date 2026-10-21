@@ -5,6 +5,7 @@ import type { ScGrade } from '@/content/modules/signCharts/grade'
 import type { CxGrade } from '@/content/modules/complexNums/grade'
 import type { LogGrade } from '@/engine'
 import type { PartGrade } from '@/content/modules/explog/parts'
+import type { TrigPartGrade } from '@/content/modules/trig/parts'
 import type { GeoGrade } from '@/content/modules/geometry/grade'
 import type { PtGrade } from '@/content/modules/periodic/grade'
 import type { PwGrade } from '@/content/modules/piecewiseRate/grade'
@@ -387,6 +388,25 @@ export function recordAtomGrade(grade: AtomGrade): void {
     return
   }
   for (const p of grade.patterns) s.recordFinalAnswer({ correct: false, pattern: p.id, via: 'text' })
+}
+
+/**
+ * Log one check of a part of an angle or unit-circle problem (precalculus Unit 4). A named mistake is stored under its
+ * trig_ id. Unreadable input, an equal value not in simplest radical form, a calculator decimal where the exact value
+ * is asked, a rounding too far, and the wrong unit are not attempts: nothing is logged.
+ */
+export function recordTrigPartGrade(grade: TrigPartGrade): void {
+  if (grade.verdict === 'invalid') return
+  const s = useStore.getState()
+  if (grade.verdict === 'correct') {
+    s.recordFinalAnswer({ correct: true, via: 'text' })
+    return
+  }
+  if (grade.verdict === 'mistake') {
+    s.recordFinalAnswer({ correct: false, pattern: grade.mistake, via: 'text' })
+    return
+  }
+  s.recordFinalAnswer({ correct: false, via: 'text' })
 }
 
 /**

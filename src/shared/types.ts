@@ -15,7 +15,7 @@
 export type RelOp = '=' | '<' | '<=' | '>' | '>='
 /** `h` is the difference-quotient step; the parser accepts it only when the problem owns it (ctx.vars). */
 export type VarName = 'x' | 'y' | 'n' | 'h'
-export type ModuleId = 'numberLine' | 'inequalities' | 'evenOdd' | 'inverses' | 'propertiesDrill' | 'sigFigs' | 'atoms' | 'diffQuotient' | 'graphFeatures' | 'domainRange' | 'composition' | 'functionOps' | 'transformations' | 'piecewiseRate' | 'electrons' | 'periodic' | 'quadratics' | 'polyDivision' | 'polyZeros' | 'rationalFns' | 'signCharts' | 'complexNums' | 'logForms' | 'logProperties' | 'expLogEquations' | 'expLogGraphs' | 'expModels' | 'geoSegments' | 'geoAngles' | 'geoLogic' | 'geoProof' | 'geoParallel' | 'geoPolygonAngles' | 'geoCongruence' | 'geoIsosceles' | 'geoTriangleProofs' | 'geoParallelograms' | 'geoSpecialQuads' | 'geoTrapezoids' | 'ionicNames' | 'molecularAcids'
+export type ModuleId = 'numberLine' | 'inequalities' | 'evenOdd' | 'inverses' | 'propertiesDrill' | 'sigFigs' | 'atoms' | 'diffQuotient' | 'graphFeatures' | 'domainRange' | 'composition' | 'functionOps' | 'transformations' | 'piecewiseRate' | 'electrons' | 'periodic' | 'quadratics' | 'polyDivision' | 'polyZeros' | 'rationalFns' | 'signCharts' | 'complexNums' | 'logForms' | 'logProperties' | 'expLogEquations' | 'expLogGraphs' | 'expModels' | 'angleMeasure' | 'unitCircle' | 'geoSegments' | 'geoAngles' | 'geoLogic' | 'geoProof' | 'geoParallel' | 'geoPolygonAngles' | 'geoCongruence' | 'geoIsosceles' | 'geoTriangleProofs' | 'geoParallelograms' | 'geoSpecialQuads' | 'geoTrapezoids' | 'ionicNames' | 'molecularAcids'
 export type CalcId = 'ti84' | 'nspire'
 
 /** Fine-grained property tags. Canonical steps carry one; the engine's move detector reports one. */
@@ -578,6 +578,30 @@ export type ErrorPatternId =
   | 'geo_not_most_specific'
   | 'geo_converse_property'
   | 'geo_slope_inverted'
+  // precalculus Unit 4, trigonometric functions (engine/trig; content/modules/angleMeasure, unitCircle). Each id is
+  // the exact value, angle or quadrant that slip gives on THIS problem, computed by the core; never a right answer.
+  | 'trig_conversion_inverted'
+  | 'trig_pi_dropped'
+  | 'trig_pi_kept'
+  | 'trig_coterminal_half_turn'
+  | 'trig_coterminal_short'
+  | 'trig_negative_direction'
+  | 'trig_reference_from_y_axis'
+  | 'trig_reference_wrong_way'
+  | 'trig_reference_is_coterminal'
+  | 'trig_sign_quadrant'
+  | 'trig_sin_cos_swapped'
+  | 'trig_tan_inverted'
+  | 'trig_reciprocal_mixed'
+  | 'trig_reciprocal_missing'
+  | 'trig_zero_for_undefined'
+  | 'trig_undefined_for_zero'
+  | 'trig_r_left_out'
+  | 'trig_r_not_rooted'
+  | 'trig_arc_degrees'
+  | 'trig_sector_no_half'
+  | 'trig_sector_r_not_squared'
+  | 'trig_arc_sector_swapped'
   // behavioral (ui)
   | 'abandoned'
 

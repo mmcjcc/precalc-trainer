@@ -12,6 +12,9 @@ import { gradePtStage, PT_KEYS, ptWork } from '@/content/modules/periodic'
 import { gradeEgPart } from '@/content/modules/expLogGraphs'
 import { gradeEmPart } from '@/content/modules/expModels'
 import { partEntries, partsWork } from '@/content/modules/explog/parts'
+import { gradeAmPart } from '@/content/modules/angleMeasure'
+import { gradeUcPart } from '@/content/modules/unitCircle'
+import { trigEntries } from '@/content/modules/trig/parts'
 import { gradeNmStage, NM_KEYS, nmWork } from '@/content/modules/nomenclature'
 import { reasonLabel } from '@/content/modules/geometry/reasons'
 import { checkSquareLine, configurationMistakes, gradeAxisOfSymmetry, gradeConfiguration, gradeLogEquation, gradeLogValue, gradeVertex, squareMistakes, syntheticMistakes, vertexMistakes } from '@/engine'
@@ -38,6 +41,7 @@ import {
   verdictFromPt,
   verdictFromExpLogPart,
   verdictFromNm,
+  verdictFromTrigPart,
 } from '@/problem/tutorContext'
 import { ERROR_PATTERNS } from '@/engine'
 import type { Attempt, AttemptStep } from '@/store'
@@ -1090,6 +1094,44 @@ describe('buildTutorContext', () => {
     expect(done.finished).toBe(true)
     const wrong = verdictFromExpLogPart(gradeEmPart(w, w.trapStage, w.trapAnswer), w.trapAnswer)
     expect(wrong?.mistake?.id).toBe(w.trap)
+  })
+
+  it('describes an angle problem and a unit-circle problem part by part, with words for the math and the figure, and the named trig_ slip', () => {
+    const angle = generateProblem('angleMeasure', 'am.reference', 3)
+    if (angle.answer.type !== 'angleMeasure') throw new Error('expected an angle problem')
+    const a = angle.answer
+    expect(a.stages.map((s) => s.id)).toEqual(['quadrant', 'reference'])
+    const entries = { quadrant: a.stages[0]!.answerText, reference: 'pi/6' }
+    const ctx = buildTutorContext(angle, attempt('am-1', { moduleId: 'angleMeasure', final: { polyEntries: entries } }), null, false)
+    expect(ctx.subject).toBe('precalculus')
+    expect(ctx.kind).toBe('angleMeasure')
+    // The statement is words: the prompt's KaTeX read back, and the figure described.
+    expect(ctx.statement).toContain('17π/3')
+    expect(ctx.statement).not.toMatch(/\\frac|\$/)
+    expect(ctx.statement).toContain(`Figure: ${a.figure.ariaLabel}`)
+    // A quadrant is said by its name, not its value.
+    expect(ctx.work).toEqual([`Where the terminal side lies: ${a.stages[0]!.choices!.find((c) => c.value === a.stages[0]!.answerText)!.label}`, 'Reference angle: pi/6'])
+    expect(ctx.answer).toBe(a.expectedDisplay)
+    for (const line of ctx.canonical) expect(line).not.toMatch(/\\|\$/)
+    const slip = gradeAmPart(a, a.trapStage!, a.trapAnswer!)
+    const verdict = verdictFromTrigPart(slip, a.trapAnswer)
+    expect(verdict?.status).toBe('wrong')
+    expect(verdict?.mistake?.id).toBe(a.trap)
+    expect(verdict?.mistake?.lesson).toBe(ERROR_PATTERNS[a.trap!].lesson)
+    expect(verdict?.line).toBe(a.trapAnswer)
+    // Not simplest form, or a calculator decimal, is not a graded answer: a parse error for the tutor.
+    expect(verdictFromTrigPart(gradeAmPart(a, 'reference', '1.047'))?.status).toBe('parse_error')
+    expect(buildTutorContext(angle, attempt('am-2', { moduleId: 'angleMeasure' }), null, false).work).toEqual([])
+
+    const circle = generateProblem('unitCircle', 'uc.point', 1)
+    if (circle.answer.type !== 'unitCircle') throw new Error('expected a unit-circle problem')
+    const c = circle.answer
+    const done = buildTutorContext(circle, attempt('uc-1', { moduleId: 'unitCircle', final: { polyEntries: trigEntries(c.stages) } }), null, true)
+    expect(done.kind).toBe('unitCircle')
+    expect(done.work).toEqual(c.stages.map((s) => `${s.label}: ${s.answerText}`))
+    expect(done.finished).toBe(true)
+    expect(verdictFromTrigPart(gradeUcPart(c, c.trapStage!, c.trapAnswer!), c.trapAnswer)?.mistake?.id).toBe(c.trap)
+    expect(verdictFromTrigPart(gradeUcPart(c, 'r', '1/√2'))?.status).toBe('parse_error')
   })
 
   it('describes a Unit 4 congruence, an isosceles triangle, and a proof without changing the geometry kind', () => {

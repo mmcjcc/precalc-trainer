@@ -33,6 +33,7 @@ const unit1Titles = modulesInUnit(precalc.units[0]!).map((module) => module.titl
 const unit2Titles = modulesInUnit(precalc.units[1]!).map((module) => module.title)
 const ch7Titles = ['Ions and ionic compounds', 'Molecular compounds, acids, and hydrates']
 const unit3Titles = modulesInUnit(precalc.units[2]!).map((module) => module.title)
+const unit4Titles = modulesInUnit(precalc.units[3]!).map((module) => module.title)
 const unit5Titles = ['Parallelograms', 'Rectangles, rhombuses, and squares', 'Trapezoids, kites, and midsegments']
 
 function done(at: number, moduleId: string, skill: string): Ev {
@@ -93,8 +94,8 @@ describe('Home: classes and units', () => {
 
     fireEvent.keyDown(tablist, { key: 'Home' })
     expect(screen.getByRole('tab', { name: 'Honors Precalculus', selected: true })).toBeTruthy()
-    // A first visit lands on the last unit that has modules: Unit 3.
-    expect(moduleTitles()).toEqual(unit3Titles)
+    // A first visit lands on the last unit that has modules: Unit 4.
+    expect(moduleTitles()).toEqual(unit4Titles)
 
     fireEvent.keyDown(tablist, { key: 'ArrowLeft' })
     expect(screen.getByRole('tab', { name: 'Honors Precalculus', selected: true })).toBeTruthy()
@@ -140,8 +141,10 @@ describe('Home: classes and units', () => {
 
   it('shows only the selected unit, with the review card on precalc Unit 1 only', () => {
     renderHome()
-    // A first visit lands on the last unit that has modules (Unit 3). Unit 1 is one press away.
-    expect(moduleTitles()).toEqual(unit3Titles)
+    // A first visit lands on the last unit that has modules (Unit 4). Unit 1 is one press away.
+    expect(moduleTitles()).toEqual(unit4Titles)
+    expect(moduleTitles()).toEqual(['Angles and radian measure', 'The unit circle and trig functions of any angle'])
+    expect(screen.getByRole('button', { name: /Unit 4/, pressed: true }).textContent).toMatch(/Trigonometric functions/)
     expect(screen.queryByRole('heading', { name: 'Unit 1 review' })).toBeNull()
     fireEvent.click(screen.getByRole('button', { name: /Unit 1/ }))
     expect(moduleTitles()).toEqual(unit1Titles)
