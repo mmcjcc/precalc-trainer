@@ -70,6 +70,7 @@ export function normalizeSettings(raw: unknown): Settings {
   if (isDailyGoal(src.dailyGoal)) settings.dailyGoal = src.dailyGoal
   if (typeof src.vibrate === 'boolean') settings.vibrate = src.vibrate
   if (src.lineEntry === 'type' || src.lineEntry === 'pick') settings.lineEntry = src.lineEntry
+  if (typeof src.seenStepGuide === 'boolean') settings.seenStepGuide = src.seenStepGuide
   if (isRecord(src.unitByCourse)) {
     const unitByCourse: Record<string, string> = {}
     for (const [key, value] of Object.entries(src.unitByCourse)) {
@@ -95,6 +96,8 @@ const DEVICE_SETTINGS = ['mathKeypad', 'rewards', 'vibrate', 'lineEntry'] as con
 export function settingsAfterImport(current: Settings, imported: Settings, mode: ImportMode): Settings {
   if (mode === 'replace') {
     const next: Settings = { ...imported, testMode: current.testMode, seenA2HS: current.seenA2HS }
+    if (current.seenStepGuide === undefined) delete next.seenStepGuide
+    else next.seenStepGuide = current.seenStepGuide
     const keep = <K extends (typeof DEVICE_SETTINGS)[number]>(key: K) => {
       delete next[key]
       const mine = current[key]

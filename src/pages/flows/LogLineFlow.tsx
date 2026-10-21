@@ -475,7 +475,7 @@ function Body({ instance, attempt, flags, templateTitle, completion, finish, mod
                 autoFocus
                 label="Next line"
                 submitLabel="Check this line"
-                placeholder="next line of your work"
+                placeholder={`Step ${steps.length + 1}: your next line`}
                 stripKeys={LOG_KEYS}
                 toTex={safeLatex}
               />

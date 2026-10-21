@@ -12,6 +12,7 @@ import { useReviewChrome } from '@/pages/review/chrome'
 import { useSetChrome } from '@/pages/set/chrome'
 import { SetDots, SetSkipMenu } from '@/components/set/SetProgress'
 import { useIdleNudge } from '@/problem/useIdleNudge'
+import { isStepKind, pickModule } from '@/problem/solveStyle'
 import { completionWords, type Completion } from '@/problem/useAttempt'
 import type { ProgressLine } from '@/problem/stepEngine'
 import { useFullScreenPage } from '@/components/appChrome'
@@ -27,6 +28,7 @@ import { isNativeApp } from '@/components/nativeApp'
 import { PageLayout, RailToolbar, type RailPanel } from '@/components/PageLayout'
 import { PickLineOffer } from '@/components/LineCards'
 import { FinishRewards, FinishSheet, useFinish } from '@/components/rewards/Finish'
+import { StepGuide } from '@/components/StepGuide'
 import { StuckProvider, type StuckApi } from '@/components/Stuck'
 import { useBreakpoint } from '@/components/useBreakpoint'
 import { useKeymap } from '@/components/useKeymap'
@@ -387,6 +389,7 @@ export function ProblemFrame({ instance, attempt, flags, templateTitle, progress
   // Rewards on: a phone gets the finish sheet in the card's place (closing it leaves a small card); a wide screen
   // shows the same rewards inside the card. Rewards off: the card as it was.
   const rewardsOn = useRewardsOn()
+  const stepGuideSeen = useStore((s) => s.settings.seenStepGuide === true)
   const finishData = useFinish(rewardsOn && completion ? attempt?.id : undefined, instance.skill)
   const phoneFinish = phone && finishData !== null
   const [sheetClosedFor, setSheetClosedFor] = useState<Completion | null>(null)
@@ -427,6 +430,7 @@ export function ProblemFrame({ instance, attempt, flags, templateTitle, progress
   const spoken = completion ? completionWords(completion.summary, completion.newlyMastered, templateTitle) : null
   const announcement = spoken ? `${spoken.message}. ${spoken.detail}` : ''
   const why = lineVerdict && lineVerdict.tone !== 'info' ? lineVerdict.why : undefined
+  const showStepGuide = !completion && isStepKind(instance.kind) && !stepGuideSeen
 
   return (
     <StuckProvider value={stuckApi}>
@@ -486,6 +490,9 @@ export function ProblemFrame({ instance, attempt, flags, templateTitle, progress
               </div>
             </header>
           )}
+
+          {/* A step-by-step problem opens with how it works, until she closes the guide once. */}
+          {showStepGuide && <StepGuide pick={pickModule(instance.moduleId)} />}
 
           {children}
 
