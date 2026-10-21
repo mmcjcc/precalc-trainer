@@ -292,7 +292,7 @@ function ElectronBody({ instance, attempt, flags, templateTitle, completion, fin
             Undo
           </button>
           {!done && (
-            <button type="button" onClick={submitOrder} className="min-h-11 rounded-xl bg-navy px-4 font-semibold text-white hover:bg-navy-600">
+            <button type="button" onClick={submitOrder} className="btn-chunky min-h-11 rounded-xl bg-navy px-4 font-semibold text-white hover:bg-navy-600">
               Check order
             </button>
           )}

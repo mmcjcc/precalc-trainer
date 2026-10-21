@@ -267,16 +267,20 @@ describe('LogLineFlow hints', () => {
   )
 })
 
+/** A one-step problem, ln(x) = k: the first line she writes is the solution. */
+function oneLineSeed(): number {
+  for (let seed = 1; seed < 600; seed++) {
+    const a = generateProblem('expLogEquations', 'ee.logarithmic', seed).answer
+    if (a.type === 'expLogEquations' && /^ln\(x\) = \d$/.test(a.equation)) return seed
+  }
+  throw new Error('no ln(x) = k in 600 seeds')
+}
+
 describe('ExpLogEquationsFlow, fixes from the review', () => {
   it(
     'a line that already is the solution goes into the answer box, and one wrong answer counts once',
     () => {
-      // A one-step problem, ln(x) = k: the first line she writes is the solution.
-      let seed = 1
-      for (; seed < 600; seed++) {
-        const a = generateProblem('expLogEquations', 'ee.logarithmic', seed).answer
-        if (a.type === 'expLogEquations' && /^ln\(x\) = \d$/.test(a.equation)) break
-      }
+      const seed = oneLineSeed()
       const p = generateProblem('expLogEquations', 'ee.logarithmic', seed)
       if (p.answer.type !== 'expLogEquations') throw new Error('ee.logarithmic')
       renderAt(problemPath('expLogEquations', 'ee.logarithmic', seed))
@@ -284,8 +288,11 @@ describe('ExpLogEquationsFlow, fixes from the review', () => {
       click('Check this line')
       expect(accepted()).toHaveLength(1)
       expect(field('Answer').value.replace(/\s+/g, '')).toBe(p.answer.path[0]!.replace(/\s+/g, ''))
+      // The composer offers the check where she is, until the box holds something else.
+      expect(document.querySelector('[data-answer-ready]')!.textContent).toContain('Your last line is in the answer box.')
       // The same wrong answer twice, once with a trailing space, is one recorded attempt.
       type('Answer', 'x = 3')
+      expect(document.querySelector('[data-answer-ready]')).toBeNull()
       click('Check the answer')
       type('Answer', 'x = 3 ')
       click('Check the answer')
@@ -294,6 +301,25 @@ describe('ExpLogEquationsFlow, fixes from the review', () => {
       click('Check the answer')
       expect(finals().at(-1)).toMatchObject({ correct: true })
       expect(doneEvent()).toBeTruthy()
+    },
+    FLOW_TIMEOUT,
+  )
+
+  it(
+    '"Check my answer" in the composer checks the line that went into the answer box, and finishes',
+    () => {
+      const seed = oneLineSeed()
+      const p = generateProblem('expLogEquations', 'ee.logarithmic', seed)
+      if (p.answer.type !== 'expLogEquations') throw new Error('ee.logarithmic')
+      renderAt(problemPath('expLogEquations', 'ee.logarithmic', seed))
+      expect(document.querySelector('[data-answer-ready]')).toBeNull()
+      type('Next line', p.answer.path[0]!)
+      click('Check this line')
+      expect(screen.getByText(/It is in the answer box below\./)).toBeTruthy()
+      click('Check my answer')
+      expect(finals()).toMatchObject([{ correct: true }])
+      expect(doneEvent()).toMatchObject({ finalCorrect: true })
+      expect(document.querySelector('[data-answer-ready]')).toBeNull()
     },
     FLOW_TIMEOUT,
   )

@@ -3,6 +3,7 @@ import { generateProblem, getCourse, getTemplate, modulesInUnit } from '@/conten
 import { defaultKnobs, flagsFromKnobs } from '@/problem/url'
 import type { ModuleId } from '@/shared/types'
 import { emptyRewards, type Ev, type MistakeCardState, type RewardsState } from '@/store/types'
+import { stepByStepModule } from '@/problem/solveStyle'
 import { buildSet, classTypes, pickSetTypes, SET_SIZE, setSizeFor, workingUnit, type ClassType } from './buildSet'
 
 const DAY = 86_400_000
@@ -210,6 +211,24 @@ describe('pickSetTypes: the rules in order', () => {
     expect(picks(r)).toEqual(['extra', 'extra', 'extra'])
   })
 
+  it('one problem in each set is step by step when the class has one: it takes the last unit pick, never a mistake or a review', () => {
+    const steps = (t: ClassType): ClassType => ({ ...t, steps: true })
+    const withSteps = TYPES.map((t) => (t.templateId === 'a4' || t.templateId === 'b2' ? steps(t) : t))
+    // An empty history: a1, a2, then the unit's step type a4 in place of a3.
+    const r = pick([], { types: withSteps })
+    expect(ids(r)).toEqual(['a1', 'a2', 'a4'])
+    expect(picks(r)).toEqual(['unit', 'unit', 'unit'])
+    // Already one in the set: nothing changes.
+    expect(ids(pick([practiced('a4', NOW - DAY)], { types: withSteps }))).toEqual(['a4', 'a1', 'a2'])
+    // A mistake and a review keep their places; the unit pick gives way.
+    const events = [rejected('a1', NOW - DAY, 'no_sign_flip'), ...mastered('a2', NOW - 20 * DAY)]
+    const kept = pick(events, { types: withSteps })
+    expect(picks(kept).slice(0, 2)).toEqual(['mistake', 'review'])
+    expect(ids(kept)[2]).toBe('a4')
+    // A class with no step types: unchanged.
+    expect(ids(pick([]))).toEqual(['a1', 'a2', 'a3'])
+  })
+
   it('a class with fewer types makes a shorter set; no class, no set', () => {
     expect(ids(pick([], { types: [type('u1', 'a1'), type('u1', 'a2')] }))).toEqual(['a1', 'a2'])
     expect(ids(pick([], { size: 2 }))).toEqual(['a1', 'a2'])
@@ -224,11 +243,14 @@ describe('buildSet on a real class', () => {
   const chemistry = getCourse('chemistry')!
   const unit1Types = modulesInUnit(precalc.units[0]!).flatMap((m) => m.templates.map((t) => t.id))
 
-  it('an empty history: three problems from the first unit, in Home’s order, at the default difficulty, with fresh seeds', () => {
+  it('an empty history: the first unit in Home’s order, one of them step by step, at the default difficulty, with fresh seeds', () => {
     const set = buildSet({ course: precalc, events: [], rewards: emptyRewards(), now: NOW, seed: 42 })
     expect(set.courseId).toBe('precalc')
     expect(set.unitId).toBe('unit1')
-    expect(set.problems.map((p) => p.templateId)).toEqual(unit1Types.slice(0, 3))
+    // The unit's first two types, then its first step-by-step type in place of the third (none of the first three is one).
+    const unit1Steps = modulesInUnit(precalc.units[0]!).filter((m) => stepByStepModule(m.id)).flatMap((m) => m.templates.map((t) => t.id))
+    const expected = [...unit1Types.slice(0, 2), unit1Steps[0]!]
+    expect(set.problems.map((p) => p.templateId)).toEqual(expected)
     expect(new Set(set.problems.map((p) => p.seed)).size).toBe(3)
     for (const p of set.problems) {
       const template = getTemplate(p.moduleId as ModuleId, p.templateId)
@@ -238,7 +260,7 @@ describe('buildSet on a real class', () => {
     // The same input gives the same set; another seed gives other problems of the same types.
     expect(buildSet({ course: precalc, events: [], rewards: emptyRewards(), now: NOW, seed: 42 })).toEqual(set)
     const other = buildSet({ course: precalc, events: [], rewards: emptyRewards(), now: NOW, seed: 43 })
-    expect(other.problems.map((p) => p.templateId)).toEqual(unit1Types.slice(0, 3))
+    expect(other.problems.map((p) => p.templateId)).toEqual(expected)
     expect(other.problems.map((p) => p.seed)).not.toEqual(set.problems.map((p) => p.seed))
   })
 

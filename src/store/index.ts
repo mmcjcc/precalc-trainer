@@ -13,6 +13,7 @@ import { useShallow } from 'zustand/react/shallow'
 import type { ChipId } from '@/shared/types'
 import { buildBackup, importBackup, normalizeSettings, settingsAfterImport, type ImportMode } from './backup'
 import { compact } from './compaction'
+import { mergeMilestones } from './milestones'
 import { computeRewards, dailyGoalOf, foldRewards, normalizeRewards, rewardsOn, settleDays, type RewardsView } from './rewards'
 import {
   bumpStreak,
@@ -52,6 +53,7 @@ import {
 export * from './types'
 export * from './selectors'
 export * from './rewards'
+export * from './milestones'
 export { compact } from './compaction'
 export { STORAGE_KEYS, saveReturnTo, takeReturnTo } from './storage'
 export { relativeDays, daysAgo, dayKey, isoWeekKey, startOfIsoWeek } from './time'
@@ -163,6 +165,9 @@ interface Actions {
   leaveAttempt: (now?: number) => void
   // drill
   recordDrillAnswer: (skill: string, correct: boolean, kind: 'property' | 'legal', now?: number) => void
+  // celebrations
+  /** Streak milestones now celebrated (store/milestones.ts): kept in the rewards' slice so each happens once. */
+  noteMilestones: (milestones: readonly number[]) => void
   // maintenance
   resetProgress: () => void
   exportJson: () => string
@@ -537,6 +542,15 @@ export const useStore = create<StoreState>()(
         const ev: Ev = { t: 'drill_answer', at: now, skill, correct, kind }
         set((s) => ({ events: [...s.events, ev] }))
       },
+
+      // --- celebrations -----------------------------------------------------
+      noteMilestones: (milestones) =>
+        set((s) => {
+          const merged = mergeMilestones(s.rewards.milestones, milestones)
+          const had = s.rewards.milestones ?? []
+          if (merged.length === had.length && merged.every((m, i) => m === had[i])) return {}
+          return { rewards: { ...s.rewards, milestones: merged } }
+        }),
 
       // --- maintenance ------------------------------------------------------
       resetProgress: () => {

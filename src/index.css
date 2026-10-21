@@ -171,6 +171,101 @@ kbd.keycap {
 /* KaTeX: let long lines scroll instead of overflowing the phone width. */
 .katex-display { margin: 0.25rem 0; overflow-x: auto; overflow-y: hidden; }
 
+/* ---- Juice (components/juice, docs/progress/phone-juice.md). Every animation here is off under reduced motion. ---- */
+
+/* Chunky primary buttons (Check, the keypad's Check, Start a set, Next in set, See results, Next problem, Another
+   set): a darker bottom edge that presses down on tap. The edge is a shadow, so the gold focus ring keeps it. */
+.btn-chunky {
+  --chunky-edge: #1b2353;
+  --chunky-depth: 4px;
+  box-shadow: 0 var(--chunky-depth) 0 var(--chunky-edge);
+  transition: transform 70ms ease-out, box-shadow 70ms ease-out, background-color 150ms ease-out;
+  -webkit-tap-highlight-color: transparent;
+}
+.btn-chunky.bg-coral { --chunky-edge: #c9464c; }
+.btn-chunky.kp-key { --chunky-depth: 3px; }
+.btn-chunky:focus-visible { box-shadow: 0 var(--chunky-depth) 0 var(--chunky-edge), 0 0 0 1px var(--color-navy); }
+.btn-chunky:active:not(:disabled) { transform: translateY(var(--chunky-depth)); box-shadow: 0 0 0 var(--chunky-edge); }
+
+/* A kept line (components/WorkedColumn.tsx): it flashes green once and its check pops. */
+@keyframes juice-flash {
+  0% { background-color: var(--color-ok-100); border-color: var(--color-ok); }
+  100% { background-color: #fff; border-color: var(--color-navy-100); }
+}
+@keyframes juice-pop {
+  0% { transform: scale(1); }
+  45% { transform: scale(1.55); }
+  100% { transform: scale(1); }
+}
+.juice-kept { animation: juice-flash 900ms ease-out 1; }
+.juice-pop { display: inline-block; animation: juice-pop 420ms cubic-bezier(0.3, 1.6, 0.5, 1) 1; }
+
+/* "+10" rising from a kept line or a part (components/juice/XpFloats.tsx): page coordinates, over the sheets and the
+   keypad, under the toasts. */
+.xp-float-layer { position: absolute; left: 0; top: 0; width: 0; height: 0; z-index: 45; pointer-events: none; }
+.xp-float {
+  position: absolute;
+  white-space: nowrap;
+  font-size: 1.125rem;
+  font-weight: 800;
+  color: var(--color-ok);
+  text-shadow: 0 1px 0 #fff, 0 0 6px #fff;
+  animation: xp-float 1000ms ease-out both;
+}
+@keyframes xp-float {
+  0% { opacity: 0; transform: translate(-50%, 6px) scale(0.85); }
+  15% { opacity: 1; transform: translate(-50%, -6px) scale(1.12); }
+  70% { opacity: 1; }
+  100% { opacity: 0; transform: translate(-50%, -52px) scale(1); }
+}
+
+/* The combo pill (components/juice/ComboPill.tsx): it slides in, and its count bumps when it goes up. Where a
+   problem has no composer, it waits at the bottom of the screen, above the keypad. */
+@keyframes combo-in {
+  from { opacity: 0; transform: translateY(10px) scale(0.85); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes combo-bump {
+  0% { transform: scale(1); }
+  40% { transform: scale(1.18); }
+  100% { transform: scale(1); }
+}
+.combo-pill { animation: combo-in 260ms cubic-bezier(0.3, 1.4, 0.5, 1) both; }
+.combo-count { display: inline-block; animation: combo-bump 320ms ease-out 1; }
+.combo-dock { position: sticky; bottom: calc(var(--keypad-h, 0px) + 0.75rem); z-index: 20; display: flex; justify-content: flex-end; pointer-events: none; }
+
+/* The streak flame flares once when today's goal is met (components/juice/Flame.tsx). */
+@keyframes flame-flare {
+  0% { transform: scale(1); filter: drop-shadow(0 0 0 rgb(249 97 103 / 0)); }
+  35% { transform: scale(1.45) rotate(-6deg); filter: drop-shadow(0 0 8px rgb(249 97 103 / 0.7)); }
+  70% { transform: scale(0.95) rotate(3deg); }
+  100% { transform: scale(1); filter: drop-shadow(0 0 0 rgb(249 97 103 / 0)); }
+}
+.flame-flare { transform-origin: 50% 85%; animation: flame-flare 1000ms ease-out 1; }
+
+/* Confetti (components/juice/Confetti.tsx): up, then falling, then gone. Over everything, never in the way. */
+.confetti-layer { position: fixed; inset: 0; z-index: 60; pointer-events: none; overflow: hidden; }
+.confetti-bit { position: absolute; animation-name: confetti-fly; animation-fill-mode: both; will-change: transform, opacity; }
+@keyframes confetti-fly {
+  0% { opacity: 1; transform: translate(-50%, -50%) rotate(0deg); animation-timing-function: cubic-bezier(0.2, 0.7, 0.4, 1); }
+  40% {
+    opacity: 1;
+    transform: translate(calc(-50% + var(--dx) * 0.55), calc(-50% + var(--up))) rotate(calc(var(--rot) * 0.4));
+    animation-timing-function: cubic-bezier(0.5, 0, 0.9, 0.6);
+  }
+  100% { opacity: 0; transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--fall))) rotate(var(--rot)); }
+}
+
+/* The streak milestone banner (components/juice/Milestone.tsx), under the status bar. */
+.milestone-host { padding-top: env(safe-area-inset-top, 0px); }
+@keyframes milestone-in {
+  from { opacity: 0; transform: translateY(-16px) scale(0.95); }
+  to { opacity: 1; transform: none; }
+}
+.milestone-banner { animation: milestone-in 320ms cubic-bezier(0.3, 1.4, 0.5, 1) both; }
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
+  .juice-kept, .juice-pop, .xp-float, .combo-pill, .combo-count, .flame-flare, .confetti-bit, .milestone-banner { animation: none !important; }
+  .btn-chunky:active:not(:disabled) { transform: none; }
 }

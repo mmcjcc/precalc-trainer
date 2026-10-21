@@ -15,7 +15,7 @@ disagree, research wins** (the spec's random-sampling equivalence test is vacuou
 | Content | `src/content/modules` | 5 modules: number line (1 template), inequalities (4), even/odd (2), inverses (6: linear, cube root, fraction coefficient, rational, Möbius, quadratic not one-to-one), properties drill (twin-pair bank), difference quotient (4: linear, quadratic, rational, radical; see docs/progress/diff-quotient.md). Tests push every canonical path, and the solve-first alternative for inverses, through the context engine for 25 seeds. |
 | Calculator panels | `src/content/calc` | TI-84 Plus CE and TI-Nspire CX II for 11 problem families, expression / k / f(k) / twin substituted. |
 | Store | `src/store` | Append-only event log with weekly compaction, attempt resume, selectors (mastery, first-try, hint rate, property accuracy, pattern counts, habits, streak, weak spots), rewards (`rewards.ts`: XP, daily goal, goal streak, mistake cards, type rings; slice `pct.rewards`), export/import. |
-| UI | `src/App.tsx`, `src/pages`, `src/pages/flows`, `src/problem`, `src/components` | Complete. `pages/Problem.tsx` dispatches to the inequality, number-line, even/odd and inverse flows; Home, Module, Progress, Settings, Drill, Sandbox and the PIN gate. Graph and calculator panels stay behind a reveal button until the problem is complete (they show the answer). On phones the panel toolbar sits in the composer, or at the top when a screen has no composer. The first-spike demo UI is removed. Sets of three problems (`/set`, `src/session`) and the phone's bottom tab bar: §7. Guided mode (pick the next line from three cards; exponential and log equations): §7. |
+| UI | `src/App.tsx`, `src/pages`, `src/pages/flows`, `src/problem`, `src/components` | Complete. `pages/Problem.tsx` dispatches to the inequality, number-line, even/odd and inverse flows; Home, Module, Progress, Settings, Drill, Sandbox and the PIN gate. Graph and calculator panels stay behind a reveal button until the problem is complete (they show the answer). On phones the panel toolbar sits in the composer, or at the top when a screen has no composer. The first-spike demo UI is removed. Sets of three problems (`/set`, `src/session`) and the phone's bottom tab bar: §7. Guided mode (pick the next line from three cards; exponential and log equations): §7. Juice (sounds, the combo, confetti and motion, the streak flame and milestones; `src/components/juice`): §7. |
 | Deploy | `Dockerfile`, `nginx.conf`, `docker/`, `.github/workflows`, `deploy/azure.md` | Written. The image builds and passes `deploy/smoke.sh` in GitHub Actions (Docker is not installed on the dev box). On Azure it runs behind Container Apps sign-in with Google plus an email allowlist in nginx (`docker/25-allowlist.sh`, `deploy/azure-setup.sh`). |
 
 **Verification** (2026-09-15): `npm test` 28 files / 297 tests; `npm run test:sweep` pushes every canonical step and its mutations through the engine; browser QA and a two-agent review are recorded in `docs/progress/qa.md` and `docs/progress/review-findings.md` (all 23 findings fixed).
@@ -260,6 +260,25 @@ canonical step's rule card, `step_accepted.rule`) picked right twice since she l
 window, the rings and the compaction's kept five (`compaction.ts` `inMasteryWindow`). A line kept after its cards were
 shown counts as picked however she entered it (`Attempt.picks`). The answer is always typed. To add a line-by-line
 type, add its source to `cardSources.ts`. See `docs/progress/phone-guided.md`.
+
+Juice (works with rewards on or off; `components/juice`): sounds synthesized with Web Audio (`sounds.ts`: one AudioContext
+made lazily and woken by a gesture, asleep when idle or hidden, silent where Web Audio is missing or blocked), chosen per
+moment from the event log by `useJuice.ts` + `cues.ts` (mounted once in the app shell; only for events she just added, as
+the vibrate tick): a chime that climbs with the combo, a soft "nope" for a slip, an arpeggio at a finish, and with rewards
+on a pop for a squashed mistake and a sparkle for the goal or a streak milestone; the set's results play a fanfare
+(`SetSummary`). Settings "Sounds" (`settings.sounds`, a device setting like Vibrate): on by default in the store app, off
+in the family app. The combo (`session/combo.ts`, pure): right lines and parts in a row on the first try, over the problem
+and the running set's earlier problems (`SetChrome.attemptIds`); a slip resets it. Its pill (`ComboPill`, rewards on, from
+3) is in the composer (a phone: above the verdict line; a wide screen: the top of the composer box), or in a sticky dock
+above the keypad where a problem has no composer. Motion, all off under prefers-reduced-motion (`motion.ts`; where the
+preference cannot be read, nothing moves): a kept line flashes and its check pops (`WorkedColumn`, which marks each row
+`data-kept-step`), "+10" rises from the line or part that earned it (rewards on), XP counts up on the finish sheet and the
+set's results (`CountUp`), confetti (CSS particles) on the set's results, the goal met, a type newly mastered and a streak
+milestone, rings sweep from before to now (`GoalRing from`), and `btn-chunky` (index.css) gives the main actions (every
+Check, the keypad's Check, Start a set, Next problem / Next in set / See results, Another set) a darker edge that presses
+down. The streak: a flame on the Today card (none, 1-6, 7-29, 30+ days; lit, with one flare a day, once today's goal is
+met) and a one-time banner the first time the streak reaches 7, 30 and 100 days (`RewardsState.milestones`, in backups;
+`store/milestones.ts`). See `docs/progress/phone-juice.md`.
 
 Problem-page flows by kind:
 - **inequality**: worked column starts at `instance.start`; steps until progress says solved; then

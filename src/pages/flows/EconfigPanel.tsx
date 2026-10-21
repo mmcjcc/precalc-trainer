@@ -377,7 +377,7 @@ function EconfigForm({ instance, attempt, flags, templateTitle, completion, fini
         </p>
       )}
       {!done && (
-        <button type="submit" className="min-h-11 rounded-xl bg-navy px-4 font-semibold text-white hover:bg-navy-600">
+        <button type="submit" className="btn-chunky min-h-11 rounded-xl bg-navy px-4 font-semibold text-white hover:bg-navy-600">
           Check answer
         </button>
       )}

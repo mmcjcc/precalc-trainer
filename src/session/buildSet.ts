@@ -19,6 +19,7 @@
  */
 import { modulesInUnit, type CourseDef } from '@/content'
 import { mixSeed } from '@/content/rng'
+import { stepByStepModule } from '@/problem/solveStyle'
 import { defaultKnobs, flagsFromKnobs } from '@/problem/url'
 import { computeRewards, DEFAULT_DAILY_GOAL, openCards, REVIEW_AFTER_MS, skillRings, type RingLevel } from '@/store/rewards'
 import type { Ev, RewardsState } from '@/store/types'
@@ -39,6 +40,8 @@ export interface ClassType {
   templateId: string
   /** The type's default difficulty, written as the problem URL writes it (`d=`). */
   flags: string
+  /** Solved step by step, one checked line at a time (src/problem/solveStyle.ts). Absent: an answer or parts. */
+  steps?: boolean
 }
 
 export interface PickedType extends ClassType {
@@ -54,7 +57,13 @@ export function classTypes(course: CourseDef): ClassType[] {
       for (const template of module.templates) {
         if (seen.has(template.id)) continue
         seen.add(template.id)
-        out.push({ unitId: unit.id, moduleId: module.id, templateId: template.id, flags: flagsFromKnobs(defaultKnobs(template.knobs)) })
+        out.push({
+          unitId: unit.id,
+          moduleId: module.id,
+          templateId: template.id,
+          flags: flagsFromKnobs(defaultKnobs(template.knobs)),
+          ...(stepByStepModule(module.id) ? { steps: true } : {}),
+        })
       }
     }
   }
@@ -171,6 +180,26 @@ export function pickSetTypes(input: PickInput): PickResult {
 
   // Still short: the class is nearly all mastered. Mastered types, the working unit's first.
   for (const unit of tour) for (const t of types) if (t.unitId === unit) take(t, 'extra')
+
+  // One step-by-step problem per set when the class has one to give: solving line by line, every line checked, is
+  // the heart of the app, and a set of answer-only types never shows it. The step type the unit rules would reach
+  // first (not mastered if there is one) takes the place of the last unit pick; a mistake or a review keeps its place.
+  if (!picked.some((p) => p.steps)) {
+    const inTour = tour.flatMap((unit) => types.filter((t) => t.unitId === unit && t.steps && free(t)))
+    const step = inTour.find((t) => level(t.templateId) !== 'mastered') ?? inTour[0]
+    if (step) {
+      let at = -1
+      for (let i = picked.length - 1; i >= 0; i--) {
+        const pick = picked[i]!.pick
+        if (pick === 'unit' || pick === 'next' || pick === 'extra') {
+          at = i
+          break
+        }
+      }
+      if (at >= 0) picked[at] = { ...step, pick: picked[at]!.pick }
+      else if (picked.length < size) picked.push({ ...step, pick: 'unit' })
+    }
+  }
 
   return { types: picked, unitId }
 }

@@ -373,7 +373,7 @@ function Body({ instance, attempt, flags, templateTitle, completion, finish, ans
                     keypad={{ keys: s.id === 'solution' ? KEYPAD_SETS.interval : KEYPAD_SETS.number }}
                   />
                 )}
-                <button type="submit" className="min-h-12 rounded-xl bg-navy px-4 font-semibold text-white hover:bg-navy-600">
+                <button type="submit" className="btn-chunky min-h-12 rounded-xl bg-navy px-4 font-semibold text-white hover:bg-navy-600">
                   {CHECK_LABEL[s.id]}
                 </button>
                 {shown && <GradeNote grade={shown.grade} />}

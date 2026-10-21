@@ -1,4 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react'
+import { useMotionAllowed } from '@/components/juice/motion'
 import type { SkillRingInfo } from '@/store'
 import { RING_WORD } from './words'
 
@@ -8,7 +9,8 @@ const TONE: Record<Tone, string> = { navy: 'stroke-navy', ok: 'stroke-ok' }
 
 /**
  * A progress ring (SVG). Decorative: the caller gives it a role and words (color is never the only signal). A value
- * that changes slides there (CSS transition; reduced motion makes it a jump).
+ * that changes sweeps there (CSS transition; reduced motion makes it a jump), from empty too: the arc is always drawn,
+ * invisible at 0.
  */
 export function Ring({ value, size, tone, children }: { value: number; size: number; tone: Tone; children?: ReactNode }) {
   const stroke = Math.max(4, Math.round(size / 10))
@@ -19,29 +21,33 @@ export function Ring({ value, size, tone, children }: { value: number; size: num
     <span className="relative inline-flex shrink-0 items-center justify-center" style={{ width: size, height: size }}>
       <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} aria-hidden="true" focusable="false" className="-rotate-90">
         <circle cx={size / 2} cy={size / 2} r={r} fill="none" strokeWidth={stroke} className="stroke-navy-100" />
-        {v > 0 && (
-          <circle
-            cx={size / 2}
-            cy={size / 2}
-            r={r}
-            fill="none"
-            strokeWidth={stroke}
-            strokeLinecap="round"
-            strokeDasharray={c}
-            strokeDashoffset={c * (1 - v)}
-            className={`${TONE[tone]} transition-[stroke-dashoffset] duration-700 ease-out`}
-            data-ring-value={v.toFixed(2)}
-          />
-        )}
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={r}
+          fill="none"
+          strokeWidth={stroke}
+          strokeLinecap="round"
+          strokeDasharray={c}
+          strokeDashoffset={c * (1 - v)}
+          strokeOpacity={v > 0 ? undefined : 0}
+          className={`${TONE[tone]} transition-[stroke-dashoffset] duration-700 ease-out`}
+          data-ring-value={v > 0 ? v.toFixed(2) : undefined}
+        />
       </svg>
       {children && <span className="absolute inset-0 flex flex-col items-center justify-center text-center leading-none">{children}</span>}
     </span>
   )
 }
 
-/** Today's XP against the goal (or twice the goal while a missed day waits to be mended). */
-export function GoalRing({ xp, target, size = 88, label = 'Today’s goal' }: { xp: number; target: number; size?: number; label?: string }) {
+/**
+ * Today's XP against the goal (or twice the goal while a missed day waits to be mended). `from` (the XP before what she
+ * just did) makes the ring sweep from there to now where it appears after a change: the finish sheet, the set's
+ * results, Home after a problem. What it says is always the XP now.
+ */
+export function GoalRing({ xp, target, size = 88, label = 'Today’s goal', from }: { xp: number; target: number; size?: number; label?: string; from?: number }) {
   const met = xp >= target
+  const shown = useSlide(from === undefined ? xp / target : Math.min(from, xp) / target, xp / target)
   return (
     <span
       role="progressbar"
@@ -52,7 +58,7 @@ export function GoalRing({ xp, target, size = 88, label = 'Today’s goal' }: { 
       aria-valuetext={`${xp} of ${target} XP${met ? ', goal met' : ''}`}
       className="inline-flex"
     >
-      <Ring value={xp / target} size={size} tone={met ? 'ok' : 'navy'}>
+      <Ring value={shown} size={size} tone={met ? 'ok' : 'navy'}>
         <span className={`font-bold text-navy ${size >= 80 ? 'text-2xl' : 'text-lg'}`}>{xp}</span>
         <span className="mt-0.5 text-[11px] text-navy/70">of {target} XP</span>
       </Ring>
@@ -60,15 +66,17 @@ export function GoalRing({ xp, target, size = 88, label = 'Today’s goal' }: { 
   )
 }
 
-/** Mounted at `from`, then slides to `to`: the ring that moved. */
+/** Mounted at `from`, then sweeps to `to`: the ring that moved. At once under reduced motion. */
 function useSlide(from: number, to: number): number {
+  const motion = useMotionAllowed()
+  const sweep = motion && from !== to
   const [value, setValue] = useState(from)
   useEffect(() => {
-    if (from === to) return
+    if (!sweep) return
     const timer = setTimeout(() => setValue(to), 80)
     return () => clearTimeout(timer)
-  }, [from, to])
-  return from === to ? to : value
+  }, [sweep, to])
+  return sweep ? value : to
 }
 
 /** The words a problem-type ring says (its accessible name, and the line under it). */

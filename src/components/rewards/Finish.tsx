@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { BottomSheet } from '@/components/BottomSheet'
+import { CountUp } from '@/components/juice/CountUp'
 import { finishInfo, skillRing, useEvents, useRewards, useStore, type FinishInfo, type SkillRingInfo, type TodayView } from '@/store'
 import { GoalRing, SkillRing } from './Rings'
 import { RING_WORD, awardLines } from './words'
@@ -39,6 +40,12 @@ function cheers(info: FinishInfo): string[] {
   return out
 }
 
+/** Today's XP before this problem: where the goal ring sweeps from. */
+export function xpBefore(data: FinishData): number {
+  const today = data.info.awards.filter((a) => a.day === data.today.day).reduce((s, a) => s + a.xp, 0)
+  return Math.max(0, data.today.xp - today)
+}
+
 /** The line under the goal ring: what is left to the goal (or the double goal), or that it is met. */
 export function goalCaption(today: TodayView): string {
   const left = Math.max(0, today.target - today.xp)
@@ -58,7 +65,11 @@ export function FinishRewards({ data, templateTitle, size = 'card' }: { data: Fi
   const moved = data.before.level !== data.after.level
   return (
     <div className="space-y-3" data-finish-rewards="">
-      {size === 'card' && <p className="text-2xl font-bold text-navy">+{data.info.total} XP</p>}
+      {size === 'card' && (
+        <p className="text-2xl font-bold text-navy">
+          <CountUp value={data.info.total} prefix="+" suffix=" XP" />
+        </p>
+      )}
       {lines.length > 0 && (
         <ul aria-label="XP earned" className="divide-y divide-navy-100 rounded-xl border border-navy-100 bg-white px-3">
           {lines.map((line) => {
@@ -101,7 +112,7 @@ export function FinishRewards({ data, templateTitle, size = 'card' }: { data: Fi
       )}
       <div className="flex flex-wrap items-start justify-center gap-6">
         <div className="flex max-w-36 flex-col items-center gap-1 text-center">
-          <GoalRing xp={data.today.xp} target={data.today.target} size={ringSize} />
+          <GoalRing xp={data.today.xp} target={data.today.target} size={ringSize} from={xpBefore(data)} />
           <p className="text-xs text-navy/80">{goalCaption(data.today)}</p>
         </div>
         <div className="flex max-w-36 flex-col items-center gap-1 text-center">
@@ -145,13 +156,15 @@ export function FinishSheet({
           <span aria-hidden className="flex h-16 w-16 items-center justify-center rounded-full bg-ok text-4xl font-bold text-white">
             ✓
           </span>
-          <p className="mt-2 text-4xl font-bold text-navy">+{data.info.total} XP</p>
+          <p className="mt-2 text-4xl font-bold text-navy">
+            <CountUp value={data.info.total} prefix="+" suffix=" XP" />
+          </p>
         </div>
         <FinishRewards data={data} templateTitle={templateTitle} size="sheet" />
         <button
           type="button"
           onClick={onNext}
-          className="min-h-14 w-full rounded-2xl bg-navy px-4 text-lg font-semibold text-white hover:bg-navy-600"
+          className="btn-chunky min-h-14 w-full rounded-2xl bg-navy px-4 text-lg font-semibold text-white hover:bg-navy-600"
         >
           {nextLabel}
         </button>

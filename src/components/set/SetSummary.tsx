@@ -1,9 +1,12 @@
 import { useEffect, useRef } from 'react'
+import { burstConfetti } from '@/components/juice/Confetti'
+import { CountUp } from '@/components/juice/CountUp'
+import { playCue, soundsOn } from '@/components/juice/sounds'
 import { goalCaption } from '@/components/rewards/Finish'
 import { GoalRing, SkillRing } from '@/components/rewards/Rings'
 import { patternTitle, RING_WORD, skillTitle } from '@/components/rewards/words'
 import { outcomeWords, type SetLine, type SetOutcome, type SetRewards } from '@/session/summary'
-import type { TodayView } from '@/store'
+import { useStore, type TodayView } from '@/store'
 
 /** Shape, not only color: a filled check, a plain check, a dashed ring for skipped. */
 function OutcomeMark({ outcome }: { outcome: SetOutcome }) {
@@ -16,8 +19,10 @@ function OutcomeMark({ outcome }: { outcome: SetOutcome }) {
 
 /**
  * The end of a set, after "See results": a big check, "Set done", each problem with how it went, and with rewards on
- * the set's XP, today's goal ring, the problem-type rings that moved and the mistakes it squashed. One big "Another
- * set" and "Done". It does not know the screen size: one column that the page centers.
+ * the set's XP (counting up from 0), today's goal ring (sweeping from before the set), the problem-type rings that
+ * moved and the mistakes it squashed. A small party when it appears: confetti (not under reduced motion) and, with
+ * Sounds on, a fanfare; rewards on or off. One big "Another set" and "Done". It does not know the screen size: one
+ * column that the page centers.
  */
 export function SetSummary({
   lines,
@@ -38,6 +43,11 @@ export function SetSummary({
   useEffect(() => {
     headingRef.current?.focus({ preventScroll: true })
   }, [])
+  // The party: once, when the results appear.
+  useEffect(() => {
+    burstConfetti({ y: 0.22, count: 64 })
+    if (soundsOn(useStore.getState().settings)) playCue('fanfare')
+  }, [])
 
   return (
     <div className="mx-auto w-full max-w-xl space-y-5" data-set-summary="">
@@ -48,7 +58,11 @@ export function SetSummary({
         <h1 ref={headingRef} tabIndex={-1} className="mt-3 text-3xl font-bold text-navy outline-none">
           Set done
         </h1>
-        {rewards && <p className="mt-1 text-4xl font-bold text-navy">+{rewards.xp} XP</p>}
+        {rewards && (
+          <p className="mt-1 text-4xl font-bold text-navy">
+            <CountUp value={rewards.xp} prefix="+" suffix=" XP" />
+          </p>
+        )}
       </header>
 
       <ol aria-label="Problems in this set" className="divide-y divide-navy-100 rounded-2xl border border-navy-100 bg-white">
@@ -68,7 +82,7 @@ export function SetSummary({
         <section aria-label="What the set earned" className="space-y-3" data-set-rewards="">
           <div className="flex flex-wrap items-start justify-center gap-6">
             <div className="flex max-w-36 flex-col items-center gap-1 text-center">
-              <GoalRing xp={today.xp} target={today.target} />
+              <GoalRing xp={today.xp} target={today.target} from={Math.max(0, today.xp - rewards.xpToday)} />
               <p className="text-xs text-navy/80">{goalCaption(today)}</p>
             </div>
             {rewards.rings.map((ring) => (
@@ -97,7 +111,7 @@ export function SetSummary({
       )}
 
       <div className="space-y-2">
-        <button type="button" onClick={onAnother} className="min-h-14 w-full rounded-2xl bg-navy px-4 text-lg font-semibold text-white hover:bg-navy-600">
+        <button type="button" onClick={onAnother} className="btn-chunky min-h-14 w-full rounded-2xl bg-navy px-4 text-lg font-semibold text-white hover:bg-navy-600">
           Another set
         </button>
         <button type="button" onClick={onDone} className="min-h-12 w-full rounded-xl px-4 font-semibold text-navy underline hover:bg-navy-50">

@@ -228,7 +228,7 @@ export function FinalAnswerCard({ target, initial, onGrade, done = false, variab
       {grade && !grade.done && (grade.mismatch || grade.interval.status === 'wrong' || grade.setBuilder.status === 'wrong') && <StuckChip />}
 
       <div className="flex flex-wrap items-center gap-3">
-        <button type="submit" disabled={done} className="min-h-12 rounded-xl bg-coral px-4 font-semibold text-navy hover:bg-coral/80 disabled:opacity-50">
+        <button type="submit" disabled={done} className="btn-chunky min-h-12 rounded-xl bg-coral px-4 font-semibold text-navy hover:bg-coral/80 disabled:opacity-50">
           Check answer
         </button>
         {done && (

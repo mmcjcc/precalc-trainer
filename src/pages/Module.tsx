@@ -13,6 +13,8 @@ import {
 } from '@/content'
 import { defaultKnobs, flagsFromKnobs, problemPath } from '@/problem/url'
 import { useMastery, useModuleMastery } from '@/store'
+import { StepBadge } from '@/components/StepBadge'
+import { pickModule, stepByStepModule } from '@/problem/solveStyle'
 
 const STEP_OPTIONS: { value: 1 | 2 | 3; label: string }[] = [
   { value: 1, label: 'Shortest' },
@@ -144,6 +146,7 @@ function ModuleView({ module }: { module: ModuleDef }) {
       <header className="space-y-2">
         <p className="text-sm font-semibold tracking-wide text-coral-700">{eyebrow}</p>
         <h1 className="text-3xl font-semibold text-navy">{module.title}</h1>
+        {stepByStepModule(module.id) && <StepBadge pick={pickModule(module.id)} />}
         <p className="max-w-2xl text-navy/80">{module.blurb}</p>
         {!isDrill && mm.total > 0 && (
           <p className="text-sm text-navy">

@@ -327,7 +327,7 @@ function PartField({
           enterKeyHint="go"
           className={BOX}
         />
-        <button type="submit" disabled={disabled} className="min-h-12 shrink-0 rounded-xl bg-navy px-4 font-semibold text-white hover:bg-navy-600 disabled:opacity-50">
+        <button type="submit" disabled={disabled} className="btn-chunky min-h-12 shrink-0 rounded-xl bg-navy px-4 font-semibold text-white hover:bg-navy-600 disabled:opacity-50">
           Check
         </button>
       </div>
@@ -404,7 +404,7 @@ function WriteRows({
         <button type="button" disabled={disabled || n <= 1} onClick={() => onCount(n - 1)} className="min-h-12 rounded-xl border-2 border-navy-100 px-3 font-semibold text-navy hover:bg-navy-50 disabled:opacity-50">
           Remove a piece
         </button>
-        <button type="submit" disabled={disabled} className="min-h-12 rounded-xl bg-navy px-4 font-semibold text-white hover:bg-navy-600 disabled:opacity-50">
+        <button type="submit" disabled={disabled} className="btn-chunky min-h-12 rounded-xl bg-navy px-4 font-semibold text-white hover:bg-navy-600 disabled:opacity-50">
           Check
         </button>
       </div>

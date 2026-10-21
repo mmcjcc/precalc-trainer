@@ -69,7 +69,9 @@ export function normalizeSettings(raw: unknown): Settings {
   if (typeof src.rewards === 'boolean') settings.rewards = src.rewards
   if (isDailyGoal(src.dailyGoal)) settings.dailyGoal = src.dailyGoal
   if (typeof src.vibrate === 'boolean') settings.vibrate = src.vibrate
+  if (typeof src.sounds === 'boolean') settings.sounds = src.sounds
   if (src.lineEntry === 'type' || src.lineEntry === 'pick') settings.lineEntry = src.lineEntry
+  if (typeof src.seenStepGuide === 'boolean') settings.seenStepGuide = src.seenStepGuide
   if (isRecord(src.unitByCourse)) {
     const unitByCourse: Record<string, string> = {}
     for (const [key, value] of Object.entries(src.unitByCourse)) {
@@ -81,7 +83,7 @@ export function normalizeSettings(raw: unknown): Settings {
 }
 
 /** Settings that belong to the device: an import keeps this device's value (or its absence, the default). */
-const DEVICE_SETTINGS = ['mathKeypad', 'rewards', 'vibrate', 'lineEntry'] as const
+const DEVICE_SETTINGS = ['mathKeypad', 'rewards', 'vibrate', 'sounds', 'lineEntry'] as const
 
 /**
  * Settings after an import. Merge adds another device's work to this one, so this device keeps its
@@ -89,12 +91,14 @@ const DEVICE_SETTINGS = ['mathKeypad', 'rewards', 'vibrate', 'lineEntry'] as con
  * settings (the daily goal among them), except the ones that belong to the device or the moment: test mode
  * (imported silently, it would keep later practice out of the mastery bars), whether the add-to-home-screen
  * card was seen here, the math keypad (a phone's choice, which a backup from a computer must not undo), the
- * rewards and vibrate switches (the store app and the family web app start with rewards on and off), and Guided
- * mode's Type / Pick choice (picking is a phone's way to write lines).
+ * rewards, vibrate and sounds switches (the store app and the family web app start with rewards and sounds on and
+ * off), and Guided mode's Type / Pick choice (picking is a phone's way to write lines).
  */
 export function settingsAfterImport(current: Settings, imported: Settings, mode: ImportMode): Settings {
   if (mode === 'replace') {
     const next: Settings = { ...imported, testMode: current.testMode, seenA2HS: current.seenA2HS }
+    if (current.seenStepGuide === undefined) delete next.seenStepGuide
+    else next.seenStepGuide = current.seenStepGuide
     const keep = <K extends (typeof DEVICE_SETTINGS)[number]>(key: K) => {
       delete next[key]
       const mine = current[key]

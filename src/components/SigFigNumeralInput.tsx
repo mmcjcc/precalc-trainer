@@ -160,7 +160,7 @@ export function SigFigNumeralInput({ coefficient, power, onChange, onSubmit, uni
           {errorText}
         </p>
       )}
-      <button type="submit" disabled={disabled} className="min-h-11 rounded-xl bg-navy px-4 font-semibold text-white hover:bg-navy-600 disabled:opacity-50">
+      <button type="submit" disabled={disabled} className="btn-chunky min-h-11 rounded-xl bg-navy px-4 font-semibold text-white hover:bg-navy-600 disabled:opacity-50">
         {submitLabel}
       </button>
     </form>

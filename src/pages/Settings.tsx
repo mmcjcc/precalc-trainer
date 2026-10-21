@@ -2,6 +2,7 @@ import { useCallback, useId, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { A2HSCard } from '@/components/A2HSCard'
 import { BottomSheet } from '@/components/BottomSheet'
+import { canPlaySounds, playCue, soundsOn } from '@/components/juice/sounds'
 import { canVibrate } from '@/components/rewards/haptics'
 import { isIosSafari, isStandalone } from '@/components/useBreakpoint'
 import { useCoarsePointer } from '@/components/useMathKeypad'
@@ -157,6 +158,19 @@ export function SettingsPage() {
               description="Math answers open a keypad with the numbers, x, + − × ÷, powers and the symbols each problem uses, instead of the phone's keyboard. Its abc key brings the keyboard back for words like “no solution”. Off: the keyboard and the symbol strip."
               checked={settings.mathKeypad !== false}
               onChange={(on) => setSettings({ mathKeypad: on })}
+            />
+          )}
+          {/* Only where the browser can make sounds (Web Audio); a switch that did nothing would only confuse. */}
+          {canPlaySounds() && (
+            <Switch
+              label="Sounds"
+              description="A chime when a line or a part is right (it climbs while you get them in a row), a soft note for a slip, and a little tune when you finish."
+              checked={soundsOn(settings)}
+              onChange={(on) => {
+                setSettings({ sounds: on })
+                // A taste of it, and the tap lets the browser start the sound.
+                if (on) playCue('right', { step: 2 })
+              }}
             />
           )}
         </div>

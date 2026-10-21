@@ -180,3 +180,19 @@ Changed in review:
 
 Left: only exp/log equations offer cards; the wording "A part right first try" for the answer of a line-by-line
 problem could read "Answer right first try".
+
+## Follow-up: the answer box at the end of the work (Claude, 2026-10-21)
+
+Found on the emulator while reviewing the phone juice. On a phone the answer box sits under the work, behind the
+composer, so the end of a line-by-line exponential or log problem was easy to miss:
+- A typed line that already is the solution went into the answer box (out of sight) and the composer asked for the
+  next line ("No cards for this line: type it."). Now, while the box still holds that line, the composer says "Your
+  last line is in the answer box." with a "Check my answer" button, which checks the box as its own Check does; the
+  kept line's status adds "It is in the answer box below."
+- At the end of the card path, "That was the last line of the path: write the solution in the answer box." ends with
+  "Go to the answer box": the box takes the focus as after a tap, so on a phone the keypad opens on it and brings it
+  into view (on a computer it scrolls into view).
+- The nudge's Dismiss no longer breaks into letters on a narrow phone.
+
+Tests: `LogLineFlow.test.tsx` (the offer comes and goes with the box; "Check my answer" finishes the problem) and
+`GuidedMode.test.tsx` ("Go to the answer box" on a wide screen, and on a phone where it opens the keypad on the box).

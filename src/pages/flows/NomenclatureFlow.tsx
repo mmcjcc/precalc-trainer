@@ -422,7 +422,7 @@ function Body({ instance, attempt, flags, templateTitle, completion, finish, ans
                 ) : (
                   <FormulaBox stage={s} value={entries[key] ?? ''} invalid={invalid} onChange={(v) => update(key, v)} inputRef={register(key)} />
                 )}
-                <button type="submit" className="min-h-12 rounded-xl bg-navy px-4 font-semibold text-white hover:bg-navy-600">
+                <button type="submit" className="btn-chunky min-h-12 rounded-xl bg-navy px-4 font-semibold text-white hover:bg-navy-600">
                   {`Check ${s.label.toLowerCase()}`}
                 </button>
                 {shown && <GradeNote feedback={shown} />}

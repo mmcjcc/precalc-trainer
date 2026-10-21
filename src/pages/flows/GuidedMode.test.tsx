@@ -315,6 +315,22 @@ describe('Guided mode on a wide screen', () => {
     },
     FLOW_TIMEOUT,
   )
+
+  it(
+    'at the end of the path the note offers "Go to the answer box", which puts her in the box',
+    () => {
+      const { p, seed } = problemWith('ee.exponential', '3^x = 13')
+      useStore.getState().setSettings({ lineEntry: 'pick' })
+      renderAt(problemPath('expLogEquations', 'ee.exponential', seed))
+      pick(rightCard(p))
+      expect(screen.queryByRole('button', { name: 'Go to the answer box' })).toBeNull()
+      pick(rightCard(p))
+      expect(document.querySelector('[data-typed-note]')!.textContent).toContain('That was the last line of the path')
+      fireEvent.click(screen.getByRole('button', { name: 'Go to the answer box' }))
+      expect(document.activeElement).toBe(screen.getByRole('textbox', { name: 'Answer' }))
+    },
+    FLOW_TIMEOUT,
+  )
 })
 
 describe('Guided mode on a phone', () => {
@@ -360,6 +376,23 @@ describe('Guided mode on a phone', () => {
       expect(queryKeypad()).toBeNull()
       fireEvent.click(within(composer).getByRole('button', { name: 'Type it yourself instead' }))
       expect(document.activeElement).toBe(lineBox())
+      expect(queryKeypad()).toBeTruthy()
+    },
+    FLOW_TIMEOUT,
+  )
+
+  it(
+    'at the end of the path, "Go to the answer box" in the composer opens the keypad on the answer box',
+    () => {
+      const { p, seed } = problemWith('ee.exponential', '3^x = 13')
+      useStore.getState().setSettings({ lineEntry: 'pick' })
+      renderAt(problemPath('expLogEquations', 'ee.exponential', seed))
+      pick(rightCard(p))
+      pick(rightCard(p))
+      const composer = document.querySelector<HTMLElement>('[data-keypad-region]')!
+      expect(queryKeypad()).toBeNull()
+      fireEvent.click(within(composer).getByRole('button', { name: 'Go to the answer box' }))
+      expect(document.activeElement).toBe(screen.getByRole('textbox', { name: 'Answer' }))
       expect(queryKeypad()).toBeTruthy()
     },
     FLOW_TIMEOUT,

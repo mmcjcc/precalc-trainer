@@ -101,7 +101,7 @@ export function OneToOneCard({ answer, f, seed, done = false, onResult }: OneToO
         </fieldset>
       )}
       <div className="flex flex-wrap items-center gap-3">
-        <button type="submit" disabled={done || !verdict} className="min-h-11 rounded-xl bg-navy px-4 font-semibold text-white hover:bg-navy-600 disabled:opacity-50">
+        <button type="submit" disabled={done || !verdict} className="btn-chunky min-h-11 rounded-xl bg-navy px-4 font-semibold text-white hover:bg-navy-600 disabled:opacity-50">
           Check
         </button>
       </div>
@@ -176,7 +176,7 @@ export function CheckItCard({ check, f, inverse, done = false, onResult }: Check
       </p>
       {field(`f(${check.k}) =`, fk, setFk, grade?.fk ?? null, 'fk')}
       {field(`f⁻¹(f(${check.k})) =`, back, setBack, grade?.back ?? null, 'back')}
-      <button type="submit" disabled={done} className="min-h-11 rounded-xl bg-coral px-4 font-semibold text-navy hover:bg-coral/80 disabled:opacity-50">
+      <button type="submit" disabled={done} className="btn-chunky min-h-11 rounded-xl bg-coral px-4 font-semibold text-navy hover:bg-coral/80 disabled:opacity-50">
         Check both
       </button>
       {done && <Message ok text={`f⁻¹(f(${check.k})) = ${check.k}. The inverse undoes f — done.`} />}
@@ -289,7 +289,7 @@ export function TwinCard({ check, done = false, onResult }: TwinProps) {
           }}
         />
       )}
-      <button type="submit" disabled={done} className="min-h-11 rounded-xl bg-coral px-4 font-semibold text-navy hover:bg-coral/80 disabled:opacity-50">
+      <button type="submit" disabled={done} className="btn-chunky min-h-11 rounded-xl bg-coral px-4 font-semibold text-navy hover:bg-coral/80 disabled:opacity-50">
         Check both
       </button>
       {done && evidence && (
@@ -356,7 +356,7 @@ export function ParityVerdictCard({ answer, enabled, done = false, onResult }: P
           ))}
         </fieldset>
       )}
-      <button type="submit" disabled={!enabled || done || !verdict} className="min-h-11 rounded-xl bg-navy px-4 font-semibold text-white hover:bg-navy-600 disabled:opacity-50">
+      <button type="submit" disabled={!enabled || done || !verdict} className="btn-chunky min-h-11 rounded-xl bg-navy px-4 font-semibold text-white hover:bg-navy-600 disabled:opacity-50">
         Check verdict
       </button>
       {grade && <Message ok={grade.correct} text={grade.message} />}
