@@ -604,7 +604,7 @@ export function arcProblem(o: { r: number; theta: ArcProblem['theta']; what: Arc
     figure: sectorFigure(theta.kind === 'plain' ? (qNum(theta.rad) * 180) / Math.PI : qNum(theta.deg), thetaSay, `${r} ${u.abbr}`, what),
     stages: [part],
     promisable: part.traps.filter((t) => t.id !== 'trig_conversion_inverted'),
-    calc: arcCalc(tiExpr, nsExpr, value, what),
+    calc: arcCalc(tiExpr, nsExpr, value, what, part.kind === 'value'),
     calcExpr: nsExpr,
     ruleCards: [AM_RULE_IDS.arc, AM_RULE_IDS.radians],
   }

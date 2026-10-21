@@ -58,4 +58,23 @@ describe('the calculator panels: the mode first, then the keys, then a decimal c
     const point = generateProblem('unitCircle', 'uc.point', 1)
     expect(point.calc.ti84[0]!.title).toBe('Find r')
   })
+
+  it('an arc says where π is only when its keys use π, and checks an exact answer only', { timeout: LOOP_TIMEOUT }, () => {
+    let exactWithPi = 0
+    let roundedPlain = 0
+    for (let seed = 1; seed <= 300; seed++) {
+      const a = trigAnswerOf(generateProblem('angleMeasure', 'am.arc', seed))
+      const p = generateProblem('angleMeasure', 'am.arc', seed)
+      const work = p.calc.ti84[0]!
+      expect((work.why ?? '').includes('π is 2nd ^'), work.keys).toBe(work.keys.includes('π'))
+      const exact = a.stages[0]!.kind === 'value'
+      expect(p.calc.ti84.some((s) => s.title === 'Check your exact answer')).toBe(exact)
+      expect(p.calc.nspire.some((s) => s.title === 'Check your exact answer')).toBe(exact)
+      if (exact && work.keys.includes('π')) exactWithPi += 1
+      if (!exact && !work.keys.includes('π')) roundedPlain += 1
+    }
+    // Both kinds come up.
+    expect(exactWithPi).toBeGreaterThan(0)
+    expect(roundedPlain).toBeGreaterThan(0)
+  })
 })

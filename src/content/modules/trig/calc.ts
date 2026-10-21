@@ -133,12 +133,16 @@ export function pointCalc(x: number, y: number, r: number): CalcPanels {
   }
 }
 
-/** Arc length or sector area: plain arithmetic, so the mode does not matter. */
-export function arcCalc(expressionTi: string, expressionNspire: string, value: number, what: 'arc' | 'area'): CalcPanels {
+/**
+ * Arc length or sector area: plain arithmetic, so the mode does not matter. Where to find π only when the keys use it;
+ * the check of an exact answer only when the answer is exact (a rounded one is the decimal itself).
+ */
+export function arcCalc(expressionTi: string, expressionNspire: string, value: number, what: 'arc' | 'area', exact: boolean): CalcPanels {
   const title = what === 'arc' ? 'Work out the arc length' : 'Work out the area'
   const caution = 'No SIN or COS here, so the angle mode does not matter. θ has to be in radians.'
+  const shown = `It shows about ${fixed(value)}.`
   return {
-    ti84: [{ title, keys: `${expressionTi} → ENTER`, why: `π is 2nd ^. It shows about ${fixed(value)}.`, caution }, CHECK_TI],
-    nspire: [{ title, keys: `${expressionNspire} → ctrl enter`, why: `It shows about ${fixed(value)}.`, caution }, CHECK_NSPIRE],
+    ti84: [{ title, keys: `${expressionTi} → ENTER`, why: expressionTi.includes('π') ? `π is 2nd ^. ${shown}` : shown, caution }, ...(exact ? [CHECK_TI] : [])],
+    nspire: [{ title, keys: `${expressionNspire} → ctrl enter`, why: shown, caution }, ...(exact ? [CHECK_NSPIRE] : [])],
   }
 }
