@@ -2,7 +2,7 @@
 import { render, screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 import { circleFigure, pointFigure, sectorFigure } from '@/content/modules/trig/figure'
-import { anglePath, polar, TrigFigure } from './TrigFigure'
+import { anglePath, labelHalfSize, polar, TrigFigure } from './TrigFigure'
 
 const el = (container: HTMLElement, name: string) => container.querySelector(`[data-trig="${name}"]`)
 const num = (e: Element | null, attr: string) => Number(e?.getAttribute(attr))
@@ -67,6 +67,35 @@ describe('a point on the terminal side', () => {
     expect(el(container, 'drop')).not.toBeNull()
     expect(container.textContent).not.toMatch(/\b5\b/)
     expect(screen.getByRole('img').getAttribute('aria-label')).toMatch(/point \(−3, 4\)/)
+  })
+
+  it('the point’s label stays clear of the terminal side running past it, the drop, and the edges', () => {
+    const coords = [-21, -12, -8, -5, -3, -2, -1, 1, 2, 3, 5, 8, 12, 21]
+    const minus = (n: number) => String(n).replace('-', '−')
+    const clashes: string[] = []
+    for (const x of coords) {
+      for (const y of coords) {
+        const text = `(${minus(x)}, ${minus(y)})`
+        const { container, unmount } = render(<TrigFigure spec={pointFigure(x, y, text)} />)
+        const at = { x: num(el(container, 'point-label'), 'x'), y: num(el(container, 'point-label'), 'y') }
+        const { w, h } = labelHalfSize(text)
+        const inBox = (px: number, py: number) => Math.abs(px - at.x) < w && Math.abs(py - at.y) < h
+        // Walk each line a unit at a time.
+        const crosses = (line: Element | null) => {
+          const [x1, y1, x2, y2] = ['x1', 'y1', 'x2', 'y2'].map((a) => num(line, a)) as [number, number, number, number]
+          const steps = Math.ceil(Math.hypot(x2 - x1, y2 - y1))
+          for (let i = 0; i <= steps; i++) if (inBox(x1 + ((x2 - x1) * i) / steps, y1 + ((y2 - y1) * i) / steps)) return true
+          return false
+        }
+        const dot = el(container, 'point')
+        if (crosses(el(container, 'terminal'))) clashes.push(`${text}: the terminal side`)
+        if (crosses(el(container, 'drop'))) clashes.push(`${text}: the drop`)
+        if (inBox(num(dot, 'cx'), num(dot, 'cy'))) clashes.push(`${text}: the point`)
+        if (at.x - w < 0 || at.x + w > 320 || at.y - h < 0 || at.y + h > 320) clashes.push(`${text}: off the figure`)
+        unmount()
+      }
+    }
+    expect(clashes).toEqual([])
   })
 })
 

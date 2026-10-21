@@ -132,6 +132,28 @@ function CircleFigure({ spec, showReference, marker }: { spec: TrigFigureSpec; s
   )
 }
 
+/** Half a label's width and height in SVG units (14-unit semibold text: about 8 units a character). */
+export function labelHalfSize(text: string): { w: number; h: number } {
+  return { w: text.length * 4 + 2, h: 8 }
+}
+
+/**
+ * Where a point's label goes: beside the point, across the terminal side from the drop to the x-axis, and far enough
+ * out for its width, so the ray running on past the point never crosses it. `u` is the ray's direction (SVG units).
+ */
+export function pointLabelAt(P: { x: number; y: number }, u: { x: number; y: number }, text: string): { x: number; y: number } {
+  // Of the two sides of the ray, the one away from the x-axis; on the x-axis, above it.
+  let n = { x: -u.y, y: u.x }
+  const away = P.y - CY
+  if (n.y * away < 0 || (away === 0 && n.y > 0)) n = { x: -n.x, y: -n.y }
+  const { w, h } = labelHalfSize(text)
+  const d = w * Math.abs(n.x) + h * Math.abs(n.y) + 6
+  return {
+    x: Math.min(Math.max(P.x + n.x * d, w + 2), VW - w - 2),
+    y: Math.min(Math.max(P.y + n.y * d, h + 2), VH - h - 2),
+  }
+}
+
 function PointFigure({ spec, marker }: { spec: TrigFigureSpec; marker: string }) {
   const pt = spec.point!
   const scale = 96 / Math.max(Math.abs(pt.x), Math.abs(pt.y))
@@ -145,7 +167,7 @@ function PointFigure({ spec, marker }: { spec: TrigFigureSpec; marker: string })
   // r along the segment, on the side away from the angle's arc.
   const rAt = { x: (CX + P.x) / 2 - uy * 14, y: (CY + P.y) / 2 + ux * 14 }
   const thetaAt = polar(spec.deg / 2, 36)
-  const pointLabel = { x: P.x + (pt.x >= 0 ? 8 : -8), y: P.y + (pt.y >= 0 ? -16 : 18) }
+  const pointLabel = pointLabelAt(P, { x: ux, y: uy }, pt.label)
   return (
     <>
       <Axes marker={marker} />
