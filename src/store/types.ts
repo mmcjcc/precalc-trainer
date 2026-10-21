@@ -62,6 +62,11 @@ export interface Settings {
    * changes it.
    */
   lineEntry?: LineEntry
+  /**
+   * She closed the "Solve it step by step" guide that opens a step-by-step problem (components/StepGuide.tsx). Like
+   * seenA2HS, it belongs to this device and this moment: an import never sets it.
+   */
+  seenStepGuide?: boolean
 }
 
 /** How she writes each line where the problem offers cards: on the keypad, or picked from three cards. */

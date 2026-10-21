@@ -227,7 +227,7 @@ function FormBody({ instance, attempt, flags, templateTitle, completion, finish,
           autoFocus
           label="Next line"
           submitLabel="Check this line"
-          placeholder="next line of your work"
+          placeholder={`Step ${steps.length + 1}: your next line`}
           stripKeys={FUNCTION_KEYS}
           toTex={safeLatex}
         />

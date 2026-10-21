@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState, type KeyboardEvent } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { A2HSCard } from '@/components/A2HSCard'
+import { StepBadge } from '@/components/StepBadge'
 import { STORE } from '@/edition'
 import { MasteryBar } from '@/components/MasteryBar'
 import { TodayCard } from '@/components/rewards/TodayCard'
@@ -24,6 +25,7 @@ import {
 import { loadReview } from '@/pages/review/session'
 import { startSet } from '@/pages/set/startSet'
 import { attemptResolves } from '@/problem/attemptResolves'
+import { pickModule, stepByStepModule } from '@/problem/solveStyle'
 import { defaultKnobs, flagsFromKnobs, problemPath } from '@/problem/url'
 import { loadActiveSet, resumePosition, resumeSet, sameSetProblem, setFinished, type ActiveSet } from '@/session/activeSet'
 import { setSizeFor } from '@/session/buildSet'
@@ -287,6 +289,11 @@ function ModuleCard({ module, primary }: { module: ModuleDef; primary: boolean }
       <h3 id={titleId} className="text-lg font-semibold text-navy">
         {module.title}
       </h3>
+      {stepByStepModule(module.id) && (
+        <div className="mt-1">
+          <StepBadge pick={pickModule(module.id)} />
+        </div>
+      )}
       <p className="mt-1 text-sm text-navy/80">{module.blurb}</p>
       <div className="mt-3">
         {isDrill ? (
@@ -428,6 +435,16 @@ function HomeScreen() {
 
   const setCount = setSizeFor(course)
   /** "Start a set": three problems for her from the selected class. It starts something, so no break here. */
+  // One problem solved line by line: the unit's first step-by-step module (else the class's), a random type of it.
+  const stepModule =
+    modulesInUnit(unit).find((m) => stepByStepModule(m.id) && m.templates.length > 0) ??
+    course.units.flatMap((u) => modulesInUnit(u)).find((m) => stepByStepModule(m.id) && m.templates.length > 0)
+  function solveStepByStep() {
+    if (!stepModule) return
+    const template = stepModule.templates[Math.floor(Math.random() * stepModule.templates.length)]!
+    navigate(randomProblemPath(stepModule.id, template))
+  }
+
   function startASet() {
     // With no history in this class, the set comes from the unit Home shows (the first-run picker's choice).
     if (startSet(course, unit.id)) navigate('/set')
@@ -453,8 +470,18 @@ function HomeScreen() {
 
       {rewards && <TodayCard />}
       {setCount > 0 && (
-        <div className={phone ? undefined : 'max-w-sm'}>
+        <div className={phone ? 'space-y-1' : 'max-w-sm space-y-1'}>
           <StartSetButton count={setCount} onStart={startASet} />
+          {stepModule && (
+            <button
+              type="button"
+              onClick={solveStepByStep}
+              data-step-link=""
+              className="inline-flex min-h-11 w-full items-center justify-center font-semibold text-navy underline"
+            >
+              Or solve one problem step by step
+            </button>
+          )}
         </div>
       )}
       {activeSet && resumed && (
