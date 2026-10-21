@@ -188,7 +188,7 @@ function StopButton({
           </span>
         </Ring>
       </span>
-      <span className={`path-caption line-clamp-2 min-w-0 text-sm leading-snug text-navy ${here ? 'font-bold' : 'font-semibold'}`}>{stop.title}</span>
+      <span className={`path-caption line-clamp-2 min-w-0 text-balance text-sm leading-snug text-navy ${here ? 'font-bold' : 'font-semibold'}`}>{stop.title}</span>
     </button>
   )
 }

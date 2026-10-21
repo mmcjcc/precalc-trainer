@@ -159,3 +159,20 @@ New: `src/components/path/{pathModel.ts, pathMemory.ts, StopDialog.tsx, UnitPath
 Changed: `src/pages/Home.tsx` (the module cards gave way to the path and the module list), `src/index.css` (the path's
 faces, tag, halo and pop, in the reduced-motion block too), `src/pages/Home.test.tsx`, `src/pages/HomeToday.test.tsx`,
 `src/App.test.tsx`, `src/components/StepGuide.test.tsx`, `docs/BUILD_GUIDE.md` (§0 UI row, §7).
+
+## Review (Claude, 2026-10-21)
+
+Built by one Claude agent (about 0.47M tokens, 80 minutes). Read the model (the stops from the set builder's own type
+list, "You are here" from `pickSetTypes` with Home's inputs, so the two cannot disagree; no randomness there, the set's
+only random part is the problem seeds), the memoization (recomputed when the event log or the rewards change), and the
+Home change (module cards become the path and a compact module list). Checked on the Android emulator in a store-app
+build: Unit 3's path with its signposts and step-by-step marks, "Show me" scrolling to and focusing "You are here"
+(Exponential equations, practiced 1 of 5, raised, gold tag), the stop's sheet (ring, "Practiced: 1 of the last 5 went
+well", "Practice this type" opening a fresh problem of that type, "About this module"), and Unit 1's 36 stops ending at
+the review trophy.
+
+Changed in review: a caption could wrap with one word alone on its second line ("Quadratic f(x) = ax² + bx +" / "c");
+captions now balance their two lines (`text-balance`; checked on the emulator's WebView, where it works with the
+two-line clamp).
+
+Left: the wide-screen popover was not seen in a browser (jsdom tests only); Unit 1's path is long (36 stops).
