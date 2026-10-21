@@ -4,7 +4,7 @@
  * Check, Start a set, Next problem, Next in set, See results, Another set — keeping each button's role and accessible
  * name; the press and the juice's animations stand still under reduced motion.
  */
-import { readFileSync } from 'node:fs'
+import { readdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { fireEvent, render, screen, within } from '@testing-library/react'
 import { useState } from 'react'
@@ -123,6 +123,22 @@ describe('the main actions share the chunky class and keep their roles and names
     const key = within(keypad()).getByRole('button', { name: 'check' })
     expect(chunky(key)).toBe(true)
     expect(key.getAttribute('tabindex')).toBe('-1')
+  })
+})
+
+describe('every flow’s Check', () => {
+  it('each submit button in a flow has the chunky class, a new flow’s too', () => {
+    // Tests run from the project root. An opening tag runs to the first ">" that is not an arrow's.
+    const dir = join(process.cwd(), 'src', 'pages', 'flows')
+    const plain: string[] = []
+    for (const file of readdirSync(dir).filter((name) => name.endsWith('.tsx') && !name.includes('.test.'))) {
+      const source = readFileSync(join(dir, file), 'utf8')
+      for (const tag of source.matchAll(/<button\b((?:=>|[^>])*)>/g)) {
+        const attrs = tag[1]!
+        if (/type="submit"/.test(attrs) && !/className="[^"]*\bbtn-chunky\b/.test(attrs)) plain.push(`${file}: ${attrs.trim()}`)
+      }
+    }
+    expect(plain).toEqual([])
   })
 })
 

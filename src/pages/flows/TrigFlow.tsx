@@ -343,7 +343,7 @@ function TrigPartsBody({ instance, attempt, flags, templateTitle, completion, fi
               open ? (
                 <form onSubmit={submit} noValidate className="space-y-4">
                   <PolyChoice legend={s.label} name={`tr-${s.id}`} options={s.choices ?? []} value={value} disabled={false} onChange={(v) => update(s.id, v)} firstRef={register(s.id)} />
-                  <button type="submit" className="min-h-12 rounded-xl bg-navy px-4 font-semibold text-white hover:bg-navy-600">
+                  <button type="submit" className="btn-chunky min-h-12 rounded-xl bg-navy px-4 font-semibold text-white hover:bg-navy-600">
                     Check
                   </button>
                   {shown && <GradeNote grade={shown.grade} />}
@@ -371,7 +371,7 @@ function TrigPartsBody({ instance, attempt, flags, templateTitle, completion, fi
                   keypad={{ keys: TRIG_KEYS }}
                 />
                 {!keypadOn && <SymbolStrip onInsert={(k) => insert(s.id, k)} keys={TRIG_KEYS} disabled={false} />}
-                <button type="submit" className="min-h-12 rounded-xl bg-navy px-4 font-semibold text-white hover:bg-navy-600">
+                <button type="submit" className="btn-chunky min-h-12 rounded-xl bg-navy px-4 font-semibold text-white hover:bg-navy-600">
                   Check
                 </button>
                 {shown && <GradeNote grade={shown.grade} />}
