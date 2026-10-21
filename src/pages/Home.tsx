@@ -1,9 +1,8 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState, type KeyboardEvent } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { A2HSCard } from '@/components/A2HSCard'
-import { StepBadge } from '@/components/StepBadge'
 import { STORE } from '@/edition'
-import { MasteryBar } from '@/components/MasteryBar'
+import { UnitPath } from '@/components/path/UnitPath'
 import { TodayCard } from '@/components/rewards/TodayCard'
 import { ResumeSetCard, StartSetButton } from '@/components/set/TodaySet'
 import { useBreakpoint } from '@/components/useBreakpoint'
@@ -25,7 +24,7 @@ import {
 import { loadReview } from '@/pages/review/session'
 import { startSet } from '@/pages/set/startSet'
 import { attemptResolves } from '@/problem/attemptResolves'
-import { pickModule, stepByStepModule } from '@/problem/solveStyle'
+import { stepByStepModule } from '@/problem/solveStyle'
 import { defaultKnobs, flagsFromKnobs, problemPath } from '@/problem/url'
 import { loadActiveSet, resumePosition, resumeSet, sameSetProblem, setFinished, type ActiveSet } from '@/session/activeSet'
 import { setSizeFor } from '@/session/buildSet'
@@ -36,7 +35,6 @@ import {
   useAttempt,
   useDrillAccuracy,
   useEvents,
-  useModuleMastery,
   useRewardsOn,
   useSettings,
   useStore,
@@ -222,16 +220,16 @@ function WeakSpots({ course, primary }: { course: CourseDef; primary: boolean })
 function DrillSummary() {
   const acc = useDrillAccuracy()
   if (acc.denominator === 0 || acc.rate === null) {
-    return <p className="text-sm text-navy/80">Not started — ten quick “legal or illegal?” calls at a time.</p>
+    return <span className="block text-sm text-navy/80">Not started — ten quick “legal or illegal?” calls at a time.</span>
   }
   return (
-    <p className="text-sm text-navy">
+    <span className="block text-sm text-navy">
       Drill so far:{' '}
       <strong>
         {acc.numerator} of {acc.denominator} right
       </strong>{' '}
       ({percent(acc.rate)})
-    </p>
+    </span>
   )
 }
 
@@ -264,57 +262,47 @@ function ReviewCard({ reviewId, unitLabel, primary }: { reviewId: string; unitLa
   )
 }
 
-function ModuleCard({ module, primary }: { module: ModuleDef; primary: boolean }) {
-  const navigate = useNavigate()
-  const skills = useMemo(() => module.templates.map((t) => t.id), [module])
-  const m = useModuleMastery(skills)
+/**
+ * "Modules in this unit", under the path: a compact list of links to each module page, where the rule cards, every
+ * type with its difficulty, and the mastery explanation stay. The properties drill (no problem types, so no stretch of
+ * the path) is here too, with how the drill is going.
+ */
+function UnitModules({ modules }: { modules: ModuleDef[] }) {
   const titleId = useId()
-  const isDrill = module.id === 'propertiesDrill'
-  const first = module.templates[0]
-
-  function random() {
-    if (isDrill) navigate('/drill')
-    else if (first) navigate(randomProblemPath(module.id, first))
-    else navigate(`/m/${module.id}`)
-  }
-
-  const status = m.complete
-    ? 'complete — every type mastered'
-    : m.rate === null
-      ? 'not started'
-      : `${percent(m.rate)} first-try · ${m.masteredCount} of ${m.total} types mastered`
-
+  const drillId = useId()
   return (
-    <article aria-labelledby={titleId} className="flex flex-col rounded-2xl border border-navy-100 bg-white p-4">
-      <h3 id={titleId} className="text-lg font-semibold text-navy">
-        {module.title}
-      </h3>
-      {stepByStepModule(module.id) && (
-        <div className="mt-1">
-          <StepBadge pick={pickModule(module.id)} />
-        </div>
-      )}
-      <p className="mt-1 text-sm text-navy/80">{module.blurb}</p>
-      <div className="mt-3">
-        {isDrill ? (
-          <DrillSummary />
-        ) : (
-          <MasteryBar label="Mastery" rate={m.rate} mastered={m.complete} status={status} valueText={status} lastAt={m.lastAt} />
-        )}
-      </div>
-      <div className="mt-auto flex flex-wrap gap-2 pt-4">
-        <button type="button" onClick={random} aria-describedby={titleId} className={`min-h-11 rounded-xl px-4 text-sm font-semibold ${actionLook(primary)}`}>
-          Random problem
-        </button>
-        <Link
-          to={`/m/${module.id}`}
-          aria-describedby={titleId}
-          className="inline-flex min-h-11 items-center rounded-xl border border-navy-100 bg-white px-4 text-sm font-semibold text-navy hover:bg-navy-50"
-        >
-          Choose a type
-        </Link>
-      </div>
-    </article>
+    <section aria-labelledby={titleId} className="space-y-2" data-unit-modules="">
+      <h2 id={titleId} className="text-lg font-semibold text-navy">
+        Modules in this unit
+      </h2>
+      <ul className="grid gap-2 sm:grid-cols-2">
+        {modules.map((m) => {
+          const drill = m.id === 'propertiesDrill'
+          return (
+            <li key={m.id}>
+              <Link
+                to={`/m/${m.id}`}
+                aria-label={m.title}
+                aria-describedby={drill ? drillId : undefined}
+                className="flex min-h-12 items-center justify-between gap-3 rounded-xl border border-navy-100 bg-white px-4 py-2 text-navy hover:bg-navy-50"
+              >
+                <span className="min-w-0">
+                  <span className="block font-semibold">{m.title}</span>
+                  {drill && (
+                    <span id={drillId} className="block">
+                      <DrillSummary />
+                    </span>
+                  )}
+                </span>
+                <span aria-hidden className="shrink-0 text-lg">
+                  ›
+                </span>
+              </Link>
+            </li>
+          )
+        })}
+      </ul>
+    </section>
   )
 }
 
@@ -555,11 +543,12 @@ function HomeScreen() {
       {reviewId && <ReviewCard reviewId={reviewId} unitLabel={unit.label} primary={!phone} />}
 
       {modules.length > 0 ? (
-        <div className="grid gap-4 sm:grid-cols-2">
-          {modules.map((m) => (
-            <ModuleCard key={m.id} module={m} primary={!phone} />
-          ))}
-        </div>
+        <>
+          {/* The unit as a road she walks (components/path), then the module pages. Keyed: the path decides on mount
+              which of this unit's stops levelled up since she last saw them. */}
+          <UnitPath key={`${course.id}/${unit.id}`} course={course} unit={unit} phone={phone} onShowUnit={selectUnit} />
+          <UnitModules modules={modules} />
+        </>
       ) : (
         <p className="rounded-2xl border border-navy-100 bg-white p-4 text-navy/80">
           Nothing to practise here yet: this unit is being built.

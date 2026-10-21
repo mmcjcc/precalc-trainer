@@ -69,13 +69,17 @@ describe('where step-by-step problems are', () => {
   it('Home marks the step-by-step modules and offers one under Start a set', SLOW, () => {
     useStore.getState().setSettings({ courseId: 'precalc', unitByCourse: { precalc: 'unit1' } })
     renderAt('/')
-    const badges = document.querySelectorAll('[data-step-badge]')
+    // The path's signposts carry the mark, on exactly the step-by-step modules.
+    const badges = [...document.querySelectorAll('[data-step-badge]')]
     expect(badges.length).toBeGreaterThan(0)
     for (const badge of badges) {
-      const card = badge.closest('article')!
-      const title = card.querySelector('h3')!.textContent!
-      expect(title.length).toBeGreaterThan(0)
+      const signpost = badge.closest<HTMLElement>('[data-path-signpost]')!
+      expect(signpost.querySelector('h3')!.textContent!.length).toBeGreaterThan(0)
+      expect(stepByStepModule(signpost.dataset.pathSignpost!)).toBe(true)
     }
+    const marked = badges.map((b) => b.closest<HTMLElement>('[data-path-signpost]')!.dataset.pathSignpost)
+    const steps = [...document.querySelectorAll<HTMLElement>('[data-path-signpost]')].map((s) => s.dataset.pathSignpost!).filter(stepByStepModule)
+    expect(marked).toEqual(steps)
     fireEvent.click(screen.getByRole('button', { name: 'Or solve one problem step by step' }))
     const path = screen.getByTestId('where').textContent!
     const moduleId = path.split('/')[2]!

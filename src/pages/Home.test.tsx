@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { fireEvent, render, screen } from '@testing-library/react'
+import { fireEvent, render, screen, within } from '@testing-library/react'
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { getCourse, modulesInUnit } from '@/content'
@@ -24,7 +24,24 @@ function renderHome(path = '/') {
   )
 }
 
+/** The selected unit's modules: "Modules in this unit" under the path (the path replaced the grid of module cards). */
+function moduleList(): HTMLElement | null {
+  return screen.queryByRole('region', { name: 'Modules in this unit' })
+}
+
 function moduleTitles(): string[] {
+  const list = moduleList()
+  return list ? within(list).getAllByRole('link').map((link) => link.getAttribute('aria-label') ?? '') : []
+}
+
+/** Where each module's link goes (each module page keeps its rule cards and every type). */
+function moduleLinks(): string[] {
+  const list = moduleList()
+  return list ? within(list).getAllByRole('link').map((link) => link.getAttribute('href') ?? '') : []
+}
+
+/** The path's signposts: one per module with problem types (the properties drill has none), in the path's order. */
+function signposts(): string[] {
   return screen.queryAllByRole('heading', { level: 3 }).map((heading) => heading.textContent)
 }
 
@@ -144,35 +161,42 @@ describe('Home: classes and units', () => {
     // A first visit lands on the last unit that has modules (Unit 4). Unit 1 is one press away.
     expect(moduleTitles()).toEqual(unit4Titles)
     expect(moduleTitles()).toEqual(['Angles and radian measure', 'The unit circle and trig functions of any angle'])
+    expect(signposts()).toEqual(unit4Titles)
     expect(screen.getByRole('button', { name: /Unit 4/, pressed: true }).textContent).toMatch(/Trigonometric functions/)
     expect(screen.queryByRole('heading', { name: 'Unit 1 review' })).toBeNull()
     fireEvent.click(screen.getByRole('button', { name: /Unit 1/ }))
     expect(moduleTitles()).toEqual(unit1Titles)
     expect(moduleTitles().at(-1)).toBe('Difference quotient')
     expect(moduleTitles().indexOf('Domain and range')).toBe(moduleTitles().indexOf('Reading a graph') + 1)
+    // The path signposts every module with problem types, in the same order; the drill is in the list only.
+    expect(signposts()).toEqual(unit1Titles.filter((title) => title !== 'Properties drill'))
+    expect(moduleTitles()).toContain('Properties drill')
+    // The review card comes before the path (its first signpost) and the module list.
     const review = screen.getByRole('heading', { name: 'Unit 1 review' })
     const firstModule = screen.getAllByRole('heading', { level: 3 })[0]!
     expect(review.compareDocumentPosition(firstModule) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(review.compareDocumentPosition(moduleList()!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
     expect(screen.getByRole('link', { name: /Start the review/ }).getAttribute('href')).toBe('/review/unit1')
 
     fireEvent.click(screen.getByRole('tab', { name: 'Chemistry' }))
     expect(screen.queryByRole('heading', { name: 'Unit 1 review' })).toBeNull()
     expect(screen.queryByRole('heading', { name: 'Difference quotient' })).toBeNull()
     expect(moduleTitles()).toEqual(ch7Titles)
-    expect(screen.getAllByRole('link', { name: /Choose a type/ }).map((link) => link.getAttribute('href'))).toEqual(['/m/ionicNames', '/m/molecularAcids'])
+    expect(signposts()).toEqual(ch7Titles)
+    expect(moduleLinks()).toEqual(['/m/ionicNames', '/m/molecularAcids'])
 
     fireEvent.click(screen.getByRole('button', { name: /Chapter 6/ }))
     expect(moduleTitles()).toEqual(['The periodic table'])
-    expect(screen.getByRole('link', { name: /Choose a type/ }).getAttribute('href')).toBe('/m/periodic')
+    expect(moduleLinks()).toEqual(['/m/periodic'])
 
     fireEvent.click(screen.getByRole('button', { name: /Chapter 3/ }))
     expect(moduleTitles()).toEqual(['Significant figures'])
-    expect(screen.getByRole('link', { name: /Choose a type/ }).getAttribute('href')).toBe('/m/sigFigs')
+    expect(moduleLinks()).toEqual(['/m/sigFigs'])
     expect(screen.queryByRole('heading', { name: 'Unit 1 review' })).toBeNull()
 
     fireEvent.click(screen.getByRole('button', { name: /Chapter 4/ }))
     expect(moduleTitles()).toEqual(['Atomic structure'])
-    expect(screen.getByRole('link', { name: /Choose a type/ }).getAttribute('href')).toBe('/m/atoms')
+    expect(moduleLinks()).toEqual(['/m/atoms'])
 
     fireEvent.click(screen.getByRole('tab', { name: 'Honors Precalculus' }))
     // Unit 2 has modules now (completing the square first), so it is no longer "coming soon".
@@ -180,7 +204,7 @@ describe('Home: classes and units', () => {
     expect(moduleTitles()).toEqual(unit2Titles)
     expect(moduleTitles()).toContain('Completing the square')
     expect(screen.queryByText('Nothing to practise here yet: this unit is being built.')).toBeNull()
-    expect(screen.getAllByRole('link', { name: /Choose a type/ }).map((link) => link.getAttribute('href'))).toContain('/m/quadratics')
+    expect(moduleLinks()).toContain('/m/quadratics')
     expect(screen.queryByRole('heading', { name: 'Unit 1 review' })).toBeNull()
     expect(screen.queryByRole('heading', { name: 'Difference quotient' })).toBeNull()
     expect(screen.getByRole('button', { name: /Unit 2/, pressed: true }).textContent).not.toMatch(/Coming soon/)
@@ -194,7 +218,8 @@ describe('Home: classes and units', () => {
       'Graphs of exponential and logarithmic functions',
       'Exponential growth and decay',
     ])
-    expect(screen.getAllByRole('link', { name: /Choose a type/ }).map((link) => link.getAttribute('href'))).toContain('/m/logForms')
+    expect(signposts()).toEqual(unit3Titles)
+    expect(moduleLinks()).toContain('/m/logForms')
     expect(screen.getByRole('button', { name: /Unit 3/, pressed: true }).textContent).not.toMatch(/Coming soon/)
     expect(screen.queryByRole('heading', { name: 'Unit 1 review' })).toBeNull()
   })

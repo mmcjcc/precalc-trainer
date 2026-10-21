@@ -15,7 +15,7 @@ disagree, research wins** (the spec's random-sampling equivalence test is vacuou
 | Content | `src/content/modules` | 5 modules: number line (1 template), inequalities (4), even/odd (2), inverses (6: linear, cube root, fraction coefficient, rational, Möbius, quadratic not one-to-one), properties drill (twin-pair bank), difference quotient (4: linear, quadratic, rational, radical; see docs/progress/diff-quotient.md). Tests push every canonical path, and the solve-first alternative for inverses, through the context engine for 25 seeds. |
 | Calculator panels | `src/content/calc` | TI-84 Plus CE and TI-Nspire CX II for 11 problem families, expression / k / f(k) / twin substituted. |
 | Store | `src/store` | Append-only event log with weekly compaction, attempt resume, selectors (mastery, first-try, hint rate, property accuracy, pattern counts, habits, streak, weak spots), rewards (`rewards.ts`: XP, daily goal, goal streak, mistake cards, type rings; slice `pct.rewards`), export/import. |
-| UI | `src/App.tsx`, `src/pages`, `src/pages/flows`, `src/problem`, `src/components` | Complete. `pages/Problem.tsx` dispatches to the inequality, number-line, even/odd and inverse flows; Home, Module, Progress, Settings, Drill, Sandbox and the PIN gate. Graph and calculator panels stay behind a reveal button until the problem is complete (they show the answer). On phones the panel toolbar sits in the composer, or at the top when a screen has no composer. The first-spike demo UI is removed. Sets of three problems (`/set`, `src/session`) and the phone's bottom tab bar: §7. Guided mode (pick the next line from three cards; exponential and log equations): §7. Juice (sounds, the combo, confetti and motion, the streak flame and milestones; `src/components/juice`): §7. |
+| UI | `src/App.tsx`, `src/pages`, `src/pages/flows`, `src/problem`, `src/components` | Complete. `pages/Problem.tsx` dispatches to the inequality, number-line, even/odd and inverse flows; Home, Module, Progress, Settings, Drill, Sandbox and the PIN gate. Graph and calculator panels stay behind a reveal button until the problem is complete (they show the answer). On phones the panel toolbar sits in the composer, or at the top when a screen has no composer. The first-spike demo UI is removed. Sets of three problems (`/set`, `src/session`) and the phone's bottom tab bar: §7. Guided mode (pick the next line from three cards; exponential and log equations): §7. Juice (sounds, the combo, confetti and motion, the streak flame and milestones; `src/components/juice`): §7. Home's unit path (the unit as a road of its problem types, "You are here", no locks; `src/components/path`): §7. |
 | Deploy | `Dockerfile`, `nginx.conf`, `docker/`, `.github/workflows`, `deploy/azure.md` | Written. The image builds and passes `deploy/smoke.sh` in GitHub Actions (Docker is not installed on the dev box). On Azure it runs behind Container Apps sign-in with Google plus an email allowlist in nginx (`docker/25-allowlist.sh`, `deploy/azure-setup.sh`). |
 
 **Verification** (2026-09-15): `npm test` 28 files / 297 tests; `npm run test:sweep` pushes every canonical step and its mutations through the engine; browser QA and a two-agent review are recorded in `docs/progress/qa.md` and `docs/progress/review-findings.md` (all 23 findings fixed).
@@ -279,6 +279,20 @@ Check, the keypad's Check, Start a set, Next problem / Next in set / See results
 down. The streak: a flame on the Today card (none, 1-6, 7-29, 30+ days; lit, with one flare a day, once today's goal is
 met) and a one-time banner the first time the streak reaches 7, 30 and 100 days (`RewardsState.milestones`, in backups;
 `store/milestones.ts`). See `docs/progress/phone-juice.md`.
+
+The unit path (works with rewards on or off; `components/path`, every screen size): Home shows the selected unit as a
+road of its problem types in course order (`pathModel.ts` `unitPath`, from the set builder's own `classTypes`), winding
+over five lanes, a signpost where each module begins (its title and the step-by-step mark), and in place of the module
+cards a compact "Modules in this unit" list of module-page links (the drill, with no types, is only there). Each stop is a
+button with the rewards' ring (`skillRings`: New grey, Practiced navy part-filled, Solid and Mastered green with a check),
+named "type: state. In module." and "You are here" first on the type "Start a set" would start with (`setStart` calls
+`pickSetTypes` with what Home's button passes it, so the two never disagree; when that type is in another unit the
+header says so and offers that unit). A stop opens a sheet (phone) or popover (wide) that keeps focus in: "Practice this
+type" and "About this module". The unit's review is a trophy at the end (Unit 1), else a finish flag with "N of M types
+solid". Nothing is ever locked or disabled. A stop that levelled up since the path last showed it pops once and its ring
+sweeps, when it comes into view (`pathMemory.ts`: what the path last showed, device memory in `pct.path`, not in backups;
+nothing under reduced motion, nothing on a device's first visit); "You are here" pulses where motion is allowed. See
+`docs/progress/phone-path.md`.
 
 Problem-page flows by kind:
 - **inequality**: worked column starts at `instance.start`; steps until progress says solved; then

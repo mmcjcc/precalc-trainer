@@ -36,14 +36,16 @@ afterEach(() => {
 })
 
 describe('App routes', () => {
-  it('renders Home with module cards, weak-spot practice and the current nav item marked', () => {
+  it('renders Home with the unit path, its modules, weak-spot practice and the current nav item marked', () => {
     renderAt('/')
     expect(screen.getByRole('heading', { level: 1, name: 'Math & Science Trainer' })).toBeTruthy()
     expect(screen.getByRole('link', { name: 'Math & Science Trainer' })).toBeTruthy()
     expect(screen.getByRole('button', { name: 'Practice weak spots' })).toBeTruthy()
-    // A first visit lands on the last unit that has modules (Unit 3).
+    // A first visit lands on the last unit that has modules: its path (a stop per problem type) and its module pages.
     const landing = [...getCourse('precalc')!.units].reverse().find((unit) => modulesInUnit(unit).length > 0)!
-    expect(screen.getAllByRole('button', { name: 'Random problem' })).toHaveLength(modulesInUnit(landing).length)
+    const path = screen.getByRole('list', { name: `Path through ${landing.label}` })
+    expect(path.querySelectorAll('[data-path-stop]')).toHaveLength(modulesInUnit(landing).flatMap((m) => m.templates).length)
+    expect(within(screen.getByRole('region', { name: 'Modules in this unit' })).getAllByRole('link')).toHaveLength(modulesInUnit(landing).length)
     const nav = screen.getByRole('navigation', { name: 'Main' })
     expect(within(nav).getByRole('link', { name: 'Home' }).getAttribute('aria-current')).toBe('page')
     expect(within(nav).getByRole('link', { name: 'Progress' }).getAttribute('aria-current')).toBeNull()
