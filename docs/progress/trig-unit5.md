@@ -250,3 +250,27 @@ Changed:
   `src/grapher/graphIt.test.ts`, `src/problem/tutorContext.test.ts`, `src/components/keypadKeys.test.ts`,
   `src/content/modules/trig/trig2.review.test.ts` (its id slice ends where Unit 5's begin).
 - `docs/roadmap.md` (a row for Unit 5).
+
+## Review (Claude, 2026-10-22)
+
+Built by one Claude agent (4 h, 763 tool calls). Checked:
+- Twenty-one sample problems by hand (three per template): every amplitude, period, phase shift, midline, range,
+  asymptote and x-intercept family, the three model stories (temperature, tide, Ferris wheel) with their values and
+  first times, the inverse values, arctan(tan(7π/6)) = π/6, cos(cos⁻¹(−3)) with no value, and the reference triangle
+  of cot(cos⁻¹(−6/7)) (y = √13, cot = −6√13/13). All right.
+- An independent cross-check of 2,100 problems (300 per template, `trig/unit5.crosscheck.test.ts`), by other roads than
+  `resolve5.ts`: features from the function on screen by exact arithmetic on its inner argument (and the Graph it
+  function checked against it); the drawn curve and every label of an equation-from-a-graph problem against the answer,
+  plus an equation built from the labelled extremes (a cosine from the maximum) that must grade right; which drawn
+  curve of the four matches the function; model values and first times by scanning the model from the story's start;
+  inverse values from math.js. No differences.
+- Answers a textbook accepts, graded right: shifts in words or signed ("π/2 to the right", "-π/4"), ranges as
+  intervals or inequalities, equivalent equations (sine for cosine, a negative amplitude with a shifted phase, f(x) =),
+  any member of an asymptote family and (2k + 1)π/2, "undefined" or "DNE" for no value. Unsimplified forms get notes.
+- On the Android emulator (store build): an equation from a graph (π ticks, labelled extremes off the curve), the four
+  matching cards (dashed asymptotes, π/12 ticks), the reference triangle (axes only until the quadrant is answered,
+  then the triangle with x and r, y unlabelled until found), and a features graph behind its reveal gate.
+
+Left as is: "3.14" typed for π in an equation is graded wrong rather than noted when the drift passes 1% over two
+periods (the note fires for closer decimals); a bare positive phase shift on a left shift is the "wrong way" slip
+(Larson's signed convention; the part asks for size and direction).
