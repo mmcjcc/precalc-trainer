@@ -67,7 +67,7 @@ function scopeOf(attemptId: string, s: StoreState): string[] {
 function lastAttemptId(events: readonly Ev[]): string | null {
   for (let i = events.length - 1; i >= 0; i--) {
     const e = events[i]!
-    if (e.t !== 'drill_answer') return e.attemptId
+    if ('attemptId' in e) return e.attemptId
   }
   return null
 }

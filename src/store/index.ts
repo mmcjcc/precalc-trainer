@@ -12,10 +12,11 @@ import { persist } from 'zustand/middleware'
 import { useShallow } from 'zustand/react/shallow'
 import type { ChipId } from '@/shared/types'
 import { buildBackup, importBackup, normalizeSettings, settingsAfterImport, type ImportMode } from './backup'
+import { chestOpenings, drawChestReward, ownedThemes } from './chest'
 import { compact } from './compaction'
 import { mergeCatches } from './catches'
 import { mergeMilestones } from './milestones'
-import { computeRewards, dailyGoalOf, foldRewards, normalizeRewards, rewardsOn, settleDays, type RewardsView } from './rewards'
+import { addDays, chestRestEligible, computeRewards, dailyGoalOf, foldRewards, normalizeRewards, rewardsOn, settleDays, type RewardsView } from './rewards'
 import {
   bumpStreak,
   currentStreak,
@@ -40,6 +41,7 @@ import {
   type AttemptFinal,
   type AttemptMode,
   type AttemptStep,
+  type ChestReward,
   type Ev,
   type HintRung,
   type LinePicks,
@@ -56,7 +58,9 @@ export * from './selectors'
 export * from './rewards'
 export * from './milestones'
 export * from './catches'
-export { compact } from './compaction'
+export * from './chest'
+export * from './themes'
+export { compact, keptForGood } from './compaction'
 export { STORAGE_KEYS, saveReturnTo, takeReturnTo } from './storage'
 export { relativeDays, daysAgo, dayKey, isoWeekKey, startOfIsoWeek } from './time'
 export { attemptTouched } from './touched'
@@ -176,6 +180,18 @@ interface Actions {
   noteMilestones: (milestones: readonly number[]) => void
   /** Mistake Monsters caught for the first time (store/catches.ts): kept in the rewards' slice so each catch shows once. */
   noteCatches: (patterns: readonly string[]) => void
+  // daily quests and the chest (docs/progress/phone-quests.md)
+  /**
+   * A set ended: she saw its results (pages/SetPage.tsx, after its one break). Logs `set_done` once per set, which the
+   * daily quests read.
+   */
+  noteSetDone: (input: { setId: string; done: readonly string[]; skipped: number; now?: number }) => void
+  /**
+   * Open the chest of `day` (today's, or yesterday's on the next day): draws its reward (store/chest.ts) and logs
+   * `chest_opened`. The caller shows the chest only when that day's three quests are done (session/quests.ts). Null when
+   * that chest was opened already or the day is neither today nor yesterday.
+   */
+  openChest: (day: string, now?: number) => ChestReward | null
   // maintenance
   resetProgress: () => void
   exportJson: () => string
@@ -586,6 +602,26 @@ export const useStore = create<StoreState>()(
           if (merged.length === had.length && merged.every((p, i) => p === had[i])) return {}
           return { rewards: { ...s.rewards, caught: merged } }
         }),
+
+      // --- daily quests and the chest ---------------------------------------
+      noteSetDone: ({ setId, done, skipped, now = Date.now() }) =>
+        set((s) => {
+          if (s.events.some((e) => e.t === 'set_done' && e.setId === setId)) return {}
+          const ev: Ev = { t: 'set_done', at: now, setId, done: [...done], skipped }
+          return { events: [...s.events, ev] }
+        }),
+      openChest: (day, now = Date.now()) => {
+        const s = get()
+        const today = dayKey(now)
+        if (day !== today && day !== addDays(today, -1)) return null
+        if (chestOpenings(s.events).has(day)) return null
+        // What she has right now decides what the day's draw can give (a rest day she may hold, a theme she lacks).
+        const view = rewardsViewOf(s, now)
+        const reward = drawChestReward(day, { owned: ownedThemes(s.events), restEligible: chestRestEligible(view, s.events, now) })
+        const ev: Ev = { t: 'chest_opened', at: now, day, reward }
+        set({ events: [...s.events, ev] })
+        return reward
+      },
 
       // --- maintenance ------------------------------------------------------
       resetProgress: () => {

@@ -14,7 +14,8 @@ import { parseExpression, parseStatement, singleRelation } from '@/engine/parse'
 import type { ModuleId, VarName } from '@/shared/types'
 
 const SEEDS = Number(process.env.EXPLOG_SEEDS ?? 300)
-const HEAVY = 240000
+// Seeded sweeps run past 4 minutes when the whole suite shares the laptop with a builder (review 2026-10-22).
+const HEAVY = 600_000
 
 function answerOf(module: string, template: string, seed: number): Record<string, unknown> {
   return generateProblem(module as ModuleId, template, seed).answer as unknown as Record<string, unknown>

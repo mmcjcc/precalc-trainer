@@ -15,7 +15,7 @@ disagree, research wins** (the spec's random-sampling equivalence test is vacuou
 | Content | `src/content/modules` | 5 modules: number line (1 template), inequalities (4), even/odd (2), inverses (6: linear, cube root, fraction coefficient, rational, Möbius, quadratic not one-to-one), properties drill (twin-pair bank), difference quotient (4: linear, quadratic, rational, radical; see docs/progress/diff-quotient.md). Tests push every canonical path, and the solve-first alternative for inverses, through the context engine for 25 seeds. |
 | Calculator panels | `src/content/calc` | TI-84 Plus CE and TI-Nspire CX II for 11 problem families, expression / k / f(k) / twin substituted. |
 | Store | `src/store` | Append-only event log with weekly compaction, attempt resume, selectors (mastery, first-try, hint rate, property accuracy, pattern counts, habits, streak, weak spots), rewards (`rewards.ts`: XP, daily goal, goal streak, mistake cards, type rings; slice `pct.rewards`), export/import. |
-| UI | `src/App.tsx`, `src/pages`, `src/pages/flows`, `src/problem`, `src/components` | Complete. `pages/Problem.tsx` dispatches to the inequality, number-line, even/odd and inverse flows; Home, Module, Progress, Settings, Drill, Sandbox and the PIN gate. Graph and calculator panels stay behind a reveal button until the problem is complete (they show the answer). On phones the panel toolbar sits in the composer, or at the top when a screen has no composer. The first-spike demo UI is removed. Sets of three problems (`/set`, `src/session`) and the phone's bottom tab bar: §7. Guided mode (pick the next line from three cards; exponential and log equations): §7. Juice (sounds, the combo, confetti and motion, the streak flame and milestones; `src/components/juice`): §7. Home's unit path (the unit as a road of its problem types, "You are here", no locks; `src/components/path`): §7. Mistake Monsters (every named mistake a monster to catch and squash, the Monsters tab; `src/components/monsters`): §7. The grapher (the Graph tab, "Graph it" from a problem; `src/grapher`, `src/components/grapher`): §7. |
+| UI | `src/App.tsx`, `src/pages`, `src/pages/flows`, `src/problem`, `src/components` | Complete. `pages/Problem.tsx` dispatches to the inequality, number-line, even/odd and inverse flows; Home, Module, Progress, Settings, Drill, Sandbox and the PIN gate. Graph and calculator panels stay behind a reveal button until the problem is complete (they show the answer). On phones the panel toolbar sits in the composer, or at the top when a screen has no composer. The first-spike demo UI is removed. Sets of three problems (`/set`, `src/session`) and the phone's bottom tab bar: §7. Guided mode (pick the next line from three cards; exponential and log equations): §7. Juice (sounds, the combo, confetti and motion, the streak flame and milestones; `src/components/juice`): §7. Home's unit path (the unit as a road of its problem types, "You are here", no locks; `src/components/path`): §7. Mistake Monsters (every named mistake a monster to catch and squash, the Monsters tab; `src/components/monsters`): §7. Daily quests and the chest (three goals a day from the event log, a chest when all three are done, colour themes to earn; `src/session/quests.ts`, `src/store/chest.ts`, `src/components/quests`): §7. The grapher (the Graph tab, "Graph it" from a problem; `src/grapher`, `src/components/grapher`): §7. |
 | Deploy | `Dockerfile`, `nginx.conf`, `docker/`, `.github/workflows`, `deploy/azure.md` | Written. The image builds and passes `deploy/smoke.sh` in GitHub Actions (Docker is not installed on the dev box). On Azure it runs behind Container Apps sign-in with Google plus an email allowlist in nginx (`docker/25-allowlist.sh`, `deploy/azure-setup.sh`). |
 
 **Verification** (2026-09-15): `npm test` 28 files / 297 tests; `npm run test:sweep` pushes every canonical step and its mutations through the engine; browser QA and a two-agent review are recorded in `docs/progress/qa.md` and `docs/progress/review-findings.md` (all 23 findings fixed).
@@ -342,6 +342,25 @@ solved (length, numbers, powers, nesting depth, a log inside a log). The attempt
 review date, set picks, the path and the unit review never do (`inMasteryWindow`, `withoutOwn`). Adding a module: write
 its `own.ts` with a round trip over every template it takes (300 seeds), a why-not list and a keypad fuzz shape
 (`src/problem/own.fuzz.test.ts`). See `docs/progress/own-problem.md`.
+
+Daily quests and the chest (rewards on only, both editions; `session/quests.ts` pure, `store/chest.ts`, `store/themes.ts`,
+`components/quests`): three quests a local day, drawn from the day's hash among the ones she can do judged by her log when
+the day began (her class is her latest problem's; a squash only with an open card, a path stop from `pickSetTypes`, her
+homework one school day a week), one per group (volume, skill, set, focus, own), sized to the daily goal. Progress is read
+from the log (`questDay`): the rewards' own awards for XP (a chest's bonus not), lines and parts and squashes;
+`problem_done` for problems, types not mastered when the day began, the path's stop and her own problem; the new
+`set_done` event (logged by the set runner after the set's one break, with the results) for "a set with no hints" and "a
+perfect set" (every problem `isFirstTryRight`). Her own problems count where their XP counts, never for a squash, mastery or
+the path. The quests row is on Home's Today card; the finish sheet (the wide completion card) and the set's results show
+what a problem or set moved ("Quest done: ...", with the code-made `quest` cue after the finish's or the results' own
+sound). All three done: a chest (`ChestSpots`), on Home, the finish sheet and the results, never on a set's finish sheet
+(it waits for the results, after the ad). Opening it logs `chest_opened` with the reward drawn from the chest's day and
+what she has (`drawChestReward`: bonus XP 15-50 most days, counted that day like any XP; a rest day about one chest in
+five, at most once a week and below `MAX_REST_DAYS`, banked in the streak walk that day; a theme she lacks about one in
+twelve). Only the first opening of a day counts; today's or yesterday's; the compaction keeps these events. Themes are
+five values for the navy family of tokens (`--color-navy`, `-600`, `-800`, `-100`, `-50`) set on `<html>` by
+`useAppliedTheme` (in the app shell) when rewards are on and she owns the one she picked (Settings, "Colour theme");
+every theme passes navy's contrast rules (`store/themes.test.ts`). See `docs/progress/phone-quests.md`.
 
 Problem-page flows by kind:
 - **inequality**: worked column starts at `instance.start`; steps until progress says solved; then

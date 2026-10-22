@@ -67,7 +67,16 @@ export interface Settings {
    * seenA2HS, it belongs to this device and this moment: an import never sets it.
    */
   seenStepGuide?: boolean
+  /**
+   * The colour theme she picked in Settings (store/themes.ts). Absent means the default navy. It only applies with
+   * rewards on and while she owns it (a chest gave it to her: store/chest.ts); otherwise the app is navy. A replace
+   * import takes the file's, like the daily goal.
+   */
+  theme?: ThemeId
 }
+
+/** The app's colour themes: the default navy and the three a daily chest can give (store/themes.ts). */
+export type ThemeId = 'navy' | 'ocean' | 'plum' | 'cocoa'
 
 /** How she writes each line where the problem offers cards: on the keypad, or picked from three cards. */
 export type LineEntry = 'type' | 'pick'
@@ -310,6 +319,41 @@ export type Ev =
     })
   | (EvBase & OwnMark & { t: 'problem_abandoned'; attemptId: string; skill: string })
   | (EvBase & { t: 'drill_answer'; skill: string; correct: boolean; kind: 'property' | 'legal' })
+  | (EvBase & {
+      /**
+       * A set ended: she saw its results (pages/SetPage.tsx, after the set's one break). The daily quests read it
+       * ("Finish a set with no hints", "A perfect set": session/quests.ts). No skill and no XP of its own; the
+       * compaction drops it with the rest of its 60-day-old events.
+       */
+      t: 'set_done'
+      /** The set (`ActiveSet.id`). */
+      setId: string
+      /** The attempts of the problems she finished in it, in the set's order. */
+      done: string[]
+      /** Problems she skipped. */
+      skipped: number
+    })
+  | (EvBase & {
+      /**
+       * A daily chest opened (components/quests/Chest.tsx): the day whose three quests earned it and the reward drawn
+       * for it (store/chest.ts). Bonus XP counts on the day it is opened; a rest day is banked that day; a theme is
+       * hers from then on. The compaction keeps these events (a rest day and a theme last), and only the first opening
+       * of a day counts (two devices merged).
+       */
+      t: 'chest_opened'
+      /** The chest's day ('YYYY-MM-DD', local): today's, or yesterday's opened the next day. */
+      day: string
+      reward: ChestReward
+    })
+
+/** What a daily chest gave her (store/chest.ts). */
+export type ChestReward =
+  /** Bonus XP (15 to 50), counted in the day's XP and the goal like any XP. */
+  | { kind: 'xp'; xp: number }
+  /** One more rest day for the streak, banked like the weekly one (up to the most the streak allows). */
+  | { kind: 'rest' }
+  /** A colour theme she did not own yet. */
+  | { kind: 'theme'; theme: ThemeId }
 
 export type EvType = Ev['t']
 

@@ -6,6 +6,7 @@ import { JuiceLayers } from '@/components/juice/JuiceLayers'
 import { useJuice } from '@/components/juice/useJuice'
 import { useMonsterCatches } from '@/components/monsters/catchMoment'
 import { isNavActive, navItems, tabItems, type NavItem } from '@/components/navItems'
+import { useAppliedTheme } from '@/components/quests/theme'
 import { useRewardTicks } from '@/components/rewards/haptics'
 import { TabBar } from '@/components/TabBar'
 import { Toasts } from '@/components/Toast'
@@ -182,6 +183,8 @@ export function AppShell() {
   useJuice()
   // Mistake Monsters: the first time she makes a mistake, the verdict shows its monster, caught (once per mistake).
   useMonsterCatches()
+  // The colour theme a daily chest gave her, when she picked it in Settings (rewards on): the navy tokens on <html>.
+  useAppliedTheme()
 
   if (pinHash && !unlocked) {
     return (

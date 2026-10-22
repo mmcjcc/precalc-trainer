@@ -19,6 +19,7 @@ import {
 } from '@/session/activeSet'
 import { setEndBreak } from '@/session/breaks'
 import { setRewards, summarizeSet } from '@/session/summary'
+import { useQuestNews } from '@/components/quests/useQuests'
 import { useAttempt, useEvents, useRewards, useRewardsOn, useStore, type Ev } from '@/store'
 import { ProblemView } from './Problem'
 import { SetChromeProvider, type SetChrome } from './set/chrome'
@@ -160,8 +161,17 @@ function SetRun({ set, onSet }: { set: ActiveSet; onSet: (next: ActiveSet) => vo
     if (!readyForResults(prev)) return
     breakTaken.current = true
     const ready = prev
-    // The set's one break (session/breaks.ts): the store app's announced ad, or straight to the results here.
-    setEndBreak(() => onSetRef.current(showSetResults(ready)), { timed: ready.timed })
+    // The set's one break (session/breaks.ts): the store app's announced ad, or straight to the results here. The set's
+    // end goes into the log with the results, after the break (the daily quests read it, and the chest it may earn is
+    // opened on the results: an ad never comes between her tap on a chest and its reward).
+    setEndBreak(() => {
+      useStore.getState().noteSetDone({
+        setId: ready.id,
+        done: ready.attemptIds.filter((id, i): id is string => id !== null && ready.status[i] === 'done'),
+        skipped: ready.status.filter((st) => st === 'skipped').length,
+      })
+      onSetRef.current(showSetResults(ready))
+    }, { timed: ready.timed })
   }, [])
 
   const chrome = useMemo<SetChrome>(
@@ -239,7 +249,20 @@ function SetResults({ set, onAnother, onDone }: { set: ActiveSet; onAnother: () 
   const view = useRewards()
   const lines = useMemo(() => summarizeSet(set, events), [set, events])
   const rewards = useMemo(() => (rewardsOn ? setRewards(set, events, view.awards, view.today.day) : null), [rewardsOn, set, events, view.awards, view.today.day])
-  return <SetSummary lines={lines} rewards={rewards} today={rewardsOn ? view.today : null} onAnother={onAnother} onDone={onDone} />
+  // With rewards on: what the set did to today's quests, and the chest (it waits here, after the set's break).
+  const attempts = useMemo(() => set.attemptIds.filter((id): id is string => id !== null), [set.attemptIds])
+  const quests = useQuestNews(rewardsOn ? attempts : null, set.id)
+  return (
+    <SetSummary
+      lines={lines}
+      rewards={rewards}
+      today={rewardsOn ? view.today : null}
+      quests={quests}
+      setId={set.id}
+      onAnother={onAnother}
+      onDone={onDone}
+    />
+  )
 }
 
 export default SetPage
