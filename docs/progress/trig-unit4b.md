@@ -270,3 +270,27 @@ Changed: `src/shared/types.ts`, `src/content/types.ts`, `src/engine/trig/index.t
 `src/components/TrigFigure.tsx`, `src/pages/flows/TrigFlow.tsx`, `src/pages/Problem.tsx`, `src/problem/tutorContext.ts`,
 `docs/roadmap.md`. Tests changed: `unitCircle.test.ts`, `courses.test.ts`, `generators.test.ts`, `Home.test.tsx`,
 `tutorContext.test.ts`, `keypadKeys.test.ts`.
+
+## Review (Claude, 2026-10-22)
+
+Built by one Claude agent (about 0.87M tokens, 2 h 15 min; its first run stopped on the weekly usage limit and was
+restarted). Checked:
+- 45 sample problems by hand across all six templates and every story and phrasing (66 word-problem shapes listed):
+  every answer right.
+- An independent re-solve of 2400 problems (400 per template) from what she reads, with my own reading of each story
+  (the kite's string, the ladder and the ramp are hypotenuses; the heights and the rise are opposite; distances and
+  shadows adjacent; the angle of depression at the top equals the elevation at the boat), Math and mathjs only: the
+  rounded sides and angles at the precision asked, the third side and the six ratios, both special triangles with any
+  side given, the given-value problems' signs from a quadrant, an interval or another function's sign, and every
+  solution set of uc.solve. No mismatch.
+- On the Android emulator in a store-app build: the kite, lighthouse (both kinds), ramp, tree-shadow and 30-60-90
+  figures: labels on the right sides, dimension lines end to end, "Not drawn to scale." where it is not.
+
+Changed in review:
+- The 18 new trig_ mistakes placed among the monsters (appended to their species, so no caught monster changes its
+  look), and the main branch's monsters merged in.
+- A 13-foot ramp at 3° reaches 13.0 feet along the ground, so copying the given length was right: a draw whose rounded
+  answer equals a number the prompt gives is redrawn (1 draw in 800); a test checks 800 problems.
+
+Left: the tree is drawn as a dashed trunk with a pale crown (reads, but could look more like a tree); the lighthouse's
+angle arc is small at phone size (its label sits beside it).
