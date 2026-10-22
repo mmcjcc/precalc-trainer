@@ -65,6 +65,7 @@ or the textbook) is one more entry in that file.
 | Nov | 3 Parallel and perpendicular lines | transversal angle pairs, proving lines parallel, slopes and equations of lines; triangle and polygon angle sums | shipped 2026-10-17 |
 | Nov | 4 Congruent triangles | corresponding parts, which method (SSS, SAS, ASA, AAS, HL, not enough information), algebra with congruent and isosceles triangles, two-column proofs with CPCTC | shipped 2026-10-18 (rebuilt once: fixed tables) |
 | Dec | 5 Quadrilaterals | geoParallelograms (properties, proving a parallelogram, on the coordinate plane), geoSpecialQuads (rectangles, rhombuses and squares, the most specific name), geoTrapezoids (midsegments and medians, isosceles trapezoids and kites) | shipped 2026-10-19, built by a Claude agent; reviewer re-solve of 7,000 problems |
+| Jan | 6 Similarity | geoRatios (proportions, the geometric mean, similar polygons), geoSimilarTriangles (AA, SSS and SAS similarity or not enough information; using similar triangles, shadows and mirrors), geoProportionalParts (the Triangle Proportionality and Angle-Bisector Theorems, three parallel lines) | built 2026-10-22 by a Claude agent, in review; independent re-solve of 12,000 problems |
 
 ## Chemistry (CK-12 order)
 

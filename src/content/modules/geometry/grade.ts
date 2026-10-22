@@ -106,6 +106,28 @@ export const GEO_UNIT5_MISTAKE_IDS = [
   'geo_slope_inverted',
 ] as const
 
+/** Unit 6 mistakes (similarity). A number or pick is named only when it is exactly what that slip produces here. */
+export const GEO_UNIT6_MISTAKE_IDS = [
+  'geo_matched_by_position',
+  'geo_part_over_whole',
+  'geo_scale_factor_inverted',
+  'geo_perimeter_ratio_squared',
+  'geo_cross_multiplied_wrong',
+  'geo_geometric_as_arithmetic',
+  'geo_bisector_ratio_swapped',
+  'geo_ssa_as_similarity',
+  'geo_corresponding_supplementary',
+  'geo_shadows_crossed',
+  'geo_shared_angle_missed',
+  'geo_similarity_test_missed',
+  'geo_sss_two_pairs',
+  'geo_aa_one_angle',
+  'geo_proportion_distribute',
+  'geo_mean_not_rooted',
+  'geo_angle_scaled',
+  'geo_one_ratio_inverted',
+] as const
+
 export const GEO_UNIT1_MISTAKE_IDS = GEO_MISTAKE_IDS
 
 export type GeoMistakeId =
@@ -114,6 +136,7 @@ export type GeoMistakeId =
   | (typeof GEO_UNIT3_MISTAKE_IDS)[number]
   | (typeof GEO_UNIT4_MISTAKE_IDS)[number]
   | (typeof GEO_UNIT5_MISTAKE_IDS)[number]
+  | (typeof GEO_UNIT6_MISTAKE_IDS)[number]
 
 export type GeoGrade =
   | { verdict: 'correct'; message: string }
@@ -145,8 +168,10 @@ export function gradeGeoStage(answer: GeometryAnswer, stageId: GeometryStageId, 
   if (stage.kind === 'choice') return gradeChoice(stage, text)
   if (stage.kind === 'reason') return gradeReason(stage, text)
   if (stage.kind === 'line') return gradeLine(stage, text)
-  const opts = stage.allowUndefined ? { allowUndefined: true as const } : {}
-  const read = readGeoAnswer(text, opts)
+  const opts = { ...(stage.allowUndefined ? { allowUndefined: true as const } : {}), ...(stage.ratio ? { ratio: true as const } : {}) }
+  const unitless = stage.lengthUnit ? withoutLengthUnit(text, stage.lengthUnit) : { ok: true as const, text }
+  if (!unitless.ok) return { verdict: 'invalid', message: unitless.message }
+  const read = readGeoAnswer(unitless.text, opts)
   if (!read.ok) return { verdict: 'invalid', message: read.message }
   if (read.value.kind === 'point' && stage.kind !== 'point') return { verdict: 'invalid', message: 'This part asks for one number, not a point.' }
   if (read.value.kind !== 'point' && stage.kind === 'point') return { verdict: 'invalid', message: 'This part asks for a point. Write it as (x, y).' }
@@ -219,6 +244,22 @@ function gradeReason(stage: GeometryAnswer['stages'][number], text: string): Geo
 
 const approx = (q: GeoQty) => (q.n / q.d) * Math.sqrt(q.rad)
 
+const UNIT_WORDS: Record<'ft' | 'm', { words: RegExp; name: string; other: RegExp; otherName: string }> = {
+  ft: { words: /\s*(?:ft|feet|foot)\.?$/i, name: 'feet', other: /\s*(?:m|meters?|metres?)\.?$/i, otherName: 'meters' },
+  m: { words: /\s*(?:m|meters?|metres?)\.?$/i, name: 'meters', other: /\s*(?:ft|feet|foot)\.?$/i, otherName: 'feet' },
+}
+
+/** A story's length: "12 ft", "12 feet", or "12" all read as 12. A length in the other unit is a note, not an attempt. */
+function withoutLengthUnit(text: string, unit: 'ft' | 'm'): { ok: true; text: string } | { ok: false; message: string } {
+  const rule = UNIT_WORDS[unit]
+  const trimmed = text.trim()
+  if (rule.words.test(trimmed)) return { ok: true, text: trimmed.replace(rule.words, '') }
+  if (/\d/.test(trimmed) && rule.other.test(trimmed)) {
+    return { ok: false, message: `This problem measures in ${rule.name}, not ${rule.otherName}. Give the length in ${rule.name}.` }
+  }
+  return { ok: true, text: trimmed }
+}
+
 /**
  * True when a mistake's catalog example (written for another problem) contains this part's answer on
  * either side of the arrow. The flow leaves such an example out: "→ 15" beside her slip reads as the
@@ -238,7 +279,8 @@ export function isGeoMistake(id: ErrorPatternId): id is GeoMistakeId {
     (GEO_UNIT2_MISTAKE_IDS as readonly string[]).includes(id) ||
     (GEO_UNIT3_MISTAKE_IDS as readonly string[]).includes(id) ||
     (GEO_UNIT4_MISTAKE_IDS as readonly string[]).includes(id) ||
-    (GEO_UNIT5_MISTAKE_IDS as readonly string[]).includes(id)
+    (GEO_UNIT5_MISTAKE_IDS as readonly string[]).includes(id) ||
+    (GEO_UNIT6_MISTAKE_IDS as readonly string[]).includes(id)
   )
 }
 
@@ -259,7 +301,8 @@ export function assertGeoAnswer(where: string, answer: GeometryAnswer): void {
   for (const a of answer.angles) {
     if (!Number.isInteger(a) || a <= 0 || a >= 180) throw new Error(`${where}: angle ${a} is not strictly between 0 and 180`)
   }
-  if (!answer.figure.ariaLabel.trim()) throw new Error(`${where}: figure has no description`)
+  // A problem stated in words alone (a proportion to solve) has no figure to describe.
+  if (answer.figure.points.length > 0 && !answer.figure.ariaLabel.trim()) throw new Error(`${where}: figure has no description`)
   for (const phrase of METHOD) {
     if (phrase.test(answer.prompt)) throw new Error(`${where}: prompt teaches the method (${phrase})`)
   }

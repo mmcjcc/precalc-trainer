@@ -37,6 +37,8 @@ export interface GeoReadOptions {
   /** Accept the words none / undefined. Off unless the question allows them. */
   allowNone?: boolean
   allowUndefined?: boolean
+  /** Read a ratio written "2:3" or "2 to 3" as the number 2/3 (a scale factor). Off unless the part is a ratio. */
+  ratio?: boolean
 }
 
 type Flags = { denom: boolean; perfect: boolean; square: boolean; unreduced: boolean; sum: boolean; product: boolean }
@@ -145,7 +147,7 @@ function gcd(a: number, b: number): number {
 }
 
 export function readGeoAnswer(raw: string, opts: GeoReadOptions = {}): GeoRead {
-  const prepared = prepare(raw)
+  const prepared = prepare(raw, opts.ratio === true)
   if (!prepared.ok) return prepared
   const word = prepared.text.replace(/[.]$/, '').toLowerCase()
   if (word === 'none' || word === 'undefined') {
@@ -185,7 +187,10 @@ type Prepared = { ok: true; text: string; degrees: boolean } | { ok: false; mess
  */
 const NAMED = /^(?:[A-Za-z]|[A-Z]{2,3}|(?:m\s*)?∠\s*(?:[A-Z]{1,3}|\d))\s*=\s*(.*)$/
 
-function prepare(raw: string): Prepared {
+/** "2:3", "2 : 3", "2 to 3": one ratio sign between two numbers. */
+const RATIO = /^([^:∶]+?)\s*(?:[:∶]|\bto\b)\s*([^:∶]+)$/i
+
+function prepare(raw: string, ratio = false): Prepared {
   const trimmed = raw.trim()
   if (!trimmed) return { ok: false, message: 'Type an answer first.' }
   const normalized = normalizeInput(trimmed)
@@ -197,6 +202,11 @@ function prepare(raw: string): Prepared {
   if (assigned) {
     s = assigned[1]!.trim()
     if (!s) return { ok: false, message: 'Type the number after the equals sign.' }
+  }
+  if (ratio) {
+    // A textbook writes a scale factor 2:3 as often as 2/3. Both read as the same number.
+    const parts = RATIO.exec(s)
+    if (parts) s = `(${parts[1]!.trim()})/(${parts[2]!.trim()})`
   }
   return { ok: true, text: s, degrees }
 }

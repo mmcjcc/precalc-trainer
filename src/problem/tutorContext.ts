@@ -600,6 +600,12 @@ export function assertGeometryQuestion(question: GeometryQuestion): void {
     case 'quadClassify':
     case 'midsegment':
     case 'trapezoidKite':
+    case 'proportion':
+    case 'similarPolygons':
+    case 'similarProve':
+    case 'similarSolve':
+    case 'splitter':
+    case 'angleBisector':
       return
     default: {
       const unexpected: never = question

@@ -105,13 +105,15 @@ describe('course registry', () => {
       ['g3', 'Unit 3', 'Parallel and perpendicular lines', ['geoParallel', 'geoPolygonAngles']],
       ['g4', 'Unit 4', 'Congruent triangles', ['geoCongruence', 'geoIsosceles', 'geoTriangleProofs']],
       ['g5', 'Unit 5', 'Quadrilaterals', ['geoParallelograms', 'geoSpecialQuads', 'geoTrapezoids']],
+      ['g6', 'Unit 6', 'Similarity', ['geoRatios', 'geoSimilarTriangles', 'geoProportionalParts']],
     ])
-    expect(unitsWithModules(geometry!).map((u) => u.id)).toEqual(['g1', 'g2', 'g3', 'g4', 'g5'])
+    expect(unitsWithModules(geometry!).map((u) => u.id)).toEqual(['g1', 'g2', 'g3', 'g4', 'g5', 'g6'])
     expect(modulesInUnit(geometry!.units[0]!).map((m) => m.id)).toEqual(['geoSegments', 'geoAngles'])
     expect(modulesInUnit(geometry!.units[1]!).map((m) => m.id)).toEqual(['geoLogic', 'geoProof'])
     expect(modulesInUnit(geometry!.units[2]!).map((m) => m.id)).toEqual(['geoParallel', 'geoPolygonAngles'])
     expect(modulesInUnit(geometry!.units[3]!).map((m) => m.id)).toEqual(['geoCongruence', 'geoIsosceles', 'geoTriangleProofs'])
     expect(modulesInUnit(geometry!.units[4]!).map((m) => m.id)).toEqual(['geoParallelograms', 'geoSpecialQuads', 'geoTrapezoids'])
+    expect(modulesInUnit(geometry!.units[5]!).map((m) => m.id)).toEqual(['geoRatios', 'geoSimilarTriangles', 'geoProportionalParts'])
     expect(precalc!.units[0]!.reviewId).toBe('unit1')
     expect(precalc!.units[1]!.reviewId).toBeUndefined()
     expect(precalc!.units[2]!.reviewId).toBeUndefined()

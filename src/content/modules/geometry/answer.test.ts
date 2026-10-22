@@ -99,3 +99,24 @@ describe('readGeoAnswer', () => {
     expect(twenty.simplest).toBe(false)
   })
 })
+
+describe('readGeoAnswer with ratios (a scale factor)', () => {
+  const ratio = (raw: string) => readGeoAnswer(raw, { ratio: true })
+  it('reads 2:3, 2 : 3, 2 to 3, and k = 2:3 as the number 2/3, and 4:6 as the same ratio', () => {
+    for (const raw of ['2/3', '2:3', '2 : 3', '2 to 3', 'k = 2:3', '4:6', '2∶3']) {
+      const read = ratio(raw)
+      expect(read.ok, raw).toBe(true)
+      if (!read.ok || read.value.kind !== 'qty') continue
+      expect(sameQty(read.value.q, geoQty(2, 3, 1)), raw).toBe(true)
+    }
+    const whole = ratio('3:1')
+    expect(whole.ok && whole.value.kind === 'qty' && sameQty(whole.value.q, geoQty(3, 1, 1))).toBe(true)
+  })
+
+  it('reads a colon only when the part is a ratio, and refuses two colons', () => {
+    expect(readGeoAnswer('2:3').ok).toBe(false)
+    expect(ratio('2:3:4').ok).toBe(false)
+    expect(ratio('2:').ok).toBe(false)
+    expect(ratio('x:3').ok).toBe(false)
+  })
+})

@@ -1304,6 +1304,54 @@ describe('buildTutorContext', () => {
     expect(factsSeen).toBe(1)
   }, 120_000)
 
+  it('describes the Unit 6 similarity problems without changing the geometry kind', () => {
+    const cases = [
+      ['geoRatios', 'gr.proportion', 'proportion'],
+      ['geoRatios', 'gr.polygons', 'similarPolygons'],
+      ['geoSimilarTriangles', 'gt.prove', 'similarProve'],
+      ['geoSimilarTriangles', 'gt.solve', 'similarSolve'],
+      ['geoProportionalParts', 'gp.splitter', 'splitter'],
+      ['geoProportionalParts', 'gp.bisector', 'angleBisector'],
+    ] as const
+    for (const [moduleId, templateId, question] of cases) {
+      const instance = generateProblem(moduleId, templateId, 1)
+      if (instance.answer.type !== 'geometry') throw new Error(`${templateId} is not geometry`)
+      const a = instance.answer
+      expect(a.question).toBe(question)
+      assertGeometryQuestion(a.question)
+      const ctx = buildTutorContext(instance, attempt(`u6-${templateId}`, { moduleId }), null, false)
+      expect(ctx.kind).toBe('geometry')
+      expect(ctx.subject).toBe('geometry')
+      expect(ctx.statement).toBe(a.figure.ariaLabel ? `${a.prompt} Figure: ${a.figure.ariaLabel}` : a.prompt)
+      expect(ctx.canonical[0]).toBe(a.reveal[0])
+      for (const stage of a.stages) expect(ctx.statement).not.toContain(stage.reveal[0]!)
+      const slip = gradeGeoStage(a, a.trapStage, a.trapAnswer)
+      expect(slip.verdict).toBe('mistake')
+      if (slip.verdict !== 'mistake') continue
+      expect(verdictFromGeo(slip)?.mistake?.id).toBe(a.trap)
+      expect(verdictFromGeo(slip)?.status).toBe('wrong')
+      expect(verdictFromGeo(gradeGeoStage(a, a.stages[0]!.id, a.stages[0]!.kind === 'choice' ? '' : '???'))?.status).toBe('parse_error')
+      const filled = buildTutorContext(instance, attempt(`u6-${templateId}-done`, { moduleId, final: { polyEntries: geoEntries(a) } }), null, true)
+      expect(filled.work).toEqual(geoWork(a, geoEntries(a)))
+      expect(filled.answer).toBe(a.expectedDisplay)
+    }
+
+    // A proportion stated in words alone has no figure, so the tutor sees the equation and no "Figure:".
+    const words = generateProblem('geoRatios', 'gr.proportion', 1)
+    if (words.answer.type !== 'geometry') throw new Error('gr.proportion is not geometry')
+    expect(words.answer.figure.points).toEqual([])
+    const ctx = buildTutorContext(words, attempt('u6-words', { moduleId: 'geoRatios', final: { polyEntries: { x: '5' } } }), null, false)
+    expect(ctx.statement).toBe(words.answer.prompt)
+    expect(ctx.statement).not.toContain('Figure:')
+    expect(ctx.work).toEqual(['x: 5'])
+    // The tutor sees the statement she picked, not its id.
+    const solve = generateProblem('geoSimilarTriangles', 'gt.solve', 1)
+    if (solve.answer.type !== 'geometry') throw new Error('gt.solve is not geometry')
+    const statement = solve.answer.stages[0]!
+    const picked = buildTutorContext(solve, attempt('u6-statement', { moduleId: 'geoSimilarTriangles', final: { polyEntries: { [GEO_KEYS[statement.id]]: statement.answerText } } }), null, false)
+    expect(picked.work).toEqual([`${statement.label}: ${statement.choices!.find((c) => c.id === statement.answerText)!.text}`])
+  }, 120_000)
+
   it('never adds a name, email, or account field', () => {
     const instance = generateProblem('inequalities', 'ineq.linear', 4)
     const ctx = buildTutorContext(instance, attempt('attempt-1', { steps: [step('x <= 3')] }), null, true)

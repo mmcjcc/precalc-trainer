@@ -157,6 +157,12 @@ export const COURSES: readonly CourseDef[] = [
         title: 'Quadrilaterals',
         moduleIds: ['geoParallelograms', 'geoSpecialQuads', 'geoTrapezoids'],
       },
+      {
+        id: 'g6',
+        label: 'Unit 6',
+        title: 'Similarity',
+        moduleIds: ['geoRatios', 'geoSimilarTriangles', 'geoProportionalParts'],
+      },
     ],
   },
 ]

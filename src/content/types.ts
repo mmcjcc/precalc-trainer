@@ -370,7 +370,8 @@ export interface TrigTriangleSpec {
 
 /**
  * Which geometry screen this problem is. Unit 2 adds logic and proof; Unit 3 adds parallels and polygons; Unit 4 adds
- * congruent triangles; Unit 5 adds quadrilaterals.
+ * congruent triangles; Unit 5 adds quadrilaterals; Unit 6 adds similarity (proportions, similar polygons, similar
+ * triangles, proportional parts).
  */
 export type GeometryQuestion =
   | 'addition'
@@ -404,6 +405,12 @@ export type GeometryQuestion =
   | 'quadClassify'
   | 'midsegment'
   | 'trapezoidKite'
+  | 'proportion'
+  | 'similarPolygons'
+  | 'similarProve'
+  | 'similarSolve'
+  | 'splitter'
+  | 'angleBisector'
 
 /**
  * One checked part of a geometry problem. `x` and `result` are the Unit 1 boxes.
@@ -1342,6 +1349,13 @@ export type AnswerSpec =
         unit?: 'deg'
         /** A vertical line has no slope number. The word "undefined" is an answer only when this is set. */
         allowUndefined?: boolean
+        /**
+         * A ratio (a scale factor, a ratio of two lengths): "2:3" and "2 to 3" are read as 2/3, as a textbook writes
+         * them. Off unless set.
+         */
+        ratio?: boolean
+        /** A length measured in this unit (a story problem): "12 ft" or "12 feet" is read as 12. Off unless set. */
+        lengthUnit?: 'ft' | 'm'
         /** Box label, e.g. "x", "AB", "Reason for line 2". */
         label: string
         /** Line under the box or the choices. Never this part's answer. */

@@ -2427,6 +2427,117 @@ export const ERROR_PATTERNS: Record<ErrorPatternId, ErrorPatternInfo> = {
     lesson: 'Slope is the change in y divided by the change in x: (y₂ − y₁)/(x₂ − x₁). Dividing the change in x by the change in y gives the reciprocal, which is a different slope.',
     example: 'a rise of 1 over a run of 4: 4 ✗ → 1/4',
   },
+  // --- honors geometry Unit 6 (similarity). Examples use the letters j, k, l, m, n and words, which no template uses,
+  // and no digit but the 180 of a straight angle, so no example can show a generated answer. A lesson for a slip that
+  // can be named on a "which method" question never names the method that is the answer there.
+  geo_matched_by_position: {
+    id: 'geo_matched_by_position',
+    title: 'Match parts by the letters, not by the picture',
+    lesson: 'In a similarity statement the order of the letters is the correspondence: first with first, second with second, third with third. A figure can be turned or flipped, so a part that sits in the same place in both drawings is often not the part that corresponds.',
+    example: 'the side drawn in the same spot ✗ → the side whose letters sit in the same places in the statement',
+  },
+  geo_part_over_whole: {
+    id: 'geo_part_over_whole',
+    title: 'Compare the same kind of pieces on both sides',
+    lesson: 'Each side of a proportion has to compare the same kind of pieces. A part over the other part on one side needs a part over the other part on the other side, and a part over a whole side needs a part over a whole side. Mixing the two kinds breaks the proportion.',
+    example: 'JK/KL = JM/JN ✗ → JK/KL = JM/MN',
+  },
+  geo_scale_factor_inverted: {
+    id: 'geo_scale_factor_inverted',
+    title: 'The scale factor runs from the first figure to the second',
+    lesson: 'The scale factor of one figure to another is a side of the first figure over the corresponding side of the second. Upside down, it is the scale factor going the other way.',
+    example: 'side j in the first figure, side k in the second: k/j ✗ → j/k',
+  },
+  geo_perimeter_ratio_squared: {
+    id: 'geo_perimeter_ratio_squared',
+    title: 'Perimeters keep the scale factor',
+    lesson: 'The perimeters of two similar figures are in the same ratio as their corresponding sides: the scale factor itself. Squaring the scale factor gives the ratio of the areas, not the perimeters.',
+    example: 'sides in the ratio j:k, so perimeters j²:k² ✗ → perimeters j:k',
+  },
+  geo_cross_multiplied_wrong: {
+    id: 'geo_cross_multiplied_wrong',
+    title: 'Cross-multiply across the equals sign',
+    lesson: 'In a proportion, each numerator multiplies the denominator on the other side of the equals sign: the product of the means equals the product of the extremes. Multiplying each fraction’s own top and bottom writes a different equation.',
+    example: 'j/k = l/m: j · k = l · m ✗ → j · m = k · l',
+  },
+  geo_geometric_as_arithmetic: {
+    id: 'geo_geometric_as_arithmetic',
+    title: 'The geometric mean is not the average',
+    lesson: 'The geometric mean of two positive numbers is the positive number whose square is their product. Adding the two numbers and halving the sum gives the arithmetic mean, which is a different average.',
+    example: 'the geometric mean of j and k: half of j + k ✗ → √(jk)',
+  },
+  geo_bisector_ratio_swapped: {
+    id: 'geo_bisector_ratio_swapped',
+    title: 'Each piece goes with the side next to it',
+    lesson: 'The Triangle Angle-Bisector Theorem pairs each piece of the opposite side with the side of the triangle that touches it. Turning one ratio around pairs each piece with the side across from it instead.',
+    example: 'JN bisects ∠J, with N between K and L: KN/NL = JL/JK ✗ → KN/NL = JK/JL',
+  },
+  geo_ssa_as_similarity: {
+    id: 'geo_ssa_as_similarity',
+    title: 'The angle has to sit between the two sides',
+    lesson: 'The SAS Similarity Theorem needs the congruent angles to be the ones between the two pairs of proportional sides. With the angle across from one of those sides instead (SSA), triangles of different shapes can carry the same marks, so the marks prove nothing.',
+    example: 'two proportional sides and the angle across from one of them ✗ → two proportional sides and the angle between them',
+  },
+  geo_corresponding_supplementary: {
+    id: 'geo_corresponding_supplementary',
+    title: 'Corresponding angles are congruent',
+    lesson: 'In similar figures, corresponding angles have equal measures. They are not supplementary: they match each other, they do not add to 180°.',
+    example: 'm∠J + m∠M = 180 ✗ → m∠J = m∠M',
+  },
+  geo_shadows_crossed: {
+    id: 'geo_shadows_crossed',
+    title: 'Heights go with heights, ground lengths with ground lengths',
+    lesson: 'The two triangles in indirect measurement are similar, so each ratio compares the same two kinds of parts: a height over its own shadow (or its own distance to the mirror) on both sides. Pairing one object’s height with the other object’s shadow crosses the correspondence.',
+    example: 'heights j and l, shadows k and m: j/m = l/k ✗ → j/k = l/m',
+  },
+  geo_shared_angle_missed: {
+    id: 'geo_shared_angle_missed',
+    title: 'An angle in both triangles counts',
+    lesson: 'When two triangles overlap at a vertex, the angle they share is congruent to itself (the reflexive property). That pair counts toward proving the triangles similar, even with no mark drawn on it.',
+    example: 'the shared angle left out ✗ → the shared angle counted as a pair',
+  },
+  geo_similarity_test_missed: {
+    id: 'geo_similarity_test_missed',
+    title: 'Those marks are one of the three ways',
+    lesson: 'Any one of three facts proves two triangles similar: two pairs of congruent angles; all three pairs of sides in proportion; or two pairs of sides in proportion with the angles between them congruent. Right angles and angles made by parallel lines count as congruent pairs. These marks give one of the three.',
+    example: 'marks that give one of the three ways, called short ✗ → that way proves it',
+  },
+  geo_sss_two_pairs: {
+    id: 'geo_sss_two_pairs',
+    title: 'SSS needs all three pairs of sides',
+    lesson: 'The SSS Similarity Theorem needs every pair of corresponding sides in proportion. Two proportional pairs say nothing about the third pair on their own.',
+    example: 'two pairs of sides in proportion ✗ → all three pairs in proportion',
+  },
+  geo_aa_one_angle: {
+    id: 'geo_aa_one_angle',
+    title: 'AA needs two pairs of angles',
+    lesson: 'The AA Similarity Postulate needs two pairs of congruent angles. One pair on its own fits triangles of many different shapes.',
+    example: 'one pair of congruent angles ✗ → two pairs of congruent angles',
+  },
+  geo_proportion_distribute: {
+    id: 'geo_proportion_distribute',
+    title: 'Multiply every term in the parentheses',
+    lesson: 'After you cross-multiply, the number in front of a sum multiplies every term of that sum. Multiplying only the first term leaves the two sides unequal.',
+    example: 'j(x + k) = l: jx + k = l ✗ → jx + jk = l',
+  },
+  geo_mean_not_rooted: {
+    id: 'geo_mean_not_rooted',
+    title: 'Take the square root at the end',
+    lesson: 'The geometric mean x of two numbers makes x² equal to their product. The product is x², not x, so the mean is the positive square root of the product.',
+    example: 'x² = jk, so x = jk ✗ → x = √(jk)',
+  },
+  geo_angle_scaled: {
+    id: 'geo_angle_scaled',
+    title: 'Angles do not grow with the scale factor',
+    lesson: 'Similar figures have the same shape, so corresponding angles are congruent. The scale factor stretches or shrinks the sides; every angle keeps its measure.',
+    example: 'scale factor j/k: the angle times j/k ✗ → the same angle',
+  },
+  geo_one_ratio_inverted: {
+    id: 'geo_one_ratio_inverted',
+    title: 'Turn both ratios over, or neither',
+    lesson: 'A proportion stays true when both ratios are turned upside down. Turning only one of them over, which is the same as multiplying the two numerators together and the two denominators together, writes a different equation.',
+    example: 'j/k = l/m: k/j = l/m ✗ → k/j = m/l',
+  },
   // --- precalculus Unit 4, trigonometric functions (engine/trig; content/modules/angleMeasure, unitCircle). Answers
   // there are angles, π-multiples and the special values, so examples use letters (d, k, θ, x, y, r) and numbers are
   // written as words: no example or lesson can show a generated answer.

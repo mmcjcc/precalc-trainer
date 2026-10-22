@@ -52,6 +52,7 @@ const ch7Titles = ['Ions and ionic compounds', 'Molecular compounds, acids, and 
 const unit3Titles = modulesInUnit(precalc.units[2]!).map((module) => module.title)
 const unit4Titles = modulesInUnit(precalc.units[3]!).map((module) => module.title)
 const unit5Titles = ['Parallelograms', 'Rectangles, rhombuses, and squares', 'Trapezoids, kites, and midsegments']
+const unit6Titles = ['Ratio, proportion and similar polygons', 'Similar triangles', 'Proportional parts']
 
 function done(at: number, moduleId: string, skill: string): Ev {
   return {
@@ -103,8 +104,8 @@ describe('Home: classes and units', () => {
 
     fireEvent.keyDown(tablist, { key: 'ArrowRight' })
     expect(screen.getByRole('tab', { name: 'Honors Geometry', selected: true })).toBeTruthy()
-    // A first visit lands on the last unit that has modules: Unit 5.
-    expect(moduleTitles()).toEqual(unit5Titles)
+    // A first visit lands on the last unit that has modules: Unit 6.
+    expect(moduleTitles()).toEqual(unit6Titles)
 
     fireEvent.keyDown(tablist, { key: 'ArrowRight' })
     expect(screen.getByRole('tab', { name: 'Honors Geometry', selected: true })).toBeTruthy()
@@ -122,27 +123,30 @@ describe('Home: classes and units', () => {
     expect(screen.queryByRole('heading', { name: 'Unit 1 review' })).toBeNull()
   })
 
-  it('shows Honors Geometry Units 1, 2, 3, 4, and 5', () => {
+  it('shows Honors Geometry Units 1, 2, 3, 4, 5, and 6', () => {
     renderHome('/c/geometry')
     expect(screen.getByRole('tab', { name: 'Honors Geometry', selected: true })).toBeTruthy()
-    // A first visit lands on the last unit that has modules: Unit 5.
-    expect(moduleTitles()).toEqual(unit5Titles)
+    // A first visit lands on the last unit that has modules: Unit 6.
+    expect(moduleTitles()).toEqual(unit6Titles)
     const unit1 = screen.getByRole('button', { name: /Unit 1/ })
     const unit2 = screen.getByRole('button', { name: /Unit 2/ })
     const unit3 = screen.getByRole('button', { name: /Unit 3/ })
     const unit4 = screen.getByRole('button', { name: /Unit 4/ })
     const unit5 = screen.getByRole('button', { name: /Unit 5/ })
+    const unit6 = screen.getByRole('button', { name: /Unit 6/ })
     expect(unit1.textContent).not.toMatch(/Coming soon/)
     expect(unit2.textContent).not.toMatch(/Coming soon/)
     expect(unit3.textContent).not.toMatch(/Coming soon/)
     expect(unit4.textContent).not.toMatch(/Coming soon/)
     expect(unit5.textContent).not.toMatch(/Coming soon/)
-    expect(unit5.getAttribute('aria-pressed')).toBe('true')
+    expect(unit6.textContent).not.toMatch(/Coming soon/)
+    expect(unit6.getAttribute('aria-pressed')).toBe('true')
     expect(unit1.textContent).toMatch(/Tools of geometry/)
     expect(unit2.textContent).toMatch(/Reasoning and proof/)
     expect(unit3.textContent).toMatch(/Parallel and perpendicular lines/)
     expect(unit4.textContent).toMatch(/Congruent triangles/)
     expect(unit5.textContent).toMatch(/Quadrilaterals/)
+    expect(unit6.textContent).toMatch(/Similarity/)
     expect(screen.queryByText(/Nothing to practise here yet/)).toBeNull()
     fireEvent.click(unit1)
     expect(moduleTitles()).toEqual(['Segments, midpoints and distance', 'Angles and angle pairs'])
@@ -154,6 +158,8 @@ describe('Home: classes and units', () => {
     expect(moduleTitles()).toEqual(['Congruent triangles', 'Isosceles and equilateral triangles', 'Proving triangles congruent'])
     fireEvent.click(unit5)
     expect(moduleTitles()).toEqual(unit5Titles)
+    fireEvent.click(unit6)
+    expect(moduleTitles()).toEqual(unit6Titles)
   })
 
   it('shows only the selected unit, with the review card on precalc Unit 1 only', () => {

@@ -261,6 +261,7 @@ export const SPECIES: readonly Species[] = [
       'sc_critical_missing',
       'opt_term_dropped',
       'opt_binomial_square',
+      'geo_proportion_distribute',
     ],
   },
   {
@@ -301,13 +302,14 @@ export const SPECIES: readonly Species[] = [
       'trig_r_not_rooted',
       'trig_side_not_rooted',
       'trig_special_45_two',
+      'geo_mean_not_rooted',
     ],
   },
   {
     id: 'upside',
     name: 'The Upside-Downer',
     personality: 'Reads every fraction standing on its head.',
-    family: 'Upside-down slips: a fraction, a ratio or a rate written with its top and bottom swapped, or a parabola turned over.',
+    family: 'Upside-down slips: a fraction, a ratio, a rate or a scale factor written with its top and bottom swapped, one ratio of a proportion turned over, or a parabola turned over.',
     subject: 'math',
     look: { body: 'drop', hue: 192, sat: 62, light: 52, accent: 330, top: 'horns', eyes: 'round', mouth: 'grin', feet: 'stubs', arms: 'stubs', mark: 'fraction', face: 'high', flip: true },
     variants: [
@@ -320,6 +322,9 @@ export const SPECIES: readonly Species[] = [
       'exp_halflife_inverted',
       'opt_opens_wrong_way',
       'trig_hypotenuse_as_leg',
+      'geo_scale_factor_inverted',
+      'geo_shadows_crossed',
+      'geo_one_ratio_inverted',
     ],
   },
   {
@@ -622,7 +627,7 @@ export const SPECIES: readonly Species[] = [
     id: 'mismeasure',
     name: 'The Mismeasurer',
     personality: 'Measures twice and gets it wrong both times.',
-    family: 'Measure slips: parts and wholes, midpoints, halves and doubles, x in place of the measure, angle sums of polygons, fences and areas counted wrong.',
+    family: 'Measure slips: parts and wholes, midpoints, halves and doubles, x in place of the measure, angle sums of polygons, fences and areas counted wrong, proportions set up or cross-multiplied wrong, and the means and ratios of similar figures.',
     subject: 'math',
     look: { body: 'box', hue: 50, sat: 86, light: 56, accent: 4, top: 'antennae', eyes: 'round', mouth: 'grin', feet: 'stubs', arms: 'stubs', mark: 'ruler' },
     variants: [
@@ -653,13 +658,19 @@ export const SPECIES: readonly Species[] = [
       'opt_area_as_fence',
       'trig_pythag_added',
       'trig_pythag_subtracted',
+      'geo_part_over_whole',
+      'geo_perimeter_ratio_squared',
+      'geo_cross_multiplied_wrong',
+      'geo_geometric_as_arithmetic',
+      'geo_bisector_ratio_swapped',
+      'geo_angle_scaled',
     ],
   },
   {
     id: 'angle',
     name: 'The Angle Swapper',
     personality: 'Trades angle partners: vertical for linear, alternate for corresponding.',
-    family: 'Angle mix-ups: complementary or supplementary, vertical or linear, the transversal pairs, the angles of a quadrilateral, which side is across from which angle.',
+    family: 'Angle mix-ups: complementary or supplementary, vertical or linear, the transversal pairs, the angles of a quadrilateral, which side is across from which angle, and which part of a similar figure corresponds to which.',
     subject: 'math',
     look: { body: 'tri', hue: 122, sat: 44, light: 52, accent: 340, top: 'horns', eyes: 'round', mouth: 'smirk', feet: 'stubs', arms: 'stubs', mark: 'arc' },
     variants: [
@@ -683,6 +694,8 @@ export const SPECIES: readonly Species[] = [
       'trig_special_legs_swapped',
       'trig_depression_from_vertical',
       'trig_opposite_adjacent_swapped',
+      'geo_matched_by_position',
+      'geo_corresponding_supplementary',
     ],
   },
   {
@@ -708,7 +721,7 @@ export const SPECIES: readonly Species[] = [
     id: 'reason',
     name: 'The Reason Thief',
     personality: 'Swipes the right reason out of your proof and leaves a wrong one.',
-    family: 'Proof slips: the wrong property for a line, congruence shortcuts that prove nothing, CPCTC too soon.',
+    family: 'Proof slips: the wrong property for a line, congruence and similarity shortcuts that prove nothing, a pair the figure gives left out, CPCTC too soon.',
     subject: 'math',
     look: { body: 'bean', hue: 236, sat: 34, light: 46, accent: 48, top: 'ears', eyes: 'side', mouth: 'smirk', feet: 'stubs', arms: 'stubs', mark: 'therefore', face: 'high' },
     variants: [
@@ -726,6 +739,11 @@ export const SPECIES: readonly Species[] = [
       'geo_vertices_out_of_order',
       'geo_shared_side_missed',
       'geo_cpctc_too_soon',
+      'geo_ssa_as_similarity',
+      'geo_shared_angle_missed',
+      'geo_similarity_test_missed',
+      'geo_sss_two_pairs',
+      'geo_aa_one_angle',
     ],
   },
   {

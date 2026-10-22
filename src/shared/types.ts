@@ -15,7 +15,7 @@
 export type RelOp = '=' | '<' | '<=' | '>' | '>='
 /** `h` is the difference-quotient step; the parser accepts it only when the problem owns it (ctx.vars). */
 export type VarName = 'x' | 'y' | 'n' | 'h'
-export type ModuleId = 'numberLine' | 'inequalities' | 'evenOdd' | 'inverses' | 'propertiesDrill' | 'sigFigs' | 'atoms' | 'diffQuotient' | 'graphFeatures' | 'domainRange' | 'composition' | 'functionOps' | 'transformations' | 'piecewiseRate' | 'electrons' | 'periodic' | 'quadratics' | 'optimization' | 'polyDivision' | 'polyZeros' | 'rationalFns' | 'signCharts' | 'complexNums' | 'logForms' | 'logProperties' | 'expLogEquations' | 'expLogGraphs' | 'expModels' | 'angleMeasure' | 'rightTriangle' | 'unitCircle' | 'geoSegments' | 'geoAngles' | 'geoLogic' | 'geoProof' | 'geoParallel' | 'geoPolygonAngles' | 'geoCongruence' | 'geoIsosceles' | 'geoTriangleProofs' | 'geoParallelograms' | 'geoSpecialQuads' | 'geoTrapezoids' | 'ionicNames' | 'molecularAcids'
+export type ModuleId = 'numberLine' | 'inequalities' | 'evenOdd' | 'inverses' | 'propertiesDrill' | 'sigFigs' | 'atoms' | 'diffQuotient' | 'graphFeatures' | 'domainRange' | 'composition' | 'functionOps' | 'transformations' | 'piecewiseRate' | 'electrons' | 'periodic' | 'quadratics' | 'optimization' | 'polyDivision' | 'polyZeros' | 'rationalFns' | 'signCharts' | 'complexNums' | 'logForms' | 'logProperties' | 'expLogEquations' | 'expLogGraphs' | 'expModels' | 'angleMeasure' | 'rightTriangle' | 'unitCircle' | 'geoSegments' | 'geoAngles' | 'geoLogic' | 'geoProof' | 'geoParallel' | 'geoPolygonAngles' | 'geoCongruence' | 'geoIsosceles' | 'geoTriangleProofs' | 'geoParallelograms' | 'geoSpecialQuads' | 'geoTrapezoids' | 'geoRatios' | 'geoSimilarTriangles' | 'geoProportionalParts' | 'ionicNames' | 'molecularAcids'
 export type CalcId = 'ti84' | 'nspire'
 
 /** Fine-grained property tags. Canonical steps carry one; the engine's move detector reports one. */
@@ -578,6 +578,27 @@ export type ErrorPatternId =
   | 'geo_not_most_specific'
   | 'geo_converse_property'
   | 'geo_slope_inverted'
+  // honors geometry Unit 6, similarity (content/modules/geometry). Each id is the exact number or pick that slip
+  // produces on this problem: a proportion set up or solved the wrong way, parts matched by where they are drawn
+  // instead of by the letters, a ratio upside down, or a similarity test used where it does not apply.
+  | 'geo_matched_by_position'
+  | 'geo_part_over_whole'
+  | 'geo_scale_factor_inverted'
+  | 'geo_perimeter_ratio_squared'
+  | 'geo_cross_multiplied_wrong'
+  | 'geo_geometric_as_arithmetic'
+  | 'geo_bisector_ratio_swapped'
+  | 'geo_ssa_as_similarity'
+  | 'geo_corresponding_supplementary'
+  | 'geo_shadows_crossed'
+  | 'geo_shared_angle_missed'
+  | 'geo_similarity_test_missed'
+  | 'geo_sss_two_pairs'
+  | 'geo_aa_one_angle'
+  | 'geo_proportion_distribute'
+  | 'geo_mean_not_rooted'
+  | 'geo_angle_scaled'
+  | 'geo_one_ratio_inverted'
   // precalculus Unit 4, trigonometric functions (engine/trig; content/modules/angleMeasure, unitCircle). Each id is
   // the exact value, angle or quadrant that slip gives on THIS problem, computed by the core; never a right answer.
   | 'trig_conversion_inverted'

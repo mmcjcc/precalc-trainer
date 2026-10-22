@@ -34,6 +34,10 @@ import { drawPgramProve } from './unit5Prove'
 import { PARALLELOGRAM_RULES, SPECIAL_RULES, TRAPEZOID_RULES } from './unit5Rules'
 import { drawClassify, drawSpecialProps } from './unit5Special'
 import { drawMidsegment, drawTrapezoidKite } from './unit5Trap'
+import { drawProportion, drawSimilarPolygons } from './unit6Ratios'
+import { PARTS_RULES, RATIO_RULES, SIMILAR_RULES } from './unit6Rules'
+import { drawBisectorParts, drawSplitter } from './unit6Parts'
+import { drawSimilarProve, drawSimilarSolve } from './unit6Similar'
 
 export { readGeoAnswer, formatPoint, formatQty, formatValue, geoQty, sameGeoValue, sameQty, simplifyRadical } from './answer'
 export type { GeoQty, GeoRead, GeoReadOptions, GeoValue } from './answer'
@@ -410,4 +414,100 @@ registerModule(geoIsoscelesModule)
 registerModule(geoTriangleProofsModule)
 registerModule(geoParallelogramsModule)
 registerModule(geoSpecialQuadsModule)
+/**
+ * Ratio, proportion and similar polygons (honors geometry Unit 6, Jurgensen 7-1 to 7-3). Solving a proportion, the
+ * properties of proportions and the geometric mean; the scale factor, sides, angles and perimeters of similar polygons.
+ */
+export const geoRatiosModule: ModuleDef = {
+  id: 'geoRatios',
+  subject: 'Geometry',
+  title: 'Ratio, proportion and similar polygons',
+  blurb: 'Solve a proportion, use its properties and the geometric mean, and find the scale factor, sides, angles and perimeter of similar polygons.',
+  order: 21,
+  templates: [
+    geoTemplate(
+      'geoRatios',
+      'gr.proportion',
+      'Proportions',
+      'Solve a proportion or find a geometric mean, find a ratio from an equation, or pick the equation a proportion gives.',
+      drawProportion,
+    ),
+    geoTemplate(
+      'geoRatios',
+      'gr.polygons',
+      'Similar polygons',
+      'Two similar polygons, one turned or flipped. Find the scale factor, then x, then a side, the perimeter, or an angle.',
+      drawSimilarPolygons,
+    ),
+  ],
+  ruleCards: RATIO_RULES,
+  progress: PROGRESS,
+  nextStep: () => null,
+}
+
 registerModule(geoTrapezoidsModule)
+/**
+ * Similar triangles (honors geometry Unit 6, Jurgensen 7-3 to 7-5). Which postulate or theorem proves two triangles
+ * similar, and using similar triangles: a triangle inside a triangle, the altitude to the hypotenuse, shadows and a mirror.
+ */
+export const geoSimilarTrianglesModule: ModuleDef = {
+  id: 'geoSimilarTriangles',
+  subject: 'Geometry',
+  title: 'Similar triangles',
+  blurb: 'Decide which postulate or theorem proves two triangles similar, then write the similarity statement and find a length.',
+  order: 22,
+  templates: [
+    geoTemplate(
+      'geoSimilarTriangles',
+      'gt.prove',
+      'Proving triangles similar',
+      'Two triangles with marks. Which postulate or theorem, if any, proves they are similar?',
+      drawSimilarProve,
+    ),
+    geoTemplate(
+      'geoSimilarTriangles',
+      'gt.solve',
+      'Using similar triangles',
+      'A triangle inside a triangle, the altitude to the hypotenuse, or shadows and a mirror. Write the similarity statement, then find x.',
+      drawSimilarSolve,
+    ),
+  ],
+  ruleCards: SIMILAR_RULES,
+  progress: PROGRESS,
+  nextStep: () => null,
+}
+
+registerModule(geoRatiosModule)
+/**
+ * Proportional parts (honors geometry Unit 6, Jurgensen 7-6). The Triangle Proportionality Theorem and its converse, a
+ * parallel through a midpoint, the Triangle Angle-Bisector Theorem, and three parallel lines cutting two transversals.
+ */
+export const geoProportionalPartsModule: ModuleDef = {
+  id: 'geoProportionalParts',
+  subject: 'Geometry',
+  title: 'Proportional parts',
+  blurb: 'Use a segment parallel to a side, an angle bisector, or three parallel lines to set up a proportion of pieces.',
+  order: 23,
+  templates: [
+    geoTemplate(
+      'geoProportionalParts',
+      'gp.splitter',
+      'Triangle Proportionality Theorem',
+      'A segment parallel to a side divides the other two sides proportionally. Find x, decide whether a segment is parallel, or use a midpoint.',
+      drawSplitter,
+    ),
+    geoTemplate(
+      'geoProportionalParts',
+      'gp.bisector',
+      'Angle bisectors and parallel lines',
+      'An angle bisector divides the opposite side in the ratio of the other two sides, and three parallel lines divide two transversals proportionally. Find x.',
+      drawBisectorParts,
+    ),
+  ],
+  ruleCards: PARTS_RULES,
+  progress: PROGRESS,
+  nextStep: () => null,
+}
+
+registerModule(geoSimilarTrianglesModule)
+registerModule(geoProportionalPartsModule)
