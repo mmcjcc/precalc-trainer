@@ -18,6 +18,7 @@ import type { MathNode } from 'mathjs'
 import {
   OWN_VERSION,
   fail,
+  letterReason,
   lettersOf,
   math,
   ownProblemId,
@@ -26,6 +27,7 @@ import {
   scanFeatures,
   screenText,
   screenTree,
+  type LetterRule,
   type OwnConstructor,
   type OwnKind,
   type OwnResult,
@@ -52,10 +54,15 @@ const FORMS = 'here I check the difference quotient of a line, a quadratic, or a
 
 type Read = { ok: true; f: MathNode; text: string } | { ok: false; result: OwnResult }
 
+const LETTERS: LetterRule = { main: 'x', allowed: ['x'], functions: true, here: [math('f'), ' is written in ', math('x'), ' alone'] }
+
 function readFunction(statement: string): Read {
   if (/[=<>]/.test(statement)) {
     const rel = parseStatement(statement, ['x', 'y'])
-    if (!rel.ok) return { ok: false, result: { ok: false, reason: parseReason(rel.error, statement) } }
+    if (!rel.ok) {
+      const r = parseReason(rel.error, statement)
+      return { ok: false, result: r.code === 'letter' ? letterReason(statement, LETTERS) : { ok: false, reason: r } }
+    }
     const rels = rel.statement.disjuncts.flat()
     const only = rels.length === 1 && rel.statement.disjuncts.length === 1 ? rels[0]! : null
     if (only && only.op === '=' && symbolName(only.lhs) === 'y' && !collectVars(only.rhs).includes('y')) {
@@ -66,10 +73,7 @@ function readFunction(statement: string): Read {
   const expr = parseExpression(statement, ['x'])
   if (!expr.ok) {
     const r = parseReason(expr.error, statement)
-    if (r.code === 'letter') {
-      const letter = /letter "([^"]+)"/.exec(expr.error.message)?.[1] ?? '?'
-      return { ok: false, result: fail('letter', 'This uses the letter ', math(letter), ', and here ', math('f'), ' is written in ', math('x'), ' alone.') }
-    }
+    if (r.code === 'letter') return { ok: false, result: letterReason(statement, LETTERS) }
     return { ok: false, result: { ok: false, reason: r } }
   }
   return { ok: true, f: expr.node, text: statement }

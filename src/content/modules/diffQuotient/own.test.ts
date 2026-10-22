@@ -122,7 +122,9 @@ describe('why not: what is outside the difference quotient gets its reason', () 
     ['3/x + 2', 'not_form', /not one of the forms/],
     ['7', 'constant', /no x in it/],
     ['100x + 1', 'number_too_big', /up to 50/],
-    ['f(x) = 3x^2 + h', 'letter', /letter h/],
+    ['f(x) = 3x^2 + h', 'letter', /^This has two letters, x and h, and here f is written in x alone\.$/],
+    ['f(t) = 3t^2 + 1', 'letter', /letter t, .*; type it with x in place of t, and I can check it\.$/],
+    ['g(x) = 3x^2 + 1', 'letter', /calls the function g, .*; type it as f\(x\) = 3x\^\{2\}\+1, and I can check it\.$/],
     ['3x^2 + 2x - 1 = 0', 'not_function', /Type the function/],
   ]
   for (const [text, code, words] of cases) {

@@ -18,6 +18,7 @@ import {
   OWN_VERSION,
   fail,
   hasLogInLog,
+  letterReason,
   lettersOf,
   math,
   ownProblemId,
@@ -113,8 +114,7 @@ export function buildOwnLogProperties(kindId: string, text: string): OwnResult {
   if (!parsed.ok) {
     const r = parseReason(parsed.error, expr)
     if (r.code === 'letter') {
-      const letter = /letter "([^"]+)"/.exec(parsed.error.message)?.[1] ?? '?'
-      return fail('letter', 'This uses the letter ', math(letter), ', and here the letters are ', math('x'), ', ', math('y'), ' and ', math('n'), '.')
+      return letterReason(expr, { main: 'x', allowed: ['x', 'y', 'n'], together: true, here: ['the letters are ', math('x'), ', ', math('y'), ' and ', math('n')] })
     }
     return { ok: false, reason: r }
   }

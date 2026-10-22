@@ -34,6 +34,7 @@ class QuietObserver {
 
 let navigateTo: NavigateFunction | null = null
 let where = ''
+let whereSearch = ''
 
 /** The router's navigate and location, for Back and for checking where a link went. */
 function Probe() {
@@ -42,6 +43,7 @@ function Probe() {
   useEffect(() => {
     navigateTo = navigate
     where = location.pathname
+    whereSearch = location.search
   })
   return null
 }
@@ -431,6 +433,7 @@ describe('modules without a constructor', () => {
       const view = renderApp([`/m/${moduleId}`])
       await screen.findByRole('heading', { level: 1 }, LAZY)
       expect(document.querySelector('[data-own-card]'), moduleId).toBeNull()
+      expect(document.querySelector('[data-own-link]'), moduleId).toBeNull()
       view.unmount()
       const link = renderApp([`/own/${moduleId}`])
       await waitFor(() => expect(where).toBe(`/m/${moduleId}`), LAZY)
@@ -441,9 +444,91 @@ describe('modules without a constructor', () => {
     }
   })
 
-  it('the inequality module shows the card', { timeout: PAGE_TIMEOUT }, async () => {
+  it('the inequality module shows a one-line link above the first problem type, and the card below the last', { timeout: PAGE_TIMEOUT }, async () => {
     renderApp(['/m/inequalities'])
     await screen.findByRole('heading', { level: 1 }, LAZY)
-    expect(document.querySelector('[data-own-card]')).toBeTruthy()
+    const card = document.querySelector('[data-own-card]')!
+    const link = within(document.querySelector<HTMLElement>('[data-own-link]')!).getByRole('link', { name: /Check a problem from your homework/ })
+    expect(link.getAttribute('href')).toBe('/own/inequalities')
+    const types = document.querySelectorAll('article')
+    expect(types.length).toBeGreaterThan(1)
+    // The link comes before every problem type; the card after them all.
+    expect(link.compareDocumentPosition(types[0]!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(card.compareDocumentPosition(types[types.length - 1]!) & Node.DOCUMENT_POSITION_PRECEDING).toBeTruthy()
+    fireEvent.click(link)
+    expect(await screen.findByRole('textbox', { name: 'Your problem' }, LAZY)).toBeTruthy()
+    expect(where).toBe('/own/inequalities')
+  })
+})
+
+describe('Check my own problem: an exponential or log equation, rounded as her homework asks', () => {
+  const STATEMENT = 'ln(x) + ln(x - 2) = 1'
+  const send = (text: string) => {
+    fireEvent.change(screen.getByRole('textbox', { name: 'Next line' }), { target: { value: text } })
+    fireEvent.click(screen.getByRole('button', { name: 'Check this line' }))
+  }
+  const answer = (text: string) => {
+    fireEvent.change(screen.getByLabelText('Answer'), { target: { value: text } })
+    fireEvent.click(screen.getByRole('button', { name: 'Check the answer' }))
+  }
+
+  it('the builder’s choice of places → Start carries it → her line → Back keeps it in the builder', { timeout: PAGE_TIMEOUT }, async () => {
+    renderApp(['/m/expLogEquations', '/own/expLogEquations'])
+    const box = await screen.findByRole('textbox', { name: 'Your problem' }, LAZY)
+    // Exact by default; she picks what her homework asks.
+    expect((screen.getByRole('radio', { name: 'Exact answer' }) as HTMLInputElement).checked).toBe(true)
+    fireEvent.change(box, { target: { value: STATEMENT } })
+    fireEvent.click(screen.getByRole('button', { name: 'Check it' }))
+    const no = await screen.findByRole('heading', { name: 'I can’t check this one here' })
+    expect(no.closest('section')!.textContent).toContain('pick how many decimal places')
+    fireEvent.click(screen.getByRole('radio', { name: 'Round to 3 decimal places' }))
+    // A new choice puts the old verdict away.
+    expect(screen.queryByRole('heading', { name: 'I can’t check this one here' })).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: 'Check it' }))
+    const ok = await screen.findByRole('heading', { name: /I can check this one/ })
+    expect(ok.closest('section')!.textContent).toContain('round the solution to three decimal places')
+    fireEvent.click(screen.getByRole('button', { name: 'Start' }))
+
+    await screen.findByRole('textbox', { name: 'Next line' }, LAZY)
+    expect(where).toBe(ownProblemPath('expLogEquations', 'ee.logarithmic', STATEMENT))
+    expect(whereSearch).toBe('?d=r3')
+    expect(screen.getByText('Solve. Round to three decimal places. Check every answer in the original equation.')).toBeTruthy()
+    expect(store().attempt).toMatchObject({ own: STATEMENT, difficulty: 'r3' })
+    send('x(x - 2) = e')
+    expect(store().attempt?.steps).toHaveLength(1)
+
+    act(() => navigateTo!(-1))
+    const back = await screen.findByRole('textbox', { name: 'Your problem' }, LAZY)
+    expect((back as HTMLInputElement).value).toBe(STATEMENT)
+    expect((screen.getByRole('radio', { name: 'Round to 3 decimal places' }) as HTMLInputElement).checked).toBe(true)
+    expect(JSON.parse(localStorage.getItem(OWN_STORAGE_KEY)!).expLogEquations).toMatchObject({ text: STATEMENT, places: 3 })
+  })
+
+  it('a reload keeps the places and her lines; 2.93 is rounded too far, keeping −0.928 is named, 2.928 finishes', { timeout: PAGE_TIMEOUT }, async () => {
+    const path = ownProblemPath('expLogEquations', 'ee.logarithmic', STATEMENT, 'r3')
+    const view = renderApp([path])
+    await screen.findByRole('textbox', { name: 'Next line' }, LAZY)
+    send('x(x - 2) = e')
+    const saved = localStorage.getItem(STORAGE_KEYS.attempt)
+    expect(saved).toContain('"difficulty":"r3"')
+    view.unmount()
+
+    // Reload: memory is gone, localStorage survives.
+    useStore.setState({ attempt: null })
+    localStorage.setItem(STORAGE_KEYS.attempt, saved!)
+    await useStore.persist.rehydrate()
+    renderApp([path])
+    await screen.findByRole('textbox', { name: 'Next line' }, LAZY)
+    expect(store().attempt?.steps.map((s) => s.text.replace(/[*\s]/g, ''))).toEqual(['x(x-2)=e'])
+    expect(screen.getByText('Solve. Round to three decimal places. Check every answer in the original equation.')).toBeTruthy()
+
+    answer('2.93')
+    expect(document.body.textContent).toContain('Keep 3 decimal places: your answer is rounded too far.')
+    answer('x = -0.928 or x = 2.928')
+    expect(caught('log_extraneous_kept')).toBeTruthy()
+    answer('2.928')
+    const card = await finished()
+    expect(within(card).getByRole('button', { name: 'Check another' })).toBeTruthy()
+    allHers('ee.logarithmic')
   })
 })

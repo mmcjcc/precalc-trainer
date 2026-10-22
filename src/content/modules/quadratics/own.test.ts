@@ -81,7 +81,8 @@ describe('why not: what is outside completing the square gets its reason', () =>
     ['sqrt(x) + x^2', 'not_polynomial', /not a quadratic polynomial/],
     ['1/x + x^2', 'not_polynomial'],
     ['7', 'no_variable', /no x in it/],
-    ['x^2 + 2xy', 'letter', /letter y/],
+    ['x^2 + 2xy', 'letter', /^This has two letters, x and y, and here the quadratic is in x\.$/],
+    ['t^2 + 4t + 1', 'letter', /^This uses the letter t, .*; type it with x in place of t, and I can check it\.$/],
     ['x^2 +', 'missing', /missing after the \+/],
     ['x^2 + 123456x', 'number_too_big', /123456/],
   ]

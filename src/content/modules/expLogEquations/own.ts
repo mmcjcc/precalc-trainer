@@ -3,13 +3,16 @@
  * ProblemInstance exactly like the three templates make (kind 'expLogEquations'), or the reason it is outside this
  * module.
  *
- * The class is what the logs engine solves exactly: one equation in x with x in an exponent or inside a log (one base
- * or two, a log on each side, a quadratic in disguise), whose solutions the engine finds exactly. The answer, the
- * extraneous roots and the worked solution are the engine's own (`analyzeLogEquation`), never a template's numbers;
- * the hint path is the engine's worked lines, each kept only when the flow's own checker (`checkLogStep`, with her
- * equation as the original) keeps it, ending with the solution. Her answer is graded by `gradeLogEquation`, as a
- * generated problem's is. The per-seed trap is left out unless the engine's analysis names one (an extraneous root
- * she might keep).
+ * The class is what the logs engine solves: one equation in x with x in an exponent or inside a log (one base or two,
+ * a log on each side, a quadratic in disguise). For the exact answer the engine must find the solutions exactly; with
+ * the answer rounded (she picks 1 to 4 decimal places, as her homework asks) one solution is enough, found exactly or
+ * only as a decimal, and the answer is written as the module's rounded templates write theirs (`places`, "Solve. Round
+ * to three decimal places.", the rounded value). The answer, the extraneous roots and the worked solution are the
+ * engine's own (`analyzeLogEquation`), never a template's numbers; the hint path is the engine's worked lines, each
+ * kept only when the flow's own checker (`checkLogStep`, with her equation as the original and the places she asked
+ * for) keeps it, ending with the solution. Her answer is graded by `gradeLogEquation`, as a generated problem's is. The
+ * per-seed trap is left out unless the engine's analysis names one (an extraneous root she might keep) and it grades
+ * as that slip.
  */
 import type { CanonicalStep, ProblemInstance } from '@/content/types'
 import { analyzeLogEquation, checkLogStep, gradeLogEquation, normalizeInput, parseStatement, sameLogLine, statementHolds, type LogEquation } from '@/engine'
@@ -19,12 +22,15 @@ import { ratDiv, ratNeg } from '@/notation'
 import type { MathNode } from 'mathjs'
 import type { ErrorPatternId } from '@/shared/types'
 import {
+  OWN_PLACES,
   OWN_VERSION,
   fail,
   fnWords,
   hasLogInLog,
+  letterReason,
   lettersOf,
   math,
+  ownFlags,
   ownProblemId,
   ownSeed,
   parseReason,
@@ -33,11 +39,12 @@ import {
   screenTree,
   type OwnConstructor,
   type OwnKind,
+  type OwnOptions,
   type OwnPart,
   type OwnResult,
 } from '@/content/own/core'
 import { ZERO, factor, isMinusOne, isOne, plus } from '@/content/own/print'
-import { EQUATION_HINT, EQUATION_NUDGE } from '../explog/text'
+import { EQUATION_HINT, EQUATION_NUDGE, placesWord, roundPlaces } from '../explog/text'
 import { EE_MODULE_ID, type ExpLogAnswer } from './build'
 import { EE_RULE_IDS } from './rules'
 
@@ -133,13 +140,18 @@ function lineOf(sols: readonly { value: number; text: string }[]): string {
  * The formula at the end of one of the engine's worked sentences ("Combine the logs …: x(x − 3) = 10."), as a line.
  * A line in u ("Solve for u: u = 2 or u = 3.") is written back in x with the engine's own u (e^x = 2 or e^x = 3).
  */
+/** e to the first power written as e (the engine writes e^1 = x + 1; a person writes e = x + 1). */
+function tidyE(text: string): string {
+  return text.replace(/(?<![A-Za-z])e\^(?:1|\(1\))(?![\d.])/g, 'e')
+}
+
 function workedLine(sentence: string, u: string | null): string | null {
   const at = sentence.lastIndexOf(': ')
   if (at < 0) return null
   let text = sentence.slice(at + 2).trim()
   if (text.endsWith('.')) text = text.slice(0, -1)
   // The sentence is display text (−, ·): the app's syntax first.
-  text = normalizeInput(text).replace(/\s+/g, ' ').trim()
+  text = tidyE(normalizeInput(text).replace(/\s+/g, ' ').trim())
   if (u && /(?<![A-Za-z])u(?![A-Za-z])/.test(text)) {
     const power = /^[A-Za-z0-9.]+\^(\w+|\([^()]*\))$/.test(u) ? u : `(${u})`
     text = text.replace(/(?<![A-Za-z])u(?![A-Za-z])/g, power)
@@ -173,14 +185,74 @@ function exactFromAlgebraic(a: LogEquation, equation: string): string | null {
   // The side is P·x + Q: x = (other − Q)/P.
   const P = ratDiv(lin.num[1]!, lin.den[0]!)
   const Q = ratDiv(lin.num[0] ?? ZERO, lin.den[0]!)
-  const atom = /^[^+\-]*$/.test(otherSrc.trim().replace(/^-/, '')) ? otherSrc.trim() : `(${otherSrc.trim()})`
+  const src = tidyE(otherSrc.trim())
+  const atom = /^[^+\-]*$/.test(src.replace(/^-/, '')) ? src : `(${src})`
   const top = plus(atom, ratNeg(Q))
   const text = isOne(P) ? `x = ${top}` : isMinusOne(P) ? `x = -(${top})` : `x = (${top})/${factor(P)}`
   const g = gradeLogEquation(equation, text)
   return g.verdict === 'correct' ? text : null
 }
 
-export function buildOwnExpLogEquation(text: string): OwnResult {
+/** The answer she will be asked for, and the hint path's last line. */
+interface Answer {
+  /** What the answer box shows as the answer (`answerText`). */
+  text: string
+  /** Spellings the answer box takes, the answer first. */
+  accept: string[]
+  /** The solution as a line, the hint path's last. */
+  last: string
+}
+
+/** The exact answer: the engine's solutions, or one written from its own log-free line; null when neither is exact. */
+function exactAnswer(a: LogEquation, equation: string): Answer | null {
+  let text = lineOf(a.solutions)
+  if (a.solutions.some((s) => !s.exact)) {
+    const exact = exactFromAlgebraic(a, equation)
+    if (!exact) return null
+    text = exact
+  }
+  if (gradeLogEquation(equation, text).verdict !== 'correct') return null
+  // Spellings the answer box takes: the whole line, and the bare number when there is one solution.
+  const accept = [text]
+  if (a.solutions.length === 1) {
+    const bare = text.replace(/^\s*x\s*=\s*/, '')
+    if (bare !== text && gradeLogEquation(equation, bare).verdict === 'correct') accept.push(bare)
+  }
+  return { text, accept, last: text }
+}
+
+/**
+ * One solution rounded, as the module's rounded templates write theirs: the value to `places` (2.727), and the
+ * spellings that grade right with those places (the exact value too where it is a whole number). The path ends with the
+ * solution as a line: exact where the engine writes it exactly, as the templates' paths do, else rounded (the flow's
+ * checker keeps x = 2.928 on a rounded problem). Null for several solutions, or when the grader would not take it.
+ */
+function roundedAnswer(a: LogEquation, equation: string, places: number): Answer | null {
+  if (a.solutions.length !== 1) return null
+  const s = a.solutions[0]!
+  const text = roundPlaces(s.value, places)
+  const decimal = { decimal: { places } }
+  if (gradeLogEquation(equation, text, decimal).verdict !== 'correct') return null
+  const accept = [text]
+  if (s.text !== text && gradeLogEquation(equation, s.text, decimal).verdict === 'correct') accept.push(s.text)
+  const exactLine = s.exact ? `x = ${s.text}` : exactFromAlgebraic(a, equation)
+  return { text, accept, last: exactLine ?? `x = ${text}` }
+}
+
+/** "x = −0.928 or x = 2.928": the values rounded, smallest first. */
+function roundedLine(sols: readonly { value: number }[], places: number): string {
+  return [...sols]
+    .sort((p, q) => p.value - q.value)
+    .map((s) => `x = ${roundPlaces(s.value, places)}`)
+    .join(' or ')
+}
+
+function placesWords(places: number): string {
+  return `${placesWord(places)} decimal place${places === 1 ? '' : 's'}`
+}
+
+export function buildOwnExpLogEquation(text: string, options: OwnOptions = {}): OwnResult {
+  const places = options.places !== undefined && (OWN_PLACES as readonly number[]).includes(options.places) ? options.places : undefined
   const screened = screenText(text)
   if (!screened.ok) return { ok: false, reason: screened.reason }
   const equation = screened.statement
@@ -189,10 +261,7 @@ export function buildOwnExpLogEquation(text: string): OwnResult {
   if (!parsed.ok) {
     if (/needs both sides and/.test(parsed.error.message)) return fail('no_relation', 'This has no = sign; type the whole equation, with something on each side.')
     const r = parseReason(parsed.error, equation)
-    if (r.code === 'letter') {
-      const letter = /letter "([^"]+)"/.exec(parsed.error.message)?.[1] ?? '?'
-      return fail('letter', 'This uses the letter ', math(letter), ', and here the equation is in ', math('x'), ' alone.')
-    }
+    if (r.code === 'letter') return letterReason(equation, { main: 'x', allowed: ['x'], here: ['the equation is in ', math('x'), ' alone'] })
     return { ok: false, reason: r }
   }
   const rels = parsed.statement.disjuncts.flat()
@@ -237,21 +306,33 @@ export function buildOwnExpLogEquation(text: string): OwnResult {
   if (a.solutions.some((s) => !Number.isFinite(s.value) || Math.abs(s.value) > MAX_SOLUTION)) {
     return fail('far_answer', 'The answer to this one is a very large number, beyond what I can check reliably.')
   }
-  let answerText = lineOf(a.solutions)
-  if (a.solutions.some((s) => !s.exact)) {
-    const exact = exactFromAlgebraic(a, equation)
-    if (!exact) return fail('not_exact', 'I can’t write the answer to this one exactly, so I won’t check it.')
-    answerText = exact
+  // The flow's checker, as the flow calls it (cardSources.expLogStepContext): her equation, its seed, her places.
+  const seed = ownSeed(equation)
+  const ctxFor = (p?: number) => ({ original: equation, vars: ['x' as const], seed, ...(p ? { decimal: { places: p } } : {}) })
+  const ctx = ctxFor(places)
+
+  let answer: Answer | null
+  if (places) {
+    if (a.solutions.length > 1) {
+      // As the rounded templates: one solution. Say to pick the exact answer only when that one checks.
+      const count = `This one has ${a.solutions.length === 2 ? 'two' : 'several'} solutions, and here I check a rounded answer when there is one`
+      return exactAnswer(a, equation)
+        ? fail('round_several', `${count}; pick “Exact answer” to check it exactly.`)
+        : fail('round_several', `${count}, so I won’t check it.`)
+    }
+    answer = roundedAnswer(a, equation, places)
+    if (!answer) return fail('unsure', 'I’m not sure I can grade this one rounded, so I won’t check it.')
+  } else {
+    answer = exactAnswer(a, equation)
+    if (!answer) {
+      // Rounded, it may be one: say so only when it is (one solution, graded and kept by the line checker).
+      const rounded = roundedAnswer(a, equation, 3)
+      return rounded && checkLogStep(equation, rounded.last, ctxFor(3)).ok
+        ? fail('not_exact', 'I can’t write the answer to this one exactly. If it asks you to round, pick how many decimal places, and I can check it.')
+        : fail('not_exact', 'I can’t write the answer to this one exactly, so I won’t check it.')
+    }
   }
-  if (gradeLogEquation(equation, answerText).verdict !== 'correct') {
-    return fail('unsure', 'I’m not sure I can grade this one exactly, so I won’t check it.')
-  }
-  // Spellings the answer box takes: the whole line, and the bare number when there is one solution.
-  const accept = [answerText]
-  if (a.solutions.length === 1) {
-    const bare = answerText.replace(/^\s*x\s*=\s*/, '')
-    if (bare !== answerText && gradeLogEquation(equation, bare).verdict === 'correct') accept.push(bare)
-  }
+  const answerText = answer.text
 
   const question: ExpLogAnswer['question'] = a.explanation.some((s) => s.startsWith('Let u = ')) ? 'quadratic' : a.kind
   const extraneous = a.extraneous.length > 0
@@ -260,16 +341,14 @@ export function buildOwnExpLogEquation(text: string): OwnResult {
 
   // Her right last line must be one the flow's checker keeps. Where it is not (a double root its grid can miss), the
   // engine is unsure, and so is this: it would refuse her right line.
-  const seed = ownSeed(equation)
-  const ctx = { original: equation, vars: ['x' as const], seed }
-  if (!checkLogStep(equation, answerText, ctx).ok) return fail('unsure', 'I’m not sure my line checks work on this one, so I won’t check it.')
+  if (!checkLogStep(equation, answer.last, ctx).ok) return fail('unsure', 'I’m not sure my line checks work on this one, so I won’t check it.')
 
   // The hint path: at most two of the engine's own worked lines that the flow's checker keeps, then the solution. A
   // line is only put to the checker when it holds at every solution (a line it would refuse costs the most to check).
   const candidates: string[] = []
   const squash = (t: string) => t.replace(/\s+/g, '')
   const add = (line: string | null) => {
-    if (line && squash(line) !== squash(answerText) && !candidates.some((c) => squash(c) === squash(line))) candidates.push(line)
+    if (line && squash(line) !== squash(answer.last) && squash(line) !== squash(answerText) && !candidates.some((c) => squash(c) === squash(line))) candidates.push(line)
   }
   let u: string | null = null
   for (const sentence of a.explanation) {
@@ -293,19 +372,34 @@ export function buildOwnExpLogEquation(text: string): OwnResult {
     path.push(line)
     prev = kept
   }
-  if (path.length && !checkLogStep(prev, answerText, ctx).ok) path.length = 0
-  path.push(answerText)
+  if (path.length && !checkLogStep(prev, answer.last, ctx).ok) path.length = 0
+  path.push(answer.last)
 
   const canonical: CanonicalStep[] = path.map((line, i) => ({ text: line, tag: 'simplify', nudge: EQUATION_NUDGE, ruleCard: card, stage: `line-${i + 1}` }))
-  const trap: { trap?: ErrorPatternId; trapAnswer?: string } = extraneous ? { trap: 'log_extraneous_kept', trapAnswer: lineOf(a.candidates) } : {}
-  const answer: ExpLogAnswer = {
+  // Keeping the extraneous root: the trap only when it grades as that slip, with her places.
+  let trap: { trap?: ErrorPatternId; trapAnswer?: string } = {}
+  if (extraneous) {
+    const trapAnswer = places ? roundedLine(a.candidates, places) : lineOf(a.candidates)
+    const g = gradeLogEquation(equation, trapAnswer, places ? { decimal: { places } } : {})
+    if (g.verdict === 'mistake' && g.mistake === 'log_extraneous_kept') trap = { trap: 'log_extraneous_kept', trapAnswer }
+  }
+  // The prompt in the templates' words: a rounded template says "Solve. Round to three decimal places."
+  const prompt = places
+    ? question === 'logarithmic'
+      ? `Solve. Round to ${placesWords(places)}. Check every answer in the original equation.`
+      : `Solve. Round to ${placesWords(places)}.`
+    : question === 'logarithmic'
+      ? 'Solve exactly. Check every answer in the original equation.'
+      : 'Solve. Give the exact answer.'
+  const spec: ExpLogAnswer = {
     type: 'expLogEquations',
     question,
     equation,
-    prompt: question === 'logarithmic' ? 'Solve exactly. Check every answer in the original equation.' : 'Solve. Give the exact answer.',
+    ...(places ? { places } : {}),
+    prompt,
     path,
     answerText,
-    accept,
+    accept: answer.accept,
     formatHint: EQUATION_HINT,
     expectedDisplay: answerText,
     nudge: EQUATION_NUDGE,
@@ -317,7 +411,7 @@ export function buildOwnExpLogEquation(text: string): OwnResult {
   }
   const templateId = TEMPLATE_OF[question]
   const instance: ProblemInstance = {
-    id: ownProblemId(MODULE, templateId, equation),
+    id: ownProblemId(MODULE, templateId, equation, ownFlags({ places })),
     moduleId: MODULE,
     templateId,
     skill: templateId,
@@ -331,14 +425,17 @@ export function buildOwnExpLogEquation(text: string): OwnResult {
     vars: ['x'],
     start: equation,
     canonical,
-    answer,
+    answer: spec,
     graph: { kind: 'none' },
     calc: { ti84: [], nspire: [] },
-    params: { own: true, question, equation, answer: answerText },
+    params: { own: true, question, equation, answer: answerText, places: places ?? 0 },
     own: equation,
   }
-  const asks: OwnPart[] =
-    question === 'logarithmic'
+  const asks: OwnPart[] = places
+    ? question === 'logarithmic'
+      ? ['Solve for ', math('x'), ` one line at a time, check every answer in the original equation, and round the solution to ${placesWords(places)}.`]
+      : ['Solve for ', math('x'), ` one line at a time, then round the solution to ${placesWords(places)} in the answer box.`]
+    : question === 'logarithmic'
       ? ['Solve for ', math('x'), ' exactly, one line at a time, and check every answer in the original equation.']
       : ['Solve for ', math('x'), ' exactly, one line at a time, then write the solution in the answer box.']
   return { ok: true, instance, asks }
@@ -347,9 +444,10 @@ export function buildOwnExpLogEquation(text: string): OwnResult {
 export const ownExpLogEquations: OwnConstructor = {
   moduleId: MODULE,
   kinds: [KIND],
-  build: (_kind, text) => {
+  rounding: true,
+  build: (_kind, text, options) => {
     try {
-      return buildOwnExpLogEquation(text)
+      return buildOwnExpLogEquation(text, options)
     } catch {
       return fail('unsure', 'I’m not sure I can check this one, so I won’t.')
     }

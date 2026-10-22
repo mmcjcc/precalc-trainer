@@ -28,8 +28,8 @@ function describe(attempt: Attempt): OtherProblem {
       where = `${mod.title} · ${attempt.own !== undefined ? 'Your own problem' : getTemplate(attempt.moduleId, attempt.templateId).title}`
     }
     if (attempt.own !== undefined) {
-      // Her own problem: rebuilt from her statement, as its route does.
-      const r = ownProblemFromRoute(attempt.moduleId, attempt.templateId, attempt.own)
+      // Her own problem: rebuilt from her statement and its flags (the answer rounded), as its route does.
+      const r = ownProblemFromRoute(attempt.moduleId, attempt.templateId, attempt.own, attempt.difficulty)
       if (r.ok && r.instance.id === attempt.problemId) {
         title = r.instance.title
         summary = pinnedSummary(r.instance.statementText, r.instance.vars)

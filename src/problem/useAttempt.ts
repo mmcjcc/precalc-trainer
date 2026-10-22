@@ -10,10 +10,10 @@ function isFor(attempt: Attempt, instance: ProblemInstance, flags: string): bool
   return attempt.problemId === instance.id && attempt.difficulty === flags && attempt.own === instance.own
 }
 
-/** The stored attempt was opened from this very URL (module, template, seed, flags; or her own statement). */
+/** The stored attempt was opened from this very URL (module, template, seed, flags; or her own statement and flags). */
 function sameRoute(attempt: Attempt, instance: ProblemInstance, flags: string): boolean {
   if (attempt.own !== undefined || instance.own !== undefined) {
-    return attempt.own === instance.own && attempt.moduleId === instance.moduleId && attempt.templateId === instance.templateId
+    return attempt.own === instance.own && attempt.moduleId === instance.moduleId && attempt.templateId === instance.templateId && attempt.difficulty === flags
   }
   return (
     attempt.moduleId === instance.moduleId &&

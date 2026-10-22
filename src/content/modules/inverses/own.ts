@@ -36,6 +36,7 @@ import {
   OWN_VERSION,
   fail,
   fnWords,
+  letterReason,
   math,
   ownProblemId,
   ownSeed,
@@ -250,8 +251,7 @@ function readFunction(statement: string): Read {
   const error = /[=<>]/.test(statement) ? asRelation.error : asExpression.error
   const r = parseReason(error, statement)
   if (r.code === 'letter') {
-    const letter = /letter "([^"]+)"/.exec(error.message)?.[1] ?? '?'
-    return { ok: false, result: fail('letter', 'This uses the letter ', math(letter), '; here a function is written in ', math('x'), ', like ', math('f(x) = 2x + 3'), '.') }
+    return { ok: false, result: letterReason(statement, { main: 'x', allowed: ['x'], functions: true, here: ['a function is written in ', math('x')] }) }
   }
   return { ok: false, result: { ok: false, reason: r } }
 }

@@ -7,7 +7,7 @@
  * numbers and powers), so no input can hang the page or throw: math.js never sees 9^9^9 evaluated by an exact engine.
  */
 import type { MathNode } from 'mathjs'
-import { normalizeInput } from '@/engine'
+import { normalizeInput, parseExpression, parseStatement } from '@/engine'
 import { collectVars, evalNode, fnName, isOp, nodeArgs } from '@/engine/math'
 import { toLatex } from '@/notation'
 import type { ModuleId, ParseError, VarName } from '@/shared/types'
@@ -59,12 +59,38 @@ export interface OwnKind {
   vars: readonly VarName[]
 }
 
+/** What she asks of the answer besides the kind: exponential and log equations may want it rounded. */
+export interface OwnOptions {
+  /** Round the answer to this many decimal places (one of OWN_PLACES); absent: the exact answer. */
+  places?: number
+}
+
+/** The decimal places she may ask for. */
+export const OWN_PLACES = [1, 2, 3, 4] as const
+
+/**
+ * The options as her problem's route carries them (`?d=`, like a generated problem's flags) and as the attempt keeps
+ * them (`Attempt.difficulty`): '' for the exact answer, 'r3' for three decimal places.
+ */
+export function ownFlags(options: OwnOptions = {}): string {
+  return options.places && (OWN_PLACES as readonly number[]).includes(options.places) ? `r${options.places}` : ''
+}
+
+/** The options a route's flags ask for; null when the flags are not ones this app writes. */
+export function ownOptionsFromFlags(flags: string | null | undefined): OwnOptions | null {
+  if (!flags) return {}
+  const m = /^r([1-4])$/.exec(flags)
+  return m ? { places: Number(m[1]) } : null
+}
+
 /** One module's constructor. */
 export interface OwnConstructor {
   moduleId: ModuleId
   kinds: readonly OwnKind[]
-  /** Her text as a problem of this kind, or why not. Never throws. */
-  build: (kindId: string, text: string) => OwnResult
+  /** She may ask for the answer rounded (exponential and log equations): the builder offers it. */
+  rounding?: boolean
+  /** Her text as a problem of this kind, or why not. Never throws. Options only reach a constructor that takes them. */
+  build: (kindId: string, text: string, options?: OwnOptions) => OwnResult
   /** The kind a template's problems belong to (the problem's route carries the template), or null. */
   kindOfTemplate: (templateId: string) => string | null
 }
@@ -124,11 +150,14 @@ export function ownSeed(statement: string): number {
  * Back-and-return finds her lines again. Never a generated problem's id (those have no "own:"). The statement goes in
  * as a 64-bit hash (two FNV-1a runs, base 36), so the id stays short and in the characters every id uses: the tutor's
  * server takes only letters, digits and `_.:@/#?=&+-` (server/src/validate.ts). The statement itself is
- * `instance.own` and `attempt.own`, and an attempt matches a problem only when both agree.
+ * `instance.own` and `attempt.own`, and an attempt matches a problem only when both agree. `flags` (`ownFlags`: the
+ * answer rounded) go into the hash and after it, so the exact and the rounded problem never share saved lines.
  */
-export function ownProblemId(moduleId: ModuleId, templateId: string, statement: string): string {
-  const key = `${fnv1a(statement, 0x811c9dc5).toString(36)}-${fnv1a(statement, 0x050c5d1f).toString(36)}`
-  return `own:${moduleId}/${templateId}@${OWN_VERSION}/${key}`
+export function ownProblemId(moduleId: ModuleId, templateId: string, statement: string, flags = ''): string {
+  // A statement never holds a line break (screenText makes every run of spaces one space).
+  const text = flags ? `${statement}\n${flags}` : statement
+  const key = `${fnv1a(text, 0x811c9dc5).toString(36)}-${fnv1a(text, 0x050c5d1f).toString(36)}`
+  return `own:${moduleId}/${templateId}@${OWN_VERSION}/${key}${flags ? `/${flags}` : ''}`
 }
 
 // ---------------------------------------------------------------------------
@@ -428,4 +457,91 @@ export function lettersOf(sides: readonly MathNode[]): string[] {
 export function listWords(items: readonly string[]): string {
   if (items.length <= 1) return items.join('')
   return `${items.slice(0, -1).join(', ')} and ${items[items.length - 1]}`
+}
+
+// ---------------------------------------------------------------------------
+// Letters she used that the module does not take
+// ---------------------------------------------------------------------------
+
+/** Every letter but e (the constant): to read which letters she used. */
+const ANY_LETTERS = 'abcdfghijklmnopqrstuvwxyz'.split('')
+/** A function written with its name and its letter: f(x) = …, g(t) = … */
+const FUNCTION_LEFT = /^\s*([A-Za-z])\s*\(\s*([A-Za-z])\s*\)\s*=\s*/
+const Y_LEFT = /^\s*y\s*=\s*/
+const COUNT_WORDS = ['no', 'one', 'two', 'three', 'four', 'five', 'six'] as const
+
+/** How a module takes letters, for the reason it gives when hers are others. */
+export interface LetterRule {
+  /** The letter its problems are written in. */
+  main: string
+  /** Every letter it takes. */
+  allowed: readonly string[]
+  /** Several of them may stand in one problem (log properties: x, y and n). */
+  together?: boolean
+  /** Its problems are functions, typed f(x) = …, y = … or as the expression alone. */
+  functions?: boolean
+  /** What it checks, after "and here": "the equation is in x alone". */
+  here: readonly OwnPart[]
+}
+
+/** "x", "x and y", "x, y and n", each letter in KaTeX. */
+function letterList(letters: readonly string[]): OwnPart[] {
+  const out: OwnPart[] = []
+  letters.forEach((l, i) => {
+    if (i > 0) out.push(i === letters.length - 1 ? ' and ' : ', ')
+    out.push(math(l))
+  })
+  return out
+}
+
+/** The letters in a text read with any letter allowed (functions and constants stay themselves); null if unreadable. */
+function lettersIn(text: string): string[] | null {
+  const p = /[=<>]/.test(text) ? parseStatement(text, ANY_LETTERS) : parseExpression(text, ANY_LETTERS)
+  if (!p.ok) return null
+  return lettersOf('node' in p ? [p.node] : p.statement.disjuncts.flat().flatMap((r) => [r.lhs, r.rhs]))
+}
+
+/**
+ * Her problem uses a letter the module does not take: say which, and what to type instead when swapping letters makes
+ * it a problem here ("type it with x in place of t, and I can check it"; a function called g: "type it as
+ * f(x) = 2x + 3"). Nothing beyond that: a letter beside the module's own (x and t) only says what is there.
+ */
+export function letterReason(statement: string, rule: LetterRule): OwnResult {
+  let body = statement
+  let name: string | null = null
+  if (rule.functions) {
+    const fn = FUNCTION_LEFT.exec(statement)
+    if (fn) {
+      name = fn[1]!
+      body = statement.slice(fn[0].length)
+    } else body = statement.replace(Y_LEFT, '')
+  }
+  const here: OwnPart[] = [', and here ', ...rule.here]
+  const letters = lettersIn(body)
+  const foreign = letters?.filter((l) => !rule.allowed.includes(l)) ?? []
+  const present = letters?.filter((l) => rule.allowed.includes(l)) ?? []
+  if (!foreign.length) {
+    // Only the function's name is another letter: g(x) = 2x + 3.
+    if (letters && name && name !== 'f') {
+      return fail('letter', 'This calls the function ', math(name), ', and here a function is written as ', math(`f(${rule.main})`), '; type it as ', math(`f(${rule.main}) = ${body}`), ', and I can check it.')
+    }
+    return fail('letter', 'This uses a letter I don’t take', ...here, '.')
+  }
+  const free = rule.together ? rule.allowed.filter((l) => !present.includes(l)) : present.length ? [] : [rule.main]
+  if (foreign.length <= free.length) {
+    const swap = free.slice(0, foreign.length)
+    return fail(
+      'letter',
+      foreign.length === 1 ? 'This uses the letter ' : 'This uses the letters ',
+      ...letterList(foreign),
+      ...here,
+      '; type it with ',
+      ...letterList(swap),
+      ' in place of ',
+      ...letterList(foreign),
+      ', and I can check it.',
+    )
+  }
+  const all = [...present, ...foreign]
+  return fail('letter', `This has ${COUNT_WORDS[all.length] ?? 'several'} letters, `, ...letterList(all), ...here, '.')
 }

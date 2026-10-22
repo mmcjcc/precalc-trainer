@@ -18,6 +18,7 @@ import type { MathNode } from 'mathjs'
 import {
   OWN_VERSION,
   fail,
+  letterReason,
   lettersOf,
   math,
   ownProblemId,
@@ -26,6 +27,7 @@ import {
   scanFeatures,
   screenText,
   screenTree,
+  type LetterRule,
   type OwnConstructor,
   type OwnKind,
   type OwnResult,
@@ -55,13 +57,15 @@ const HERE = 'here I complete the square on a quadratic, like '
 
 type Read = { ok: true; f: MathNode; text: string } | { ok: false; result: OwnResult }
 
+const LETTERS: LetterRule = { main: 'x', allowed: ['x'], functions: true, here: ['the quadratic is in ', math('x')] }
+
 /** f(x) = Q, y = Q, or Q alone. */
 function readQuadratic(statement: string): Read {
   if (/[=<>]/.test(statement)) {
     const rel = parseStatement(statement, ['x', 'y'])
     if (!rel.ok) {
       const r = parseReason(rel.error, statement)
-      return { ok: false, result: { ok: false, reason: r } }
+      return { ok: false, result: r.code === 'letter' ? letterReason(statement, LETTERS) : { ok: false, reason: r } }
     }
     const rels = rel.statement.disjuncts.flat()
     const only = rels.length === 1 && rel.statement.disjuncts.length === 1 ? rels[0]! : null
@@ -76,10 +80,7 @@ function readQuadratic(statement: string): Read {
   const expr = parseExpression(statement, ['x'])
   if (!expr.ok) {
     const r = parseReason(expr.error, statement)
-    if (r.code === 'letter') {
-      const letter = /letter "([^"]+)"/.exec(expr.error.message)?.[1] ?? '?'
-      return { ok: false, result: fail('letter', 'This uses the letter ', math(letter), ', and here the quadratic is in ', math('x'), '.') }
-    }
+    if (r.code === 'letter') return { ok: false, result: letterReason(statement, LETTERS) }
     return { ok: false, result: { ok: false, reason: r } }
   }
   return { ok: true, f: expr.node, text: statement }

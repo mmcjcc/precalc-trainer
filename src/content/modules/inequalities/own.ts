@@ -37,6 +37,7 @@ import {
   OWN_VERSION,
   fail,
   fnWords,
+  letterReason,
   lettersOf,
   listWords,
   math,
@@ -497,8 +498,7 @@ export function buildOwnInequality(text: string): OwnResult {
     }
     const r = parseReason(parsed.error, statement)
     if (r.code === 'letter') {
-      const letter = /letter "([^"]+)"/.exec(parsed.error.message)?.[1] ?? '?'
-      return fail('letter', 'This uses the letter ', math(letter), ', and here I check inequalities in ', math('x'), ', ', math('y'), ' or ', math('n'), '.')
+      return letterReason(statement, { main: 'x', allowed: ['x', 'y', 'n'], here: ['I check inequalities in one letter, ', math('x'), ', ', math('y'), ' or ', math('n')] })
     }
     return { ok: false, reason: r }
   }

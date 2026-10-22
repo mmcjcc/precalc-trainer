@@ -440,7 +440,7 @@ export function ProblemFrame({ instance, attempt, flags, templateTitle, progress
 
   // Her own problem ("Check my own problem"): the header says so, and the way on is "Check another" (the builder).
   const own = instance.own !== undefined
-  const route = own ? ownProblemPath(instance.moduleId, instance.templateId, instance.own!) : problemPath(instance.moduleId, instance.templateId, instance.seed, flags)
+  const route = own ? ownProblemPath(instance.moduleId, instance.templateId, instance.own!, flags) : problemPath(instance.moduleId, instance.templateId, instance.seed, flags)
 
   async function copyLink() {
     const url = `${window.location.origin}${window.location.pathname}#${route}`

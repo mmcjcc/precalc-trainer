@@ -23,7 +23,7 @@ export function attemptResolves(attempt: Saved): boolean {
   if (hit !== undefined) return hit
   let ok = false
   if (attempt.own !== undefined) {
-    const r = ownProblemFromRoute(attempt.moduleId, attempt.templateId, attempt.own)
+    const r = ownProblemFromRoute(attempt.moduleId, attempt.templateId, attempt.own, attempt.difficulty)
     ok = r.ok && r.instance.templateId === attempt.templateId
   } else {
     const seed = parseSeedParam(attempt.seed)

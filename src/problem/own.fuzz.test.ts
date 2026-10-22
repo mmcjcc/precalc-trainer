@@ -2,7 +2,8 @@
  * "Check my own problem": she may type anything. For every module that takes her own problem, 2000 strings typed on
  * that module's keypad (its own keys and the grid's digits and signs, a few to forty presses, seeded) each give an
  * instance or a reason within 50 ms, never an exception. A share of them are real problems, so the whole way through
- * (the exact solve and the engine's check of every hinted line) is inside the budget too.
+ * (the exact solve and the engine's check of every hinted line) is inside the budget too. A module that rounds her
+ * answer (exponential and log equations) takes the same strings again, rounded to three places.
  *
  * Timing on a shared machine: the whole suite runs three test files at a time, and a busy moment can double a time.
  * A string over 50 ms is timed again, up to four more times, and its best time counts; a first time over 250 ms
@@ -12,7 +13,7 @@ import { describe, expect, it } from 'vitest'
 import { GRID_KEYS } from '@/components/keypadKeys'
 import type { StripKey } from '@/components/symbolStrip'
 import { makeRng } from '@/content/rng'
-import { buildOwnProblem, ownConstructor, OWN_MODULES, type OwnResult } from '@/content/own'
+import { buildOwnProblem, ownConstructor, OWN_MODULES, type OwnOptions, type OwnResult } from '@/content/own'
 import { ownKeysFor } from './ownDraft'
 
 const COUNT = 2000
@@ -142,21 +143,21 @@ interface Run {
   slowest: { text: string; ms: number }
 }
 
-function timed(moduleId: string, kindId: string, text: string): number {
+function timed(moduleId: string, kindId: string, text: string, options: OwnOptions): number {
   const t0 = performance.now()
-  buildOwnProblem(moduleId, kindId, text)
+  buildOwnProblem(moduleId, kindId, text, options)
   return performance.now() - t0
 }
 
-function run(moduleId: string, kindId: string, strings: readonly string[], budgetMs: number, ceilingMs = Number.POSITIVE_INFINITY): Run {
+function run(moduleId: string, kindId: string, strings: readonly string[], budgetMs: number, ceilingMs = Number.POSITIVE_INFINITY, options: OwnOptions = {}): Run {
   // Warm the engine once, so the first string does not pay for loading it.
-  buildOwnProblem(moduleId, kindId, ownConstructor(moduleId)!.kinds.find((k) => k.id === kindId)!.example)
+  buildOwnProblem(moduleId, kindId, ownConstructor(moduleId)!.kinds.find((k) => k.id === kindId)!.example, options)
   const out: Run = { failures: [], instances: 0, slowest: { text: '', ms: 0 } }
   for (const text of strings) {
     const t0 = performance.now()
     let r: OwnResult
     try {
-      r = buildOwnProblem(moduleId, kindId, text)
+      r = buildOwnProblem(moduleId, kindId, text, options)
     } catch (e) {
       out.failures.push(`${JSON.stringify(text)} threw ${String(e)}`)
       continue
@@ -164,7 +165,7 @@ function run(moduleId: string, kindId: string, strings: readonly string[], budge
     const first = performance.now() - t0
     let ms = first
     // Over the budget but not past the ceiling: a busy moment, or the string itself? Its best time says.
-    for (let i = 0; i < RETRIES && ms > budgetMs && first <= ceilingMs; i++) ms = Math.min(ms, timed(moduleId, kindId, text))
+    for (let i = 0; i < RETRIES && ms > budgetMs && first <= ceilingMs; i++) ms = Math.min(ms, timed(moduleId, kindId, text, options))
     if (ms > out.slowest.ms) out.slowest = { text, ms }
     if (first > ceilingMs) out.failures.push(`${JSON.stringify(text)} took ${first.toFixed(1)} ms`)
     else if (ms > budgetMs) out.failures.push(`${JSON.stringify(text)} took ${ms.toFixed(1)} ms at best (${first.toFixed(1)} ms first)`)
@@ -185,6 +186,14 @@ describe('she may type anything: an instance or a reason within 50 ms, never an 
         const r = run(moduleId, kind.id, strings, BUDGET_MS, CEILING_MS)
         expect(r.failures, `slowest ${r.slowest.ms.toFixed(1)} ms: ${r.slowest.text}`).toEqual([])
       })
+      // Her answer rounded (exponential and log equations): the same strings, the same budget.
+      if (ownConstructor(moduleId)!.rounding) {
+        it(`${moduleId} / ${kind.id}, rounded to 3 places: ${COUNT} keypad strings`, { timeout: 600_000 }, () => {
+          const strings = keypadStrings(ownKeysFor(moduleId), kind.input, COUNT, 0x5eed + moduleId.length * 31 + kind.id.length)
+          const r = run(moduleId, kind.id, strings, BUDGET_MS, CEILING_MS, { places: 3 })
+          expect(r.failures, `slowest ${r.slowest.ms.toFixed(1)} ms: ${r.slowest.text}`).toEqual([])
+        })
+      }
     }
   }
 })
@@ -204,6 +213,11 @@ describe('her real problems, shaped like the module’s, all the way through: ne
         expect(r.failures).toEqual([])
         // A good share of them are real problems of hers and went all the way through.
         expect(r.instances, `slowest ${r.slowest.ms.toFixed(1)} ms: ${r.slowest.text}`).toBeGreaterThan(DEEP / 20)
+        if (ownConstructor(moduleId)!.rounding) {
+          const rounded = run(moduleId, kind.id, strings, NO_HANG_MS, Number.POSITIVE_INFINITY, { places: 3 })
+          expect(rounded.failures).toEqual([])
+          expect(rounded.instances).toBeGreaterThan(DEEP / 20)
+        }
       })
     }
   }

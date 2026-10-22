@@ -204,6 +204,14 @@ function ModuleView({ module }: { module: ModuleDef }) {
         </section>
       ) : (
         <>
+          {hasOwnProblems(module.id) && (
+            // One line near the top for her homework problem; the card at the bottom says more.
+            <p data-own-link="">
+              <Link to={ownBuilderPath(module.id)} className="inline-flex min-h-11 items-center gap-1 font-semibold text-navy underline underline-offset-2 hover:text-navy-600">
+                Check a problem from your homework <span aria-hidden>→</span>
+              </Link>
+            </p>
+          )}
           <p className="max-w-2xl text-sm text-navy/80">
             A type counts as mastered when your last 5 finished problems average at least 80% first-try steps, with no
             revealed steps and every final answer right. It&apos;s a label, never a lock.

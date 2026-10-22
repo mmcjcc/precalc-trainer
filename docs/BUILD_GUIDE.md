@@ -327,13 +327,16 @@ backups). "Graph it" (`GraphItButton`) opens the grapher from a problem with wha
 function, or her own final equation in optimization), never its hidden answer (`grapher/graphIt.ts` per problem type),
 in the problem's window; Back returns to the problem with her work. See `docs/progress/app-grapher.md`.
 
-"Check my own problem" (a card on the module page of the modules that have a constructor; `/own/<moduleId>` is the
-builder, `pages/OwnBuilder.tsx`, and `/own/<moduleId>/<templateId>/<statement>` her problem, `pages/OwnProblem.tsx`,
-both lazy): she types a problem from her homework or quiz and the module's own flow checks it unchanged. Each module that
-takes one has `src/content/modules/<module>/own.ts`, an `OwnConstructor` (registered in `src/content/own/index.ts`) that
-returns a `ProblemInstance` exactly like a generated one (answers from the engine; `instance.own` is her statement, the
-id `own:<module>/<template>@<version>/<hash of the statement>`, the seed made from the statement) or a reason in one plain sentence
-(`OwnReason`, parts of text, KaTeX and module links). `src/content/own/core.ts` screens the text before anything is
+"Check my own problem" (a link near the top and a card at the bottom of the module page of the modules that have a
+constructor; `/own/<moduleId>` is the builder, `pages/OwnBuilder.tsx`, and `/own/<moduleId>/<templateId>/<statement>`
+her problem, `pages/OwnProblem.tsx`, both lazy): she types a problem from her homework or quiz and the module's own flow
+checks it unchanged. Each module that takes one has `src/content/modules/<module>/own.ts`, an `OwnConstructor`
+(registered in `src/content/own/index.ts`) that returns a `ProblemInstance` exactly like a generated one (answers from
+the engine; `instance.own` is her statement, the id `own:<module>/<template>@<version>/<hash>`, the seed made from the
+statement) or a reason in one plain sentence (`OwnReason`, parts of text, KaTeX and module links; `letterReason` for
+letters). A constructor with `rounding` (exponential and log equations) takes `OwnOptions.places`: the route carries it
+as `?d=r3` (`ownFlags`), the attempt as `difficulty`, the id in its hash and after it, and the answer is written as the
+module's rounded templates write theirs. `src/content/own/core.ts` screens the text before anything is
 solved (length, numbers, powers, nesting depth, a log inside a log). The attempt and every event of it carry `own`
 (`OwnMark`): XP, the goal, the streak and mistake cards count it; the mastery window, the rings, squashing, a type's
 review date, set picks, the path and the unit review never do (`inMasteryWindow`, `withoutOwn`). Adding a module: write
