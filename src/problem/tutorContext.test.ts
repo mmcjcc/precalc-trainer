@@ -42,7 +42,9 @@ import {
   verdictFromExpLogPart,
   verdictFromNm,
   verdictFromTrigPart,
+  verdictFromOptPart,
 } from '@/problem/tutorContext'
+import { gradeOptPart, optEntries, stagesFor } from '@/content/modules/optimization'
 import { ERROR_PATTERNS } from '@/engine'
 import type { Attempt, AttemptStep } from '@/store'
 import type { StepResult } from '@/shared/types'
@@ -1132,6 +1134,46 @@ describe('buildTutorContext', () => {
     expect(done.finished).toBe(true)
     expect(verdictFromTrigPart(gradeUcPart(c, c.trapStage!, c.trapAnswer!), c.trapAnswer)?.mistake?.id).toBe(c.trap)
     expect(verdictFromTrigPart(gradeUcPart(c, 'r', '1/√2'))?.status).toBe('parse_error')
+  })
+
+  it('describes an optimization problem part by part, in words, with the figure and the named opt_ slip, on either route', () => {
+    const pen = generateProblem('optimization', 'opt.wall', 3)
+    if (pen.answer.type !== 'optimization') throw new Error('expected an optimization problem')
+    const a = pen.answer
+    const entries = { secondary: a.stages[0]!.answerText, primary: 'A = x*y' }
+    const ctx = buildTutorContext(pen, attempt('opt-1', { moduleId: 'optimization', final: { polyEntries: entries } }), null, false)
+    expect(ctx.subject).toBe('precalculus')
+    expect(ctx.kind).toBe('optimization')
+    // The statement is words: the prompt's KaTeX read back, and the figure described.
+    expect(ctx.statement).not.toMatch(/\\|\$\d*\$/)
+    expect(ctx.statement).toContain(`Figure: ${a.figure!.ariaLabel}`)
+    expect(ctx.work).toEqual([`Secondary equation: ${a.stages[0]!.answerText}`, 'Primary equation: A = x*y'])
+    expect(ctx.answer).toBe(a.expectedDisplay)
+    for (const line of ctx.canonical) expect(line).not.toMatch(/\\frac|\\left/)
+    const slip = gradeOptPart(a, a.stages.find((s) => s.id === a.trapStage)!, a.trapAnswer!)
+    const verdict = verdictFromOptPart(slip, a.trapAnswer)
+    expect(verdict?.status).toBe('wrong')
+    expect(verdict?.mistake?.id).toBe(a.trap)
+    expect(verdict?.mistake?.lesson).toBe(ERROR_PATTERNS[a.trap!].lesson)
+    expect(verdict?.mistake?.witness).not.toMatch(/\$/)
+    expect(verdict?.line).toBe(a.trapAnswer)
+    // Not an attempt (an area without its unit, an equation of the wrong kind): a parse error for the tutor.
+    const maxCheck = a.stages[5]!.check
+    if (maxCheck.kind !== 'number') throw new Error('not a number part')
+    expect(verdictFromOptPart(gradeOptPart(a, a.stages[5]!, maxCheck.value))?.status).toBe('parse_error')
+    expect(verdictFromOptPart(gradeOptPart(a, a.stages[0]!, 'A = xy + 1'))?.status).toBe('parse_error')
+    expect(buildTutorContext(pen, attempt('opt-2', { moduleId: 'optimization' }), null, false).work).toEqual([])
+    // Her final equation in y: the tutor sees parts 4 and 5 the y way round.
+    if (a.stages[2]!.check.kind !== 'final') throw new Error('not a final part')
+    const yEntries = { ...optEntries(stagesFor(a, 'y')), final: a.stages[2]!.check.y }
+    const done = buildTutorContext(pen, attempt('opt-3', { moduleId: 'optimization', final: { polyEntries: yEntries } }), null, true)
+    expect(done.work).toEqual(stagesFor(a, 'y').map((s) => `${s.label}: ${yEntries[s.id as keyof typeof yEntries]}`))
+    expect(done.work[3]).toMatch(/^y: /)
+    expect(done.finished).toBe(true)
+    // A problem without a figure: the numbers.
+    const nums = generateProblem('optimization', 'opt.numbers', 2)
+    if (nums.answer.type !== 'optimization') throw new Error('expected an optimization problem')
+    expect(buildTutorContext(nums, attempt('opt-4', { moduleId: 'optimization' }), null, false).statement).not.toMatch(/Figure:/)
   })
 
   it('describes a Unit 4 congruence, an isosceles triangle, and a proof without changing the geometry kind', () => {

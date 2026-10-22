@@ -207,6 +207,11 @@ export const KEYPAD_SETS = {
   /** Equations and points in x and y (asymptotes, intercepts). */
   xy: [letterKey('x'), letterKey('y')] as readonly StripKey[],
   /**
+   * Optimization's equations: x and y, and the letter of the quantity made largest (A here; a revenue or a product box
+   * passes its own letter as `vars`). The grid already has =, x² and the digits.
+   */
+  optimization: [letterKey('x'), letterKey('y'), letterKey('A')] as readonly StripKey[],
+  /**
    * Angles and the unit circle: π, √, the degree sign and the word for a value that does not exist first (the
    * answers use them), then the six functions (a name she may write before her answer, "sin θ = …").
    */
