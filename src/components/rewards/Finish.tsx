@@ -102,6 +102,12 @@ export function FinishRewards({ data, templateTitle, size = 'card' }: { data: Fi
           Picked lines count less, and a problem with a picked line does not move the ring. Type every line to move it.
         </p>
       )}
+      {data.info.own && (
+        <p className="text-xs text-navy/70" data-own-note="">
+          Your own problem counts for XP and today’s goal. It does not move the ring or squash a monster: I can’t tell how
+          hard it is.
+        </p>
+      )}
       <SquashMoment patterns={data.info.squashed} />
       {cheer.length > 0 && (
         <ul aria-label="Cheers" className="space-y-2">

@@ -3,15 +3,18 @@ import { useNavigate } from 'react-router-dom'
 import type { ProblemInstance } from '@/content/types'
 import { attemptTouched, mastery, useStore, type Attempt, type ProblemSummary } from '@/store'
 import { attemptResolves } from './attemptResolves'
-import { problemPath } from './url'
+import { attemptPath } from './ownUrl'
 
-/** The stored attempt belongs to this page: same problem id AND same difficulty flags. */
+/** The stored attempt belongs to this page: same problem id AND same difficulty flags (and her own statement, if any). */
 function isFor(attempt: Attempt, instance: ProblemInstance, flags: string): boolean {
-  return attempt.problemId === instance.id && attempt.difficulty === flags
+  return attempt.problemId === instance.id && attempt.difficulty === flags && attempt.own === instance.own
 }
 
-/** The stored attempt was opened from this very URL (module, template, seed, flags). */
+/** The stored attempt was opened from this very URL (module, template, seed, flags; or her own statement). */
 function sameRoute(attempt: Attempt, instance: ProblemInstance, flags: string): boolean {
+  if (attempt.own !== undefined || instance.own !== undefined) {
+    return attempt.own === instance.own && attempt.moduleId === instance.moduleId && attempt.templateId === instance.templateId
+  }
   return (
     attempt.moduleId === instance.moduleId &&
     attempt.templateId === instance.templateId &&
@@ -58,9 +61,11 @@ export function useAttemptLifecycle(instance: ProblemInstance, flags: string, ac
       moduleId: instance.moduleId,
       templateId: instance.templateId,
       skill: instance.skill,
-      seed: (instance.seed >>> 0).toString(36),
+      // Her own problem has no seed of its own: '' matches no generated problem (a set's, a review's).
+      seed: instance.own !== undefined ? '' : (instance.seed >>> 0).toString(36),
       difficulty: flags,
       genVersion: instance.genVersion,
+      ...(instance.own !== undefined ? { own: instance.own } : {}),
     })
   }, [instance, flags])
 
@@ -107,7 +112,7 @@ export function useAttemptLifecycle(instance: ProblemInstance, flags: string, ac
         setAsking(null)
         // A different route: the stored problem's page mounts fresh and resumes (or, if its generator
         // changed, starts fresh via the branch above) — never a dead page.
-        navigate(problemPath(other.moduleId, other.templateId, other.seed, other.difficulty), { replace: true })
+        navigate(attemptPath(other), { replace: true })
       },
     }
   }, [asking, start, navigate])

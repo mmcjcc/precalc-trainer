@@ -16,6 +16,9 @@
  * Guided mode: a line picked from the cards (`via: 'card'`) pays +4 instead when the first card she picked for it was
  * the right one, and nothing after a wrong pick; a problem with a picked line stays out of the mastery window and the
  * rings, as a timed one does (`inMasteryWindow`).
+ * Her own problem ("Check my own problem", events marked `own`): its lines, parts and finish pay as usual and a named
+ * mistake makes or reopens its card, but it stays out of the mastery window and the rings, never squashes a card, and
+ * is not a review of its type (a mastered type's half pay and due date follow the generated problems only).
  *
  * Lines are `step_accepted` events (with the step's own first-try and revealed flags; an undone line pays nothing).
  * Parts are right `final_answer` events: the wrong checks since the attempt's last right one are the mistakes on it
@@ -242,7 +245,9 @@ function run(events: readonly Ev[], start: Pick<RewardsState, 'cards' | 'mastere
       const half = halfAt(e.skill, e.at)
       pay('finish', XP.finish, e, { attemptId: e.attemptId }, half)
       if (e.hints === 0 && e.revealed === 0) pay('no_hints', XP.noHints, e, { attemptId: e.attemptId }, half)
-      for (const card of cards.values()) {
+      // Her own problem pays its XP but never squashes a monster: its difficulty is unknown, and three trivial
+      // problems must not squash one.
+      for (const card of e.own ? [] : cards.values()) {
         if (card.skill !== e.skill || card.clean >= SQUASH_AFTER || card.lastAttempt === e.attemptId) continue
         card.clean += 1
         if (card.clean >= SQUASH_AFTER && card.squashedAt === undefined) {
@@ -261,7 +266,8 @@ function run(events: readonly Ev[], start: Pick<RewardsState, 'cards' | 'mastere
         if (!mastered.has(e.skill)) mastered.set(e.skill, e.at)
       }
     }
-    t.lastDoneAt = e.at
+    // Her own problem is not a review of the type: a mastered type stays due when only her own problems came since.
+    if (!e.own) t.lastDoneAt = e.at
     attempts.delete(e.attemptId)
   }
 
@@ -782,6 +788,8 @@ export interface FinishInfo {
   comeback: boolean
   /** Some of its lines were picked from cards (Guided mode): it does not move the type's ring. */
   picked: boolean
+  /** Her own problem ("Check my own problem"): XP and the goal, never the ring or a squash. */
+  own: boolean
 }
 
 /** What one finished attempt earned and what it set off. */
@@ -815,5 +823,6 @@ export function finishInfo(view: RewardsView, events: readonly Ev[], rewards: Re
     squashed: awards.filter((a) => a.kind === 'squash').map((a) => a.pattern ?? ''),
     comeback,
     picked: done?.t === 'problem_done' && (done.picked ?? 0) > 0,
+    own: done?.t === 'problem_done' && done.own === true,
   }
 }

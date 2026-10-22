@@ -11,6 +11,7 @@ import { ComboPill } from '@/components/juice/ComboPill'
 import { burstConfetti } from '@/components/juice/Confetti'
 import type { TutorVerdict } from '@/shared/tutor'
 import { problemPath } from '@/problem/url'
+import { ownBuilderPath, ownProblemPath } from '@/problem/ownUrl'
 import { useReviewChrome } from '@/pages/review/chrome'
 import { useSetChrome } from '@/pages/set/chrome'
 import { SetDots, SetSkipMenu } from '@/components/set/SetProgress'
@@ -437,8 +438,12 @@ export function ProblemFrame({ instance, attempt, flags, templateTitle, progress
   }, [rewardsOn, completion, attempt, comboIds, comboSetIndex, events])
   const comboPill = combo >= COMBO_SHOWS_AT ? <ComboPill count={combo} /> : null
 
+  // Her own problem ("Check my own problem"): the header says so, and the way on is "Check another" (the builder).
+  const own = instance.own !== undefined
+  const route = own ? ownProblemPath(instance.moduleId, instance.templateId, instance.own!) : problemPath(instance.moduleId, instance.templateId, instance.seed, flags)
+
   async function copyLink() {
-    const url = `${window.location.origin}${window.location.pathname}#${problemPath(instance.moduleId, instance.templateId, instance.seed, flags)}`
+    const url = `${window.location.origin}${window.location.pathname}#${route}`
     try {
       if (typeof navigator.share === 'function') {
         await navigator.share({ title: `${instance.title}: ${instance.statementText}`, url })
@@ -452,9 +457,14 @@ export function ProblemFrame({ instance, attempt, flags, templateTitle, progress
     }
   }
 
-  const nextHref = problemPath(instance.moduleId, instance.templateId, randomSeed(), flags)
-  const goNext = () => (set ? set.onNext() : review ? review.onNext() : navigate(nextHref))
-  const nextLabel = set ? set.nextLabel : review ? 'Next' : 'Next problem'
+  const nextHref = own ? ownBuilderPath(instance.moduleId) : problemPath(instance.moduleId, instance.templateId, randomSeed(), flags)
+  const goNext = () => (set ? set.onNext() : review ? review.onNext() : own ? navigate(nextHref, { state: { fresh: true } }) : navigate(nextHref))
+  const nextLabel = set ? set.nextLabel : review ? 'Next' : own ? 'Check another' : 'Next problem'
+  const ownBadge = own ? (
+    <p className="inline-flex min-h-7 items-center rounded-full bg-gold-100 px-3 text-xs font-semibold uppercase tracking-wide text-gold-text" data-own-problem="">
+      Your own problem
+    </p>
+  ) : null
   // A set's slot she can still skip: the problem she is on, not finished yet.
   const skip = set && !completion && set.status[set.index] === 'pending' ? set.onSkip : undefined
   const statementNode = statement ?? <Katex tex={toLatex(instance.statementText)} display />
@@ -484,6 +494,7 @@ export function ProblemFrame({ instance, attempt, flags, templateTitle, progress
                   progress={progress}
                   set={set ? { index: set.index, total: set.total, status: set.status, onSkip: skip } : undefined}
                 />
+                {ownBadge}
                 <div ref={cardRef} tabIndex={-1} className="problem-card rounded-2xl bg-gold-100 px-4 py-3 text-navy outline-none">
                   {statementNode}
                 </div>
@@ -509,9 +520,10 @@ export function ProblemFrame({ instance, attempt, flags, templateTitle, progress
                 <Link to={`/m/${instance.moduleId}`} className="hover:underline">
                   {mod.title}
                 </Link>{' '}
-                · {templateTitle}
+                · {own ? 'Your own problem' : templateTitle}
               </p>
               <h1 className="text-2xl font-semibold text-navy">{instance.title}</h1>
+              {ownBadge}
               <p className="text-sm text-navy/80">{instance.instructions}</p>
               <div className="rounded-2xl bg-gold-100 px-4 py-3 text-navy">{statementNode}</div>
               <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-navy/70" aria-live="polite">
@@ -557,6 +569,11 @@ export function ProblemFrame({ instance, attempt, flags, templateTitle, progress
                 <p className="text-sm text-navy/80" data-picked-note="">
                   {completion.summary.picked === 1 ? 'You picked a line from cards' : `You picked ${completion.summary.picked} lines from cards`}, so this
                   problem does not count toward mastery. Type every line to count it.
+                </p>
+              )}
+              {!finishData && completion.summary.own && (
+                <p className="text-sm text-navy/80" data-own-note="">
+                  This was your own problem, so it does not count toward mastery.
                 </p>
               )}
               {finishData && !phone && <FinishRewards data={finishData} templateTitle={templateTitle} />}

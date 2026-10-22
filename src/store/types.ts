@@ -218,6 +218,13 @@ export interface Attempt {
   /** Foreground seconds spent (maintained by the workspace's idle clock). */
   activeSecs: number
   final?: AttemptFinal
+  /**
+   * "Check my own problem": her statement, as the route `/own/<module>/<template>/<statement>` carries it, so the
+   * attempt reopens on its own route. Every event of the attempt is marked `own` (XP, the goal and the streak count
+   * it; mastery, the rings, the path, sets and squashing a monster do not). Absent on generated problems. `seed` is
+   * '' then: no generated problem has that seed.
+   */
+  own?: string
 }
 
 // ---------------------------------------------------------------------------
@@ -229,8 +236,18 @@ interface EvBase {
   at: number
 }
 
+/**
+ * "Check my own problem": the event belongs to an attempt at a problem she typed herself (`Attempt.own`). Its XP, the
+ * daily goal and the streak count it, and a named mistake catches its monster; it never counts for mastery, the rings,
+ * the path, a set, the review's weak-skill picks or squashing a monster (the problem's difficulty is unknown).
+ * Absent: a generated problem.
+ */
+interface OwnMark {
+  own?: true
+}
+
 export type Ev =
-  | (EvBase & {
+  | (EvBase & OwnMark & {
       t: 'step_accepted'
       attemptId: string
       skill: string
@@ -247,7 +264,7 @@ export type Ev =
        */
       rule?: string
     })
-  | (EvBase & {
+  | (EvBase & OwnMark & {
       t: 'step_rejected'
       attemptId: string
       skill: string
@@ -256,9 +273,9 @@ export type Ev =
       /** Guided mode: a wrong card she picked (the pattern is its named mistake). */
       via?: 'card'
     })
-  | (EvBase & { t: 'hint'; attemptId: string; skill: string; stepIdx: number; rung: 1 | 2 | 3 })
-  | (EvBase & { t: 'step_undone'; attemptId: string; skill: string; stepIdx: number })
-  | (EvBase & {
+  | (EvBase & OwnMark & { t: 'hint'; attemptId: string; skill: string; stepIdx: number; rung: 1 | 2 | 3 })
+  | (EvBase & OwnMark & { t: 'step_undone'; attemptId: string; skill: string; stepIdx: number })
+  | (EvBase & OwnMark & {
       t: 'final_answer'
       attemptId: string
       skill: string
@@ -271,7 +288,7 @@ export type Ev =
        */
       part?: string
     })
-  | (EvBase & {
+  | (EvBase & OwnMark & {
       t: 'problem_done'
       attemptId: string
       skill: string
@@ -291,7 +308,7 @@ export type Ev =
        */
       picked?: number
     })
-  | (EvBase & { t: 'problem_abandoned'; attemptId: string; skill: string })
+  | (EvBase & OwnMark & { t: 'problem_abandoned'; attemptId: string; skill: string })
   | (EvBase & { t: 'drill_answer'; skill: string; correct: boolean; kind: 'property' | 'legal' })
 
 export type EvType = Ev['t']

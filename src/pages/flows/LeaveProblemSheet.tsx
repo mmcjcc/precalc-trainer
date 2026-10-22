@@ -1,6 +1,7 @@
 import { useCallback, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { generateProblem, getModule, getTemplate, hasModule } from '@/content'
+import { ownProblemFromRoute } from '@/content/own'
 import type { Attempt } from '@/store'
 import type { LeaveQuestion } from '@/problem/useAttempt'
 import { knobsFromFlags, parseSeedParam } from '@/problem/url'
@@ -24,7 +25,16 @@ function describe(attempt: Attempt): OtherProblem {
   try {
     if (hasModule(attempt.moduleId)) {
       const mod = getModule(attempt.moduleId)
-      where = `${mod.title} · ${getTemplate(attempt.moduleId, attempt.templateId).title}`
+      where = `${mod.title} · ${attempt.own !== undefined ? 'Your own problem' : getTemplate(attempt.moduleId, attempt.templateId).title}`
+    }
+    if (attempt.own !== undefined) {
+      // Her own problem: rebuilt from her statement, as its route does.
+      const r = ownProblemFromRoute(attempt.moduleId, attempt.templateId, attempt.own)
+      if (r.ok && r.instance.id === attempt.problemId) {
+        title = r.instance.title
+        summary = pinnedSummary(r.instance.statementText, r.instance.vars)
+      }
+      return { where, title, summary }
     }
     const seed = parseSeedParam(attempt.seed)
     if (seed !== null && hasModule(attempt.moduleId)) {

@@ -27,6 +27,8 @@ const SetPage = lazy(() => import('./pages/SetPage'))
 const DrillPage = lazy(() => import('./pages/Drill'))
 const MonstersPage = lazy(() => import('./pages/Monsters'))
 const GrapherPage = lazy(() => import('./pages/Grapher'))
+const OwnBuilderPage = lazy(() => import('./pages/OwnBuilder'))
+const OwnProblemPage = lazy(() => import('./pages/OwnProblem'))
 const SandboxPage = lazy(() => import('./pages/Sandbox'))
 const AskPage = lazy(() => import('./pages/AskAnything'))
 
@@ -144,6 +146,8 @@ function UnlockedShell() {
             <Route path="/m/:moduleId" element={<ModulePage />} />
             <Route path="/p/:moduleId/:templateId/:seed" element={<ProblemPage />} />
             <Route path="/g/:moduleId/:templateId/:seed" element={<LegacyGeneratedRedirect />} />
+            <Route path="/own/:moduleId" element={<OwnBuilderPage />} />
+            <Route path="/own/:moduleId/:templateId/:statement" element={<OwnProblemPage />} />
             <Route path="/review/:reviewId" element={<ReviewPage />} />
             <Route path="/set" element={<SetPage />} />
             <Route path="/drill" element={<DrillPage />} />

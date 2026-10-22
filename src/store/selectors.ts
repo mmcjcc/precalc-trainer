@@ -6,6 +6,19 @@ import { MASTERY_WINDOW, cancelledSteps, inMasteryWindow } from './compaction'
 import { dayKey, daysBetweenKeys, startOfIsoWeek } from './time'
 import type { Ev, Streak, Weekly, WeeklySkill } from './types'
 
+/** An event of a problem she typed herself ("Check my own problem"; `Attempt.own`). */
+export function isOwnEvent(e: Ev): boolean {
+  return 'own' in e && e.own === true
+}
+
+/**
+ * The log without her own problems' events: what steers a set, the path's "You are here" and the review's picks.
+ * Her own problem's difficulty is unknown, so it never decides what she practises next.
+ */
+export function withoutOwn(events: readonly Ev[]): Ev[] {
+  return events.some(isOwnEvent) ? events.filter((e) => !isOwnEvent(e)) : (events as Ev[])
+}
+
 export interface MasteryInfo {
   /** Mean first-try step rate over the window (0..1) or null when never completed. */
   rate: number | null

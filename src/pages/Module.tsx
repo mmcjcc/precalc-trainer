@@ -12,6 +12,8 @@ import {
   type TemplateDef,
 } from '@/content'
 import { defaultKnobs, flagsFromKnobs, problemPath } from '@/problem/url'
+import { hasOwnProblems } from '@/content/own'
+import { ownBuilderPath } from '@/problem/ownUrl'
 import { useMastery, useModuleMastery } from '@/store'
 import { StepBadge } from '@/components/StepBadge'
 import { pickModule, stepByStepModule } from '@/problem/solveStyle'
@@ -130,6 +132,28 @@ function TemplateCard({ module, template }: { module: ModuleDef; template: Templ
   )
 }
 
+/** "Check my own problem": she types one from her homework, and the module checks it line by line (pages/OwnBuilder.tsx). */
+function OwnProblemCard({ moduleId }: { moduleId: ModuleDef['id'] }) {
+  const titleId = useId()
+  return (
+    <section aria-labelledby={titleId} className="rounded-2xl border border-gold bg-gold-100 p-4" data-own-card="">
+      <h2 id={titleId} className="text-lg font-semibold text-navy">
+        Check my own problem
+      </h2>
+      <p className="mt-1 text-sm text-navy/80">
+        Type a problem from your homework. Every line you write is checked, with hints and named mistakes, the same as here.
+      </p>
+      <Link
+        to={ownBuilderPath(moduleId)}
+        aria-describedby={titleId}
+        className="mt-3 inline-flex min-h-11 items-center gap-1 rounded-xl bg-navy px-4 font-semibold text-white hover:bg-navy-600"
+      >
+        Type my problem <span aria-hidden>→</span>
+      </Link>
+    </section>
+  )
+}
+
 function ModuleView({ module }: { module: ModuleDef }) {
   const skills = useMemo(() => module.templates.map((t) => t.id), [module])
   const mm = useModuleMastery(skills)
@@ -189,6 +213,7 @@ function ModuleView({ module }: { module: ModuleDef }) {
               <TemplateCard key={t.id} module={module} template={t} />
             ))}
           </div>
+          {hasOwnProblems(module.id) && <OwnProblemCard moduleId={module.id} />}
         </>
       )}
 

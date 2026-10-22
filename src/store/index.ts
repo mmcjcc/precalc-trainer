@@ -83,6 +83,8 @@ export interface StartAttemptInput {
   difficulty: string
   genVersion: number
   mode?: AttemptMode
+  /** "Check my own problem": her statement (the route's); every event of the attempt is marked `own`. */
+  own?: string
   now?: number
 }
 
@@ -119,6 +121,8 @@ export interface ProblemSummary {
   mode: AttemptMode
   /** Lines picked from cards (Guided mode): any keeps the problem out of the mastery window. */
   picked: number
+  /** Her own problem ("Check my own problem"): it stays out of the mastery window. */
+  own: boolean
 }
 
 interface Transient {
@@ -235,6 +239,11 @@ function touch(attempt: Attempt, now: number): Attempt {
   return { ...attempt, lastActiveAt: iso(now) }
 }
 
+/** Her own problem's events carry `own` ("Check my own problem"); a generated problem's carry nothing new. */
+function ownMark(attempt: Pick<Attempt, 'own'>): { own?: true } {
+  return attempt.own !== undefined ? { own: true } : {}
+}
+
 // ---------------------------------------------------------------------------
 // Store
 // ---------------------------------------------------------------------------
@@ -271,7 +280,7 @@ export const useStore = create<StoreState>()(
         const events = get().events.slice()
         // A problem she only opened is not an attempt: leaving it is not "unfinished".
         if (prev && (prev.problemId !== input.problemId || prev.difficulty !== input.difficulty) && attemptTouched(prev, events)) {
-          events.push({ t: 'problem_abandoned', at: now, attemptId: prev.id, skill: prev.skill })
+          events.push({ t: 'problem_abandoned', at: now, attemptId: prev.id, skill: prev.skill, ...ownMark(prev) })
         }
         const attempt: Attempt = {
           id: `${input.problemId}#${now.toString(36)}`,
@@ -293,6 +302,7 @@ export const useStore = create<StoreState>()(
           currentRejections: 0,
           rejectionsByIdx: {},
           activeSecs: 0,
+          ...(input.own !== undefined ? { own: input.own } : {}),
         }
         pendingDraft = null
         if (draftTimer) clearTimeout(draftTimer)
@@ -335,6 +345,7 @@ export const useStore = create<StoreState>()(
           property: step.property,
           ...(via ? { via } : {}),
           ...(input.rule ? { rule: input.rule } : {}),
+          ...ownMark(a),
         }
         set({
           attempt: touch({ ...a, steps: [...a.steps, step], draft: '', currentRejections: 0 }, now),
@@ -364,7 +375,7 @@ export const useStore = create<StoreState>()(
         const s = get()
         const a = s.attempt
         if (!a) return
-        const ev: Ev = { t: 'step_rejected', at: now, attemptId: a.id, skill: a.skill, stepIdx: a.steps.length, pattern }
+        const ev: Ev = { t: 'step_rejected', at: now, attemptId: a.id, skill: a.skill, stepIdx: a.steps.length, pattern, ...ownMark(a) }
         const k = String(key ?? a.steps.length)
         const rejectionsByIdx = { ...a.rejectionsByIdx, [k]: (a.rejectionsByIdx?.[k] ?? 0) + 1 }
         set({ attempt: touch({ ...a, currentRejections: a.currentRejections + 1, rejectionsByIdx }, now), events: [...s.events, ev] })
@@ -382,7 +393,7 @@ export const useStore = create<StoreState>()(
         const s = get()
         const a = s.attempt
         if (!a) return
-        const ev: Ev = { t: 'step_rejected', at: now, attemptId: a.id, skill: a.skill, stepIdx: a.steps.length, pattern, via: 'card' }
+        const ev: Ev = { t: 'step_rejected', at: now, attemptId: a.id, skill: a.skill, stepIdx: a.steps.length, pattern, via: 'card', ...ownMark(a) }
         const k = String(key ?? a.steps.length)
         const rejectionsByIdx = { ...a.rejectionsByIdx, [k]: (a.rejectionsByIdx?.[k] ?? 0) + 1 }
         const line: LinePicks = a.picks?.[k] ?? { wrong: [] }
@@ -406,7 +417,7 @@ export const useStore = create<StoreState>()(
         if (!a || a.steps.length === 0) return null
         const now = Date.now()
         const last = a.steps[a.steps.length - 1]!
-        const ev: Ev = { t: 'step_undone', at: now, attemptId: a.id, skill: a.skill, stepIdx: last.idx }
+        const ev: Ev = { t: 'step_undone', at: now, attemptId: a.id, skill: a.skill, stepIdx: last.idx, ...ownMark(a) }
         set({
           attempt: touch({ ...a, steps: a.steps.slice(0, -1), draft: last.text, currentRejections: 0 }, now),
           events: [...s.events, ev],
@@ -420,7 +431,7 @@ export const useStore = create<StoreState>()(
         if (!a) return
         const prev = a.hintsUsed[String(stepIdx)] ?? 0
         const hintsUsed = { ...a.hintsUsed, [String(stepIdx)]: Math.max(prev, rung) as HintRung }
-        const ev: Ev = { t: 'hint', at: now, attemptId: a.id, skill: a.skill, stepIdx, rung }
+        const ev: Ev = { t: 'hint', at: now, attemptId: a.id, skill: a.skill, stepIdx, rung, ...ownMark(a) }
         set({ attempt: touch({ ...a, hintsUsed }, now), events: [...s.events, ev] })
       },
 
@@ -456,7 +467,7 @@ export const useStore = create<StoreState>()(
         const s = get()
         const a = s.attempt
         if (!a) return
-        const ev: Ev = { t: 'final_answer', at: now, attemptId: a.id, skill: a.skill, correct, pattern, via, ...(part !== undefined ? { part } : {}) }
+        const ev: Ev = { t: 'final_answer', at: now, attemptId: a.id, skill: a.skill, correct, pattern, via, ...(part !== undefined ? { part } : {}), ...ownMark(a) }
         const final: AttemptFinal = {
           ...a.final,
           correct,
@@ -512,10 +523,23 @@ export const useStore = create<StoreState>()(
           mode: a.mode,
           secs,
           ...(picked > 0 ? { picked } : {}),
+          ...ownMark(a),
         }
         const streak = a.mode === 'normal' ? bumpStreak(s.streak, dayKey(now)) : s.streak
         set({ attempt: null, events: [...s.events, ev], streak })
-        return { skill: a.skill, steps, firstTry, hints, revealed, finalCorrect, secs, streak: currentStreak(streak, now), mode: a.mode, picked }
+        return {
+          skill: a.skill,
+          steps,
+          firstTry,
+          hints,
+          revealed,
+          finalCorrect,
+          secs,
+          streak: currentStreak(streak, now),
+          mode: a.mode,
+          picked,
+          own: a.own !== undefined,
+        }
       },
 
       abandonAttempt: (now = Date.now()) => {
@@ -524,7 +548,7 @@ export const useStore = create<StoreState>()(
         if (!a) return
         if (draftTimer) clearTimeout(draftTimer)
         pendingDraft = null
-        const ev: Ev = { t: 'problem_abandoned', at: now, attemptId: a.id, skill: a.skill }
+        const ev: Ev = { t: 'problem_abandoned', at: now, attemptId: a.id, skill: a.skill, ...ownMark(a) }
         set({ attempt: null, events: [...s.events, ev] })
       },
 

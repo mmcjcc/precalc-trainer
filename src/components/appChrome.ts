@@ -11,7 +11,9 @@ const useFullScreenStore = create<{ pages: number }>(() => ({ pages: 0 }))
 
 /** Routes that are a problem or a running set from their first frame (before their lazy page has loaded). */
 export function isFullScreenPath(pathname: string): boolean {
-  return pathname.startsWith('/p/') || pathname.startsWith('/g/') || pathname === '/set' || pathname.startsWith('/set/')
+  // Her own problem (`/own/<module>/<template>/<statement>`) is a problem screen; its builder (`/own/<module>`) is not.
+  const ownProblem = pathname.startsWith('/own/') && pathname.split('/').length >= 5
+  return pathname.startsWith('/p/') || pathname.startsWith('/g/') || pathname === '/set' || pathname.startsWith('/set/') || ownProblem
 }
 
 /**

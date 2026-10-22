@@ -1551,9 +1551,13 @@ export type AnswerSpec =
       ruleCard: RuleCardId
       ruleCards: RuleCardId[]
       reveal: string[]
-      trap: ErrorPatternId
+      /**
+       * The named slip this seed promises. Every template sets it; her own problem (content/own) leaves it out when
+       * the engine names no slip for it cheaply (never a made-up one).
+       */
+      trap?: ErrorPatternId
       /** A wrong next line from the start. */
-      trapAnswer: string
+      trapAnswer?: string
     }
   | {
       /**
@@ -1579,9 +1583,13 @@ export type AnswerSpec =
       ruleCards: RuleCardId[]
       /** `analyzeLogEquation(...).explanation`, shown after she finishes or on hint rung 3. */
       reveal: string[]
-      trap: ErrorPatternId
+      /**
+       * The named slip this seed promises. Every template sets it; her own problem (content/own) leaves it out when
+       * the engine's analysis names none for it (never a made-up one).
+       */
+      trap?: ErrorPatternId
       /** The wrong final answer that slip produces. */
-      trapAnswer: string
+      trapAnswer?: string
       explanation: string[]
     }
   | {
@@ -1806,6 +1814,13 @@ export interface ProblemInstance {
   check?: CheckValue
   /** Template parameters (for debugging/tests). */
   params: Record<string, number | string | boolean>
+  /**
+   * Her own problem ("Check my own problem", content/own): her statement as she typed it (app syntax), which the
+   * route `/own/<module>/<template>/<statement>` carries. The flows treat the instance like a generated one; the
+   * frame says it is hers, and her events are marked `own` (never mastery, rings, the path or a squash). Absent on
+   * every generated problem.
+   */
+  own?: string
 }
 
 export interface KnobDef {

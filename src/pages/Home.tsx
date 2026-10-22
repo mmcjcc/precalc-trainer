@@ -24,6 +24,7 @@ import {
 import { loadReview } from '@/pages/review/session'
 import { startSet } from '@/pages/set/startSet'
 import { attemptResolves } from '@/problem/attemptResolves'
+import { attemptPath } from '@/problem/ownUrl'
 import { stepByStepModule } from '@/problem/solveStyle'
 import { defaultKnobs, flagsFromKnobs, problemPath } from '@/problem/url'
 import { loadActiveSet, resumePosition, resumeSet, sameSetProblem, setFinished, type ActiveSet } from '@/session/activeSet'
@@ -141,14 +142,15 @@ function courseTemplates(course: CourseDef): { module: ModuleDef; template: Temp
 
 function ContinueCard({ attempt, primary }: { attempt: Attempt; primary: boolean }) {
   const k = attempt.steps.length
-  const href = problemPath(attempt.moduleId, attempt.templateId, attempt.seed, attempt.difficulty)
+  // Her own problem reopens on its own route (`/own/...`), named as hers.
+  const href = attemptPath(attempt)
   const last = Date.parse(attempt.lastActiveAt)
   const titleId = useId()
   return (
     <section aria-labelledby={titleId} className="rounded-2xl border border-gold bg-gold-100 p-4">
       <p className="text-xs font-semibold uppercase tracking-wide text-gold-text">Pick up where you left off</p>
       <h2 id={titleId} className="mt-1 text-lg font-semibold text-navy">
-        {templateTitle(attempt.moduleId, attempt.templateId)}
+        {attempt.own !== undefined ? `Your own problem · ${templateTitle(attempt.moduleId, attempt.templateId)}` : templateTitle(attempt.moduleId, attempt.templateId)}
       </h2>
       <p className="mt-1 text-sm text-navy/80">
         {k === 0 ? 'Not started yet' : `${k} ${k === 1 ? 'step' : 'steps'} done`}

@@ -327,6 +327,19 @@ backups). "Graph it" (`GraphItButton`) opens the grapher from a problem with wha
 function, or her own final equation in optimization), never its hidden answer (`grapher/graphIt.ts` per problem type),
 in the problem's window; Back returns to the problem with her work. See `docs/progress/app-grapher.md`.
 
+"Check my own problem" (a card on the module page of the modules that have a constructor; `/own/<moduleId>` is the
+builder, `pages/OwnBuilder.tsx`, and `/own/<moduleId>/<templateId>/<statement>` her problem, `pages/OwnProblem.tsx`,
+both lazy): she types a problem from her homework or quiz and the module's own flow checks it unchanged. Each module that
+takes one has `src/content/modules/<module>/own.ts`, an `OwnConstructor` (registered in `src/content/own/index.ts`) that
+returns a `ProblemInstance` exactly like a generated one (answers from the engine; `instance.own` is her statement, the
+id `own:<module>/<template>@<version>/<hash of the statement>`, the seed made from the statement) or a reason in one plain sentence
+(`OwnReason`, parts of text, KaTeX and module links). `src/content/own/core.ts` screens the text before anything is
+solved (length, numbers, powers, nesting depth, a log inside a log). The attempt and every event of it carry `own`
+(`OwnMark`): XP, the goal, the streak and mistake cards count it; the mastery window, the rings, squashing, a type's
+review date, set picks, the path and the unit review never do (`inMasteryWindow`, `withoutOwn`). Adding a module: write
+its `own.ts` with a round trip over every template it takes (300 seeds), a why-not list and a keypad fuzz shape
+(`src/problem/own.fuzz.test.ts`). See `docs/progress/own-problem.md`.
+
 Problem-page flows by kind:
 - **inequality**: worked column starts at `instance.start`; steps until progress says solved; then
   final answer: interval input + set-builder input (both required; cross-checked; patterns 1–3, 10).

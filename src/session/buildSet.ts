@@ -22,6 +22,7 @@ import { mixSeed } from '@/content/rng'
 import { stepByStepModule } from '@/problem/solveStyle'
 import { defaultKnobs, flagsFromKnobs } from '@/problem/url'
 import { computeRewards, DEFAULT_DAILY_GOAL, openCards, REVIEW_AFTER_MS, skillRings, type RingLevel } from '@/store/rewards'
+import { withoutOwn } from '@/store/selectors'
 import type { Ev, RewardsState } from '@/store/types'
 
 /** Problems in a set. */
@@ -134,9 +135,14 @@ export interface PickResult {
   unitId: string | null
 }
 
-/** The set's problem types by the rules at the top of this file. Pure. */
+/**
+ * The set's problem types by the rules at the top of this file. Pure. Her own problems ("Check my own problem") are
+ * left out of every rule: their difficulty is unknown, so they never steer a set (nor the path's "You are here",
+ * which is this set's first type).
+ */
 export function pickSetTypes(input: PickInput): PickResult {
-  const { types, events, rewards, now } = input
+  const { types, rewards, now } = input
+  const events = withoutOwn(input.events)
   const size = Math.max(1, Math.floor(input.size ?? SET_SIZE))
   const byId = new Map(types.map((t) => [t.templateId, t]))
   const rings = skillRings(events)

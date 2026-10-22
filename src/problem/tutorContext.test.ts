@@ -1035,13 +1035,13 @@ describe('buildTutorContext', () => {
 
     const eq = generateProblem('expLogEquations', 'ee.logarithmic', 1)
     if (eq.answer.type !== 'expLogEquations') throw new Error('expected an equation')
-    const graded = gradeLogEquation(eq.answer.equation, eq.answer.trapAnswer)
+    const graded = gradeLogEquation(eq.answer.equation, eq.answer.trapAnswer!)
     const solving = buildTutorContext(
       eq,
       attempt('ee-1', {
         moduleId: 'expLogEquations',
         steps: [step(eq.answer.path[0] ?? eq.answer.equation)],
-        final: { polyEntries: { answer: eq.answer.trapAnswer } },
+        final: { polyEntries: { answer: eq.answer.trapAnswer! } },
       }),
       verdictFromLog(graded, eq.answer.trapAnswer),
       false,

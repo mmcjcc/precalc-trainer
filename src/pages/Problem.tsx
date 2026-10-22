@@ -83,7 +83,8 @@ export function ProblemPage() {
   return <ProblemView moduleId={moduleId} templateId={templateId} seed={seed} flags={search.get('d') ?? ''} />
 }
 
-function ProblemBody({ instance, flags, templateTitle }: { instance: ProblemInstance; flags: string; templateTitle: string }) {
+/** One problem's screen: the attempt, its flow, and the leave sheet. Her own problem (pages/OwnProblem.tsx) uses it too. */
+export function ProblemBody({ instance, flags, templateTitle }: { instance: ProblemInstance; flags: string; templateTitle: string }) {
   const takeSecs = useRef<() => number>(() => 0)
   const { completion, finish } = useCompletion(instance, templateTitle, () => takeSecs.current())
   const { attempt: live, leaveQuestion } = useAttemptLifecycle(instance, flags, !completion)

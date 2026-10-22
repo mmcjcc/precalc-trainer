@@ -5,7 +5,7 @@
  */
 import { DEFAULT_REVIEW_COUNT, getReview, resolveReview, type ResolvedTopic } from '@/content'
 import { makeRng, mixSeed, type Rng } from '@/content/rng'
-import { weakSpotWeights } from '@/store/selectors'
+import { weakSpotWeights, withoutOwn } from '@/store/selectors'
 import type { Ev } from '@/store/types'
 import type { ReviewProblem } from './session'
 
@@ -22,8 +22,12 @@ interface Draft {
   templateId: string
 }
 
-/** Weak-spot weight plus recent rejections, wrong finals, and named mistakes (the pattern). */
-export function reviewTemplateWeights(events: Ev[], templateIds: string[]): Map<string, number> {
+/**
+ * Weak-spot weight plus recent rejections, wrong finals, and named mistakes (the pattern). Her own problems ("Check
+ * my own problem") are left out: their difficulty is unknown, so they never steer the review's picks.
+ */
+export function reviewTemplateWeights(all: Ev[], templateIds: string[]): Map<string, number> {
+  const events = withoutOwn(all)
   const base = weakSpotWeights(events, templateIds)
   const extra = new Map<string, number>()
   const add = (skill: string, n: number) => extra.set(skill, (extra.get(skill) ?? 0) + n)

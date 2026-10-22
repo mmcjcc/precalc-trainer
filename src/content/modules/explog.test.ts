@@ -167,7 +167,7 @@ describe.each([
           expect(r.ok, `${p.id} ${prev} → ${step}`).toBe(true)
           prev = step
         }
-        const slip = checkLogRewrite(a.expr, a.trapAnswer, opts)
+        const slip = checkLogRewrite(a.expr, a.trapAnswer!, opts)
         expect(slip.ok, p.id).toBe(false)
         expect(slip.pattern?.id, `${p.id} ${a.trapAnswer}`).toBe(a.trap)
         expect(getModule(moduleId).solved?.(p, a.answerText), p.id).toBe(true)
@@ -218,7 +218,7 @@ describe.each([
             expect(r.ok, `${a.equation}: ${prev} → ${step} (${r.verdict})`).toBe(true)
             prev = r.normalized?.text ?? step
           }
-          const g = gradeLogEquation(a.equation, a.trapAnswer, opts)
+          const g = gradeLogEquation(a.equation, a.trapAnswer!, opts)
           expect(g.verdict, a.equation).toBe('mistake')
           if (g.verdict === 'mistake' && g.mistake !== a.trap) {
             const cand = logEquationMistakes(a.equation).find((c) => c.id === a.trap && c.text === a.trapAnswer)
