@@ -296,3 +296,34 @@ link), `src/pages/flows/ProblemFrame.tsx` and `src/pages/flows/LeaveProblemSheet
 `src/problem/ownUrl.ts`, `src/problem/ownDraft.ts`, `src/problem/useAttempt.ts`, `src/problem/attemptResolves.ts`,
 `src/problem/own.fuzz.test.ts`, `src/pages/OwnProblem.test.tsx`, `docs/BUILD_GUIDE.md`, this log. Not touched: the
 reviewer's `src/engine/logs/wide.ts` and `src/content/own/own.crosscheck.test.ts`.
+
+## Review (Claude, 2026-10-22)
+
+Built by one Claude agent (2 h 50 min, then 70 min of review follow-ups). Checked:
+- An independent cross-check (`src/content/own/own.crosscheck.test.ts`): random problems of every shape the six
+  constructors accept, made by the test's own generator rather than the templates', each accepted answer checked
+  without the engine (solution sets against the inequality itself, inverses composed with f, closed-form roots,
+  rewrites, vertex forms and difference quotients evaluated). At 150 per shape: 5,450 accepted, all right; refusals
+  were honest (answers past ±50, curves past the line checker's window, no solution, x² + c already in vertex form).
+  A rounded pass: 552 one-root exponential and log equations take the closed-form root rounded to 1-4 places.
+- Typical homework typed by hand (her Quiz 1 problems, textbook inequalities, inverses, exponential and log
+  equations, log rewrites, quadratics, difference quotients): accepted, or refused with a reason that says what to do.
+- On the Android emulator (store build): the module card, the builder with the keypad, "I can check this one", her
+  Quiz 1 inequality line by line with her real slip caught as the Sign Flipper, the finish sheet (XP and the goal
+  move, the ring does not, with the note), and a "can't check this one here" reason linking to Sign charts.
+
+Changed in review:
+- LOG ENGINE (src/engine/logs/wide.ts): rootsOnGrid's identity test counted grid points within ROOT_TOL of 0, and the
+  geometric grid crowds around 0, so 4^(x - 3) = 8^(x - 2) and 2^(x - 10) = 4^(x - 5) (x = 0) had NO roots: her own
+  problem was told it had no solution and x = 0 graded wrong. The stretch is now measured by length along x, and points
+  where both sides are within ROOT_TOL of 0 are left out. It affected the line checks of generated problems too.
+- Rounding (explog/text.ts roundPlaces, shared with the exp/log, models and angle templates): halves away from zero,
+  as textbooks and the TI-84 do, with float error at a half absorbed (2.25 computed as 2.2499999999999996 showed as
+  2.2; -2.75 as -2.7). Grading was right either way (any decimal within half a unit).
+- Sent back to the builder and done: a rounding choice for exponential and log equations (her homework usually asks
+  for three places; 2.727 was "a calculator approximation" before), a link near the top of the module page (the card
+  was about four phone screens down), and reasons about a letter that say what to type instead.
+
+Left as is: inverses whose curve leaves the line checker's window are refused (cbrt(x - 9) + 8; her quiz's
+cbrt(5x - 2) + 4 is fine), a soundness guard tied to engine/slicing.ts; x² + c is refused as already in vertex form;
+other function names (g(x)) are asked to be typed as f(x).
