@@ -128,6 +128,32 @@ export const GEO_UNIT6_MISTAKE_IDS = [
   'geo_one_ratio_inverted',
 ] as const
 
+/** Unit 7 mistakes (right triangles). A number or pick is named only when it is exactly what that slip produces here. */
+export const GEO_UNIT7_MISTAKE_IDS = [
+  'geo_leg_far_segment',
+  'geo_altitude_leg_mixed',
+  'geo_converse_wrong_side',
+  'geo_triangle_inequality_skipped',
+  'geo_acute_obtuse_swapped',
+  'geo_coefficient_not_squared',
+  'geo_half_not_taken',
+] as const
+
+/**
+ * Mistakes of the precalculus right-triangle core (engine/trig) that Unit 7 names too: the special triangles' factors
+ * swapped or used the wrong way, the squares added where one side is the hypotenuse (or subtracted for two legs), the
+ * square root not taken. Their catalog entries and monsters are the trig ones; geometry grades them like its own.
+ */
+export const GEO_BORROWED_TRIG_IDS = [
+  'trig_pythag_added',
+  'trig_pythag_subtracted',
+  'trig_side_not_rooted',
+  'trig_special_root3_two_swapped',
+  'trig_special_45_two',
+  'trig_special_wrong_way',
+  'trig_special_legs_swapped',
+] as const
+
 export const GEO_UNIT1_MISTAKE_IDS = GEO_MISTAKE_IDS
 
 export type GeoMistakeId =
@@ -137,6 +163,8 @@ export type GeoMistakeId =
   | (typeof GEO_UNIT4_MISTAKE_IDS)[number]
   | (typeof GEO_UNIT5_MISTAKE_IDS)[number]
   | (typeof GEO_UNIT6_MISTAKE_IDS)[number]
+  | (typeof GEO_UNIT7_MISTAKE_IDS)[number]
+  | (typeof GEO_BORROWED_TRIG_IDS)[number]
 
 export type GeoGrade =
   | { verdict: 'correct'; message: string }
@@ -168,6 +196,7 @@ export function gradeGeoStage(answer: GeometryAnswer, stageId: GeometryStageId, 
   if (stage.kind === 'choice') return gradeChoice(stage, text)
   if (stage.kind === 'reason') return gradeReason(stage, text)
   if (stage.kind === 'line') return gradeLine(stage, text)
+  if (stage.round !== undefined) return gradeRounded(stage, text)
   const opts = { ...(stage.allowUndefined ? { allowUndefined: true as const } : {}), ...(stage.ratio ? { ratio: true as const } : {}) }
   const unitless = stage.lengthUnit ? withoutLengthUnit(text, stage.lengthUnit) : { ok: true as const, text }
   if (!unitless.ok) return { verdict: 'invalid', message: unitless.message }
@@ -244,20 +273,90 @@ function gradeReason(stage: GeometryAnswer['stages'][number], text: string): Geo
 
 const approx = (q: GeoQty) => (q.n / q.d) * Math.sqrt(q.rad)
 
-const UNIT_WORDS: Record<'ft' | 'm', { words: RegExp; name: string; other: RegExp; otherName: string }> = {
+type LengthUnit = NonNullable<GeometryAnswer['stages'][number]['lengthUnit']>
+
+/** Every unit word a Unit 7 story could meet, for "that is a different unit". */
+const ANY_UNIT = /\s*(?:ft|feet|foot|in|inch|inches|yd|yards?|mi|miles?|km|kilometers?|kilometres?|cm|centimeters?|m|meters?|metres?)\.?$/i
+
+const UNIT_WORDS: Record<LengthUnit, { words: RegExp; name: string; other: RegExp; otherName: string | null }> = {
   ft: { words: /\s*(?:ft|feet|foot)\.?$/i, name: 'feet', other: /\s*(?:m|meters?|metres?)\.?$/i, otherName: 'meters' },
   m: { words: /\s*(?:m|meters?|metres?)\.?$/i, name: 'meters', other: /\s*(?:ft|feet|foot)\.?$/i, otherName: 'feet' },
+  in: { words: /\s*(?:in|inch|inches)\.?$/i, name: 'inches', other: ANY_UNIT, otherName: null },
+  yd: { words: /\s*(?:yd|yards?)\.?$/i, name: 'yards', other: ANY_UNIT, otherName: null },
+  km: { words: /\s*(?:km|kilometers?|kilometres?)\.?$/i, name: 'kilometers', other: ANY_UNIT, otherName: null },
+  mi: { words: /\s*(?:mi|miles?)\.?$/i, name: 'miles', other: ANY_UNIT, otherName: null },
 }
 
 /** A story's length: "12 ft", "12 feet", or "12" all read as 12. A length in the other unit is a note, not an attempt. */
-function withoutLengthUnit(text: string, unit: 'ft' | 'm'): { ok: true; text: string } | { ok: false; message: string } {
+function withoutLengthUnit(text: string, unit: LengthUnit): { ok: true; text: string } | { ok: false; message: string } {
   const rule = UNIT_WORDS[unit]
   const trimmed = text.trim()
   if (rule.words.test(trimmed)) return { ok: true, text: trimmed.replace(rule.words, '') }
   if (/\d/.test(trimmed) && rule.other.test(trimmed)) {
+    if (!rule.otherName) return { ok: false, message: `This problem measures in ${rule.name}. Give the length in ${rule.name}.` }
     return { ok: false, message: `This problem measures in ${rule.name}, not ${rule.otherName}. Give the length in ${rule.name}.` }
   }
   return { ok: true, text: trimmed }
+}
+
+const PLACE_WORDS: Record<0 | 1 | 2, string> = { 0: 'whole number', 1: 'tenth', 2: 'hundredth' }
+
+/** A rational n/d rounded to `places` decimal places, halves away from zero (as textbooks and the TI-84 do), exactly. */
+export function roundRational(n: number, d: number, places: number): number {
+  const f = 10 ** places
+  const sign = n < 0 ? -1 : 1
+  return (sign * Math.floor((2 * Math.abs(n) * f + d) / (2 * d))) / f
+}
+
+/** How many digits she typed after the decimal point. */
+function placesTyped(text: string): number {
+  const m = /\.(\d+)/.exec(text)
+  return m ? m[1]!.length : 0
+}
+
+const nearly = (a: number, b: number) => Math.abs(a - b) < 1e-9
+
+/**
+ * Unit 7's word problems: the answer is a decimal rounded as the problem asks. A correctly rounded decimal is right;
+ * more places are right when they round to it; a slip is named when her number is (or rounds to) the slip's rounded
+ * value; the exact radical, or a decimal rounded to fewer places, is a note that asks for the rounding.
+ */
+function gradeRounded(stage: GeometryAnswer['stages'][number], text: string): GeoGrade {
+  const places = stage.round ?? 1
+  const place = PLACE_WORDS[places]
+  const unitless = stage.lengthUnit ? withoutLengthUnit(text, stage.lengthUnit) : { ok: true as const, text: text.trim() }
+  if (!unitless.ok) return { verdict: 'invalid', message: unitless.message }
+  const read = readGeoAnswer(unitless.text)
+  if (!read.ok) return { verdict: 'invalid', message: read.message }
+  if (read.value.kind !== 'qty') return { verdict: 'invalid', message: 'This part asks for one length, not a point.' }
+  if (read.degrees) return { verdict: 'invalid', message: 'This part is not an angle measure, so leave off the degree sign.' }
+  const q = read.value.q
+  if (q.rad > 1) {
+    return { verdict: 'invalid', message: `This problem asks for a decimal rounded to the nearest ${place}. Use a calculator for the square root, then round.` }
+  }
+  if (q.n <= 0) return { verdict: 'wrong', message: 'A length is always more than zero.' }
+  const target = Number(stage.answerText)
+  const typed = placesTyped(unitless.text)
+  const v = q.n / q.d
+  const exactRead = stage.exact ? readGeoAnswer(stage.exact) : null
+  const exactValue = exactRead?.ok && exactRead.value.kind === 'qty' ? approx(exactRead.value.q) : null
+  // More places are right when they round to the answer, or when they are the true length correctly rounded at her
+  // own place (29.950 for 29.94997, which rounds to 29.9 at the tenth).
+  const ownPlaceRight = exactValue !== null && typed > places && Math.abs(v - exactValue) <= 0.5 * 10 ** -typed + 1e-12
+  if (nearly(v, target) || (typed > places && nearly(roundRational(q.n, q.d, places), target)) || ownPlaceRight) {
+    return { verdict: 'correct', message: `Correct: ${stage.answerText}.` }
+  }
+  for (const trap of stage.traps) {
+    const t = Number(trap.text)
+    if (!Number.isFinite(t) || !isGeoMistake(trap.id)) continue
+    if (nearly(v, t) || (typed > places && nearly(roundRational(q.n, q.d, places), t))) return { verdict: 'mistake', mistake: trap.id, witness: trap.witness }
+  }
+  if (typed < places && exactValue !== null) {
+    const f = 10 ** typed
+    const shorter = Math.round(exactValue * f) / f
+    if (nearly(v, shorter)) return { verdict: 'invalid', message: `That is rounded too far. Round to the nearest ${place}.` }
+  }
+  return { verdict: 'wrong', message: `That is not ${stage.label}.` }
 }
 
 /**
@@ -280,7 +379,9 @@ export function isGeoMistake(id: ErrorPatternId): id is GeoMistakeId {
     (GEO_UNIT3_MISTAKE_IDS as readonly string[]).includes(id) ||
     (GEO_UNIT4_MISTAKE_IDS as readonly string[]).includes(id) ||
     (GEO_UNIT5_MISTAKE_IDS as readonly string[]).includes(id) ||
-    (GEO_UNIT6_MISTAKE_IDS as readonly string[]).includes(id)
+    (GEO_UNIT6_MISTAKE_IDS as readonly string[]).includes(id) ||
+    (GEO_UNIT7_MISTAKE_IDS as readonly string[]).includes(id) ||
+    (GEO_BORROWED_TRIG_IDS as readonly string[]).includes(id)
   )
 }
 
@@ -307,10 +408,12 @@ export function assertGeoAnswer(where: string, answer: GeometryAnswer): void {
     if (phrase.test(answer.prompt)) throw new Error(`${where}: prompt teaches the method (${phrase})`)
   }
   const blob = visibleBlob(answer)
+  // Unit 7 gives sides like 6√2: the 6 there is a coefficient, not a length of 6, so a radical binds its number.
+  const shownIn = UNIT7_QUESTIONS.has(answer.question) ? exposedExact : exposed
   for (const stage of answer.stages) {
     const g = gradeGeoStage(answer, stage.id, stage.answerText)
     if (g.verdict !== 'correct') throw new Error(`${where}: ${stage.id} answer ${stage.answerText} graded ${g.verdict}`)
-    if (exposed(blob, stage.answerText)) throw new Error(`${where}: ${stage.label} answer ${stage.answerText} is on the figure or in the prompt`)
+    if (shownIn(blob, stage.answerText)) throw new Error(`${where}: ${stage.label} answer ${stage.answerText} is on the figure or in the prompt`)
   }
   const trapGrade = gradeGeoStage(answer, answer.trapStage, answer.trapAnswer)
   if (trapGrade.verdict !== 'mistake' || trapGrade.mistake !== answer.trap) {
@@ -496,6 +599,21 @@ function visibleBlob(answer: GeometryAnswer): string {
   for (const a of answer.figure.angles ?? []) if (a.label) bits.push(a.label)
   for (const l of answer.figure.lines ?? []) if (l.label) bits.push(l.label)
   return bits.join(' \n ')
+}
+
+/** The Unit 7 question kinds, whose generators hold every text to `exposedExact`. */
+const UNIT7_QUESTIONS: ReadonlySet<string> = new Set(['geometricMean', 'rightAltitude', 'pythagorean', 'pythagoreanConverse', 'pythagoreanWords', 'specialRight'])
+
+/**
+ * Like `exposed`, with a radical bound to the number it touches: in "6√2" neither 6 nor √2 is shown on its own, and a
+ * decimal's digits are not a whole number ("6.5" does not show 6). "6√2" itself, "6" in "(6, 2)" or "x + 6", and an
+ * answer ending a sentence ("is 6.") still count.
+ */
+export function exposedExact(blob: string, secret: string): boolean {
+  const trimmed = secret.trim()
+  if (!trimmed) return false
+  const esc = trimmed.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  return new RegExp(`(?:^|[^0-9A-Za-z√.])${esc}(?![0-9A-Za-z√]|\\.\\d)`).test(blob)
 }
 
 /** True when `secret` shows up as its own number, not as a digit inside a longer one. */

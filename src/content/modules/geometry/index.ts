@@ -38,6 +38,10 @@ import { drawProportion, drawSimilarPolygons } from './unit6Ratios'
 import { PARTS_RULES, RATIO_RULES, SIMILAR_RULES } from './unit6Rules'
 import { drawBisectorParts, drawSplitter } from './unit6Parts'
 import { drawSimilarProve, drawSimilarSolve } from './unit6Similar'
+import { drawAltitude, drawGeoMean } from './unit7Mean'
+import { drawApply, drawClassify7, drawPythSide } from './unit7Pyth'
+import { PYTHAGOREAN_RULES, RIGHT_SIMILAR_RULES, SPECIAL_RIGHT_RULES } from './unit7Rules'
+import { drawSpecial } from './unit7Special'
 
 export { readGeoAnswer, formatPoint, formatQty, formatValue, geoQty, sameGeoValue, sameQty, simplifyRadical } from './answer'
 export type { GeoQty, GeoRead, GeoReadOptions, GeoValue } from './answer'
@@ -511,3 +515,101 @@ export const geoProportionalPartsModule: ModuleDef = {
 
 registerModule(geoSimilarTrianglesModule)
 registerModule(geoProportionalPartsModule)
+
+/**
+ * Similarity in right triangles (honors geometry Unit 7, Jurgensen 8-1). The geometric mean, and the right triangle
+ * with the altitude to the hypotenuse: the altitude and each leg as geometric means, sometimes with a length in x.
+ */
+export const geoRightSimilarModule: ModuleDef = {
+  id: 'geoRightSimilar',
+  subject: 'Geometry',
+  title: 'Similarity in right triangles',
+  blurb: 'Find a geometric mean, and use the altitude to the hypotenuse of a right triangle to find the altitude, the legs, and the segments of the hypotenuse.',
+  order: 24,
+  templates: [
+    geoTemplate(
+      'geoRightSimilar',
+      'rs.mean',
+      'The geometric mean',
+      'Find the geometric mean of two numbers in simplest radical form, or a number from its geometric mean and the other number.',
+      drawGeoMean,
+    ),
+    geoTemplate(
+      'geoRightSimilar',
+      'rs.altitude',
+      'The altitude to the hypotenuse',
+      'A right triangle with the altitude to the hypotenuse. From two lengths, find the others exactly; sometimes a length is written in x.',
+      drawAltitude,
+    ),
+  ],
+  ruleCards: RIGHT_SIMILAR_RULES,
+  progress: PROGRESS,
+  nextStep: () => null,
+}
+
+/**
+ * The Pythagorean Theorem and its converse (honors geometry Unit 7, Jurgensen 8-2 and 8-3). A missing side, alone or
+ * inside a rectangle, an isosceles triangle, a rhombus or the coordinate grid; acute, right, obtuse, or no triangle;
+ * word problems rounded as asked.
+ */
+export const geoPythagoreanModule: ModuleDef = {
+  id: 'geoPythagorean',
+  subject: 'Geometry',
+  title: 'The Pythagorean Theorem and its converse',
+  blurb: 'Find a missing side of a right triangle exactly, classify a triangle from its three sides, and solve word problems with the Pythagorean Theorem.',
+  order: 25,
+  templates: [
+    geoTemplate(
+      'geoPythagorean',
+      'py.side',
+      'Finding a missing side',
+      'A missing leg or hypotenuse in simplest radical form, alone or inside a rectangle, an isosceles triangle, a rhombus, or the coordinate grid.',
+      drawPythSide,
+    ),
+    geoTemplate(
+      'geoPythagorean',
+      'py.classify',
+      'Acute, right, or obtuse',
+      'Three lengths: do they make a triangle, and if so, is it acute, right, or obtuse?',
+      drawClassify7,
+    ),
+    geoTemplate(
+      'geoPythagorean',
+      'py.apply',
+      'Pythagorean word problems',
+      'Ladders, screens, ramps, fields, kites and ships, each length rounded as the problem asks.',
+      drawApply,
+    ),
+  ],
+  ruleCards: PYTHAGOREAN_RULES,
+  progress: PROGRESS,
+  nextStep: () => null,
+}
+
+/**
+ * Special right triangles (honors geometry Unit 7, Jurgensen 8-4). 45°-45°-90° and 30°-60°-90° triangles from one
+ * side, alone and inside squares, equilateral triangles, rectangles and rhombuses, exactly.
+ */
+export const geoSpecialRightModule: ModuleDef = {
+  id: 'geoSpecialRight',
+  subject: 'Geometry',
+  title: 'Special right triangles',
+  blurb: 'Use the 45°-45°-90° and 30°-60°-90° triangles to find sides exactly, alone and inside squares, equilateral triangles, rectangles, and rhombuses.',
+  order: 26,
+  templates: [
+    geoTemplate(
+      'geoSpecialRight',
+      'sp.special',
+      'Sides of the special triangles',
+      'One side of a 45°-45°-90° or 30°-60°-90° triangle, alone or inside a figure. Find the others in simplest radical form.',
+      drawSpecial,
+    ),
+  ],
+  ruleCards: SPECIAL_RIGHT_RULES,
+  progress: PROGRESS,
+  nextStep: () => null,
+}
+
+registerModule(geoRightSimilarModule)
+registerModule(geoPythagoreanModule)
+registerModule(geoSpecialRightModule)

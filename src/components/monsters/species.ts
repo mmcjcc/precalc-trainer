@@ -334,7 +334,7 @@ export const SPECIES: readonly Species[] = [
     id: 'power',
     name: 'The Power Grabber',
     personality: 'Grabs exponents and drops them wherever it likes.',
-    family: 'Exponent slips: power rules, negative exponents, a square or an exponent forgotten.',
+    family: 'Exponent slips: power rules, negative exponents, a square or an exponent forgotten, a radical squared without the number in front.',
     subject: 'math',
     look: { body: 'round', hue: 14, sat: 74, light: 58, accent: 52, top: 'bulb', eyes: 'wide', mouth: 'teeth', feet: 'stubs', arms: 'up', mark: 'superscript' },
     variants: [
@@ -346,6 +346,7 @@ export const SPECIES: readonly Species[] = [
       'poly_multiplicity_wrong_zero',
       'geo_distance_not_squared',
       'trig_sector_r_not_squared',
+      'geo_coefficient_not_squared',
     ],
   },
   {
@@ -652,7 +653,7 @@ export const SPECIES: readonly Species[] = [
     id: 'mismeasure',
     name: 'The Mismeasurer',
     personality: 'Measures twice and gets it wrong both times.',
-    family: 'Measure slips: parts and wholes, midpoints, halves and doubles, x in place of the measure, angle sums of polygons, fences and areas counted wrong, proportions set up or cross-multiplied wrong, the means and ratios of similar figures, and a wave’s height measured from the wrong place.',
+    family: 'Measure slips: parts and wholes, midpoints, halves and doubles, x in place of the measure, angle sums of polygons, fences and areas counted wrong, proportions set up or cross-multiplied wrong, the means and ratios of similar figures, the geometric means of a right triangle paired with the wrong lengths, a whole length where the right triangle inside a figure has half of it, and a wave’s height measured from the wrong place.',
     subject: 'math',
     look: { body: 'box', hue: 50, sat: 86, light: 56, accent: 4, top: 'antennae', eyes: 'round', mouth: 'grin', feet: 'stubs', arms: 'stubs', mark: 'ruler' },
     variants: [
@@ -692,6 +693,9 @@ export const SPECIES: readonly Species[] = [
       'trig_amplitude_with_d',
       'trig_amplitude_as_span',
       'trig_amplitude_as_diameter',
+      'geo_leg_far_segment',
+      'geo_altitude_leg_mixed',
+      'geo_half_not_taken',
     ],
   },
   {
@@ -778,7 +782,7 @@ export const SPECIES: readonly Species[] = [
     id: 'quad',
     name: 'The Shape Faker',
     personality: 'Passes off any four-sided shape as something fancier.',
-    family: 'Quadrilateral slips: which properties a shape has, which tests prove it, its most specific name.',
+    family: 'Shape slips: which properties a quadrilateral has, which tests prove it, its most specific name, and what kind of triangle three lengths make by its angles, if they make one at all.',
     subject: 'math',
     look: { body: 'box', hue: 340, sat: 50, light: 66, accent: 220, top: 'none', eyes: 'round', mouth: 'grin', feet: 'stubs', arms: 'stubs', mark: 'disguise' },
     variants: [
@@ -793,6 +797,9 @@ export const SPECIES: readonly Species[] = [
       'geo_converse_property',
       'geo_square_not_rectangle',
       'geo_not_most_specific',
+      'geo_converse_wrong_side',
+      'geo_triangle_inequality_skipped',
+      'geo_acute_obtuse_swapped',
     ],
   },
   {

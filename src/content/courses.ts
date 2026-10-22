@@ -169,6 +169,12 @@ export const COURSES: readonly CourseDef[] = [
         title: 'Similarity',
         moduleIds: ['geoRatios', 'geoSimilarTriangles', 'geoProportionalParts'],
       },
+      {
+        id: 'g7',
+        label: 'Unit 7',
+        title: 'Right triangles',
+        moduleIds: ['geoRightSimilar', 'geoPythagorean', 'geoSpecialRight'],
+      },
     ],
   },
 ]

@@ -606,6 +606,12 @@ export function assertGeometryQuestion(question: GeometryQuestion): void {
     case 'similarSolve':
     case 'splitter':
     case 'angleBisector':
+    case 'geometricMean':
+    case 'rightAltitude':
+    case 'pythagorean':
+    case 'pythagoreanConverse':
+    case 'pythagoreanWords':
+    case 'specialRight':
       return
     default: {
       const unexpected: never = question
