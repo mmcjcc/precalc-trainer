@@ -538,3 +538,24 @@ describe('a true answer is never graded wrong', () => {
     HEAVY,
   )
 })
+
+describe('the shadow figures', () => {
+  it(
+    'both shadows sit on dimension lines below the ground, so a shadow length never reads as the sun’s ray',
+    () => {
+      let shadows = 0
+      for (let seed = 1; seed <= 300; seed++) {
+        const a = answerOf('geoSimilarTriangles', 'gt.solve', seed)
+        if (!/casts a shadow/.test(a.prompt)) continue
+        shadows += 1
+        // The two shadows are the labeled segments lying on the ground (both ends at height 0): both below.
+        const y = (id: string) => a.figure!.points.find((pt) => pt.id === id)!.y
+        const ground = (a.figure!.segments ?? []).filter((s) => s.label && y(s.from) === 0 && y(s.to) === 0)
+        expect(ground.length, `gt.solve/${seed}`).toBe(2)
+        for (const s of ground) expect(s.labelSide, `gt.solve/${seed} ${s.from}${s.to}`).toBe('below')
+      }
+      expect(shadows).toBeGreaterThan(20)
+    },
+    HEAVY,
+  )
+})

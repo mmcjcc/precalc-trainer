@@ -1223,14 +1223,12 @@ function solveStory(rng: Rng, seed: number, kind: 'shadow' | 'mirror'): GeoBuilt
       { x: s + gap, y: 0 },
       { x: s + gap + S, y: 0 },
     ]
-    // Both shadows are labeled below the ground (review: above it, inside the triangle, the object's shadow length sat
-    // as close to the sun's ray as to the shadow, and read as either).
     segments = [
       { from: P, to: Q, label: String(h) },
-      { from: Q, to: Rr, label: String(s), labelSide: 'below' },
+      { from: Q, to: Rr, label: String(s) },
       { from: P, to: Rr },
       { from: A, to: B, label: 'x' },
-      { from: B, to: C, label: String(S), labelSide: 'below' },
+      { from: B, to: C, label: String(S) },
       { from: A, to: C },
     ]
     angles = [
@@ -1241,7 +1239,10 @@ function solveStory(rng: Rng, seed: number, kind: 'shadow' | 'mirror'): GeoBuilt
     ]
     first = [P, Q, Rr]
     second = [A, B, C]
-    parts = []
+    // Both shadows on dimension lines below the ground, as the mirror's distances are (review: left to the label
+    // placer, the object's shadow length could sit above the ground, inside the triangle, as close to the sun's ray as
+    // to the shadow, and read as either).
+    parts = [1, 4]
   } else {
     // Person: foot Q, eyes P. Mirror R on the ground. Object: base B, top A. The angles at the mirror are congruent.
     pts = [
