@@ -58,11 +58,18 @@ export function frac(n: number, d: number): string {
   return d === 1 ? String(n) : `${n}/${d}`
 }
 
-/** Half-up rounding, then the exact number of decimal places. 2.0959 to three places is "2.096". */
+/**
+ * Rounding to a number of decimal places, halves away from zero as textbooks and the TI-84 do, then exactly that many
+ * places. 2.0959 to three places is "2.096"; 2.25 to one place is "2.3" even when it was computed as
+ * 2.2499999999999996, and −2.75 is "−2.8" (review 2026-10-22: Math.round gave "2.2" and "−2.7").
+ */
 export function roundPlaces(value: number, places: number): string {
   const scale = 10 ** places
-  const rounded = Math.round(value * scale) / scale
-  return rounded.toFixed(places)
+  const x = Math.abs(value) * scale
+  // A few units of float error at most (2.25 as 2.2499999999999996), never a real fraction of a unit: $15,143,643.72
+  // to the cent is x ≈ 1.5e9, where a tolerance of 1e-9 · x would move the answer by a cent.
+  const units = Math.floor(x + 0.5 + 64 * Number.EPSILON * Math.max(1, x))
+  return (((units === 0 ? 1 : Math.sign(value)) * units) / scale).toFixed(places)
 }
 
 export interface ShowsOptions {

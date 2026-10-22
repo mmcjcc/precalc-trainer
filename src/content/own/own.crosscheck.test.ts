@@ -11,6 +11,7 @@
  */
 import { all, create } from 'mathjs'
 import { describe, expect, it } from 'vitest'
+import { gradeLogEquation } from '@/engine/logs'
 import { rat, ratAdd, ratSub, setContains, type Rational } from '@/notation'
 import type { Piece, SolutionSet } from '@/shared/types'
 import { buildOwnProblem } from './index'
@@ -426,6 +427,27 @@ describe('reviewer cross-check: exponential and log equations she types', () => 
     console.log(`exp/log equations: ${summary(t)}`)
     expect(wrong).toEqual([])
     expect(t.accepted / t.made).toBeGreaterThan(0.5)
+  })
+
+  it('rounded: every accepted one-root equation asks for its places and takes the closed-form root rounded there', SLOW, () => {
+    const t = tally()
+    const wrong: string[] = []
+    let i = 0
+    for (const c of eqCases(20261028)) {
+      if (c.roots.length !== 1) continue
+      const places = 1 + (i++ % 4)
+      const r = buildOwnProblem('expLogEquations', 'solve', c.text, { places })
+      note(t, r.ok, r.ok ? undefined : r.reason.code)
+      if (!r.ok) continue
+      const a = r.instance.answer as { places?: number; accept: string[]; equation: string }
+      const want = c.roots[0]!.toFixed(places)
+      const graded = gradeLogEquation(a.equation, want, { decimal: { places } }).verdict
+      const listed = a.accept.some((s) => Number(s.replace(/^\s*x\s*[=≈]\s*/, '')) === Number(want))
+      if (a.places !== places || graded !== 'correct' || !listed) wrong.push(`${c.text} at ${places}: places ${a.places}, ${want} graded ${graded}, accept ${a.accept.join(' ; ')}`)
+    }
+    console.log(`exp/log equations, rounded: ${summary(t)}`)
+    expect(wrong).toEqual([])
+    expect(t.accepted / t.made).toBeGreaterThan(0.6)
   })
 })
 
