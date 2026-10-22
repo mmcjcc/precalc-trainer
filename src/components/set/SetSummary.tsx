@@ -1,7 +1,9 @@
 import { useEffect, useRef } from 'react'
 import { burstConfetti } from '@/components/juice/Confetti'
 import { CountUp } from '@/components/juice/CountUp'
-import { playCue, soundsOn } from '@/components/juice/sounds'
+import { cueLength, playCue, soundsOn } from '@/components/juice/sounds'
+import { QuestNewsBlock } from '@/components/quests/Quests'
+import type { QuestNews } from '@/components/quests/useQuests'
 import { goalCaption } from '@/components/rewards/Finish'
 import { GoalRing, SkillRing } from '@/components/rewards/Rings'
 import { MonsterArt } from '@/components/monsters/MonsterArt'
@@ -21,14 +23,17 @@ function OutcomeMark({ outcome }: { outcome: SetOutcome }) {
 /**
  * The end of a set, after "See results": a big check, "Set done", each problem with how it went, and with rewards on
  * the set's XP (counting up from 0), today's goal ring (sweeping from before the set), the problem-type rings that
- * moved and the mistakes it squashed. A small party when it appears: confetti (not under reduced motion) and, with
- * Sounds on, a fanfare; rewards on or off. One big "Another set" and "Done". It does not know the screen size: one
- * column that the page centers.
+ * moved and the mistakes it squashed, the daily quests it moved and the chest when they are all done (components/quests:
+ * opened here, after the set's break). A small party when it appears: confetti (not under reduced motion) and, with
+ * Sounds on, a fanfare (then the quest cue when it finished a quest); rewards on or off. One big "Another set" and
+ * "Done". It does not know the screen size: one column that the page centers.
  */
 export function SetSummary({
   lines,
   rewards,
   today,
+  quests = null,
+  setId = '',
   onAnother,
   onDone,
 }: {
@@ -36,6 +41,10 @@ export function SetSummary({
   /** Null with rewards off: no XP, no rings, no goal. */
   rewards: SetRewards | null
   today: TodayView | null
+  /** Rewards on: what the set did to today's quests, and the chests she can open now. */
+  quests?: QuestNews | null
+  /** The set: its quest cue plays once. */
+  setId?: string
   onAnother: () => void
   onDone: () => void
 }) {
@@ -97,6 +106,16 @@ export function SetSummary({
               </div>
             ))}
           </div>
+          {quests && (
+            <QuestNewsBlock
+              moves={quests.moves}
+              today={quests.today}
+              chests={quests.chests}
+              momentKey={`set:${setId}`}
+              cueDelay={cueLength('fanfare') + 0.1}
+              chestHere
+            />
+          )}
           {rewards.squashed.length > 0 && (
             <ul aria-label="Mistakes squashed" className="space-y-2">
               {rewards.squashed.map((s) => (

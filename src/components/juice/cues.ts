@@ -2,6 +2,7 @@
  * Which sounds a moment makes (pure; useJuice.ts gathers the facts, sounds.ts plays them). One main sound for what she
  * just did, then the rewards' extras after it:
  * - a problem finished: the arpeggio (it outranks the chime of the line or part that finished it);
+ * - a daily chest opened (components/quests): the chest's thunk, glide and shower;
  * - else a slip (a rejected line or card, a wrong check): the "nope" (a check that was partly wrong is a slip), or the
  *   "gotcha" when the slip is a mistake she never made before (its monster is caught: a catch is a win, not a slip);
  * - else a right line or part: the chime, one step higher per answer in a row (the combo, session/combo.ts);
@@ -49,7 +50,9 @@ export function cuesFor(facts: MomentFacts): PlannedCue[] {
   const finished = facts.added.some((e) => e.t === 'problem_done')
   const slip = facts.added.some((e) => e.t === 'step_rejected' || (e.t === 'final_answer' && !e.correct))
   const right = facts.added.some((e) => (e.t === 'step_accepted' && !e.revealed) || (e.t === 'final_answer' && e.correct))
+  const chest = facts.added.some((e) => e.t === 'chest_opened')
   if (finished) push('finish')
+  else if (chest) push('chest')
   else if (slip) push((facts.caught ?? 0) > 0 ? 'catch' : 'slip')
   else if (right) push('right', chimeStep(facts.combo))
   if (facts.squashed > 0) push('pop')

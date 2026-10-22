@@ -48,7 +48,7 @@ export function comboOf(events: readonly Ev[], scope: readonly string[]): number
   }
   let combo = 0
   events.forEach((e, i) => {
-    if (e.t === 'drill_answer' || !ids.has(e.attemptId)) return
+    if (!('attemptId' in e) || !ids.has(e.attemptId)) return
     switch (e.t) {
       case 'step_accepted': {
         trackOf(e.attemptId).revealPending = false

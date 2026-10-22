@@ -1,4 +1,4 @@
-import { useCallback, useId, useState } from 'react'
+import { useCallback, useId, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { A2HSCard } from '@/components/A2HSCard'
 import { BottomSheet } from '@/components/BottomSheet'
@@ -8,7 +8,20 @@ import { isIosSafari, isStandalone } from '@/components/useBreakpoint'
 import { useCoarsePointer } from '@/components/useMathKeypad'
 import { clearActiveSet } from '@/session/activeSet'
 import { CALC_LABEL, type CalcId } from '@/shared/types'
-import { DAILY_GOALS, dailyGoalOf, rewardsOn, useSettings, useStore, vibrateOn, type DailyGoal } from '@/store'
+import {
+  DAILY_GOALS,
+  DEFAULT_THEME,
+  EARNED_THEMES,
+  THEMES,
+  dailyGoalOf,
+  ownedThemes,
+  rewardsOn,
+  useEvents,
+  useSettings,
+  useStore,
+  vibrateOn,
+  type DailyGoal,
+} from '@/store'
 import { useTutorStatus } from '@/tutor/useTutorStatus'
 
 const CALC_IDS = Object.keys(CALC_LABEL) as CalcId[]
@@ -59,6 +72,60 @@ function Switch({
         )}
       </button>
     </div>
+  )
+}
+
+/**
+ * "Colour theme" (rewards on): navy, always hers, and every theme a daily chest gave her (components/quests). Picking
+ * one changes the app's primary colour at once (components/quests/theme.ts). The swatches are decorative: each option
+ * is named.
+ */
+function ThemePicker() {
+  const events = useEvents()
+  const chosen = useStore((s) => s.settings.theme ?? DEFAULT_THEME)
+  const setSettings = useStore((s) => s.setSettings)
+  const name = useId()
+  const owned = useMemo(() => ownedThemes(events), [events])
+  const options = [DEFAULT_THEME, ...owned]
+  // A theme she picked and no longer owns (a reset, a replaced backup) shows as navy, which is what applies.
+  const current = options.includes(chosen) ? chosen : DEFAULT_THEME
+  const left = EARNED_THEMES.length - owned.length
+  return (
+    <fieldset className="py-3" data-theme-picker="">
+      <legend className="font-semibold text-navy">Colour theme</legend>
+      <p className="mt-0.5 text-sm text-navy/80">
+        {left > 0
+          ? `Navy is always yours. A daily chest gives a new colour now and then (${left} more to find).`
+          : 'You have found every colour. Navy is always here too.'}
+      </p>
+      <div className="mt-2 grid max-w-md grid-cols-2 gap-1 sm:grid-cols-4">
+        {options.map((id) => {
+          const checked = current === id
+          const theme = THEMES[id]
+          return (
+            <label
+              key={id}
+              className={`flex min-h-11 cursor-pointer items-center gap-2 rounded-xl border-2 px-3 text-sm font-semibold text-navy has-[:focus-visible]:outline-3 has-[:focus-visible]:outline-gold ${
+                checked ? 'border-navy bg-navy-50' : 'border-navy-100 bg-white hover:bg-navy-50'
+              }`}
+              data-theme-option={id}
+            >
+              <input
+                type="radio"
+                name={name}
+                value={id}
+                checked={checked}
+                onChange={() => setSettings({ theme: id })}
+                className="sr-only"
+              />
+              <span aria-hidden className="h-5 w-5 shrink-0 rounded-full border border-white shadow-[0_0_0_1px_var(--color-navy-100)]" style={{ background: theme.tokens.navy }} />
+              {theme.name}
+              {checked && <span aria-hidden> ✓</span>}
+            </label>
+          )
+        })}
+      </div>
+    </fieldset>
   )
 }
 
@@ -220,6 +287,7 @@ export function SettingsPage() {
               </div>
             </fieldset>
           )}
+          {rewards && <ThemePicker />}
           {rewards && touch && canVibrate() && (
             <Switch
               label="Vibrate"

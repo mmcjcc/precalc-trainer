@@ -24,8 +24,12 @@
  * Parts are right `final_answer` events: the wrong checks since the attempt's last right one are the mistakes on it
  * (the parts flows check one part at a time), and a rung-3 hint since then revealed it. A check that grades several
  * boxes each time logs `part` (the inequality's interval and set-builder), so each box pays once.
+ *
+ * The daily chest (store/chest.ts, docs/progress/phone-quests.md): a chest opened with bonus XP pays it on the day she
+ * opens it (`chest`, no problem type), and a chest's rest day is banked on the day she opens it, like the weekly one.
  */
 import { STORE } from '@/edition'
+import { chestRestByDay, countedChestIndices, restChestThisWeek } from './chest'
 import { MASTERY_WINDOW, cancelledSteps, inMasteryWindow } from './compaction'
 import { mergeCatches, normalizeCatches } from './catches'
 import { mergeMilestones, normalizeMilestones } from './milestones'
@@ -105,6 +109,8 @@ export type AwardKind =
   | 'mastered'
   /** A right drill answer. */
   | 'drill'
+  /** Bonus XP from a daily chest (store/chest.ts), on the day she opened it. */
+  | 'chest'
 
 export interface XpAward {
   kind: AwardKind
@@ -112,6 +118,7 @@ export interface XpAward {
   at: number
   /** Local day ('YYYY-MM-DD'). */
   day: string
+  /** The problem type; '' for a chest's bonus XP (it belongs to no type). */
   skill: string
   attemptId?: string
   /** Lines: the step index. */
@@ -174,6 +181,8 @@ interface RunResult {
  */
 function run(events: readonly Ev[], start: Pick<RewardsState, 'cards' | 'mastered'>, from: number, to: number): RunResult {
   const cancelled = cancelledSteps(events)
+  // Only the first opening of each day's chest pays (two devices merged); a malformed one never does.
+  const chests = countedChestIndices(events)
   const cards = new Map<string, MistakeCardState>()
   for (const [key, card] of Object.entries(start.cards)) cards.set(key, { ...card })
   const mastered = new Map<string, number>(Object.entries(start.mastered))
@@ -353,7 +362,11 @@ function run(events: readonly Ev[], start: Pick<RewardsState, 'cards' | 'mastere
       case 'drill_answer':
         if (e.correct) pay('drill', XP.drill, e, {})
         break
+      case 'chest_opened':
+        if (chests.has(i) && e.reward.kind === 'xp') pay('chest', e.reward.xp, { at: e.at, skill: '' }, {})
+        break
       case 'step_undone':
+      case 'set_done':
         break
     }
   })
@@ -440,9 +453,22 @@ export interface StreakView {
   weekMet: number
   /** Monday to Sunday of this week. */
   week: { day: string; state: WeekDayState }[]
+  /** The first day she ever met her goal: the rest-day bank starts there. Null: never yet. */
+  since: string | null
 }
 
-function streakOf(level: (day: string) => 0 | DayMark, first: string | null, today: string, now: number): StreakView {
+/**
+ * The streak from the first day she met her goal to today. A rest day is banked each Monday (and on that first day),
+ * and one more on each day a chest gave her one (`extraRest`, by the day she opened it), never more than
+ * MAX_REST_DAYS saved; a missed day uses one by itself.
+ */
+function streakOf(
+  level: (day: string) => 0 | DayMark,
+  first: string | null,
+  today: string,
+  now: number,
+  extraRest: ReadonlyMap<string, number> = new Map(),
+): StreakView {
   const states = new Map<string, WeekDayState>()
   let days = 0
   let bank = 0
@@ -451,6 +477,8 @@ function streakOf(level: (day: string) => 0 | DayMark, first: string | null, tod
   if (first !== null && first <= today) {
     for (let d = first; d <= today; d = addDays(d, 1)) {
       if (d === first || isMonday(d)) bank = Math.min(MAX_REST_DAYS, bank + 1)
+      const chest = extraRest.get(d) ?? 0
+      if (chest > 0) bank = Math.min(MAX_REST_DAYS, bank + chest)
       const lv = level(d)
       const isToday = d === today
       if (pending !== null) {
@@ -498,7 +526,7 @@ function streakOf(level: (day: string) => 0 | DayMark, first: string | null, tod
     if (level(day) >= 1) weekMet += 1
     week.push({ day, state: states.get(day) ?? (day === today ? 'today' : 'off') })
   }
-  return { days, restDays: bank, repairToday: pending !== null, repairedToday, weekMet, week }
+  return { days, restDays: bank, repairToday: pending !== null, repairedToday, weekMet, week, since: first !== null && first <= today ? first : null }
 }
 
 /** The first day she ever met her goal, from the record and the log. */
@@ -564,7 +592,7 @@ export function computeRewards(events: readonly Ev[], rewards: RewardsState, goa
   const dayXp = sumByDay(r.awards)
   const today = dayKey(now)
   const level = dayLevel(rewards, dayXp, goal)
-  const streak = streakOf(level, firstMetDay(rewards, dayXp, level), today, now)
+  const streak = streakOf(level, firstMetDay(rewards, dayXp, level), today, now, chestRestByDay(events))
   const xp = dayXp.get(today) ?? 0
   const todayLevel = level(today)
   const cards: MistakeCard[] = [...r.cards.entries()].map(([key, c]) => ({ ...c, key, squashed: c.clean >= SQUASH_AFTER }))
@@ -583,6 +611,15 @@ export function computeRewards(events: readonly Ev[], rewards: RewardsState, goa
     streak,
     cards: sortCards(cards),
   }
+}
+
+/**
+ * A daily chest may give a rest day now (store/chest.ts): she holds fewer than the streak allows (MAX_REST_DAYS), her
+ * bank has begun (she has met her goal at least once, so the day it is banked counts), and no chest gave her one this
+ * week (Monday to Sunday).
+ */
+export function chestRestEligible(view: Pick<RewardsView, 'streak'>, events: readonly Ev[], now = Date.now()): boolean {
+  return view.streak.since !== null && view.streak.restDays < MAX_REST_DAYS && !restChestThisWeek(events, now)
 }
 
 // ---------------------------------------------------------------------------

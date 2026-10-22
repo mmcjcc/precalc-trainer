@@ -26,6 +26,10 @@ export type Cue =
   | 'pop'
   /** A mistake made for the first time, its monster caught (components/monsters): a springy "gotcha". */
   | 'catch'
+  /** A daily quest done (components/quests): a bright "ta-da", up a fourth and a fifth. */
+  | 'quest'
+  /** A daily chest opened: a soft thunk, the lid gliding up, then a shower of high notes. */
+  | 'chest'
 
 /** "Sounds" (Settings): absent means the edition's default, on in the store app and off in the family web app. */
 export function soundsOn(settings: Pick<Settings, 'sounds'>, store: boolean = STORE): boolean {
@@ -63,6 +67,10 @@ const E5 = 659.25
 const G5 = 783.99
 const C6 = 1046.5
 const E6 = 1318.51
+const G3 = 196.0
+const A5 = 880.0
+const G6 = 1567.98
+const C7 = 2093.0
 
 export function cueTones(cue: Cue, step = 0): Tone[] {
   switch (cue) {
@@ -103,6 +111,21 @@ export function cueTones(cue: Cue, step = 0): Tone[] {
         { freq: C6, at: 0.13, dur: 0.22, peak: 0.12 },
         { freq: E6, at: 0.22, dur: 0.34, peak: 0.12 },
         { freq: C6 * 2, at: 0.22, dur: 0.18, peak: 0.02 },
+      ]
+    case 'quest':
+      // E5, A5, then a held E6: bright, short, and not the finish's arpeggio.
+      return [
+        { freq: E5, at: 0, dur: 0.16, peak: 0.13 },
+        { freq: A5, at: 0.08, dur: 0.18, peak: 0.13 },
+        { freq: E6, at: 0.16, dur: 0.42, peak: 0.12 },
+        { freq: E6 * 2, at: 0.16, dur: 0.2, peak: 0.02 },
+      ]
+    case 'chest':
+      // A soft low thunk (the lid), a glide up as it swings open, then the reward's shower of high notes.
+      return [
+        { freq: G3, at: 0, dur: 0.12, peak: 0.17, type: 'triangle', lowpass: 800 },
+        { freq: G4, at: 0.1, dur: 0.32, peak: 0.07, type: 'triangle', glide: G6, lowpass: 3000 },
+        ...[C6, E6, G6, C7].map((freq, i) => ({ freq, at: 0.4 + i * 0.06, dur: 0.3, peak: 0.06 })),
       ]
   }
 }

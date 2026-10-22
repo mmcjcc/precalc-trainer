@@ -576,7 +576,7 @@ export function ProblemFrame({ instance, attempt, flags, templateTitle, progress
                   This was your own problem, so it does not count toward mastery.
                 </p>
               )}
-              {finishData && !phone && <FinishRewards data={finishData} templateTitle={templateTitle} />}
+              {finishData && !phone && <FinishRewards data={finishData} templateTitle={templateTitle} inSet={Boolean(set)} />}
               {!finishData && <SquashMoment patterns={squashedHere} />}
               {/* A wide screen shows the set's progress here; a phone has it in its header. */}
               {set && !phone && <SetDots index={set.index} total={set.total} status={set.status} prefix="Your set ·" />}
@@ -627,6 +627,7 @@ export function ProblemFrame({ instance, attempt, flags, templateTitle, progress
               templateTitle={templateTitle}
               nextLabel={nextLabel}
               onNext={goNext}
+              inSet={Boolean(set)}
             />
           )}
           {/* Says "Problem complete" to a screen reader in the toast's words, as the toast did before the card took its

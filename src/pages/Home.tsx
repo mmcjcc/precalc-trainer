@@ -88,7 +88,7 @@ function eventCourseId(event: Ev): string | null {
     const byModule = courseOfModule(event.moduleId)
     if (byModule) return byModule.course.id
   }
-  return courseOfSkill(event.skill)?.course.id ?? null
+  return 'skill' in event ? (courseOfSkill(event.skill)?.course.id ?? null) : null
 }
 
 /** Class of the latest event that belongs to a registered module, if there is one. */

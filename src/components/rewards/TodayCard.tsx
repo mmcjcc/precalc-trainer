@@ -1,6 +1,8 @@
 import { useEffect, useId, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { StreakFlame } from '@/components/juice/Flame'
+import { TodayQuests } from '@/components/quests/Quests'
+import { useTodayQuests } from '@/components/quests/useQuests'
 import { openCards, useRewards, type StreakView, type WeekDayState } from '@/store'
 import { MistakeCardList } from './MistakeCards'
 import { GoalRing } from './Rings'
@@ -58,8 +60,9 @@ let lastSeen: { day: string; xp: number } | null = null
 /**
  * The top of Home with rewards on: today's goal ring (sweeping on from where it stood when she last saw it), the
  * streak's flame (bigger with the streak, lit once today's goal is met) with "N of 7 this week" and the week's days,
- * the rest days saved, and her top three open mistake cards, each with its monster (each opens a problem of its type),
- * and the way to the whole collection: the Monsters tab.
+ * the rest days saved, the day's three quests and the chest when they are done (components/quests), and her top three
+ * open mistake cards, each with its monster (each opens a problem of its type), and the way to the whole collection: the
+ * Monsters tab.
  */
 export function TodayCard() {
   const view = useRewards()
@@ -71,6 +74,7 @@ export function TodayCard() {
     lastSeen = { day: today.day, xp: today.xp }
   }, [today.day, today.xp])
   const open = openCards(view.cards)
+  const quests = useTodayQuests()
   const left = Math.max(0, today.target - today.xp)
   const goalLine = streak.repairToday
     ? `${left} XP more for a double goal today: it keeps your streak going.`
@@ -97,6 +101,9 @@ export function TodayCard() {
             </p>
           )}
         </div>
+      </div>
+      <div className="mt-4">
+        <TodayQuests today={quests.today} chests={quests.chests} />
       </div>
       <div className="mt-4 space-y-2">
         <h3 id={mistakesId} className="font-semibold text-navy">

@@ -1,5 +1,6 @@
 /** Export/import of progress as JSON (she uses a phone AND a desktop). Pure. */
 import { isDailyGoal, mergeRewards, normalizeRewards } from './rewards'
+import { isThemeId } from './themes'
 import {
   DEFAULT_SETTINGS,
   EMPTY_STREAK,
@@ -72,6 +73,7 @@ export function normalizeSettings(raw: unknown): Settings {
   if (typeof src.sounds === 'boolean') settings.sounds = src.sounds
   if (src.lineEntry === 'type' || src.lineEntry === 'pick') settings.lineEntry = src.lineEntry
   if (typeof src.seenStepGuide === 'boolean') settings.seenStepGuide = src.seenStepGuide
+  if (isThemeId(src.theme)) settings.theme = src.theme
   if (isRecord(src.unitByCourse)) {
     const unitByCourse: Record<string, string> = {}
     for (const [key, value] of Object.entries(src.unitByCourse)) {
@@ -88,7 +90,8 @@ const DEVICE_SETTINGS = ['mathKeypad', 'rewards', 'vibrate', 'sounds', 'lineEntr
 /**
  * Settings after an import. Merge adds another device's work to this one, so this device keeps its
  * own settings and only takes a class or unit choice it does not have yet. Replace takes the file's
- * settings (the daily goal among them), except the ones that belong to the device or the moment: test mode
+ * settings (the daily goal and the colour theme among them; a theme applies only while her log says she owns it), except
+ * the ones that belong to the device or the moment: test mode
  * (imported silently, it would keep later practice out of the mastery bars), whether the add-to-home-screen
  * card was seen here, the math keypad (a phone's choice, which a backup from a computer must not undo), the
  * rewards, vibrate and sounds switches (the store app and the family web app start with rewards and sounds on and

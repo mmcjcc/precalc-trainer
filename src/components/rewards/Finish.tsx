@@ -2,17 +2,24 @@ import { useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { BottomSheet } from '@/components/BottomSheet'
 import { CountUp } from '@/components/juice/CountUp'
+import { cueLength } from '@/components/juice/sounds'
 import { SquashMoment } from '@/components/monsters/SquashMoment'
+import { QuestNewsBlock } from '@/components/quests/Quests'
+import { useQuestNews, type QuestNews } from '@/components/quests/useQuests'
 import { finishInfo, skillRing, useEvents, useRewards, useStore, type FinishInfo, type SkillRingInfo, type TodayView } from '@/store'
 import { GoalRing, SkillRing } from './Rings'
 import { RING_WORD, awardLines } from './words'
 
 export interface FinishData {
+  /** The finished attempt. */
+  attemptId: string
   info: FinishInfo
   /** The problem type's ring before this problem and after it. */
   before: SkillRingInfo
   after: SkillRingInfo
   today: TodayView
+  /** What it did to today's quests (components/quests), and the chests she can open now. */
+  quests: QuestNews | null
 }
 
 /** What a finished attempt earned, today's goal, and its type's ring before and after (null without an attempt). */
@@ -20,6 +27,7 @@ export function useFinish(attemptId: string | undefined, skill: string): FinishD
   const view = useRewards()
   const events = useEvents()
   const rewards = useStore((s) => s.rewards)
+  const quests = useQuestNews(attemptId ? [attemptId] : null)
   return useMemo(() => {
     if (!attemptId) return null
     const info = finishInfo(view, events, rewards, attemptId)
@@ -28,8 +36,8 @@ export function useFinish(attemptId: string | undefined, skill: string): FinishD
       events.filter((e) => !(e.t === 'problem_done' && e.attemptId === attemptId)),
       skill,
     )
-    return { info, before, after, today: view.today }
-  }, [attemptId, skill, view, events, rewards])
+    return { attemptId, info, before, after, today: view.today, quests }
+  }, [attemptId, skill, view, events, rewards, quests])
 }
 
 /** The moments worth a cheer, besides the XP lines that already say a mistake was squashed or a type mastered. */
@@ -54,13 +62,28 @@ export function goalCaption(today: TodayView): string {
   return today.xp >= today.target ? 'Today’s goal: met' : `${left} XP to today’s goal`
 }
 
+/** The quest cue waits for the finish's arpeggio and the pop or sparkle after it (components/juice/cues.ts). */
+const QUEST_CUE_DELAY = cueLength('finish') + 0.35
+
 /**
  * A finished problem's rewards: the XP and the lines that earned it, the monsters it squashed (components/monsters:
  * a splat, the card turning gold), the cheers (goal met, a comeback; a squashed mistake and a new mastery are lines of
- * their own), today's goal ring, and the ring of the problem type that moved. The phone's finish sheet shows it under a
+ * their own), the daily quests it moved and the chest (components/quests; inside a set the chest waits for the set's
+ * results), today's goal ring, and the ring of the problem type that moved. The phone's finish sheet shows it under a
  * big check; a wide screen shows it in the completion card.
  */
-export function FinishRewards({ data, templateTitle, size = 'card' }: { data: FinishData; templateTitle: string; size?: 'sheet' | 'card' }) {
+export function FinishRewards({
+  data,
+  templateTitle,
+  size = 'card',
+  inSet = false,
+}: {
+  data: FinishData
+  templateTitle: string
+  size?: 'sheet' | 'card'
+  /** A problem of a running set: its chest waits for the set's results. */
+  inSet?: boolean
+}) {
   const lines = awardLines(data.info.awards, templateTitle)
   const cheer = cheers(data.info)
   const ringSize = size === 'sheet' ? 88 : 72
@@ -119,6 +142,16 @@ export function FinishRewards({ data, templateTitle, size = 'card' }: { data: Fi
           ))}
         </ul>
       )}
+      {data.quests && (
+        <QuestNewsBlock
+          moves={data.quests.moves}
+          today={data.quests.today}
+          chests={data.quests.chests}
+          momentKey={`attempt:${data.attemptId}`}
+          cueDelay={QUEST_CUE_DELAY}
+          chestHere={!inSet}
+        />
+      )}
       <div className="flex flex-wrap items-start justify-center gap-6">
         <div className="flex max-w-36 flex-col items-center gap-1 text-center">
           <GoalRing xp={data.today.xp} target={data.today.target} size={ringSize} from={xpBefore(data)} />
@@ -149,6 +182,7 @@ export function FinishSheet({
   templateTitle,
   nextLabel,
   onNext,
+  inSet = false,
 }: {
   open: boolean
   onClose: () => void
@@ -157,6 +191,8 @@ export function FinishSheet({
   templateTitle: string
   nextLabel: string
   onNext: () => void
+  /** A problem of a running set: its chest waits for the set's results. */
+  inSet?: boolean
 }) {
   return (
     <BottomSheet open={open} onClose={onClose} title={title}>
@@ -169,7 +205,7 @@ export function FinishSheet({
             <CountUp value={data.info.total} prefix="+" suffix=" XP" />
           </p>
         </div>
-        <FinishRewards data={data} templateTitle={templateTitle} size="sheet" />
+        <FinishRewards data={data} templateTitle={templateTitle} size="sheet" inSet={inSet} />
         <button
           type="button"
           onClick={onNext}
