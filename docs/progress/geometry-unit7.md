@@ -241,3 +241,16 @@ Changed: `src/shared/types.ts`, `src/content/types.ts`, `src/content/modules/geo
   `trig_pythag_added` (the answer is 37.6 m).
 - `#/p/geoSpecialRight/sp.special/a`: a 30°-60°-90° triangle with m∠V = 60 and QW = 20; VW as 10 (the longer leg halved,
   the factors swapped) is `trig_special_root3_two_swapped` (the answer is (20√3)/3).
+
+## Review (Claude, 2026-10-22)
+
+Built by one Claude agent (2 h 35 min, 315 tool calls). Checked:
+- Eighteen sample problems by hand (three per template): geometric means (9 and 25 → 15; 10 and 16 → 4√10; 21 and x with
+  mean 6√7 → 12), the altitude relations (RH = 2, HF = 8, UH = 2x − 2 → x = 3 and FU = 4√5; DZ = 5, ZW = 4 → WV = 6;
+  SE = x − 3, EU = 24, VE = 12 → SE = 6, x = 9), missing sides (28, 53 → 45; 10, 4 → 2√29; a rhombus with side 34 and a
+  diagonal 60 → 32), the converse (16, 19, 24 acute; 5√6, 22, 25 acute; 12, 35, 37 right), word problems (37.6 m,
+  17.49 in, 10.8 ft) and special triangles (4√2, 3√2, 6√3). All right.
+- On the Android emulator (store build): the altitude figure (hypotenuse segments on their own dimension lines, both
+  right-angle marks, the expression on the altitude), a rhombus drawn to scale with the right angle at W, a ladder
+  scene with dimension lines, and a turned 30°-60°-90° triangle with the given side and the 60° mark only.
+No changes in review.
