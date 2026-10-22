@@ -32,7 +32,8 @@ import { pieces, plain, showsNumber } from './text'
 import { trigAnswerOf } from './testkit'
 
 const SWEEP = 2000
-const LOOP_TIMEOUT = 120_000
+// 2000 seeds per template: about a minute alone, past two minutes when the whole suite runs on a busy laptop.
+const LOOP_TIMEOUT = 600_000
 
 const cardTexts = (cards: readonly RuleCard[]) => cards.flatMap((c) => [c.title, c.body, c.example ?? ''])
 
