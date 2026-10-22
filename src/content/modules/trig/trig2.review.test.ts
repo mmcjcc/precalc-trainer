@@ -22,7 +22,8 @@ import { plain, showsNumber } from './text'
 import { trigAnswerOf } from './testkit'
 
 const SWEEP = 2000
-const LOOP_TIMEOUT = 120_000
+// Seeded sweeps run past 2 minutes when the whole suite shares the laptop with a builder (review 2026-10-22).
+const LOOP_TIMEOUT = 600_000
 
 const cardTexts = (cards: readonly RuleCard[]) => cards.flatMap((c) => [c.title, c.body, c.example ?? ''])
 

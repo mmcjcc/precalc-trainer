@@ -219,3 +219,22 @@ narrowing), `src/components/rewards/{TodayCard.tsx (the quests row), Finish.tsx 
 `go`), `src/pages/flows/ProblemFrame.tsx` (tells the finish whether it is in a set), `src/pages/Settings.tsx` (Colour
 theme), `src/pages/Home.tsx` (one narrowing), `src/App.tsx` (mounts the theme), `src/index.css` (`--color-navy-800`, the
 edges and two shadows follow the theme, the quest and chest motion), `docs/BUILD_GUIDE.md` (§0 UI row, §7).
+
+## Review (Claude, 2026-10-22)
+
+Built by one Claude agent (2 h 3 min). Checked:
+- The XP code: a chest's bonus pays on the day she opens it (not into the "Earn XP" quest), only the first opening of a
+  day counts (two devices merged), a chest's rest day is banked on the open day and capped at two with the weekly ones,
+  and own problems count where their XP counts but never squash.
+- On the Android emulator (store build): Home's Today card with "Quests 0/3", three quests with words, "5 of 8" and bars
+  (her own problem's lines already counted); after a seeded clean set, "Quests 3/3" with green ticks and the gold "Open
+  today's chest" card; tapping it opened the chest to "+15 XP · Bonus XP: it counts in today's goal" and the goal ring
+  moved 290 → 305; the Plum theme applied to a module page (titles, text, Start buttons, the tab highlight) reads well.
+- Decisions accepted: Cocoa instead of Forest (a green theme would look like the "right" green), the chest as a gold
+  card so "Start a set" stays the one primary action, quests fixed from her state at midnight.
+
+Changed in review: the three seeded sweeps that timed out in the builder's busy full suite (explog.crosscheck,
+trig2.review, trig5) get 600-second limits, as the Unit 5 review sweep did.
+
+Left as is (noted by the builder): navy's own 70% text (`text-navy/70`) is 4.35:1, just under 4.5, on 104 uses; graphs
+and the number line keep their fixed navy palette under a theme.

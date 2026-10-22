@@ -18,7 +18,8 @@ import { SG_HINTS, SG_RULES } from '../sinusoids'
 import { showsNumber } from './text'
 import { sweep, trigAnswerOf } from './testkit'
 
-const LOOP_TIMEOUT = 120_000
+// Seeded sweeps run past 2 minutes when the whole suite shares the laptop with a builder (review 2026-10-22).
+const LOOP_TIMEOUT = 600_000
 
 const TEMPLATES: [ModuleId, string, readonly RuleCard[], readonly string[], readonly string[], readonly string[]][] = [
   [
