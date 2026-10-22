@@ -197,17 +197,24 @@ describe('the finish sheet', () => {
     expect(document.querySelector('[data-finish-rewards]')).toBeNull()
   })
 
-  it('a wide screen with rewards on shows the same rewards inside the completion card', { timeout: PAGE_TIMEOUT }, () => {
+  // The layout moved (docs/progress/app-tablet.md): from 840 px the finish sheet opens too, as a centred dialog, where the
+  // rewards used to sit inside the completion card.
+  it('the tablet layout with rewards on: the same finish sheet, as a centred dialog; closing it leaves the small card', { timeout: PAGE_TIMEOUT }, () => {
     rewardsOn()
     finishNumberLine()
-    expect(screen.queryByRole('dialog')).toBeNull()
-    expect(within(card()).getByText('+50 XP')).toBeTruthy()
-    expect(itemsOf(within(card()).getByRole('list', { name: 'XP earned' }))).toHaveLength(4)
-    expect(within(card()).getByRole('progressbar', { name: 'Today’s goal' })).toBeTruthy()
-    expect(within(card()).getByRole('img', { name: new RegExp(`^${NL_TITLE}: Practiced`) })).toBeTruthy()
-    expect(within(card()).getByRole('link', { name: 'Done for today' })).toBeTruthy()
-    expect(within(card()).getByRole('button', { name: 'Copy link' })).toBeTruthy()
+    const sheet = screen.getByRole('dialog', { name: 'Problem complete' })
+    expect(sheet.closest('[data-sheet]')!.getAttribute('data-sheet')).toBe('dialog')
+    expect(within(sheet).getByText('+50 XP')).toBeTruthy()
+    expect(itemsOf(within(sheet).getByRole('list', { name: 'XP earned' }))).toHaveLength(4)
+    expect(within(sheet).getByRole('progressbar', { name: 'Today’s goal' })).toBeTruthy()
+    expect(within(sheet).getByRole('img', { name: new RegExp(`^${NL_TITLE}: Practiced`) })).toBeTruthy()
+    expect(within(sheet).getByRole('link', { name: 'Done for today' })).toBeTruthy()
     expect(completionToasts()).toEqual([])
+    fireEvent.click(within(sheet).getAllByRole('button', { name: 'Close' }).at(-1)!)
+    expect(screen.queryByRole('dialog')).toBeNull()
+    expect(card().textContent).toContain('+50 XP')
+    expect(within(card()).getByRole('button', { name: 'See what you earned' })).toBeTruthy()
+    expect(within(card()).getByRole('button', { name: 'Copy link' })).toBeTruthy()
   })
 })
 

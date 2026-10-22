@@ -124,7 +124,7 @@ export function PinnedProblemStrip({
         {...keepFocus}
         onClick={onShow}
         aria-label={figure ? `${summary.text} Show the figure` : `Show the problem: ${summary.text}`}
-        className="mx-auto flex min-h-11 w-full max-w-3xl items-center gap-3 px-4 py-1 text-left text-navy"
+        className="mx-auto flex min-h-11 w-full max-w-2xl items-center gap-3 px-4 py-1 text-left text-navy"
       >
         <span className="min-w-0 flex-1 truncate text-sm">{summary.tex ? <Katex tex={summary.tex} /> : summary.text}</span>
         {figure && <span className="shrink-0 text-sm font-semibold underline">Show the figure</span>}

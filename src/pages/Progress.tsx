@@ -1,4 +1,5 @@
 import { Fragment, useId, useMemo, useRef, useState, type ChangeEvent } from 'react'
+import { CardColumns } from '@/components/CardColumns'
 import { Link } from 'react-router-dom'
 import { allTemplates, COURSES, courseOfModule, courseOfSkill, modulesInUnit, unitsWithModules } from '@/content'
 import { ERROR_PATTERNS } from '@/engine'
@@ -813,7 +814,7 @@ export function ProgressPage() {
         </section>
       )}
 
-      <div className="grid gap-4 md:grid-cols-2">
+      <CardColumns>
         <section aria-labelledby="progress-habits" className="rounded-2xl border border-navy-100 bg-white p-4">
           <h2 id="progress-habits" className="text-lg font-semibold text-navy">
             Habits
@@ -845,7 +846,7 @@ export function ProgressPage() {
             Open the properties drill
           </Link>
         </section>
-      </div>
+      </CardColumns>
 
       <BackupSection />
     </div>

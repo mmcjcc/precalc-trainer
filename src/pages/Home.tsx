@@ -445,8 +445,10 @@ function HomeScreen() {
   )
   const resumed = activeSet ? resumeSet(activeSet) : null
 
-  return (
-    <div className={`mx-auto max-w-4xl ${phone ? 'space-y-4' : 'space-y-6'}`}>
+  // The tablet layout: two columns, today's part (the Today card, Start a set, Resume) beside the class's part (its
+  // units, the path, the modules), in the same order as the phone's one column.
+  const today = (
+    <>
       <header className="space-y-2">
         <h1 className={`${phone ? 'text-2xl' : 'text-3xl'} font-semibold text-navy`}>{STORE ? 'Math Trainer' : 'Math & Science Trainer'}</h1>
         {!phone && (
@@ -481,7 +483,10 @@ function HomeScreen() {
       {attempt && !attemptInSet && attemptResolves(attempt) && <ContinueCard attempt={attempt} primary={!phone} />}
       {/* An installed phone app has no "add to home screen" step. */}
       {!STORE && <A2HSCard quiet={phone} />}
-
+    </>
+  )
+  const classPart = (
+    <>
       <div className="space-y-3">
         <div
           role="tablist"
@@ -564,6 +569,21 @@ function HomeScreen() {
           Type an old line and a new one and see exactly what the checker says about the move.
         </span>
       </Link>
+    </>
+  )
+  return phone ? (
+    <div className="mx-auto max-w-4xl space-y-4" data-columns={1}>
+      {today}
+      {classPart}
+    </div>
+  ) : (
+    <div className="mx-auto grid max-w-6xl grid-cols-[minmax(0,22rem)_minmax(0,1fr)] items-start gap-8" data-columns={2}>
+      <div className="space-y-6" data-home-column="today">
+        {today}
+      </div>
+      <div className="space-y-6" data-home-column="class">
+        {classPart}
+      </div>
     </div>
   )
 }

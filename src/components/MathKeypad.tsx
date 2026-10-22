@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, type MouseEvent, type PointerEvent, type ReactNode, type RefObject } from 'react'
+import { createPortal } from 'react-dom'
 import { useVisualViewportOffset } from './Composer'
 import { pressBackspace, pressInsert, pressMove, revealAboveKeypad, submitLikeEnter } from './keypadDom'
 import { notePress, useKeypadStore, type KeypadMode, type KeypadTarget } from './keypadStore'
@@ -123,7 +124,7 @@ const ICON = {
 const CELLS = ['var', 'pow', 'd7', 'd8', 'd9', 'div', 'lp', 'rp', 'd4', 'd5', 'd6', 'mul', 'comma', 'sq', 'd1', 'd2', 'd3', 'sub', 'abc', 'hide', 'd0', 'dot', 'eq', 'add', 'left', 'right', 'del', 'check'] as const
 const GRID_BY_AREA = new Map(GRID_KEYS.map((k) => [k.area, k]))
 
-function KeypadPanel({ target }: { target: KeypadTarget }) {
+function KeypadPanel({ target, docked }: { target: KeypadTarget; docked: boolean }) {
   const panel = useRef<HTMLDivElement>(null)
   const layout = useMemo(() => keypadLayout(target.keys, target.vars), [target.keys, target.vars])
   const keys = useMemo(() => allKeys(layout), [layout])
@@ -226,7 +227,7 @@ function KeypadPanel({ target }: { target: KeypadTarget }) {
   }
 
   return (
-    <div ref={panel} data-math-keypad="" role="group" aria-label="Math keypad" className="math-keypad">
+    <div ref={panel} data-math-keypad="" data-docked={docked ? '' : undefined} role="group" aria-label="Math keypad" className="math-keypad">
       <div className="kp-inner">
         {layout.context.length > 0 && (
           <div className="kp-context">
@@ -314,27 +315,41 @@ function useMeasuredHeight(ref: RefObject<HTMLDivElement | null>) {
  * Mount it once (the app shell). It does not know which page it is on: a box tells it, through
  * `useMathKeypad`, that it has focus and which keys it takes. While it is open the page keeps room
  * for it at the bottom (`--keypad-h`), so the composer, the box and her messages stay above it.
+ * Where a layout gives it a dock (the problem screen's right pane in the tablet layout), it opens there
+ * instead, as part of that pane, and the page keeps no room for it.
  */
 export function MathKeypad() {
   const target = useKeypadStore((s) => s.target)
   const mode = useKeypadStore((s) => (s.target ? (s.modes[s.target.id] ?? 'keypad') : 'keypad'))
   const height = useKeypadStore((s) => s.height)
   const checks = useKeypadStore((s) => s.checks)
+  const dock = useKeypadStore((s) => s.dock)
   const shown = target !== null
   const open = shown && mode === 'keypad'
+  // The abc bar stays at the bottom of the screen, over the phone's own keyboard, docked or not.
+  const docked = open && dock !== null && dock.isConnected
   const targetEl = target?.el ?? null
 
   useEffect(() => useKeypadStore.getState().addHost(), [])
 
-  // The keypad (or the abc bar) keeps its room at the bottom of the page.
+  // The keypad (or the abc bar) keeps its room at the bottom of the page; a docked keypad has its room in its pane.
   useLayoutEffect(() => {
-    if (!shown || height <= 0) return
+    if (!shown || height <= 0 || docked) return
     const root = document.documentElement
     root.style.setProperty('--keypad-h', `${height}px`)
     return () => {
       root.style.removeProperty('--keypad-h')
     }
-  }, [shown, height])
+  }, [shown, height, docked])
+
+  // While the keypad covers the bottom of the screen, the page keeps no safe-area band under it (index.css): it pads
+  // itself for the navigation bar, and the phone's composer sits right on it.
+  useLayoutEffect(() => {
+    if (!open || docked) return
+    const root = document.documentElement
+    root.setAttribute('data-keypad-open', '')
+    return () => root.removeAttribute('data-keypad-open')
+  }, [open, docked])
 
   // The focused box scrolls into view above the keypad.
   useLayoutEffect(() => {
@@ -354,5 +369,7 @@ export function MathKeypad() {
   }, [checks])
 
   if (!target) return null
-  return open ? <KeypadPanel target={target} /> : <AbcBar target={target} />
+  if (!open) return <AbcBar target={target} />
+  const panel = <KeypadPanel target={target} docked={docked} />
+  return docked ? createPortal(panel, dock!) : panel
 }

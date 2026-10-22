@@ -33,6 +33,10 @@
   --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
 }
 
+/* The tablet layout's window (components/useBreakpoint.ts: 840 px wide and 480 px tall or more) as `tab:` in class
+   names, for the few rules that are pure CSS. Layouts that render differently ask useLayout() instead. */
+@custom-variant tab (@media (min-width: 840px) and (min-height: 480px));
+
 html { height: 100%; -webkit-text-size-adjust: 100%; }
 body { min-height: 100%; background: #fff; color: var(--color-ink); overflow-wrap: anywhere; }
 #root { min-height: 100dvh; display: flex; flex-direction: column; }
@@ -68,9 +72,12 @@ input[type="text"], input[type="password"], input:not([type]), textarea { font-s
    over the bar, so the room is the larger of the two. */
 html { scroll-padding-bottom: max(var(--keypad-h, 0px), var(--tabbar-h, 0px)); }
 body { padding-bottom: max(var(--keypad-h, 0px), var(--tabbar-h, 0px)); }
+/* While the keypad is up it covers the bottom of the screen and pads itself for the navigation bar, so the page keeps
+   no safe-area band of its own under it: the phone composer sits right on the keypad (docs/progress/app-tablet.md). */
+html[data-keypad-open] #root { padding-bottom: 0; }
 .math-keypad {
   position: fixed;
-  left: 0;
+  left: var(--rail-w, 0px);
   right: 0;
   bottom: 0;
   z-index: 35; /* over the composer (20) and the safe-area band (30), under a bottom sheet (40) and toasts */
@@ -116,7 +123,7 @@ body { padding-bottom: max(var(--keypad-h, 0px), var(--tabbar-h, 0px)); }
    the keypad back. Translated up with the visual viewport, so no safe-area padding (the keyboard covers it). */
 .kp-abc-bar {
   position: fixed;
-  left: 0;
+  left: var(--rail-w, 0px);
   right: 0;
   bottom: 0;
   z-index: 35;
@@ -128,16 +135,51 @@ body { padding-bottom: max(var(--keypad-h, 0px), var(--tabbar-h, 0px)); }
   user-select: none;
   -webkit-tap-highlight-color: transparent;
 }
+/* The keypad docked at the bottom of the problem screen's right pane (the tablet layout): part of the pane, not over
+   the screen. The pane keeps its room (it is in the pane's column), so the page keeps none (no --keypad-h). */
+.math-keypad[data-docked] {
+  position: relative;
+  left: auto;
+  right: auto;
+  bottom: auto;
+  z-index: auto;
+  border: 1px solid var(--color-navy-100);
+  border-radius: 1rem;
+  box-shadow: none;
+  padding: 6px;
+}
 /* The phone composer: sticky to the bottom of the screen, or to the top of the open keypad. */
 .composer-sticky {
   bottom: var(--keypad-h, 0px);
   padding-bottom: max(0.5rem, calc(env(safe-area-inset-bottom, 0px) - var(--keypad-h, 0px)));
 }
-.toast-host { bottom: calc(max(1rem, env(safe-area-inset-bottom, 0px)) + max(var(--keypad-h, 0px), var(--tabbar-h, 0px))); }
+/* The phone problem screen with a composer: the column fills the screen down to the keypad (or the bottom), and the
+   composer is pushed to its end (mt-auto), so the composer always sits on the keypad, never above a blank band, even
+   when her work is short. The room under it is the keypad's (with the keypad up the page keeps no safe-area band). */
+.phone-problem-column {
+  min-height: calc(100dvh - max(var(--keypad-h, 0px), env(safe-area-inset-bottom, 0px)) - env(safe-area-inset-top, 0px) - 1rem);
+}
+.toast-host { bottom: calc(max(1rem, env(safe-area-inset-bottom, 0px)) + max(var(--keypad-h, 0px), var(--tabbar-h, 0px))); padding-left: calc(1rem + var(--rail-w, 0px)); }
 
 /* Bottom tab bar (components/TabBar.tsx): a phone's menu screens only. Fixed to the bottom and painted over the white
    band under the navigation bar (z-31, over #root::after), its own padding keeping the tabs above that bar and clear
    of a notch on its side. Under the keypad (35), a bottom sheet (40) and the toasts (50). */
+/* The navigation rail (components/NavRail.tsx): the tablet layout (840 px and more), every screen. Fixed down the left
+   edge, clear of a notch on that side; the page, the keypad and the toasts start right of it (--rail-w). Under the
+   keypad (35), a sheet (40) and the toasts (50). */
+body { padding-left: var(--rail-w, 0px); }
+.nav-rail {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 31;
+  width: var(--rail-w, 5rem);
+  overflow-y: auto;
+  background: #fff;
+  border-right: 1px solid var(--color-navy-100);
+  padding: max(0.75rem, env(safe-area-inset-top, 0px)) 0.5rem max(0.75rem, env(safe-area-inset-bottom, 0px)) calc(0.5rem + env(safe-area-inset-left, 0px));
+}
 .tab-bar {
   position: fixed;
   left: 0;
@@ -155,6 +197,17 @@ body { padding-bottom: max(var(--keypad-h, 0px), var(--tabbar-h, 0px)); }
    never overlaps; under the keypad, the sheets and the toasts). Scrolling back to the card stops below the bar. */
 .pinned-problem { top: env(safe-area-inset-top, 0px); }
 .problem-card { scroll-margin-top: calc(env(safe-area-inset-top, 0px) + 0.75rem); }
+
+/* The scratch pad (components/scratch): the drawing takes every touch on it (no scrolling, no zooming), and graph paper
+   is a background under the ink, so the eraser takes ink off without taking the grid. */
+.scratch-surface { touch-action: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+.scratch-paper {
+  background-color: #fff;
+  background-image:
+    linear-gradient(to right, var(--color-navy-100) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--color-navy-100) 1px, transparent 1px);
+  background-size: 20px 20px;
+}
 
 /* Keycaps */
 kbd.keycap {

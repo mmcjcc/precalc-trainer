@@ -44,6 +44,11 @@ interface KeypadState {
   height: number
   /** Bumped by each Check, so the keypad can bring her message into view once the page answers. */
   checks: number
+  /**
+   * Where the keypad docks instead of covering the bottom of the screen: the problem screen's right pane in the tablet
+   * layout gives its slot here while it is mounted (components/PageLayout.tsx). Null: fixed at the bottom.
+   */
+  dock: HTMLElement | null
   addHost: () => () => void
   activate: (target: KeypadTarget) => void
   deactivate: (id: string) => void
@@ -51,6 +56,8 @@ interface KeypadState {
   forget: (id: string) => void
   setHeight: (height: number) => void
   checked: () => void
+  /** A layout gives its slot (an element) or takes it back (null, only when it is still the one it gave). */
+  setDock: (dock: HTMLElement | null, from?: HTMLElement) => void
 }
 
 function sameTarget(a: KeypadTarget | null, b: KeypadTarget): boolean {
@@ -72,6 +79,7 @@ export const useKeypadStore = create<KeypadState>()((set, get) => ({
   modes: {},
   height: 0,
   checks: 0,
+  dock: null,
   addHost: () => {
     set((s) => ({ hosts: s.hosts + 1 }))
     return () => set((s) => ({ hosts: Math.max(0, s.hosts - 1) }))
@@ -101,6 +109,10 @@ export const useKeypadStore = create<KeypadState>()((set, get) => ({
     if (get().height !== height) set({ height })
   },
   checked: () => set((s) => ({ checks: s.checks + 1 })),
+  setDock: (dock, from) => {
+    if (dock === null && from !== undefined && get().dock !== from) return
+    if (get().dock !== dock) set({ dock })
+  },
 }))
 
 /**
@@ -122,5 +134,5 @@ export function pressedRecently(now = Date.now()): boolean {
 /** Tests: back to no keypad, no target. */
 export function resetKeypadForTests(): void {
   lastPress = Number.NEGATIVE_INFINITY
-  useKeypadStore.setState({ hosts: 0, target: null, modes: {}, height: 0, checks: 0 })
+  useKeypadStore.setState({ hosts: 0, target: null, modes: {}, height: 0, checks: 0, dock: null })
 }

@@ -1,4 +1,5 @@
 import { useEffect, useId, useRef, type ReactNode } from 'react'
+import { useLayout } from './useBreakpoint'
 
 type Props = {
   open: boolean
@@ -12,6 +13,8 @@ type Props = {
 /**
  * Modal bottom sheet (UX-03). The keyboard and the sheet are never open together: opening blurs
  * the active input first. Esc / backdrop / close button close it; focus returns to the opener.
+ * The layout decides how it looks: from the bottom of the screen in the phone layout, a centred
+ * dialog in the tablet layout (840 px and more). What is in it never knows.
  */
 export function BottomSheet({ open, onClose, title, children, id }: Props) {
   const autoId = useId()
@@ -44,9 +47,10 @@ export function BottomSheet({ open, onClose, title, children, id }: Props) {
     }
   }, [open, onClose])
 
+  const dialog = useLayout() === 'tablet'
   if (!open) return null
   return (
-    <div className="fixed inset-0 z-40 flex items-end justify-center sm:items-center">
+    <div className={`fixed inset-0 z-40 flex justify-center ${dialog ? 'items-center p-6' : 'items-end'}`} data-sheet={dialog ? 'dialog' : 'sheet'}>
       <button type="button" aria-label="Close" onClick={onClose} className="absolute inset-0 bg-navy/40" tabIndex={-1} />
       <div
         ref={panelRef}
@@ -55,9 +59,11 @@ export function BottomSheet({ open, onClose, title, children, id }: Props) {
         aria-modal="true"
         aria-labelledby={titleId}
         tabIndex={-1}
-        className="relative max-h-[85dvh] w-full max-w-lg overflow-y-auto rounded-t-2xl bg-white p-4 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-2xl outline-none sm:rounded-2xl"
+        className={`relative w-full max-w-lg overflow-y-auto bg-white p-4 shadow-2xl outline-none ${
+          dialog ? 'max-h-[min(85dvh,48rem)] rounded-2xl' : 'max-h-[85dvh] rounded-t-2xl pb-[max(1rem,env(safe-area-inset-bottom))]'
+        }`}
       >
-        <div className="mx-auto mb-2 h-1 w-10 rounded-full bg-navy-100 sm:hidden" aria-hidden />
+        {!dialog && <div className="mx-auto mb-2 h-1 w-10 rounded-full bg-navy-100" aria-hidden />}
         <div className="mb-3 flex items-center justify-between gap-3">
           <h2 id={titleId} className="text-lg font-semibold text-navy">
             {title}

@@ -1,16 +1,17 @@
 import { lazy, Suspense, useEffect } from 'react'
-import { HashRouter, Link, Navigate, Route, Routes, useLocation, useNavigationType, useParams } from 'react-router-dom'
-import { isFullScreenPath, useFullScreenPageShown } from '@/components/appChrome'
+import { HashRouter, Navigate, Route, Routes, useLocation, useNavigationType, useParams } from 'react-router-dom'
+import { isFullScreenPath, useDockedComposerShown, useFullScreenPageShown } from '@/components/appChrome'
 import { MathKeypad } from '@/components/MathKeypad'
 import { JuiceLayers } from '@/components/juice/JuiceLayers'
 import { useJuice } from '@/components/juice/useJuice'
 import { useMonsterCatches } from '@/components/monsters/catchMoment'
-import { isNavActive, navItems, tabItems, type NavItem } from '@/components/navItems'
+import { NavRail } from '@/components/NavRail'
+import { navItems, tabItems } from '@/components/navItems'
 import { useAppliedTheme } from '@/components/quests/theme'
 import { useRewardTicks } from '@/components/rewards/haptics'
 import { TabBar } from '@/components/TabBar'
 import { Toasts } from '@/components/Toast'
-import { useBreakpoint } from '@/components/useBreakpoint'
+import { useLayout } from '@/components/useBreakpoint'
 import { Home } from '@/pages/Home'
 import { ModulePage } from '@/pages/Module'
 import { PinPage } from '@/pages/Pin'
@@ -18,7 +19,6 @@ import { ProgressPage } from '@/pages/Progress'
 import { SettingsPage } from '@/pages/Settings'
 import { TutorLogPage } from '@/pages/TutorLog'
 import { useStore } from '@/store'
-import { STORE } from '@/edition'
 import { useTutorStatus } from '@/tutor/useTutorStatus'
 
 // Heavy routes (KaTeX, the workspace flows, the engine playground) load on demand.
@@ -48,42 +48,6 @@ function SkipLink() {
     >
       Skip to content
     </button>
-  )
-}
-
-/** The top navigation (wide screens): the app's name and its destinations as text links. */
-function Header({ items }: { items: readonly NavItem[] }) {
-  const { pathname } = useLocation()
-  return (
-    <header className="border-b border-navy-100 bg-white">
-      <div className="mx-auto flex w-full max-w-6xl flex-wrap items-center justify-between gap-x-4 px-4 py-1">
-        <Link to="/" className="flex min-h-11 items-center font-semibold text-navy">
-          {STORE ? 'Math Trainer' : 'Math & Science Trainer'}
-        </Link>
-        <nav aria-label="Main" className="-mx-2 max-w-full overflow-x-auto">
-          <ul className="flex items-center gap-0.5">
-            {items.map((item) => {
-              const active = isNavActive(pathname, item.to, item.end)
-              return (
-                <li key={item.to}>
-                  <Link
-                    to={item.to}
-                    aria-current={active ? 'page' : undefined}
-                    className={`flex min-h-11 min-w-11 items-center justify-center whitespace-nowrap rounded-lg px-2.5 text-sm font-semibold ${
-                      active
-                        ? 'text-navy shadow-[inset_0_-3px_0_var(--color-coral)]'
-                        : 'text-navy/70 hover:bg-navy-50 hover:text-navy'
-                    }`}
-                  >
-                    {item.label}
-                  </Link>
-                </li>
-              )
-            })}
-          </ul>
-        </nav>
-      </div>
-    </header>
   )
 }
 
@@ -117,27 +81,33 @@ function ScrollToTopOnNavigate() {
 }
 
 /**
- * The unlocked app: navigation, routes, keypad, toasts. Wide screens keep the top navigation on every page. On a
- * phone the top navigation gives way to a bottom tab bar (Home, Monsters, Graph, Progress, Settings) on menu screens
- * (those five, the class and module pages, the drill, Ask...), and a problem screen or a running set has neither: it is
- * full screen with its own compact header.
+ * The unlocked app: navigation, routes, keypad, toasts. The layout follows the window's width (components/useBreakpoint):
+ * - the tablet layout (840 px and more: a tablet on its side, a large tablet, a computer): the navigation rail down the
+ *   left on every screen (Home, Monsters, Graph, Progress, Settings, then Ask and the Sandbox where the app has them);
+ * - the phone layout (below 840 px): a bottom tab bar on menu screens (the five, the class and module pages, the drill,
+ *   Ask...), and a problem screen or a running set has none: it is full screen with its own compact header. From 600 px
+ *   (a tablet held upright, a phone on its side) the page is a wider reading column (42rem), still one column.
  */
 function UnlockedShell() {
   const { pathname } = useLocation()
   const tutor = useTutorStatus()
   const items = navItems(Boolean(tutor.status?.configured))
-  const phone = useBreakpoint() === 'mobile'
+  const phone = useLayout() === 'phone'
   const fullScreenPage = useFullScreenPageShown()
+  const dockedComposer = useDockedComposerShown()
   const tabs = phone && !fullScreenPage && !isFullScreenPath(pathname)
+  // The phone's composer sits right on the keypad (or the bottom of the screen): no padding under the page.
+  const bottom = tabs ? 'pb-6' : phone && dockedComposer ? 'pb-0' : 'pb-24'
   return (
     <>
       <ScrollToTopOnNavigate />
       <SkipLink />
-      {!phone && <Header items={items} />}
+      {!phone && <NavRail items={items} />}
       <main
         id="main"
         tabIndex={-1}
-        className={`mx-auto w-full max-w-6xl flex-1 px-4 outline-none ${phone ? 'pt-4' : 'pt-6'} ${tabs ? 'pb-6' : 'pb-24'}`}
+        data-layout={phone ? 'phone' : 'tablet'}
+        className={`mx-auto w-full flex-1 outline-none ${phone ? 'max-w-2xl px-4 pt-4' : 'max-w-6xl px-6 pt-6'} ${bottom}`}
       >
         <Suspense fallback={<Loading />}>
           <Routes>

@@ -261,8 +261,8 @@ export function GrapherPage() {
         </div>
       </header>
 
-      <div className="flex min-h-0 flex-1 flex-col gap-2 md:flex-row md:gap-4">
-        <section aria-label="The graph" className="flex flex-none flex-col gap-1 md:order-2 md:min-w-0 md:flex-1" style={planeHeight ? { height: planeHeight } : undefined}>
+      <div className="flex min-h-0 flex-1 flex-col gap-2 tab:flex-row tab:gap-4">
+        <section aria-label="The graph" className="flex flex-none flex-col gap-1 tab:order-2 tab:min-w-0 tab:flex-1" style={planeHeight ? { height: planeHeight } : undefined}>
           <div className="min-h-0 flex-1">
             <Plane
               model={model}
@@ -289,7 +289,7 @@ export function GrapherPage() {
           {!phone && points}
         </section>
 
-        <section ref={listRef} aria-label="Expression list" className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain pb-2 md:order-1 md:w-[23rem] md:flex-none md:pr-1">
+        <section ref={listRef} aria-label="Expression list" className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain pb-2 tab:order-1 tab:w-[23rem] tab:flex-none tab:pr-1">
           {phone && points}
           <RowList model={model} current={current} names={names} />
           <div className="flex flex-wrap items-center gap-2">

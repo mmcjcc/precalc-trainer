@@ -1,4 +1,5 @@
 import { useCallback, useId, useMemo, useState } from 'react'
+import { CardColumns } from '@/components/CardColumns'
 import { useMotionAllowed } from '@/components/juice/motion'
 import { monsterCollection, monsterStateWords, tallyLine, type MonsterEntry, type SpeciesEntry } from '@/components/monsters/collection'
 import { MonsterArt } from '@/components/monsters/MonsterArt'
@@ -79,8 +80,9 @@ function SpeciesSection({ entry, motion, onOpen }: { entry: SpeciesEntry; motion
           </span>
         </summary>
         {open && (
-          <div className="px-3 pb-3">
-            <ul aria-label={`${species.name}: its monsters`} className="grid grid-cols-4 gap-2 sm:grid-cols-6 lg:grid-cols-8">
+          // As many tiles a row as the card has room for (a phone, a tablet's half of the page): a container query.
+          <div className="@container px-3 pb-3">
+            <ul aria-label={`${species.name}: its monsters`} className="grid grid-cols-4 gap-2 @md:grid-cols-6 @2xl:grid-cols-8">
               {monsters.map((m) => (
                 <MonsterTile key={m.id} m={m} speciesName={species.name} motion={motion} onOpen={onOpen} />
               ))}
@@ -129,11 +131,12 @@ export function MonstersPage() {
           </p>
         )}
       </header>
-      <div className="space-y-3">
+      {/* One column on a phone, two in the tablet layout (components/CardColumns.tsx). */}
+      <CardColumns gap={3}>
         {collection.species.map((entry) => (
           <SpeciesSection key={entry.species.id} entry={entry} motion={motion} onOpen={onOpen} />
         ))}
-      </div>
+      </CardColumns>
       {open && shown && (
         <MonsterCardDialog
           monster={shown.m}

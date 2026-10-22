@@ -85,19 +85,81 @@ function span(el: Element): Span {
 
 const MARGIN = 8
 
+/** Scroll an element (a pane) by `delta` px; jsdom and old browsers have no Element.scrollBy. */
+function scrollElementBy(el: HTMLElement, delta: number): void {
+  if (typeof el.scrollBy === 'function') el.scrollBy({ top: delta, behavior: 'smooth' })
+  else el.scrollTop += delta
+}
+
+/**
+ * The problem screen's work area that scrolls on its own (the tablet layout's right pane: `data-pane-scroll` inside a
+ * `data-pane`), when the box is in that layout. The keypad docks under that pane, so the band is the area's own box.
+ */
+function paneScroller(el: Element): HTMLElement | null {
+  return el.closest('[data-pane]')?.querySelector<HTMLElement>('[data-pane-scroll]') ?? null
+}
+
+function revealInPane(el: HTMLInputElement, scroller: HTMLElement, reason: 'open' | 'check'): void {
+  if (!scroller.contains(el)) {
+    // The box is in the composer docked under the work: after a Check her newest line and its message, at the end of the
+    // work, come into view.
+    if (reason === 'check' && el.closest('[data-keypad-scroll="end"]')) scrollElementBy(scroller, scroller.scrollHeight)
+    return
+  }
+  const region = el.closest('[data-keypad-region]') ?? el.closest('section') ?? el.closest('form') ?? el
+  const block = el.closest('form') ?? el
+  const box = scroller.getBoundingClientRect()
+  const band = { top: box.top + MARGIN, bottom: box.bottom - MARGIN }
+  if (band.bottom - band.top < 48) return
+  const delta = revealDelta(span(el), span(region.contains(block) ? block : el), span(region), band)
+  if (delta !== 0) scrollElementBy(scroller, delta)
+}
+
+/**
+ * After a Check in the phone's composer: her newest line of work (the last `data-work-line`, WorkedColumn's rows) ends
+ * right above the composer, which sits on the keypad. So the line she is writing, her last lines over it and the problem
+ * strip at the top are what the screen shows; the work-list card under her line (the full lesson) waits behind the
+ * composer, whose own line names the mistake, with Why? for the lesson. Without a line of work the page goes to its end.
+ */
+/** The room between her last line and the composer's top edge (px): a small phone needs every pixel. */
+export const LINE_GAP = 4
+
+function revealLastLines(el: HTMLInputElement, keypadHeight: number): void {
+  const lines = document.querySelectorAll<HTMLElement>('[data-work-line]')
+  const last = lines[lines.length - 1]
+  const composer = el.closest<HTMLElement>('[data-keypad-region]')
+  if (!last || !composer) {
+    const end = document.documentElement.scrollHeight - window.innerHeight
+    if (end > window.scrollY + 1) window.scrollTo({ top: end, behavior: 'smooth' })
+    return
+  }
+  const vv = window.visualViewport
+  const viewTop = vv?.offsetTop ?? 0
+  const viewHeight = vv?.height ?? window.innerHeight
+  const bandBottom = viewTop + viewHeight - keypadHeight - composer.getBoundingClientRect().height - LINE_GAP
+  const delta = Math.round(last.getBoundingClientRect().bottom - bandBottom)
+  if (delta !== 0) window.scrollBy({ top: delta, behavior: 'smooth' })
+}
+
 /**
  * Bring the box, its preview and the message about her answer into the band above the keypad. The
  * region is the part's card (`section`), or a container marked `data-keypad-region` (the composer).
  * After a Check, a box in a container marked `data-keypad-scroll="end"` (the line-by-line composer)
- * scrolls the page to its end instead, where her newest line and its message are. A bar docked on top
+ * scrolls her newest line of work to just above the composer (revealLastLines). A bar docked on top
  * of the keypad (`data-keypad-dock`: the phone composer) takes its height off the band for every other
- * box, such as the answer box under the work.
+ * box, such as the answer box under the work. In the tablet layout's two panes the keypad is docked
+ * under the work and the work's own area scrolls instead of the page.
  */
 export function revealAboveKeypad(el: HTMLInputElement, keypadHeight: number, reason: 'open' | 'check'): void {
-  if (keypadHeight <= 0 || !el.isConnected) return
+  if (!el.isConnected) return
+  const scroller = paneScroller(el)
+  if (scroller) {
+    revealInPane(el, scroller, reason)
+    return
+  }
+  if (keypadHeight <= 0) return
   if (reason === 'check' && el.closest('[data-keypad-scroll="end"]')) {
-    const end = document.documentElement.scrollHeight - window.innerHeight
-    if (end > window.scrollY + 1) window.scrollTo({ top: end, behavior: 'smooth' })
+    revealLastLines(el, keypadHeight)
     return
   }
   const region = el.closest('[data-keypad-region]') ?? el.closest('section') ?? el.closest('form') ?? el

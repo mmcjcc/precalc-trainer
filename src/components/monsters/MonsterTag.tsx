@@ -34,6 +34,25 @@ export function CaughtBanner({ pattern, compact = false }: { pattern: string | n
 }
 
 /**
+ * The catch in one line (the phone composer's folded verdict, with the keypad up): the monster small, flipping in, in a
+ * gold ring, before the mistake's title; "Caught: <name>." is said, not shown (the banner shows it when the line unfolds).
+ */
+export function CaughtBadge({ pattern }: { pattern: string | null | undefined }) {
+  const caught = useJustCaught(pattern)
+  const motion = useMotionAllowed()
+  const species = pattern ? speciesOf(pattern) : null
+  if (!caught || !species || !pattern) return null
+  return (
+    <span data-monster-caught={pattern} data-caught-badge="" className="mr-1 inline-flex shrink-0 items-center rounded-full bg-white align-middle ring-2 ring-gold">
+      <span className={`inline-flex ${motion ? 'monster-flip-in' : ''}`}>
+        <MonsterArt id={pattern} size={24} sticker />
+      </span>
+      <span className="sr-only">Caught: {species.name}. </span>
+    </span>
+  )
+}
+
+/**
  * A named mistake's monster, small, beside its title: every time after the first (the catch shows it the first time).
  * Decorative; the title beside it is the words.
  */

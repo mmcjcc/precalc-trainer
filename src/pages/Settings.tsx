@@ -4,7 +4,8 @@ import { A2HSCard } from '@/components/A2HSCard'
 import { BottomSheet } from '@/components/BottomSheet'
 import { canPlaySounds, playCue, soundsOn } from '@/components/juice/sounds'
 import { canVibrate } from '@/components/rewards/haptics'
-import { isIosSafari, isStandalone } from '@/components/useBreakpoint'
+import { CardColumns } from '@/components/CardColumns'
+import { isIosSafari, isStandalone, useLayout } from '@/components/useBreakpoint'
 import { useCoarsePointer } from '@/components/useMathKeypad'
 import { clearActiveSet } from '@/session/activeSet'
 import { CALC_LABEL, type CalcId } from '@/shared/types'
@@ -137,6 +138,8 @@ function configuredSignOutUrl(): string {
 }
 
 export function SettingsPage() {
+  // A comfortable width: one column on a phone, the sections in two in the tablet layout.
+  const tablet = useLayout() === 'tablet'
   const signOutUrl = configuredSignOutUrl()
   const settings = useSettings()
   const setSettings = useStore((s) => s.setSettings)
@@ -163,211 +166,214 @@ export function SettingsPage() {
   }
 
   return (
-    <div className="mx-auto max-w-2xl space-y-6">
+    <div className={`mx-auto space-y-6 ${tablet ? 'max-w-5xl' : 'max-w-2xl'}`}>
       <header>
         <h1 className="text-3xl font-semibold text-navy">Settings</h1>
       </header>
 
-      <section aria-labelledby="settings-calc" className="rounded-2xl border border-navy-100 bg-white p-4">
-        <h2 id="settings-calc" className="font-semibold text-navy">
-          Calculator
-        </h2>
-        <p className="mt-0.5 text-sm text-navy/80">Calculator steps on every problem use the keys of this model.</p>
-        <fieldset className="mt-3">
-          <legend className="sr-only">Calculator model</legend>
-          <div className="inline-flex flex-wrap rounded-xl border border-navy-100 bg-white p-0.5">
-            {CALC_IDS.map((id) => {
-              const checked = settings.calculator === id
-              return (
-                <label
-                  key={id}
-                  className={`flex min-h-11 cursor-pointer items-center gap-1 rounded-lg px-3 text-sm font-semibold has-[:focus-visible]:outline-3 has-[:focus-visible]:outline-gold ${
-                    checked ? 'bg-navy text-white' : 'text-navy hover:bg-navy-50'
-                  }`}
-                >
-                  <input
-                    type="radio"
-                    name={calcName}
-                    value={id}
-                    checked={checked}
-                    onChange={() => setSettings({ calculator: id })}
-                    className="sr-only"
-                  />
-                  {checked && <span aria-hidden>✓</span>}
-                  {CALC_LABEL[id]}
-                </label>
-              )
-            })}
+      {/* One column on a phone; in the tablet layout two, read top to bottom (components/CardColumns.tsx). */}
+      <CardColumns flow="columns">
+        <section aria-labelledby="settings-calc" className="rounded-2xl border border-navy-100 bg-white p-4">
+          <h2 id="settings-calc" className="font-semibold text-navy">
+            Calculator
+          </h2>
+          <p className="mt-0.5 text-sm text-navy/80">Calculator steps on every problem use the keys of this model.</p>
+          <fieldset className="mt-3">
+            <legend className="sr-only">Calculator model</legend>
+            <div className="inline-flex flex-wrap rounded-xl border border-navy-100 bg-white p-0.5">
+              {CALC_IDS.map((id) => {
+                const checked = settings.calculator === id
+                return (
+                  <label
+                    key={id}
+                    className={`flex min-h-11 cursor-pointer items-center gap-1 rounded-lg px-3 text-sm font-semibold has-[:focus-visible]:outline-3 has-[:focus-visible]:outline-gold ${
+                      checked ? 'bg-navy text-white' : 'text-navy hover:bg-navy-50'
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name={calcName}
+                      value={id}
+                      checked={checked}
+                      onChange={() => setSettings({ calculator: id })}
+                      className="sr-only"
+                    />
+                    {checked && <span aria-hidden>✓</span>}
+                    {CALC_LABEL[id]}
+                  </label>
+                )
+              })}
+            </div>
+          </fieldset>
+        </section>
+
+        <section aria-labelledby="settings-practice" className="rounded-2xl border border-navy-100 bg-white px-4 py-2">
+          <h2 id="settings-practice" className="pt-2 font-semibold text-navy">
+            Practice
+          </h2>
+          <div className="divide-y divide-navy-100">
+            <Switch
+              label="Ask which property after each step"
+              description="After a step is accepted, pick the property that justified it. Skipping is always fine and never counts against you."
+              checked={settings.askProperty === 'always'}
+              onChange={(on) => setSettings({ askProperty: on ? 'always' : 'off' })}
+            />
+            <Switch
+              label="Test mode"
+              description="Adds a timer you can pause to problems you start. Timed problems are kept out of your mastery bars, and nothing ever locks or submits on its own."
+              checked={settings.testMode}
+              onChange={(on) => setSettings({ testMode: on })}
+            />
+            {touch && (
+              <Switch
+                label="Math keypad"
+                description="Math answers open a keypad with the numbers, x, + − × ÷, powers and the symbols each problem uses, instead of the phone's keyboard. Its abc key brings the keyboard back for words like “no solution”. Off: the keyboard and the symbol strip."
+                checked={settings.mathKeypad !== false}
+                onChange={(on) => setSettings({ mathKeypad: on })}
+              />
+            )}
+            {/* Only where the browser can make sounds (Web Audio); a switch that did nothing would only confuse. */}
+            {canPlaySounds() && (
+              <Switch
+                label="Sounds"
+                description="A chime when a line or a part is right (it climbs while you get them in a row), a soft note for a slip, and a little tune when you finish."
+                checked={soundsOn(settings)}
+                onChange={(on) => {
+                  setSettings({ sounds: on })
+                  // A taste of it, and the tap lets the browser start the sound.
+                  if (on) playCue('right', { step: 2 })
+                }}
+              />
+            )}
           </div>
-        </fieldset>
-      </section>
+        </section>
 
-      <section aria-labelledby="settings-practice" className="rounded-2xl border border-navy-100 bg-white px-4 py-2">
-        <h2 id="settings-practice" className="pt-2 font-semibold text-navy">
-          Practice
-        </h2>
-        <div className="divide-y divide-navy-100">
-          <Switch
-            label="Ask which property after each step"
-            description="After a step is accepted, pick the property that justified it. Skipping is always fine and never counts against you."
-            checked={settings.askProperty === 'always'}
-            onChange={(on) => setSettings({ askProperty: on ? 'always' : 'off' })}
-          />
-          <Switch
-            label="Test mode"
-            description="Adds a timer you can pause to problems you start. Timed problems are kept out of your mastery bars, and nothing ever locks or submits on its own."
-            checked={settings.testMode}
-            onChange={(on) => setSettings({ testMode: on })}
-          />
-          {touch && (
+        <section aria-labelledby="settings-rewards" className="rounded-2xl border border-navy-100 bg-white px-4 py-2">
+          <h2 id="settings-rewards" className="pt-2 font-semibold text-navy">
+            Rewards
+          </h2>
+          <div className="divide-y divide-navy-100">
             <Switch
-              label="Math keypad"
-              description="Math answers open a keypad with the numbers, x, + − × ÷, powers and the symbols each problem uses, instead of the phone's keyboard. Its abc key brings the keyboard back for words like “no solution”. Off: the keyboard and the symbol strip."
-              checked={settings.mathKeypad !== false}
-              onChange={(on) => setSettings({ mathKeypad: on })}
+              label="Rewards (XP, daily goal, streak)"
+              description="XP for every line and problem, a daily goal, a streak that a day off now and then does not break, and a collection of the mistakes you catch and squash. Off: none of it shows anywhere."
+              checked={rewards}
+              onChange={(on) => setSettings({ rewards: on })}
             />
-          )}
-          {/* Only where the browser can make sounds (Web Audio); a switch that did nothing would only confuse. */}
-          {canPlaySounds() && (
-            <Switch
-              label="Sounds"
-              description="A chime when a line or a part is right (it climbs while you get them in a row), a soft note for a slip, and a little tune when you finish."
-              checked={soundsOn(settings)}
-              onChange={(on) => {
-                setSettings({ sounds: on })
-                // A taste of it, and the tap lets the browser start the sound.
-                if (on) playCue('right', { step: 2 })
-              }}
-            />
-          )}
-        </div>
-      </section>
+            {rewards && (
+              <fieldset className="py-3">
+                <legend className="font-semibold text-navy">Daily goal</legend>
+                <p className="mt-0.5 text-sm text-navy/80">A new goal counts from today; the days before keep the goal they had.</p>
+                <div className="mt-2 grid max-w-md grid-cols-3 gap-0.5 rounded-xl border border-navy-100 bg-white p-0.5">
+                  {DAILY_GOALS.map((g) => {
+                    const checked = goal === g
+                    return (
+                      <label
+                        key={g}
+                        className={`flex min-h-11 cursor-pointer flex-col items-center justify-center rounded-lg px-2 py-1 text-center text-sm has-[:focus-visible]:outline-3 has-[:focus-visible]:outline-gold ${
+                          checked ? 'bg-navy text-white' : 'text-navy hover:bg-navy-50'
+                        }`}
+                      >
+                        <input
+                          type="radio"
+                          name={goalName}
+                          value={g}
+                          checked={checked}
+                          onChange={() => setSettings({ dailyGoal: g })}
+                          className="sr-only"
+                        />
+                        <span className="font-semibold">
+                          {checked && <span aria-hidden>✓ </span>}
+                          {g} XP
+                        </span>
+                        <span className={`text-xs ${checked ? 'text-white/85' : 'text-navy/70'}`}>{GOAL_WORDS[g]}</span>
+                      </label>
+                    )
+                  })}
+                </div>
+              </fieldset>
+            )}
+            {rewards && <ThemePicker />}
+            {rewards && touch && canVibrate() && (
+              <Switch
+                label="Vibrate"
+                description="A light tick when a line or a part is right, and when you meet your goal."
+                checked={vibrateOn(settings)}
+                onChange={(on) => setSettings({ vibrate: on })}
+              />
+            )}
+          </div>
+        </section>
 
-      <section aria-labelledby="settings-rewards" className="rounded-2xl border border-navy-100 bg-white px-4 py-2">
-        <h2 id="settings-rewards" className="pt-2 font-semibold text-navy">
-          Rewards
-        </h2>
-        <div className="divide-y divide-navy-100">
-          <Switch
-            label="Rewards (XP, daily goal, streak)"
-            description="XP for every line and problem, a daily goal, a streak that a day off now and then does not break, and a collection of the mistakes you catch and squash. Off: none of it shows anywhere."
-            checked={rewards}
-            onChange={(on) => setSettings({ rewards: on })}
-          />
-          {rewards && (
-            <fieldset className="py-3">
-              <legend className="font-semibold text-navy">Daily goal</legend>
-              <p className="mt-0.5 text-sm text-navy/80">A new goal counts from today; the days before keep the goal they had.</p>
-              <div className="mt-2 grid max-w-md grid-cols-3 gap-0.5 rounded-xl border border-navy-100 bg-white p-0.5">
-                {DAILY_GOALS.map((g) => {
-                  const checked = goal === g
-                  return (
-                    <label
-                      key={g}
-                      className={`flex min-h-11 cursor-pointer flex-col items-center justify-center rounded-lg px-2 py-1 text-center text-sm has-[:focus-visible]:outline-3 has-[:focus-visible]:outline-gold ${
-                        checked ? 'bg-navy text-white' : 'text-navy hover:bg-navy-50'
-                      }`}
-                    >
-                      <input
-                        type="radio"
-                        name={goalName}
-                        value={g}
-                        checked={checked}
-                        onChange={() => setSettings({ dailyGoal: g })}
-                        className="sr-only"
-                      />
-                      <span className="font-semibold">
-                        {checked && <span aria-hidden>✓ </span>}
-                        {g} XP
-                      </span>
-                      <span className={`text-xs ${checked ? 'text-white/85' : 'text-navy/70'}`}>{GOAL_WORDS[g]}</span>
-                    </label>
-                  )
-                })}
-              </div>
-            </fieldset>
-          )}
-          {rewards && <ThemePicker />}
-          {rewards && touch && canVibrate() && (
-            <Switch
-              label="Vibrate"
-              description="A light tick when a line or a part is right, and when you meet your goal."
-              checked={vibrateOn(settings)}
-              onChange={(on) => setSettings({ vibrate: on })}
-            />
-          )}
-        </div>
-      </section>
-
-      <section aria-labelledby="settings-device" className="space-y-3 rounded-2xl border border-navy-100 bg-white p-4">
-        <h2 id="settings-device" className="font-semibold text-navy">
-          Your progress lives on this device
-        </h2>
-        <p className="text-sm text-navy/80">
-          Mastery, error patterns and your streak are saved on this device only — nothing is sent to a server. Using a
-          phone and a computer? Export a backup on one and import it on the other from the{' '}
-          <Link to="/progress" className="font-semibold text-navy underline">
-            Progress page
-          </Link>
-          .
-        </p>
-        {!storageOk && (
-          <p role="alert" className="text-sm font-semibold text-bad">
-            <span aria-hidden>✗ </span>
-            This browser is blocking saves right now, so progress disappears when you close it. Export a backup before you
-            go.
+        <section aria-labelledby="settings-device" className="space-y-3 rounded-2xl border border-navy-100 bg-white p-4">
+          <h2 id="settings-device" className="font-semibold text-navy">
+            Your progress lives on this device
+          </h2>
+          <p className="text-sm text-navy/80">
+            Mastery, error patterns and your streak are saved on this device only — nothing is sent to a server. Using a
+            phone and a computer? Export a backup on one and import it on the other from the{' '}
+            <Link to="/progress" className="font-semibold text-navy underline">
+              Progress page
+            </Link>
+            .
           </p>
-        )}
-        {showA2HS && <A2HSCard force />}
-      </section>
+          {!storageOk && (
+            <p role="alert" className="text-sm font-semibold text-bad">
+              <span aria-hidden>✗ </span>
+              This browser is blocking saves right now, so progress disappears when you close it. Export a backup before you
+              go.
+            </p>
+          )}
+          {showA2HS && <A2HSCard force />}
+        </section>
 
-      {signOutUrl && (
-        <section aria-labelledby="settings-account" className="rounded-2xl border border-navy-100 bg-white p-4">
-          <h2 id="settings-account" className="font-semibold text-navy">
-            Signed in
+        {signOutUrl && (
+          <section aria-labelledby="settings-account" className="rounded-2xl border border-navy-100 bg-white p-4">
+            <h2 id="settings-account" className="font-semibold text-navy">
+              Signed in
+            </h2>
+            <p className="mt-0.5 text-sm text-navy/80">
+              Signing out keeps your progress on this device. On a shared computer, sign out of Google too, or the next
+              person to open the site gets in as you.
+            </p>
+            <a
+              href={signOutUrl}
+              className="mt-3 inline-flex min-h-11 items-center rounded-xl border-2 border-navy-100 bg-white px-4 text-sm font-semibold text-navy hover:bg-navy-50"
+            >
+              Sign out
+            </a>
+          </section>
+        )}
+
+        {tutor.status?.isParent && (
+          <section aria-labelledby="settings-tutor" className="rounded-2xl border border-navy-100 bg-white p-4">
+            <h2 id="settings-tutor" className="font-semibold text-navy">
+              Tutor
+            </h2>
+            <p className="mt-0.5 text-sm text-navy/80">Questions she asked, and any answers she flagged for you to look over.</p>
+            <Link to="/tutor-log" className="mt-3 inline-flex min-h-11 items-center font-semibold text-navy underline">
+              Tutor log
+            </Link>
+          </section>
+        )}
+
+        <section aria-labelledby="settings-reset" className="rounded-2xl border border-navy-100 bg-white p-4">
+          <h2 id="settings-reset" className="font-semibold text-navy">
+            Reset progress
           </h2>
           <p className="mt-0.5 text-sm text-navy/80">
-            Signing out keeps your progress on this device. On a shared computer, sign out of Google too, or the next
-            person to open the site gets in as you.
+            Clears mastery, error patterns, streak, drill scores{rewards ? ', XP and the mistake collection' : ''} and any
+            unfinished problem on this device. Your settings stay.
           </p>
-          <a
-            href={signOutUrl}
-            className="mt-3 inline-flex min-h-11 items-center rounded-xl border-2 border-navy-100 bg-white px-4 text-sm font-semibold text-navy hover:bg-navy-50"
+          <button
+            type="button"
+            onClick={() => setConfirmOpen(true)}
+            aria-haspopup="dialog"
+            className="mt-3 min-h-11 rounded-xl border-2 border-bad bg-white px-4 text-sm font-semibold text-bad hover:bg-navy-50"
           >
-            Sign out
-          </a>
+            Reset progress…
+          </button>
         </section>
-      )}
-
-      {tutor.status?.isParent && (
-        <section aria-labelledby="settings-tutor" className="rounded-2xl border border-navy-100 bg-white p-4">
-          <h2 id="settings-tutor" className="font-semibold text-navy">
-            Tutor
-          </h2>
-          <p className="mt-0.5 text-sm text-navy/80">Questions she asked, and any answers she flagged for you to look over.</p>
-          <Link to="/tutor-log" className="mt-3 inline-flex min-h-11 items-center font-semibold text-navy underline">
-            Tutor log
-          </Link>
-        </section>
-      )}
-
-      <section aria-labelledby="settings-reset" className="rounded-2xl border border-navy-100 bg-white p-4">
-        <h2 id="settings-reset" className="font-semibold text-navy">
-          Reset progress
-        </h2>
-        <p className="mt-0.5 text-sm text-navy/80">
-          Clears mastery, error patterns, streak, drill scores{rewards ? ', XP and the mistake collection' : ''} and any
-          unfinished problem on this device. Your settings stay.
-        </p>
-        <button
-          type="button"
-          onClick={() => setConfirmOpen(true)}
-          aria-haspopup="dialog"
-          className="mt-3 min-h-11 rounded-xl border-2 border-bad bg-white px-4 text-sm font-semibold text-bad hover:bg-navy-50"
-        >
-          Reset progress…
-        </button>
-      </section>
+      </CardColumns>
 
       <BottomSheet open={confirmOpen} onClose={closeConfirm} title="Reset all progress?">
         <p className="text-navy">

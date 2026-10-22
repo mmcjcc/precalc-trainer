@@ -24,20 +24,21 @@ import { GraphItButton } from '@/components/grapher/GraphItButton'
 import { graphItFromStatement } from '@/grapher/graphIt'
 import { BottomSheet } from '@/components/BottomSheet'
 import { CalcPanel } from '@/components/CalcPanel'
-import { Composer } from '@/components/Composer'
+import { Composer, ComposerExtra } from '@/components/Composer'
 import { ComposerStatus, type LineVerdict, type VerdictWhy } from '@/components/ComposerVerdict'
 import { GraphPanel, RuleCardsPanel } from '@/components/GraphPanel'
 import { Katex } from '@/components/Katex'
 import { KeymapHelp } from '@/components/KeymapHelp'
+import { ScratchPad } from '@/components/scratch/ScratchPad'
 import { notePress, useKeypadStore } from '@/components/keypadStore'
 import { isNativeApp } from '@/components/nativeApp'
 import { PageLayout, RailToolbar, type RailPanel } from '@/components/PageLayout'
 import { PickLineOffer } from '@/components/LineCards'
-import { FinishRewards, FinishSheet, useFinish } from '@/components/rewards/Finish'
+import { FinishSheet, useFinish } from '@/components/rewards/Finish'
 import { SquashMoment, useSquashedBy } from '@/components/monsters/SquashMoment'
 import { StepGuide } from '@/components/StepGuide'
 import { StuckProvider, type StuckApi } from '@/components/Stuck'
-import { useBreakpoint } from '@/components/useBreakpoint'
+import { useBreakpoint, useLayout } from '@/components/useBreakpoint'
 import { useKeymap } from '@/components/useKeymap'
 import { TutorAskPanel } from '@/tutor/TutorPanel'
 import { dropFinishedThreads, markThreadFinished } from '@/tutor/threadStorage'
@@ -143,19 +144,23 @@ function holdsFigure(card: HTMLElement | null): boolean {
 
 /**
  * Shared problem-page chrome: header, progress line, rail [Hints, Graph it, Calculator, Rule
- * cards], mobile composer, keymap, idle nudge, completion card. On a phone (below 768 px, where the composer is
- * sticky and the rail is a row of sheets) the header is one compact row, the problem stays pinned at the top once
- * its card scrolls away, the composer shows the verdict about her line, and "Stuck?" opens the next hint. A phone
- * shows a problem full screen: no tab bar, no top navigation (the app shell decides; see components/appChrome.ts).
- * In a set (pages/SetPage.tsx) the set's progress is in the phone's header and in the completion area on a wide
- * screen, and the main button stays in the set: "Next in set", then "See results".
+ * cards], the scratch pad, the composer, keymap, idle nudge, completion card. The layout (components/PageLayout.tsx)
+ * places them; the flow inside never knows the screen size.
+ * - The phone layout (below 840 px, where the composer is docked and the rail is a row of sheets): the header is one
+ *   compact row, the problem stays pinned at the top once its card scrolls away, the composer shows the verdict about
+ *   her line (folded to one line while the keypad is up), and "Stuck?" opens the next hint. A phone shows a problem
+ *   full screen: no tab bar (the app shell decides; see components/appChrome.ts).
+ * - The tablet layout (840 px and more): two panes, the problem and its tools (and the scratch pad) on the left, her
+ *   work, the composer and the keypad on the right; the finish sheet is a centred dialog.
+ * In a set (pages/SetPage.tsx) the set's progress is in the phone's header and in the completion area in the tablet
+ * layout, and the main button stays in the set: "Next in set", then "See results".
  */
 export function ProblemFrame({ instance, attempt, flags, templateTitle, progress, hints, composer, completion, keymap, statement, graphCaption, nudgeText, tutorVerdict, graphFooter, lineVerdict, pickLine, children }: Props) {
   const navigate = useNavigate()
   const review = useReviewChrome()
   const set = useSetChrome()
   const bp = useBreakpoint()
-  const phone = bp === 'mobile'
+  const phone = useLayout() === 'phone'
   useFullScreenPage()
   const mod = getModule(instance.moduleId)
   const tutor = useTutorStatus()
@@ -331,7 +336,8 @@ export function ProblemFrame({ instance, attempt, flags, templateTitle, progress
       },
       onHint: () => {
         keymap?.onHint?.()
-        if (bp !== 'desktop') setOpenPanel('hints')
+        // The tablet layout shows the hints beside the problem; a phone opens their sheet.
+        if (phone) setOpenPanel('hints')
       },
       onGraph: hasGraph ? () => toggle('graph') : undefined,
       onCalc: hasCalc ? () => toggle('calc') : undefined,
@@ -406,16 +412,16 @@ export function ProblemFrame({ instance, attempt, flags, templateTitle, progress
     if (card && typeof card.scrollIntoView === 'function') card.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
   }, [completion])
   const native = isNativeApp()
-  // Rewards on: a phone gets the finish sheet in the card's place (closing it leaves a small card); a wide screen
-  // shows the same rewards inside the card. Rewards off: the card as it was.
+  // Rewards on: the finish sheet in the card's place (a phone: from the bottom; the tablet layout: a centred dialog),
+  // closing it leaves a small card. Rewards off: the card as it was.
   const rewardsOn = useRewardsOn()
   const stepGuideSeen = useStore((s) => s.settings.seenStepGuide === true)
   const finishData = useFinish(rewardsOn && completion ? attempt?.id : undefined, instance.skill)
   // Rewards off: the monsters this problem squashed still show in the card (no XP; the collection works either way).
   const squashedHere = useSquashedBy(!rewardsOn && completion ? attempt?.id : undefined)
-  const phoneFinish = phone && finishData !== null
+  const sheetFinish = finishData !== null
   const [sheetClosedFor, setSheetClosedFor] = useState<Completion | null>(null)
-  const sheetOpen = phoneFinish && completion !== null && sheetClosedFor !== completion
+  const sheetOpen = sheetFinish && completion !== null && sheetClosedFor !== completion
   const nextRef = useRef<HTMLButtonElement>(null)
   const closeFinish = useCallback(() => {
     setSheetClosedFor(completion)
@@ -478,185 +484,106 @@ export function ProblemFrame({ instance, attempt, flags, templateTitle, progress
   const why = lineVerdict && lineVerdict.tone !== 'info' ? lineVerdict.why : undefined
   const showStepGuide = !completion && isStepKind(instance.kind) && !stepGuideSeen
 
+  // The scratch pad (components/scratch): one per attempt, kept on this device. The phone layout opens it as a sheet
+  // from the tools row; the tablet layout as a view of the left pane, beside the tools.
+  const scratchKey = attempt?.id ?? null
+  const scratch = scratchKey ? <ScratchPad attemptId={scratchKey} size={phone ? 'sheet' : 'pane'} /> : null
+  const tools: RailPanel[] = phone && scratch ? [...rail, { id: 'scratch', title: 'Scratch pad', short: 'Scratch', content: scratch }] : rail
+
+  const nudgeBanner = nudge && (
+    <div role="status" className="mb-2 flex items-center justify-between gap-2 rounded-xl bg-gold-100 px-3 py-2 text-sm text-navy">
+      <span>{nudge}</span>
+      <button type="button" onClick={() => setNudge(null)} className="min-h-8 shrink-0 rounded px-2 text-navy/70 underline">
+        Dismiss
+      </button>
+    </div>
+  )
+
+  const problem = phone ? (
+    <>
+      <header className="space-y-2">
+        <PhoneHeader
+          title={instance.title}
+          instructions={instance.instructions}
+          closeTo={set ? '/' : `/m/${instance.moduleId}`}
+          closeLabel={set ? 'Close, back to Home. Your set is kept.' : `Close, back to ${mod.title}`}
+          progress={progress}
+          set={set ? { index: set.index, total: set.total, status: set.status, onSkip: skip } : undefined}
+        />
+        {ownBadge}
+        <div ref={cardRef} tabIndex={-1} className="problem-card rounded-2xl bg-gold-100 px-4 py-3 text-navy outline-none">
+          {statementNode}
+        </div>
+        {attempt?.mode === 'timed' && <p className="font-mono text-sm text-navy/70">test mode · {elapsed}</p>}
+      </header>
+      {!composerOpen && (
+        <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2" role="group" aria-label="Side panels">
+            <RailToolbar rail={tools} onOpen={setOpenPanel} />
+          </div>
+        </div>
+      )}
+    </>
+  ) : (
+    <header className="space-y-1">
+      {set && (
+        <div className="mb-2 flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-navy-100 bg-white px-4 py-2" data-set-bar="">
+          <SetDots index={set.index} total={set.total} status={set.status} prefix="Your set ·" />
+          {skip && <SetSkipMenu index={set.index} total={set.total} onSkip={skip} trigger="text" />}
+        </div>
+      )}
+      <p className="text-xs font-semibold uppercase tracking-wide text-coral-700">
+        <Link to={`/m/${instance.moduleId}`} className="hover:underline">
+          {mod.title}
+        </Link>{' '}
+        · {own ? 'Your own problem' : templateTitle}
+      </p>
+      <h1 className="text-2xl font-semibold text-navy">{instance.title}</h1>
+      {ownBadge}
+      <p className="text-sm text-navy/80">{instance.instructions}</p>
+      <div className="rounded-2xl bg-gold-100 px-4 py-3 text-navy" data-problem-card="">
+        {statementNode}
+      </div>
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-navy/70" aria-live="polite">
+        {progress && (
+          <span>
+            stage {progress.stage} of {progress.total} · {progress.label}
+          </span>
+        )}
+        {attempt?.mode === 'timed' && <span className="font-mono">test mode · {elapsed}</span>}
+        {/* Keyboard shortcuts mean nothing where the pointer is a finger (a phone or a tablet). */}
+        <button type="button" onClick={() => setHelp(true)} className="min-h-11 rounded px-2 underline hover:text-navy pointer-coarse:hidden">
+          shortcuts (?)
+        </button>
+      </div>
+    </header>
+  )
+
   return (
     <StuckProvider value={stuckApi}>
       {/* On a phone the frame places the panel buttons itself: in the composer, or under the problem (never above it). */}
-      <PageLayout rail={rail} openPanel={openPanel} onOpenPanel={onOpenPanel} mobileToolbar={phone || composerOpen ? 'none' : 'top'}>
-        <div className="space-y-4">
-          {phone ? (
-            <>
-              <header className="space-y-2">
-                <PhoneHeader
-                  title={instance.title}
-                  instructions={instance.instructions}
-                  closeTo={set ? '/' : `/m/${instance.moduleId}`}
-                  closeLabel={set ? 'Close, back to Home. Your set is kept.' : `Close, back to ${mod.title}`}
-                  progress={progress}
-                  set={set ? { index: set.index, total: set.total, status: set.status, onSkip: skip } : undefined}
-                />
-                {ownBadge}
-                <div ref={cardRef} tabIndex={-1} className="problem-card rounded-2xl bg-gold-100 px-4 py-3 text-navy outline-none">
-                  {statementNode}
-                </div>
-                {attempt?.mode === 'timed' && <p className="font-mono text-sm text-navy/70">test mode · {elapsed}</p>}
-              </header>
-              {!composerOpen && (
-                <div className="flex flex-wrap gap-2">
-                  <div className="flex flex-wrap gap-2" role="group" aria-label="Side panels">
-                    <RailToolbar rail={rail} onOpen={setOpenPanel} />
-                  </div>
-                </div>
-              )}
-            </>
-          ) : (
-            <header className="space-y-1">
-              {set && (
-                <div className="mb-2 flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-navy-100 bg-white px-4 py-2" data-set-bar="">
-                  <SetDots index={set.index} total={set.total} status={set.status} prefix="Your set ·" />
-                  {skip && <SetSkipMenu index={set.index} total={set.total} onSkip={skip} trigger="text" />}
-                </div>
-              )}
-              <p className="text-xs font-semibold uppercase tracking-wide text-coral-700">
-                <Link to={`/m/${instance.moduleId}`} className="hover:underline">
-                  {mod.title}
-                </Link>{' '}
-                · {own ? 'Your own problem' : templateTitle}
-              </p>
-              <h1 className="text-2xl font-semibold text-navy">{instance.title}</h1>
-              {ownBadge}
-              <p className="text-sm text-navy/80">{instance.instructions}</p>
-              <div className="rounded-2xl bg-gold-100 px-4 py-3 text-navy">{statementNode}</div>
-              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-navy/70" aria-live="polite">
-                {progress && (
-                  <span>
-                    stage {progress.stage} of {progress.total} · {progress.label}
-                  </span>
-                )}
-                {attempt?.mode === 'timed' && <span className="font-mono">test mode · {elapsed}</span>}
-                {/* Keyboard shortcuts mean nothing where the pointer is a finger (a phone or a tablet). */}
-                <button type="button" onClick={() => setHelp(true)} className="min-h-11 rounded px-2 underline hover:text-navy pointer-coarse:hidden">
-                  shortcuts (?)
-                </button>
-              </div>
-            </header>
-          )}
-
-          {/* A step-by-step problem opens with how it works, until she closes the guide once. */}
-          {showStepGuide && <StepGuide pick={pickModule(instance.moduleId)} />}
-
-          {children}
-
-          {/* Without a composer, the combo pill waits at the bottom of the screen, above the keypad. */}
-          {!composerOpen && comboPill && (
-            <div className="combo-dock" data-combo-row="">
-              {comboPill}
-            </div>
-          )}
-
-          {completion && !sheetOpen && (
-            <section ref={completionRef} data-completion-card="" className="space-y-3 rounded-2xl border border-ok bg-ok-100 p-4" aria-labelledby="completion-title">
-              <h2 id="completion-title" className="font-semibold text-navy">
-                <span aria-hidden>✓ </span>
-                {completionTitle}
-              </h2>
-              <p className="text-sm text-navy">
-                {phoneFinish && <span className="font-semibold">+{finishData.info.total} XP · </span>}
-                {completionLine}
-                {completion.newlyMastered && <span className="font-semibold"> · {templateTitle} newly mastered</span>}
-              </p>
-              {/* With rewards on, the rewards say it beside the ring. */}
-              {!finishData && completion.summary.picked > 0 && (
-                <p className="text-sm text-navy/80" data-picked-note="">
-                  {completion.summary.picked === 1 ? 'You picked a line from cards' : `You picked ${completion.summary.picked} lines from cards`}, so this
-                  problem does not count toward mastery. Type every line to count it.
-                </p>
-              )}
-              {!finishData && completion.summary.own && (
-                <p className="text-sm text-navy/80" data-own-note="">
-                  This was your own problem, so it does not count toward mastery.
-                </p>
-              )}
-              {finishData && !phone && <FinishRewards data={finishData} templateTitle={templateTitle} inSet={Boolean(set)} />}
-              {!finishData && <SquashMoment patterns={squashedHere} />}
-              {/* A wide screen shows the set's progress here; a phone has it in its header. */}
-              {set && !phone && <SetDots index={set.index} total={set.total} status={set.status} prefix="Your set ·" />}
-              <div className="flex flex-wrap items-center gap-2">
-                <button ref={nextRef} type="button" onClick={goNext} className="btn-chunky min-h-11 rounded-xl bg-navy px-4 font-semibold text-white hover:bg-navy-600">
-                  {nextLabel}
-                </button>
-                {phoneFinish && (
-                  <button
-                    type="button"
-                    onClick={() => setSheetClosedFor(null)}
-                    className="min-h-11 rounded-xl border border-navy-100 bg-white px-4 font-semibold text-navy hover:bg-navy-50"
-                  >
-                    See what you earned
-                  </button>
-                )}
-                {/* Inside the phone app a link to one of its pages opens nowhere else, so it is not offered there. */}
-                {!native && (
-                  <button type="button" onClick={() => void copyLink()} className="min-h-11 rounded-xl border border-navy-100 bg-white px-4 font-semibold text-navy hover:bg-navy-50">
-                    Copy link
-                  </button>
-                )}
-                {/* In a set the way on is the set's button; leaving for the module page would leave the set. */}
-                {!set && (
-                  <Link to={`/m/${instance.moduleId}`} className="min-h-11 rounded-xl px-3 py-2.5 font-semibold text-navy underline">
-                    Back to {mod.title}
-                  </Link>
-                )}
-                {finishData && (
-                  <Link to="/" className="min-h-11 rounded-xl px-3 py-2.5 font-semibold text-navy underline">
-                    Done for today
-                  </Link>
-                )}
-                {!native && (
-                  <span role="status" className="text-sm text-navy/70">
-                    {copied === 'ok' ? 'Link copied' : copied === 'fail' ? 'Could not copy — copy the address bar' : ''}
-                  </span>
-                )}
-              </div>
-            </section>
-          )}
-          {completion && phoneFinish && (
-            <FinishSheet
-              open={sheetOpen}
-              onClose={closeFinish}
-              title={completionTitle}
-              data={finishData}
-              templateTitle={templateTitle}
-              nextLabel={nextLabel}
-              onNext={goNext}
-              inSet={Boolean(set)}
-            />
-          )}
-          {/* Says "Problem complete" to a screen reader in the toast's words, as the toast did before the card took its
-              place. A plain live region (no status role), always on the page so the words are announced when they arrive. */}
-          <p aria-live="polite" aria-atomic="true" className="sr-only" data-completion-announcer="">
-            {announcement}
-          </p>
-
-          {composerOpen && (
+      <PageLayout
+        rail={tools}
+        openPanel={openPanel}
+        onOpenPanel={onOpenPanel}
+        mobileToolbar={phone || composerOpen ? 'none' : 'top'}
+        scratch={phone ? undefined : (scratch ?? undefined)}
+        problem={problem}
+        composer={
+          composerOpen && (
             <Composer
-              toolbar={phone ? <RailToolbar rail={rail} onOpen={setOpenPanel} /> : undefined}
-              banner={
-                nudge && (
-                  <div role="status" className="mb-2 flex items-center justify-between gap-2 rounded-xl bg-gold-100 px-3 py-2 text-sm text-navy">
-                    <span>{nudge}</span>
-                    <button type="button" onClick={() => setNudge(null)} className="min-h-8 shrink-0 rounded px-2 text-navy/70 underline">
-                      Dismiss
-                    </button>
-                  </div>
-                )
-              }
+              toolbar={phone ? <RailToolbar rail={tools} onOpen={setOpenPanel} /> : undefined}
+              banner={nudgeBanner}
               status={
                 <>
                   {/* The combo pill: right above the verdict line on a phone, at the top of the box under the work
-                      list on a wide screen. */}
+                      list in the tablet layout. Folded away with the keypad up (the folded line keeps its count). */}
                   {comboPill && (
-                    <div className="mb-1.5 flex justify-end" data-combo-row="">
-                      {comboPill}
-                    </div>
+                    <ComposerExtra>
+                      <div className="mb-1.5 flex justify-end" data-combo-row="">
+                        {comboPill}
+                      </div>
+                    </ComposerExtra>
                   )}
                   {phone && (
                     <ComposerStatus
@@ -667,6 +594,8 @@ export function ProblemFrame({ instance, attempt, flags, templateTitle, progress
                         setSheet({ kind: 'why', why })
                       }}
                       onStuck={hintsOpen ? stuck : null}
+                      nudge={nudge}
+                      combo={comboPill ? combo : 0}
                     />
                   )}
                 </>
@@ -674,24 +603,124 @@ export function ProblemFrame({ instance, attempt, flags, templateTitle, progress
             >
               {composer}
             </Composer>
-          )}
-          {!composer && nudge && !completion && (
+          )
+        }
+        after={
+          !composer && nudge && !completion ? (
             <div role="status" className="flex items-center justify-between gap-2 rounded-xl bg-gold-100 px-3 py-2 text-sm text-navy">
               <span>{nudge}</span>
               <button type="button" onClick={() => setNudge(null)} className="min-h-8 shrink-0 rounded px-2 text-navy/70 underline">
                 Dismiss
               </button>
             </div>
-          )}
-        </div>
-        {pinnedOn && scrolledPast && <PinnedProblemStrip summary={summary} figure={figure} onShow={showProblem} stripRef={stripRef} />}
-        <BottomSheet open={sheet?.kind === 'problem'} onClose={closeSheet} title="The problem">
-          <div className="rounded-2xl bg-gold-100 px-4 py-3 text-navy">{statementNode}</div>
-        </BottomSheet>
-        <BottomSheet open={sheet?.kind === 'why'} onClose={closeSheet} title={sheet?.kind === 'why' ? sheet.why.title : ''}>
-          {sheet?.kind === 'why' && sheet.why.body}
-        </BottomSheet>
-        <KeymapHelp open={help} onClose={() => setHelp(false)} omit={omitHelp.length ? omitHelp : undefined} />
+          ) : null
+        }
+        overlays={
+          <>
+            {pinnedOn && scrolledPast && <PinnedProblemStrip summary={summary} figure={figure} onShow={showProblem} stripRef={stripRef} />}
+            <BottomSheet open={sheet?.kind === 'problem'} onClose={closeSheet} title="The problem">
+              <div className="rounded-2xl bg-gold-100 px-4 py-3 text-navy">{statementNode}</div>
+            </BottomSheet>
+            <BottomSheet open={sheet?.kind === 'why'} onClose={closeSheet} title={sheet?.kind === 'why' ? sheet.why.title : ''}>
+              {sheet?.kind === 'why' && sheet.why.body}
+            </BottomSheet>
+            <KeymapHelp open={help} onClose={() => setHelp(false)} omit={omitHelp.length ? omitHelp : undefined} />
+          </>
+        }
+      >
+        {/* A step-by-step problem opens with how it works, until she closes the guide once. */}
+        {showStepGuide && <StepGuide pick={pickModule(instance.moduleId)} />}
+
+        {children}
+
+        {/* Without a composer, the combo pill waits at the bottom of the screen, above the keypad. */}
+        {!composerOpen && comboPill && (
+          <div className="combo-dock" data-combo-row="">
+            {comboPill}
+          </div>
+        )}
+
+        {completion && !sheetOpen && (
+          <section ref={completionRef} data-completion-card="" className="space-y-3 rounded-2xl border border-ok bg-ok-100 p-4" aria-labelledby="completion-title">
+            <h2 id="completion-title" className="font-semibold text-navy">
+              <span aria-hidden>✓ </span>
+              {completionTitle}
+            </h2>
+            <p className="text-sm text-navy">
+              {sheetFinish && <span className="font-semibold">+{finishData.info.total} XP · </span>}
+              {completionLine}
+              {completion.newlyMastered && <span className="font-semibold"> · {templateTitle} newly mastered</span>}
+            </p>
+            {/* With rewards on, the rewards say it beside the ring. */}
+            {!finishData && completion.summary.picked > 0 && (
+              <p className="text-sm text-navy/80" data-picked-note="">
+                {completion.summary.picked === 1 ? 'You picked a line from cards' : `You picked ${completion.summary.picked} lines from cards`}, so this
+                problem does not count toward mastery. Type every line to count it.
+              </p>
+            )}
+            {!finishData && completion.summary.own && (
+              <p className="text-sm text-navy/80" data-own-note="">
+                This was your own problem, so it does not count toward mastery.
+              </p>
+            )}
+            {!finishData && <SquashMoment patterns={squashedHere} />}
+            {/* The tablet layout shows the set's progress here; a phone has it in its header. */}
+            {set && !phone && <SetDots index={set.index} total={set.total} status={set.status} prefix="Your set ·" />}
+            <div className="flex flex-wrap items-center gap-2">
+              <button ref={nextRef} type="button" onClick={goNext} className="btn-chunky min-h-11 rounded-xl bg-navy px-4 font-semibold text-white hover:bg-navy-600">
+                {nextLabel}
+              </button>
+              {sheetFinish && (
+                <button
+                  type="button"
+                  onClick={() => setSheetClosedFor(null)}
+                  className="min-h-11 rounded-xl border border-navy-100 bg-white px-4 font-semibold text-navy hover:bg-navy-50"
+                >
+                  See what you earned
+                </button>
+              )}
+              {/* Inside the phone app a link to one of its pages opens nowhere else, so it is not offered there. */}
+              {!native && (
+                <button type="button" onClick={() => void copyLink()} className="min-h-11 rounded-xl border border-navy-100 bg-white px-4 font-semibold text-navy hover:bg-navy-50">
+                  Copy link
+                </button>
+              )}
+              {/* In a set the way on is the set's button; leaving for the module page would leave the set. */}
+              {!set && (
+                <Link to={`/m/${instance.moduleId}`} className="min-h-11 rounded-xl px-3 py-2.5 font-semibold text-navy underline">
+                  Back to {mod.title}
+                </Link>
+              )}
+              {finishData && (
+                <Link to="/" className="min-h-11 rounded-xl px-3 py-2.5 font-semibold text-navy underline">
+                  Done for today
+                </Link>
+              )}
+              {!native && (
+                <span role="status" className="text-sm text-navy/70">
+                  {copied === 'ok' ? 'Link copied' : copied === 'fail' ? 'Could not copy — copy the address bar' : ''}
+                </span>
+              )}
+            </div>
+          </section>
+        )}
+        {completion && sheetFinish && (
+          <FinishSheet
+            open={sheetOpen}
+            onClose={closeFinish}
+            title={completionTitle}
+            data={finishData}
+            templateTitle={templateTitle}
+            nextLabel={nextLabel}
+            onNext={goNext}
+            inSet={Boolean(set)}
+          />
+        )}
+        {/* Says "Problem complete" to a screen reader in the toast's words, as the toast did before the card took its
+            place. A plain live region (no status role), always on the page so the words are announced when they arrive. */}
+        <p aria-live="polite" aria-atomic="true" className="sr-only" data-completion-announcer="">
+          {announcement}
+        </p>
       </PageLayout>
     </StuckProvider>
   )

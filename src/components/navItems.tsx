@@ -1,9 +1,9 @@
 /**
- * The app's destinations (docs/progress/phone-monsters.md, docs/progress/app-grapher.md). The bottom tab bar on a phone
- * shows five, on every screen and in both editions: Home, Monsters, Graph, Progress, Settings. The top navigation on a
- * wide screen shows the same five, then Ask while the tutor is configured and the Sandbox in the family app (it has the
- * room). The drill has neither: it keeps its route and is reached from its module in Unit 1 and from Progress; Ask and
- * the Sandbox are on Home too.
+ * The app's destinations (docs/progress/phone-monsters.md, docs/progress/app-grapher.md, docs/progress/app-tablet.md).
+ * The bottom tab bar (the phone layout) shows five, on every screen and in both editions: Home, Monsters, Graph,
+ * Progress, Settings. The navigation rail (the tablet layout, 840 px and more) shows the same five in the same order,
+ * then Ask while the tutor is configured and the Sandbox in the family app (it has the room). The drill has neither: it
+ * keeps its route and is reached from its module in Unit 1 and from Progress; Ask and the Sandbox are on Home too.
  */
 import { STORE } from '@/edition'
 
@@ -32,7 +32,7 @@ export function tabItems(): readonly NavItem[] {
   return TABS
 }
 
-/** The wide top navigation: the five, then Ask (tutor configured) and the Sandbox (family app). */
+/** The navigation rail (tablet layout): the five, then Ask (tutor configured) and the Sandbox (family app). */
 export function navItems(askOn: boolean): NavItem[] {
   return [...TABS, ...(askOn ? [ASK] : []), ...(STORE ? [] : [SANDBOX])]
 }
@@ -56,6 +56,14 @@ export function tabOf(pathname: string, items: readonly NavItem[]): string | nul
   if (UNDER_HOME.some((p) => pathname === p || pathname.startsWith(`${p}/`))) return '/'
   if (pathname === '/tutor-log' || pathname.startsWith('/tutor-log/')) return items.some((i) => i.to === '/settings') ? '/settings' : null
   return items.find((i) => i.to !== '/' && isNavActive(pathname, i.to, i.end))?.to ?? null
+}
+
+/**
+ * The rail's current item (the tablet layout: the five tabs, then Ask and the Sandbox when they are there): the item
+ * whose own page this is, else the tab the page belongs to, as the tab bar marks it (Home for a module page).
+ */
+export function railOf(pathname: string, items: readonly NavItem[]): string | null {
+  return items.find((i) => i.to !== '/' && isNavActive(pathname, i.to, i.end))?.to ?? tabOf(pathname, items)
 }
 
 /** 24 px line icons in the current text color. Decorative: the label next to each says what it is. */

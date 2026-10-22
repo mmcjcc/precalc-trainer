@@ -1,7 +1,10 @@
 import type { MouseEvent, PointerEvent, ReactNode } from 'react'
 import type { PatternHit, StepResult } from '@/shared/types'
 import { rejectionView } from '@/problem/stepEngine'
-import { CaughtBanner, MistakeAvatar } from './monsters/MonsterTag'
+import { COMBO_SHOWS_AT } from '@/session/combo'
+import { useComposerFold } from './Composer'
+import { Flame } from './juice/Flame'
+import { CaughtBadge, CaughtBanner, MistakeAvatar } from './monsters/MonsterTag'
 import { CaveatText, RejectionDetails } from './RejectionCard'
 import { PatternLesson } from './SigFigFeedback'
 import { StuckButton } from './Stuck'
@@ -105,10 +108,12 @@ const keepFocus = {
   onMouseDown: (e: MouseEvent) => e.preventDefault(),
 }
 
-function VerdictText({ verdict }: { verdict: LineVerdict }) {
+function VerdictText({ verdict, oneLine = false }: { verdict: LineVerdict; oneLine?: boolean }) {
+  // One line (folded, with the keypad up): the same words, cut at the edge; the full text stays for screen readers.
+  const lines = oneLine ? 'truncate' : 'line-clamp-2'
   if (verdict.tone === 'ok') {
     return (
-      <p className="line-clamp-2 text-sm font-semibold text-ok">
+      <p className={`${lines} text-sm font-semibold text-ok`}>
         <span aria-hidden>✓ </span>
         {verdict.text}
       </p>
@@ -116,14 +121,15 @@ function VerdictText({ verdict }: { verdict: LineVerdict }) {
   }
   if (verdict.tone === 'info') {
     return (
-      <p className="line-clamp-2 text-sm text-navy/80">
+      <p className={`${lines} text-sm text-navy/80`}>
         <span aria-hidden>ⓘ </span>
         {verdict.text}
       </p>
     )
   }
   return (
-    <p className="line-clamp-2 text-sm text-navy">
+    <p className={`${lines} text-sm text-navy`}>
+      {oneLine && <CaughtBadge pattern={verdict.pattern} />}
       <MistakeAvatar pattern={verdict.pattern} size={22} className="mr-1" />
       <span aria-hidden className="font-semibold text-bad">
         ✗{' '}
@@ -135,32 +141,102 @@ function VerdictText({ verdict }: { verdict: LineVerdict }) {
   )
 }
 
+/** The folded line's switch: ⌄ shows the extras (the tools, the nudge, the whole verdict), ⌃ folds them again. */
+function FoldToggle({ folded, onToggle }: { folded: boolean; onToggle: () => void }) {
+  return (
+    <button
+      type="button"
+      {...keepFocus}
+      onClick={onToggle}
+      aria-expanded={!folded}
+      aria-label={folded ? 'More: tools, hints and notes' : 'Less'}
+      data-fold-toggle=""
+      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-navy hover:bg-navy-50"
+    >
+      <svg aria-hidden focusable="false" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+        <path d={folded ? 'M6 15l6-6 6 6' : 'M6 9l6 6 6-6'} />
+      </svg>
+    </button>
+  )
+}
+
+/** The combo in the folded line: its flame and the count (the pill comes back when the line unfolds). */
+function ComboMini({ count }: { count: number }) {
+  return (
+    <span className="inline-flex shrink-0 items-center gap-0.5 rounded-full border border-gold bg-gold-100 px-1.5 text-sm font-semibold text-navy" data-combo-mini={count}>
+      <Flame px={14} />
+      {count}
+      <span className="sr-only"> in a row</span>
+    </span>
+  )
+}
+
 /**
  * The phone composer's status row, right above her input: the latest verdict on the left (with Why?), the
  * Stuck? chip on the right, over the Check button. No live region: the work-list card already announces.
+ * With the keypad up the composer folds its extras (components/Composer.tsx): this row is then the one line they fold
+ * to, the verdict cut to one line (or the idle nudge when there is no verdict), the combo as its flame and count, Why?,
+ * Stuck? and ⌄; a tap on the line or on ⌄ unfolds it.
  */
-export function ComposerStatus({ verdict, onWhy, onStuck }: { verdict: LineVerdict | null; onWhy: () => void; onStuck: (() => void) | null }) {
-  if (!verdict && !onStuck) return null
+export function ComposerStatus({
+  verdict,
+  onWhy,
+  onStuck,
+  nudge,
+  combo = 0,
+}: {
+  verdict: LineVerdict | null
+  onWhy: () => void
+  onStuck: (() => void) | null
+  /** The idle nudge, shown in the folded line when there is no verdict (its banner is folded away). */
+  nudge?: string | null
+  /** The combo, shown in the folded line from 3 (its pill is folded away). */
+  combo?: number
+}) {
+  const fold = useComposerFold()
+  if (!verdict && !onStuck && !fold.foldable) return null
   const why = verdict && verdict.tone !== 'info' ? verdict.why : undefined
+  const whyButton = why && (
+    <button
+      type="button"
+      {...keepFocus}
+      onClick={onWhy}
+      aria-haspopup="dialog"
+      aria-label={`Why? ${why.title}`}
+      className="min-h-9 shrink-0 rounded-lg px-2 text-sm font-semibold text-navy underline hover:bg-navy-50"
+    >
+      Why?
+    </button>
+  )
+  if (fold.folded) {
+    return (
+      <div className="mb-1.5" data-composer-status="" data-folded="">
+        <div className="flex h-9 items-center gap-1.5">
+          {combo >= COMBO_SHOWS_AT && <ComboMini count={combo} />}
+          {/* A tap on the words unfolds the extras, as on the phone header's instructions; focus stays in her box. */}
+          <div {...keepFocus} onClick={fold.toggle} className="min-w-0 flex-1 cursor-pointer" data-fold-line="">
+            {verdict ? (
+              <VerdictText verdict={verdict} oneLine />
+            ) : nudge ? (
+              <p className="truncate text-sm text-navy/80">{nudge}</p>
+            ) : null}
+          </div>
+          {whyButton}
+          {onStuck && <StuckButton onClick={onStuck} />}
+          <FoldToggle folded onToggle={fold.toggle} />
+        </div>
+      </div>
+    )
+  }
   return (
     <div className="mb-2" data-composer-status="">
       {/* A mistake made for the first time: its monster, caught, right where she is looking. */}
       {verdict?.tone === 'bad' && <CaughtBanner pattern={verdict.pattern} compact />}
       <div className="flex min-h-9 items-center gap-2">
         <div className="min-w-0 flex-1">{verdict && <VerdictText verdict={verdict} />}</div>
-        {why && (
-          <button
-            type="button"
-            {...keepFocus}
-            onClick={onWhy}
-            aria-haspopup="dialog"
-            aria-label={`Why? ${why.title}`}
-            className="min-h-9 shrink-0 rounded-lg px-2 text-sm font-semibold text-navy underline hover:bg-navy-50"
-          >
-            Why?
-          </button>
-        )}
+        {whyButton}
         {onStuck && <StuckButton onClick={onStuck} />}
+        {fold.foldable && <FoldToggle folded={false} onToggle={fold.toggle} />}
       </div>
     </div>
   )

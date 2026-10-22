@@ -44,7 +44,8 @@ function useJustKept(steps: AttemptStep[]): ReadonlySet<string> {
 /**
  * The worked column: numbered accepted lines with ✓ + the word, a "revealed" tag for rung-3 lines,
  * the property she named, and Undo on the last row only (UX-15). A line she just kept flashes green and its check
- * pops; the row carries its step (`data-kept-step`) so the rewards' "+10" can rise from it (components/juice).
+ * pops; the row carries its step (`data-kept-step`) so the rewards' "+10" can rise from it (components/juice). Every row is
+ * a line of her work (`data-work-line`): after a Check on a phone the keypad brings the last one right above the composer.
  */
 export function WorkedColumn({ start, steps, onUndo, canUndo = false, afterLast, startLabel = 'start' }: Props) {
   const motion = useMotionAllowed()
@@ -52,7 +53,7 @@ export function WorkedColumn({ start, steps, onUndo, canUndo = false, afterLast,
   return (
     <ol className="space-y-2" aria-label="Worked steps">
       {start !== null && (
-        <li className="flex items-start gap-3 rounded-xl border border-navy-100 bg-navy-50 px-3 py-2">
+        <li data-work-line="" className="flex items-start gap-3 rounded-xl border border-navy-100 bg-navy-50 px-3 py-2">
           <span className="mt-1 w-12 shrink-0 text-xs font-semibold uppercase tracking-wide text-navy/50">{startLabel}</span>
           <div className="min-w-0 flex-1 overflow-x-auto text-navy">
             <Katex tex={tex(start)} />
@@ -64,7 +65,7 @@ export function WorkedColumn({ start, steps, onUndo, canUndo = false, afterLast,
         const key = keyOf(s)
         const juice = motion && !s.revealed && justKept.has(key)
         return (
-          <li key={key} data-kept-step={s.idx} className={`rounded-xl border border-navy-100 bg-white px-3 py-2 ${juice ? 'juice-kept' : ''}`}>
+          <li key={key} data-kept-step={s.idx} data-work-line="" className={`rounded-xl border border-navy-100 bg-white px-3 py-2 ${juice ? 'juice-kept' : ''}`}>
             <div className="flex items-start gap-3">
               <span className="mt-1 w-12 shrink-0 text-sm text-navy/50">{i + 1}</span>
               <div className="min-w-0 flex-1 overflow-x-auto text-navy">

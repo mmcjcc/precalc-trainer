@@ -1,9 +1,9 @@
 // @vitest-environment jsdom
 /**
- * Navigation by screen size: on a phone the menu screens get the bottom tab bar (the top navigation hides), and a
- * problem screen or a running set gets neither; a wide screen keeps today's top navigation everywhere. The tab bar is
- * Home, Monsters, Graph, Progress, Settings on every screen; the top navigation shows the same five first, then Ask
- * (tutor configured) and the Sandbox (family app) (docs/progress/phone-monsters.md, docs/progress/app-grapher.md).
+ * Navigation by window size: in the phone layout the menu screens get the bottom tab bar, and a problem screen or a
+ * running set gets none; the tablet layout (840 px and more) has the navigation rail everywhere. The tab bar is Home,
+ * Monsters, Graph, Progress, Settings on every screen; the rail shows the same five first, then Ask (tutor configured)
+ * and the Sandbox (family app) (docs/progress/phone-monsters.md, docs/progress/app-grapher.md, docs/progress/app-tablet.md).
  */
 import { render, screen, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
@@ -134,21 +134,23 @@ describe('a phone: problem screens and a running set are full screen', () => {
   })
 })
 
-describe('a wide screen keeps today’s top navigation', () => {
-  it('Home: the name and the text links, Home marked; no tab bar', { timeout: PAGE_TIMEOUT }, () => {
+// The layout moved (docs/progress/app-tablet.md): from 840 px the top navigation gave way to the navigation rail. jsdom
+// without matchMedia is that layout; NavRail.test.tsx checks the rail at each window size.
+describe('the tablet layout (jsdom’s own window) has the navigation rail', () => {
+  it('Home: the rail with the app’s mark and the same destinations, then the Sandbox; Home marked; no tab bar', { timeout: PAGE_TIMEOUT }, () => {
     renderAt('/')
     expect(tabBar()).toBeNull()
     expect(brand()).toBeTruthy()
     const nav = screen.getByRole('navigation', { name: 'Main' })
+    expect(nav.closest('[data-nav-rail]')).toBeTruthy()
     expect(within(nav).getAllByRole('link').map((a) => a.textContent)).toEqual(['Home', 'Monsters', 'Graph', 'Progress', 'Settings', 'Sandbox'])
     expect(within(nav).getByRole('link', { name: 'Home' }).getAttribute('aria-current')).toBe('page')
-    expect(nav.querySelector('svg')).toBeNull()
   })
 
-  it('a problem keeps the top navigation too', { timeout: PAGE_TIMEOUT }, async () => {
+  it('a problem keeps the rail too', { timeout: PAGE_TIMEOUT }, async () => {
     renderAt(problemPath('inequalities', 'ineq.linear', 12345))
     expect(await screen.findByRole('button', { name: 'shortcuts (?)' }, LAZY)).toBeTruthy()
-    expect(screen.getByRole('navigation', { name: 'Main' })).toBeTruthy()
+    expect(screen.getByRole('navigation', { name: 'Main' }).closest('[data-nav-rail]')).toBeTruthy()
     expect(brand()).toBeTruthy()
     expect(tabBar()).toBeNull()
   })

@@ -153,24 +153,27 @@ function EvenOddBody(props: FlowProps & { answer: ParityAnswer }) {
         onEscape: chipEngine?.skipChip,
       }}
     >
-      <div className="grid gap-4 md:grid-cols-2">
-        {(['A', 'B'] as const).map((slot) => {
-          const s = slot === 'A' ? a : b
-          return (
-            <SlotColumn
-              key={slot}
-              slot={slot}
-              f={answer.f}
-              steps={steps}
-              lineCount={lines[slot].length}
-              engine={s.engine}
-              validate={validate}
-              done={done}
-              onFocus={() => setActive(slot)}
-              inputRef={s.engine.inputRef}
-            />
-          )
-        })}
+      {/* Side by side when the column has the room (a computer, a tablet's work pane is too narrow for two). */}
+      <div className="@container">
+        <div className="grid gap-4 @xl:grid-cols-2">
+          {(['A', 'B'] as const).map((slot) => {
+            const s = slot === 'A' ? a : b
+            return (
+              <SlotColumn
+                key={slot}
+                slot={slot}
+                f={answer.f}
+                steps={steps}
+                lineCount={lines[slot].length}
+                engine={s.engine}
+                validate={validate}
+                done={done}
+                onFocus={() => setActive(slot)}
+                inputRef={s.engine.inputRef}
+              />
+            )
+          })}
+        </div>
       </div>
       <ParityVerdictCard
         answer={answer}

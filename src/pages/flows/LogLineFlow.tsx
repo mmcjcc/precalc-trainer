@@ -1,3 +1,4 @@
+import { ComposerExtra } from '@/components/Composer'
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { KEPT, stepVerdict, type LineVerdict } from '@/components/ComposerVerdict'
 import { Katex } from '@/components/Katex'
@@ -502,18 +503,21 @@ function Body({ instance, attempt, flags, templateTitle, completion, finish, mod
                   </button>
                 </div>
               )}
+              {/* A note folds into the composer's one line while the keypad is up on a phone (components/Composer.tsx). */}
               {typedNote && (
-                <p className="mb-2 text-sm text-navy/80" data-typed-note="">
-                  {typedNote}
-                  {toAnswer && answerOpen && (
-                    <>
-                      {' '}
-                      <button type="button" onClick={goToAnswer} className="min-h-11 rounded-lg px-1 font-semibold text-navy underline hover:bg-navy-50">
-                        Go to the answer box
-                      </button>
-                    </>
-                  )}
-                </p>
+                <ComposerExtra>
+                  <p className="mb-2 text-sm text-navy/80" data-typed-note="">
+                    {typedNote}
+                    {toAnswer && answerOpen && (
+                      <>
+                        {' '}
+                        <button type="button" onClick={goToAnswer} className="min-h-11 rounded-lg px-1 font-semibold text-navy underline hover:bg-navy-50">
+                          Go to the answer box
+                        </button>
+                      </>
+                    )}
+                  </p>
+                </ComposerExtra>
               )}
               <MathInput
                 value={draft}
@@ -529,13 +533,15 @@ function Body({ instance, attempt, flags, templateTitle, completion, finish, mod
                 toTex={safeLatex}
               />
               {picks?.typing && cards.length > 0 && (
-                <button
-                  type="button"
-                  onClick={() => useStore.getState().typeCardLine(false, lineKey)}
-                  className="mt-2 min-h-11 rounded-lg px-2 text-sm font-semibold text-navy underline hover:bg-navy-50"
-                >
-                  Back to the cards
-                </button>
+                <ComposerExtra>
+                  <button
+                    type="button"
+                    onClick={() => useStore.getState().typeCardLine(false, lineKey)}
+                    className="mt-2 min-h-11 rounded-lg px-2 text-sm font-semibold text-navy underline hover:bg-navy-50"
+                  >
+                    Back to the cards
+                  </button>
+                </ComposerExtra>
               )}
             </>
           )

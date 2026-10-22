@@ -1,4 +1,5 @@
 import { useId, useMemo, useState } from 'react'
+import { CardColumns } from '@/components/CardColumns'
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
 import { MasteryBar } from '@/components/MasteryBar'
 import {
@@ -216,11 +217,12 @@ function ModuleView({ module }: { module: ModuleDef }) {
             A type counts as mastered when your last 5 finished problems average at least 80% first-try steps, with no
             revealed steps and every final answer right. It&apos;s a label, never a lock.
           </p>
-          <div className="grid gap-4 md:grid-cols-2">
+          {/* One column on a phone, two in the tablet layout (components/CardColumns.tsx). */}
+          <CardColumns>
             {module.templates.map((t) => (
               <TemplateCard key={t.id} module={module} template={t} />
             ))}
-          </div>
+          </CardColumns>
           {hasOwnProblems(module.id) && <OwnProblemCard moduleId={module.id} />}
         </>
       )}
