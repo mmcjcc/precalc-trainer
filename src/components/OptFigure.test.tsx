@@ -58,11 +58,21 @@ describe('the figure of one pen against a wall', () => {
     expect(container.innerHTML).not.toMatch(/NaN/)
   })
 
-  it('a divided pen: three fences across, one side along the whole row', () => {
+  it('a divided pen: three fences across, one side along the whole row, its letter on a dimension line end to end', () => {
     const spec = penFigure({ pens: 1, divider: true, wall: true, wallLabel: 'barn', across: 'x', along: 'y', noun: 'garden' })
     const { container } = render(<OptFigure spec={spec} />)
     expect(container.querySelectorAll('[data-opt="fence"][data-kind="across"]')).toHaveLength(3)
     expect(container.querySelectorAll('[data-opt="fence"][data-kind="along"]')).toHaveLength(1)
+    // The letter names the whole side: centred on it, on a dimension line from one end of the row to the other.
+    const L = optFigureLayout(spec)
+    const y = L.labels.find((lb) => lb.text === 'y')!
+    expect(y.x).toBeCloseTo(L.box.x + L.box.w / 2, 6)
+    const dimXs = L.dims.flatMap((d) => [d.x1, d.x2])
+    expect(Math.min(...dimXs)).toBeCloseTo(L.box.x, 6)
+    expect(Math.max(...dimXs)).toBeCloseTo(L.box.x + L.box.w, 6)
+    expect(container.querySelectorAll('[data-opt="dim"]').length).toBe(L.dims.length)
+    // Pens in a row keep one letter per pen and no dimension line.
+    expect(optFigureLayout(penFigure({ pens: 3, wall: false, wallLabel: 'barn', across: 'x', along: 'y', noun: 'corral' })).dims).toEqual([])
   })
 
   it('three pens in a row: four fences across, three on top and three on the bottom', () => {
@@ -83,7 +93,7 @@ describe.each(['opt.wall', 'opt.pens'] as const)('%s: every figure over 300 seed
         const a = generateProblem('optimization', templateId, seed).answer as OptimizationAnswer
         const spec = a.figure!
         const L = optFigureLayout(spec)
-        const lines = [...L.fences, ...L.hatch, ...(L.wall ? [L.wall] : [])]
+        const lines = [...L.fences, ...L.hatch, ...L.dims, ...(L.wall ? [L.wall] : [])]
         for (const lb of L.labels) {
           if (lines.some((s) => crosses(s, lb, 1))) problems.push(`${seed}: ${lb.text} sits on a line`)
           if (lb.x - lb.w < 0 || lb.x + lb.w > L.width || lb.y - lb.h < 0 || lb.y + lb.h > L.height) problems.push(`${seed}: ${lb.text} leaves the figure`)

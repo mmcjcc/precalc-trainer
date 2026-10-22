@@ -46,6 +46,8 @@ export interface FigureLayout {
   fences: FigFence[]
   wall: FigLine | null
   hatch: FigLine[]
+  /** A divided pen's one long side: a dimension line end to end, its end ticks, with a gap for the letter. */
+  dims: FigLine[]
   labels: FigLabel[]
 }
 
@@ -67,6 +69,9 @@ const WALL_LABEL_H = 8
 const TOP_PLAIN = 30
 const TOP_WALL = 44
 const BOTTOM = 34
+/** A dimension line's distance from the side it measures, and the half-gap left in it for the letter. */
+const DIM_OFFSET = 20
+const DIM_GAP = 11
 
 export function optFigureLayout(spec: OptFigureSpec): FigureLayout {
   const n = spec.pens
@@ -87,12 +92,22 @@ export function optFigureLayout(spec: OptFigureSpec): FigureLayout {
   // Along the row: each pen's side on every fenced edge (one side for the whole row when the pen is divided).
   const edges = spec.wall ? [y0 + H] : [y0, y0 + H]
   const runs = spec.whole ? [[x0, x0 + W]] : Array.from({ length: n }, (_, i) => [x0 + i * penWidth, x0 + (i + 1) * penWidth])
+  const dims: FigLine[] = []
   for (const y of edges) {
     for (const [a, b] of runs) {
       fences.push({ x1: a!, y1: y, x2: b!, y2: y, letter: spec.along, kind: 'along' })
-      // A divided pen's one side is labelled off its middle, where the dividing fence meets it.
-      const lx = spec.whole ? a! + (b! - a!) / 4 : (a! + b!) / 2
-      labels.push({ x: lx, y: y === y0 ? y - 16 : y + 17, text: spec.along, kind: 'letter', ...LETTER })
+      if (spec.whole) {
+        // A divided pen's one side runs the whole row: a dimension line from end to end with the letter in a gap at
+        // its middle, so the letter names the whole side and not the half beside it (found on a phone: a letter under
+        // one half reads as each half being that long).
+        const yd = y === y0 ? y - DIM_OFFSET : y + DIM_OFFSET
+        const cx = (a! + b!) / 2
+        dims.push({ x1: a!, y1: yd, x2: cx - DIM_GAP, y2: yd }, { x1: cx + DIM_GAP, y1: yd, x2: b!, y2: yd })
+        dims.push({ x1: a!, y1: yd - 5, x2: a!, y2: yd + 5 }, { x1: b!, y1: yd - 5, x2: b!, y2: yd + 5 })
+        labels.push({ x: cx, y: yd, text: spec.along, kind: 'letter', ...LETTER })
+      } else {
+        labels.push({ x: (a! + b!) / 2, y: y === y0 ? y - 16 : y + 17, text: spec.along, kind: 'letter', ...LETTER })
+      }
     }
   }
   let wall: FigLine | null = null
@@ -103,7 +118,7 @@ export function optFigureLayout(spec: OptFigureSpec): FigureLayout {
     const text = spec.wallLabel
     labels.push({ x: FIG_WIDTH / 2, y: y0 - 22, text, kind: 'wall', w: text.length * 3.6 + 3, h: WALL_LABEL_H })
   }
-  return { width: FIG_WIDTH, height: y0 + H + BOTTOM, box: { x: x0, y: y0, w: W, h: H }, fences, wall, hatch, labels }
+  return { width: FIG_WIDTH, height: y0 + H + BOTTOM, box: { x: x0, y: y0, w: W, h: H }, fences, wall, hatch, dims, labels }
 }
 
 const f = (n: number) => Number(n.toFixed(2))
@@ -118,6 +133,9 @@ export function OptFigure({ spec }: { spec: OptFigureSpec }) {
           <line key={`h${i}`} data-opt="hatch" x1={f(h.x1)} y1={f(h.y1)} x2={f(h.x2)} y2={f(h.y2)} stroke={WALL} strokeOpacity={0.55} strokeWidth={1.5} />
         ))}
         {L.wall && <line data-opt="wall" x1={f(L.wall.x1)} y1={f(L.wall.y1)} x2={f(L.wall.x2)} y2={f(L.wall.y2)} stroke={WALL} strokeWidth={4} strokeLinecap="square" />}
+        {L.dims.map((d, i) => (
+          <line key={`d${i}`} data-opt="dim" x1={f(d.x1)} y1={f(d.y1)} x2={f(d.x2)} y2={f(d.y2)} stroke={INK} strokeOpacity={0.7} strokeWidth={1.25} />
+        ))}
         {L.fences.map((fe, i) => (
           <line key={`f${i}`} data-opt="fence" data-letter={fe.letter} data-kind={fe.kind} x1={f(fe.x1)} y1={f(fe.y1)} x2={f(fe.x2)} y2={f(fe.y2)} stroke={NAVY} strokeWidth={3} strokeLinecap="round" />
         ))}
