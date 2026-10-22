@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { render, screen, within } from '@testing-library/react'
+import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { ERROR_PATTERNS } from '@/engine'
 import {
@@ -53,7 +54,12 @@ describe('Progress grouped by class', () => {
       },
     }
     useStore.setState({ events, weekly })
-    render(<ProgressPage />)
+    // A page always has the router around it (Progress links to the drill and the Monsters tab).
+    render(
+      <MemoryRouter>
+        <ProgressPage />
+      </MemoryRouter>,
+    )
 
     const skills = screen.getByRole('region', { name: 'By problem type' })
     const skillHeadings = within(skills)
@@ -124,7 +130,12 @@ describe('Progress grouped by class', () => {
   })
 
   it('still says when no mistakes have been logged', () => {
-    render(<ProgressPage />)
+    // A page always has the router around it (Progress links to the drill and the Monsters tab).
+    render(
+      <MemoryRouter>
+        <ProgressPage />
+      </MemoryRouter>,
+    )
     expect(screen.getByText(/No mistakes logged yet/)).toBeTruthy()
     expect(screen.queryByRole('heading', { name: 'Other' })).toBeNull()
     expect(screen.getByRole('heading', { name: 'Honors Precalculus' })).toBeTruthy()

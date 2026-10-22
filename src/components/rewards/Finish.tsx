@@ -2,6 +2,7 @@ import { useMemo } from 'react'
 import { Link } from 'react-router-dom'
 import { BottomSheet } from '@/components/BottomSheet'
 import { CountUp } from '@/components/juice/CountUp'
+import { SquashMoment } from '@/components/monsters/SquashMoment'
 import { finishInfo, skillRing, useEvents, useRewards, useStore, type FinishInfo, type SkillRingInfo, type TodayView } from '@/store'
 import { GoalRing, SkillRing } from './Rings'
 import { RING_WORD, awardLines } from './words'
@@ -54,9 +55,10 @@ export function goalCaption(today: TodayView): string {
 }
 
 /**
- * A finished problem's rewards: the XP and the lines that earned it, the cheers (goal met, a comeback; a squashed
- * mistake and a new mastery are lines of their own), today's goal ring, and the ring of the problem type that moved.
- * The phone's finish sheet shows it under a big check; a wide screen shows it in the completion card.
+ * A finished problem's rewards: the XP and the lines that earned it, the monsters it squashed (components/monsters:
+ * a splat, the card turning gold), the cheers (goal met, a comeback; a squashed mistake and a new mastery are lines of
+ * their own), today's goal ring, and the ring of the problem type that moved. The phone's finish sheet shows it under a
+ * big check; a wide screen shows it in the completion card.
  */
 export function FinishRewards({ data, templateTitle, size = 'card' }: { data: FinishData; templateTitle: string; size?: 'sheet' | 'card' }) {
   const lines = awardLines(data.info.awards, templateTitle)
@@ -100,6 +102,7 @@ export function FinishRewards({ data, templateTitle, size = 'card' }: { data: Fi
           Picked lines count less, and a problem with a picked line does not move the ring. Type every line to move it.
         </p>
       )}
+      <SquashMoment patterns={data.info.squashed} />
       {cheer.length > 0 && (
         <ul aria-label="Cheers" className="space-y-2">
           {cheer.map((c) => (

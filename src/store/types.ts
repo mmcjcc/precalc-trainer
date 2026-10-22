@@ -368,6 +368,11 @@ export interface RewardsState {
    * Absent: none yet (a slice or a backup from before the celebrations).
    */
   milestones?: number[]
+  /**
+   * Mistake Monsters: the catalog patterns whose catch has been shown (the first time she made each one), so the moment
+   * never comes twice (store/catches.ts). Absent: none yet (a slice or a backup from before the monsters).
+   */
+  caught?: string[]
 }
 
 export function emptyRewards(): RewardsState {

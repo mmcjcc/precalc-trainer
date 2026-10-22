@@ -1,7 +1,9 @@
 import { useEffect } from 'react'
+import { isMonster } from '@/components/monsters/species'
 import { currentSlotOf, loadActiveSet } from '@/session/activeSet'
 import { comboOf, comboScope } from '@/session/combo'
 import {
+  firstCatches,
   milestoneReached,
   milestonesThrough,
   rewardsOn,
@@ -122,8 +124,9 @@ function actedOnSpot(lastPointer: { el: Element; at: number } | null): Spot | nu
 /**
  * The juice that follows the event log (mount once, in the app shell), the way the vibrate tick does: only for
  * events she just added here, never for an import, a reset or the compaction.
- * - Sounds (Settings "Sounds", rewards on or off): the chime climbing with the combo, the "nope", the arpeggio, and with
- *   rewards on the pop of a squashed mistake and the sparkle of today's goal (cues.ts).
+ * - Sounds (Settings "Sounds", rewards on or off): the chime climbing with the combo, the "nope" (the "gotcha" for a
+ *   mistake made for the first time, its monster caught), the arpeggio, the pop of a squashed mistake (its monster),
+ *   and with rewards on the sparkle of today's goal (cues.ts).
  * - Rewards on: "+10" floating from the line or part that earned it, confetti when today's goal is met, and the first
  *   time the streak reaches 7, 30 or 100 days the milestone banner with confetti and the sparkle, remembered in the
  *   rewards' slice so it never comes again.
@@ -159,17 +162,22 @@ export function useJuice(): void {
       let milestone: number | null = null
       let days = 0
       let paid: XpAward[] = []
-      if (rewards) {
+      if (rewards || sounds) {
         const before = rewardsViewOf(prev, now)
         const after = rewardsViewOf(s, now)
-        reached = goalReached(before.today, after.today)
         paid = newAwards(before.awards, after.awards)
+        // A squashed mistake pops with rewards on or off: its monster is squashed either way (components/monsters).
         squashed = paid.filter((a) => a.kind === 'squash').length
-        days = after.streak.days
-        milestone = milestoneReached(before.streak.days, days, s.rewards.milestones)
+        if (rewards) {
+          reached = goalReached(before.today, after.today)
+          days = after.streak.days
+          milestone = milestoneReached(before.streak.days, days, s.rewards.milestones)
+        }
       }
       if (sounds) {
-        for (const c of cuesFor({ added, combo, goalReached: reached, squashed, milestone: milestone !== null })) {
+        // A first catch: the state before this moment has never seen the mistake (store/catches.ts).
+        const caught = firstCatches(added, prev).filter(isMonster).length
+        for (const c of cuesFor({ added, combo, goalReached: reached, squashed, milestone: milestone !== null, caught })) {
           playCue(c.cue, { step: c.step, delay: c.delay })
         }
       }

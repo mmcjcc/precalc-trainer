@@ -3,6 +3,7 @@ import { parseSetBuilder, setToLatex } from '@/notation'
 import { gradeFinalAnswer, previewInterval, type FieldResult, type FinalAnswerGrade, type FinalAnswerTarget } from '@/problem/inequality'
 import { Katex } from './Katex'
 import { keysWith } from './keypadKeys'
+import { CaughtBanner, MistakeAvatar } from './monsters/MonsterTag'
 import { MathTextInput } from './MathTextInput'
 import { NumberLineSet } from './NumberLineSet'
 import { StuckChip } from './Stuck'
@@ -43,8 +44,12 @@ function builderKeypad(variable: string): StripKey[] {
 function StatusLine({ r, id }: { r: FieldResult; id: string }) {
   if (r.status === 'empty' || !r.message) return null
   const bad = r.status !== 'ok'
+  // A named mistake shows its monster (caught, the first time).
+  const pattern = bad ? r.pattern?.id : undefined
   return (
     <p id={id} role={bad ? 'alert' : 'status'} className={`text-sm ${bad ? 'font-medium text-bad' : 'text-ok'}`}>
+      {pattern && <CaughtBanner pattern={pattern} compact />}
+      {pattern && <MistakeAvatar pattern={pattern} size={22} className="mr-1" />}
       {r.status === 'parse' && r.error?.position != null ? `Check character ${r.error.position + 1}: ` : ''}
       {r.message}
     </p>
@@ -220,6 +225,8 @@ export function FinalAnswerCard({ target, initial, onGrade, done = false, variab
 
       {grade?.mismatch && (
         <p className="rounded-xl bg-bad-100 px-3 py-2 text-sm text-navy" role="alert">
+          <CaughtBanner pattern={grade.mismatch.id} compact />
+          <MistakeAvatar pattern={grade.mismatch.id} size={22} className="mr-1" />
           <span className="font-semibold">{grade.mismatch.title}. </span>
           {grade.mismatch.lesson}
         </p>

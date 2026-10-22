@@ -1,5 +1,6 @@
 import type { StepResult } from '@/shared/types'
 import { rejectionView, type ExampleSegment } from '@/problem/stepEngine'
+import { CaughtBanner, MistakeAvatar } from './monsters/MonsterTag'
 import { Katex } from './Katex'
 import { StuckChip } from './Stuck'
 
@@ -46,14 +47,18 @@ export function RejectionDetails({ result }: { result: StepResult }) {
  * Rejection feedback: pattern title + lesson (plain text), the wrong → right example (each part as
  * math only when it parses), and the counterexample with both sides' values. ✗ + words, never
  * color alone. On a phone, in a column without the composer (even/odd), the Stuck? chip sits under it;
- * where the composer is open the composer carries the chip and the card stays as it is.
+ * where the composer is open the composer carries the chip and the card stays as it is. A named mistake shows its
+ * monster (components/monsters): caught the first time, its small avatar after that.
  */
 export function RejectionCard({ result }: { result: StepResult }) {
   const v = rejectionView(result)
+  const pattern = result.pattern?.id
   return (
     <>
       <div role="alert" className="rounded-2xl border border-bad bg-bad-100 p-3 text-navy">
+        <CaughtBanner pattern={pattern} />
         <p className="font-semibold">
+          <MistakeAvatar pattern={pattern} className="mr-1.5" />
           <span aria-hidden>✗ </span>
           Not accepted: {v.title}
         </p>

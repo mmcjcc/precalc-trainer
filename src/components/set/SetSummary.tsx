@@ -4,6 +4,7 @@ import { CountUp } from '@/components/juice/CountUp'
 import { playCue, soundsOn } from '@/components/juice/sounds'
 import { goalCaption } from '@/components/rewards/Finish'
 import { GoalRing, SkillRing } from '@/components/rewards/Rings'
+import { MonsterArt } from '@/components/monsters/MonsterArt'
 import { patternTitle, RING_WORD, skillTitle } from '@/components/rewards/words'
 import { outcomeWords, type SetLine, type SetOutcome, type SetRewards } from '@/session/summary'
 import { useStore, type TodayView } from '@/store'
@@ -101,6 +102,7 @@ export function SetSummary({
               {rewards.squashed.map((s) => (
                 <li key={`${s.pattern}|${s.skill}`} className="rounded-xl bg-gold-100 px-3 py-2 font-semibold text-navy">
                   <span aria-hidden className="text-gold-text">★ </span>
+                  <MonsterArt id={s.pattern} size={32} className="mr-1 inline-block align-middle" />
                   Squashed: {patternTitle(s.pattern)}
                   <span className="block text-xs font-normal text-navy/80">{skillTitle(s.skill)}</span>
                 </li>

@@ -304,10 +304,65 @@ kbd.keycap {
 }
 .path-levelup { animation: path-levelup 720ms cubic-bezier(0.3, 1.4, 0.5, 1) 1; }
 
+/* ---- Mistake Monsters (components/monsters, docs/progress/phone-monsters.md): the catch flips a monster in and it
+   wiggles; a squash splats it flat, drops fly and its card turns gold; a rare monster's sparkles twinkle. The classes
+   are only added where motion is allowed, and every animation here is off under reduced motion (the block below). ---- */
+@keyframes monster-flip-in {
+  0% { opacity: 0; transform: perspective(300px) rotateY(95deg) scale(0.5); }
+  60% { opacity: 1; transform: perspective(300px) rotateY(-14deg) scale(1.08); }
+  100% { opacity: 1; transform: none; }
+}
+.monster-flip-in { animation: monster-flip-in 620ms cubic-bezier(0.3, 1.25, 0.5, 1) both; }
+@keyframes monster-wiggle {
+  0%, 100% { transform: rotate(0deg); }
+  20% { transform: rotate(-9deg); }
+  45% { transform: rotate(7deg); }
+  70% { transform: rotate(-4deg); }
+}
+.monster-wiggle { transform-origin: 50% 90%; animation: monster-wiggle 520ms ease-in-out 640ms 1 both; }
+@keyframes monster-splat {
+  0% { transform: none; }
+  25% { transform: translateY(-14%) scale(0.95, 1.08); }
+  50% { transform: scale(1.5, 0.35); }
+  70% { transform: scale(1.18, 0.66); }
+  100% { transform: scale(1.22, 0.6); }
+}
+.monster-splat { transform-origin: 50% 92%; animation: monster-splat 700ms cubic-bezier(0.3, 0.7, 0.4, 1) 250ms both; }
+/* Squashed and standing still (reduced motion, or after the splat). */
+.monster-squashed { transform-origin: 50% 92%; transform: scale(1.22, 0.6); }
+.splat-drop {
+  position: absolute;
+  bottom: 0;
+  width: 7px;
+  height: 7px;
+  border-radius: 9999px;
+  background: var(--color-coral);
+  opacity: 0;
+  animation: splat-drop 620ms ease-out 560ms both;
+}
+@keyframes splat-drop {
+  0% { opacity: 0; transform: translate(0, 0) scale(0.4); }
+  25% { opacity: 1; }
+  100% { opacity: 0; transform: translate(var(--dx), var(--dy)) scale(1); }
+}
+@keyframes squash-gold {
+  from { background-color: #fff; border-color: var(--color-navy-100); }
+  to { background-color: var(--color-gold-100); border-color: var(--color-gold); }
+}
+.squash-card { animation: squash-gold 450ms ease-out 800ms both; }
+/* A rare monster wears a sparkle frame: a gold ring outside its tile and two sparkles that twinkle. */
+.monster-rare { box-shadow: 0 0 0 2px #fff, 0 0 0 4px var(--color-gold); }
+@keyframes monster-twinkle {
+  0%, 100% { opacity: 1; transform: scale(1) rotate(0deg); }
+  50% { opacity: 0.4; transform: scale(0.7) rotate(20deg); }
+}
+.monster-twinkle { animation: monster-twinkle 1800ms ease-in-out infinite; }
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
   .juice-kept, .juice-pop, .xp-float, .combo-pill, .combo-count, .flame-flare, .confetti-bit, .milestone-banner { animation: none !important; }
   .path-pulse, .path-levelup { animation: none !important; }
+  .monster-flip-in, .monster-wiggle, .monster-splat, .splat-drop, .squash-card, .monster-twinkle { animation: none !important; }
   .btn-chunky:active:not(:disabled) { transform: none; }
   .path-stop:active .path-face { transform: none; }
 }

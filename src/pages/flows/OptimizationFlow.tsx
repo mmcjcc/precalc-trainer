@@ -6,6 +6,7 @@ import { RuleCardView } from '@/components/HintPanel'
 import { StuckChip, useStuckRequest } from '@/components/Stuck'
 import { KEYPAD_SETS, letterKey } from '@/components/keypadKeys'
 import { insertToken, type StripKey } from '@/components/symbolStrip'
+import { CaughtBanner, MistakeAvatar } from '@/components/monsters/MonsterTag'
 import { useMathKeypadOn } from '@/components/useMathKeypad'
 import { gradeOptPart, stagesFor, type OptPartGrade } from '@/content/modules/optimization/parts'
 import { pieces } from '@/content/modules/optimization/text'
@@ -90,10 +91,14 @@ function GradeNote({ grade }: { grade: OptPartGrade }) {
     )
   }
   const info = grade.verdict === 'mistake' ? ERROR_PATTERNS[grade.mistake] : null
+  const caught = grade.verdict === 'mistake' ? grade.mistake : null
   return (
     <>
       <div role="alert" className="rounded-2xl border border-bad bg-bad-100 p-3 text-navy">
+        {/* Mistake Monsters: the first time she makes this mistake, its monster, caught; after that, its avatar. */}
+        <CaughtBanner pattern={caught} />
         <p className="font-semibold">
+          <MistakeAvatar pattern={caught} className="mr-1.5" />
           <span aria-hidden>✗ </span>
           {info ? `Not quite: ${info.title}` : 'Not quite'}
         </p>
