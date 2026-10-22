@@ -252,6 +252,8 @@ export const SPECIES: readonly Species[] = [
       'fn_compose_partial_sub',
       'op_inner_not_squared',
       'sc_critical_missing',
+      'opt_term_dropped',
+      'opt_binomial_square',
     ],
   },
   {
@@ -269,6 +271,7 @@ export const SPECIES: readonly Species[] = [
       'log_convert_multiplied',
       'exp_growth_no_log',
       'exp_growth_log_diff',
+      'opt_solve_divide',
     ],
   },
   {
@@ -294,7 +297,7 @@ export const SPECIES: readonly Species[] = [
     id: 'upside',
     name: 'The Upside-Downer',
     personality: 'Reads every fraction standing on its head.',
-    family: 'Upside-down slips: a fraction, a ratio or a rate written with its top and bottom swapped.',
+    family: 'Upside-down slips: a fraction, a ratio or a rate written with its top and bottom swapped, or a parabola turned over.',
     subject: 'math',
     look: { body: 'drop', hue: 192, sat: 62, light: 52, accent: 330, top: 'horns', eyes: 'round', mouth: 'grin', feet: 'stubs', arms: 'stubs', mark: 'fraction', face: 'high', flip: true },
     variants: [
@@ -305,6 +308,7 @@ export const SPECIES: readonly Species[] = [
       'trig_conversion_inverted',
       'trig_tan_inverted',
       'exp_halflife_inverted',
+      'opt_opens_wrong_way',
     ],
   },
   {
@@ -365,7 +369,7 @@ export const SPECIES: readonly Species[] = [
     id: 'interest',
     name: 'The Interest Eater',
     personality: 'Nibbles at interest and half-lives until the numbers come out wrong.',
-    family: 'Growth and decay slips: rates as decimals, compounding, continuous growth, what is left after a half-life.',
+    family: 'Money and growth slips: rates as decimals, compounding, continuous growth, what is left after a half-life, how sales move with a price.',
     subject: 'math',
     look: { body: 'round', hue: 158, sat: 46, light: 48, accent: 46, top: 'horn', eyes: 'half', mouth: 'teeth', feet: 'stubs', arms: 'stubs', mark: 'coin', face: 'high' },
     variants: [
@@ -376,6 +380,9 @@ export const SPECIES: readonly Species[] = [
       'exp_halflife_base',
       'exp_halflife_decayed',
       'exp_growth_swapped',
+      'opt_revenue_wrong_way',
+      'opt_revenue_whole_price',
+      'opt_revenue_steps',
     ],
   },
   {
@@ -402,6 +409,7 @@ export const SPECIES: readonly Species[] = [
       'op_difference_reversed',
       'exp_inverse_shift',
       'exp_inverse_reciprocal',
+      'opt_primary_secondary_swapped',
     ],
   },
   {
@@ -428,7 +436,7 @@ export const SPECIES: readonly Species[] = [
     id: 'squint',
     name: 'The Squinter',
     personality: 'Reads graphs with its eyes half shut.',
-    family: 'Graph-reading slips: increasing or decreasing, highs and lows, x before y, end behavior.',
+    family: 'Reading slips: increasing or decreasing, highs and lows, x before y, end behavior, which value a question asks for.',
     subject: 'math',
     look: { body: 'pear', hue: 72, sat: 58, light: 52, accent: 210, top: 'tuft', eyes: 'squint', mouth: 'flat', feet: 'stubs', arms: 'stubs', mark: 'monocle' },
     variants: [
@@ -443,6 +451,10 @@ export const SPECIES: readonly Species[] = [
       'poly_end_sign_ignored',
       'poly_end_parity_swapped',
       'exp_asymptote_axis',
+      'opt_x_as_max',
+      'opt_max_as_dimension',
+      'opt_dimensions_swapped',
+      'opt_other_from_primary',
     ],
   },
   {
@@ -529,7 +541,7 @@ export const SPECIES: readonly Species[] = [
     id: 'crunch',
     name: 'The Coefficient Cruncher',
     personality: 'Chews up coefficients and spits out the wrong polynomial.',
-    family: 'Polynomial procedure slips: completing the square, synthetic division, zeros and factors, rational roots.',
+    family: 'Polynomial procedure slips: completing the square, the vertex formula, synthetic division, zeros and factors, rational roots.',
     subject: 'math',
     look: { body: 'hex', hue: 214, sat: 10, light: 66, accent: 28, top: 'bulb', eyes: 'round', mouth: 'teeth', feet: 'stubs', arms: 'stubs', mark: 'bolts' },
     variants: [
@@ -546,6 +558,10 @@ export const SPECIES: readonly Species[] = [
       'poly_rrt_no_plus_minus',
       'poly_rrt_integers_only',
       'poly_rrt_wrong_coefficients',
+      'opt_vertex_ab_swapped',
+      'opt_vertex_sign',
+      'opt_vertex_no_two',
+      'opt_coefficients_swapped',
     ],
   },
   {
@@ -591,7 +607,7 @@ export const SPECIES: readonly Species[] = [
     id: 'mismeasure',
     name: 'The Mismeasurer',
     personality: 'Measures twice and gets it wrong both times.',
-    family: 'Measure slips: parts and wholes, midpoints, halves and doubles, x in place of the measure, angle sums of polygons.',
+    family: 'Measure slips: parts and wholes, midpoints, halves and doubles, x in place of the measure, angle sums of polygons, fences and areas counted wrong.',
     subject: 'math',
     look: { body: 'box', hue: 50, sat: 86, light: 56, accent: 4, top: 'antennae', eyes: 'round', mouth: 'grin', feet: 'stubs', arms: 'stubs', mark: 'ruler' },
     variants: [
@@ -613,6 +629,13 @@ export const SPECIES: readonly Species[] = [
       'geo_sides_from_interior_360',
       'geo_sides_from_exterior_180',
       'geo_exterior_sum_as_interior',
+      'opt_wall_fenced',
+      'opt_wall_wrong_side',
+      'opt_pen_ends_short',
+      'opt_pen_long_short',
+      'opt_area_one_pen',
+      'opt_area_wrong_count',
+      'opt_area_as_fence',
     ],
   },
   {
