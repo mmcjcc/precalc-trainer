@@ -19,6 +19,8 @@ import { isStepKind, pickModule } from '@/problem/solveStyle'
 import { completionWords, type Completion } from '@/problem/useAttempt'
 import type { ProgressLine } from '@/problem/stepEngine'
 import { useFullScreenPage } from '@/components/appChrome'
+import { GraphItButton } from '@/components/grapher/GraphItButton'
+import { graphItFromStatement } from '@/grapher/graphIt'
 import { BottomSheet } from '@/components/BottomSheet'
 import { CalcPanel } from '@/components/CalcPanel'
 import { Composer } from '@/components/Composer'
@@ -169,6 +171,10 @@ export function ProblemFrame({ instance, attempt, flags, templateTitle, progress
     else dropFinishedThreads(attempt.id)
   }, [attempt?.id, completion])
 
+  // "Graph it": the problem's own function in the grapher (only what the problem shows her; src/grapher/graphIt.ts),
+  // while she works on it. A finished problem is not kept on its page, so Back would find it gone: not offered then.
+  const graphIt = useMemo(() => (completion ? null : graphItFromStatement(instance)), [instance, completion])
+
   // Graph and calculator steps show the answer: student-invoked, open by themselves once finished.
   const [revealed, setRevealed] = useState<{ graph: boolean; calc: boolean }>({ graph: false, calc: false })
   // A panel with nothing in it is left out entirely: no rail section, no toolbar button, no reveal
@@ -204,7 +210,13 @@ export function ProblemFrame({ instance, attempt, flags, templateTitle, progress
           label="Show calculator steps"
           onReveal={() => setRevealed((r) => ({ ...r, calc: true }))}
         >
-          <CalcPanel panels={instance.calc} expression={instance.graph.f ?? instance.statementText} footer={CALC_FOOTER} collapsible={bp === 'mobile'} />
+          <CalcPanel
+            panels={instance.calc}
+            expression={instance.graph.f ?? instance.statementText}
+            footer={CALC_FOOTER}
+            collapsible={bp === 'mobile'}
+            graphIt={graphIt ? <GraphItButton request={graphIt} /> : undefined}
+          />
         </RevealGate>
       ),
     },
@@ -472,11 +484,16 @@ export function ProblemFrame({ instance, attempt, flags, templateTitle, progress
                 <div ref={cardRef} tabIndex={-1} className="problem-card rounded-2xl bg-gold-100 px-4 py-3 text-navy outline-none">
                   {statementNode}
                 </div>
+                {/* With a composer the panel buttons are down in it: Graph it sits right under the problem. */}
+                {graphIt && composerOpen && <GraphItButton request={graphIt} />}
                 {attempt?.mode === 'timed' && <p className="font-mono text-sm text-navy/70">test mode · {elapsed}</p>}
               </header>
               {!composerOpen && (
-                <div className="flex flex-wrap gap-2" role="group" aria-label="Side panels">
-                  <RailToolbar rail={rail} onOpen={setOpenPanel} />
+                <div className="flex flex-wrap gap-2">
+                  <div className="flex flex-wrap gap-2" role="group" aria-label="Side panels">
+                    <RailToolbar rail={rail} onOpen={setOpenPanel} />
+                  </div>
+                  {graphIt && <GraphItButton request={graphIt} />}
                 </div>
               )}
             </>
@@ -497,6 +514,7 @@ export function ProblemFrame({ instance, attempt, flags, templateTitle, progress
               <h1 className="text-2xl font-semibold text-navy">{instance.title}</h1>
               <p className="text-sm text-navy/80">{instance.instructions}</p>
               <div className="rounded-2xl bg-gold-100 px-4 py-3 text-navy">{statementNode}</div>
+              {graphIt && <GraphItButton request={graphIt} className="pt-1" />}
               <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-navy/70" aria-live="polite">
                 {progress && (
                   <span>

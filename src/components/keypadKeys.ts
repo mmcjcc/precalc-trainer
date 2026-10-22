@@ -226,4 +226,28 @@ export const KEYPAD_SETS = {
     { label: 'sec', insert: 'sec()', caret: -1, name: 'secant' },
     { label: 'cot', insert: 'cot()', caret: -1, name: 'cotangent' },
   ] as readonly StripKey[],
+  /**
+   * The grapher's rows (pages/Grapher.tsx). Letters first, as every box's keypad puts them: x in the grid's first cell,
+   * then y, the usual slider letters (y = a(x − h)² + k, y = mx + b... ) and e; then √, |x|, the trig functions, ln,
+   * log, π, the inequality signs for shading, braces for a restriction ({x > 0}) and f(x). The grid has ^, =, x² and
+   * the digits.
+   */
+  graph: [
+    letterKey('x'),
+    letterKey('y'),
+    letterKey('a'),
+    letterKey('b'),
+    letterKey('h'),
+    letterKey('k'),
+    { label: 'e', insert: 'e', caret: 0, name: 'e' },
+    ...keysWith(['√']),
+    { label: '|x|', insert: 'abs()', caret: -1, name: 'absolute value' },
+    { label: 'sin', insert: 'sin()', caret: -1, name: 'sine' },
+    { label: 'cos', insert: 'cos()', caret: -1, name: 'cosine' },
+    { label: 'tan', insert: 'tan()', caret: -1, name: 'tangent' },
+    { label: 'ln', insert: 'ln()', caret: -1, name: 'natural log' },
+    { label: 'log', insert: 'log()', caret: -1, name: 'log base 10' },
+    ...keysWith(['π', '<', '≤', '>', '≥', '{ }']),
+    { label: 'f(x)', insert: 'f(x)', caret: 0, name: 'f of x' },
+  ] as readonly StripKey[],
 } as const

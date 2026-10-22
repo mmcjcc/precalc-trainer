@@ -196,10 +196,11 @@ function KeypadPanel({ target }: { target: KeypadTarget }) {
           </Key>
         )
       case 'check':
+        // A box that checks nothing (a grapher row) names the key for what Enter does there ("Next").
         return (
           <Key
             key={area}
-            name="check"
+            name={target.enter?.name ?? 'check'}
             area={area}
             tone="check"
             onPress={() => {
@@ -207,10 +208,16 @@ function KeypadPanel({ target }: { target: KeypadTarget }) {
               useKeypadStore.getState().checked()
             }}
           >
-            <span aria-hidden className="mr-1">
-              ✓
-            </span>
-            Check
+            {target.enter ? (
+              target.enter.label
+            ) : (
+              <>
+                <span aria-hidden className="mr-1">
+                  ✓
+                </span>
+                Check
+              </>
+            )}
           </Key>
         )
       default:

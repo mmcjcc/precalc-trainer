@@ -26,6 +26,7 @@ const ReviewPage = lazy(() => import('./pages/Review'))
 const SetPage = lazy(() => import('./pages/SetPage'))
 const DrillPage = lazy(() => import('./pages/Drill'))
 const MonstersPage = lazy(() => import('./pages/Monsters'))
+const GrapherPage = lazy(() => import('./pages/Grapher'))
 const SandboxPage = lazy(() => import('./pages/Sandbox'))
 const AskPage = lazy(() => import('./pages/AskAnything'))
 
@@ -114,9 +115,9 @@ function ScrollToTopOnNavigate() {
 
 /**
  * The unlocked app: navigation, routes, keypad, toasts. Wide screens keep the top navigation on every page. On a
- * phone the top navigation gives way to a bottom tab bar (Home, Monsters, Progress, Settings) on menu screens (those
- * four, the class and module pages, the drill, Ask...), and a problem screen or a running set has neither: it is full
- * screen with its own compact header.
+ * phone the top navigation gives way to a bottom tab bar (Home, Monsters, Graph, Progress, Settings) on menu screens
+ * (those five, the class and module pages, the drill, Ask...), and a problem screen or a running set has neither: it is
+ * full screen with its own compact header.
  */
 function UnlockedShell() {
   const { pathname } = useLocation()
@@ -147,6 +148,7 @@ function UnlockedShell() {
             <Route path="/set" element={<SetPage />} />
             <Route path="/drill" element={<DrillPage />} />
             <Route path="/monsters" element={<MonstersPage />} />
+            <Route path="/graph" element={<GrapherPage />} />
             <Route path="/progress" element={<ProgressPage />} />
             <Route path="/settings" element={<SettingsPage />} />
             <Route path="/ask" element={<AskPage />} />

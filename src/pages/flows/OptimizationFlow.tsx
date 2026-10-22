@@ -7,7 +7,9 @@ import { StuckChip, useStuckRequest } from '@/components/Stuck'
 import { KEYPAD_SETS, letterKey } from '@/components/keypadKeys'
 import { insertToken, type StripKey } from '@/components/symbolStrip'
 import { CaughtBanner, MistakeAvatar } from '@/components/monsters/MonsterTag'
+import { GraphItButton } from '@/components/grapher/GraphItButton'
 import { useMathKeypadOn } from '@/components/useMathKeypad'
+import { graphItFromFinal } from '@/grapher/graphIt'
 import { gradeOptPart, stagesFor, type OptPartGrade } from '@/content/modules/optimization/parts'
 import { pieces } from '@/content/modules/optimization/text'
 import { getModule } from '@/content/registry'
@@ -274,6 +276,9 @@ function OptPartsBody({ instance, attempt, flags, templateTitle, completion, fin
   const route: OptVar | null = useMemo(() => (passed > 2 && finalText ? finalRoute(finalText, answer.quantity, answer.domain) : null), [passed, finalText, answer])
   const stages = useMemo(() => stagesFor(answer, route), [answer, route])
   const stage = stages[passed]!
+  // "Graph it" by her final equation once it is right: her own equation, never the answer before she has it. Not once
+  // the problem is done (a finished problem is not kept on its page for Back to return to).
+  const finalGraph = useMemo(() => (passed > 2 && !done && finalText ? graphItFromFinal(answer, finalText) : null), [passed, done, finalText, answer])
 
   const restoredFor = useRef<string | null>(attempt?.id ?? null)
   useEffect(() => {
@@ -434,7 +439,12 @@ function OptPartsBody({ instance, attempt, flags, templateTitle, completion, fin
                 {shown && <GradeNote grade={shown.grade} />}
               </form>
             ) : (
-              <PolyTextBox id={`opt-${s.id}`} label={s.label} hint={s.formatHint} placeholder="" value={value} disabled invalid={false} onChange={() => {}} />
+              <>
+                <PolyTextBox id={`opt-${s.id}`} label={s.label} hint={s.formatHint} placeholder="" value={value} disabled invalid={false} onChange={() => {}} />
+                {s.id === 'final' && finalGraph && (
+                  <GraphItButton request={finalGraph} note={finalGraph.inX ? 'Your equation is in y: the grapher draws it in x, as the TI-84 does.' : undefined} />
+                )}
+              </>
             )}
           </StageCard>
         )
