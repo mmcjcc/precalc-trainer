@@ -3,10 +3,11 @@
  * angle (a multiple of 30° or 45°, in degrees or radians, in any quadrant, on an axis, negative or past a turn), and
  * the point on the terminal side (from Euclid's formula for whole-number distances, or small coordinates that leave a
  * radical). Values and slips come from the trig core; every problem passes `assertTrigProblem` before it is shown.
+ * The second half adds uc.given (given.ts) and uc.solve (solve.ts), assembled and checked here the same way.
  */
 import { problemId } from '@/content/registry'
 import type { Rng } from '@/content/rng'
-import type { DifficultyKnobs, ProblemInstance, TemplateDef, TrigFigureSpec, TrigPart, TrigPartTrap, UnitCircleAnswer } from '@/content/types'
+import type { DifficultyKnobs, ProblemInstance, TemplateDef, TrigPart, TrigPartTrap, UnitCircleAnswer } from '@/content/types'
 import {
   angleSay,
   angleTex,
@@ -43,43 +44,39 @@ import {
   type TrigSlip,
   type TrigValue,
 } from '@/engine/trig'
-import type { CalcPanels } from '@/shared/types'
 import { LogSkip } from '../explog/text'
 import { pointCalc, valueCalc } from '../trig/calc'
 import { circleFigure, pointFigure } from '../trig/figure'
 import { assertTrigProblem } from '../trig/parts'
-import { m, minus, plain, trigSearch } from '../trig/text'
+import { m, minus, plain, showsNumber, trigSearch } from '../trig/text'
+import type { UcDrafted } from './drafted'
+import { drawGiven } from './given'
+import { R_HINT, UC_HINTS, VALUE_HINT } from './hints'
 import { UC_RULES, UC_RULE_IDS } from './rules'
+import { drawSolve } from './solve'
 
 export const UC_MODULE_ID = 'unitCircle' as const
 const VERSION = 1
 
-export const VALUE_HINT = 'Exact: a whole number, a fraction, or a radical such as a√b/c. If the value does not exist, type the word for that.'
-export const R_HINT = 'Exact: a whole number, or a radical such as a√b.'
-export const UC_HINTS = [VALUE_HINT, R_HINT]
+export { GIVEN_VALUE_HINT, LIST_DEG_HINT, LIST_RAD_HINT, R_HINT, UC_HINTS, VALUE_HINT } from './hints'
 
 export const UC_INSTRUCTIONS: Record<UnitCircleAnswer['question'], string> = {
   exact: 'Give the exact value.',
   point: 'One part at a time: r first, then each function, exactly.',
+  given: 'One part at a time: the missing number first, then each function, exactly.',
+  solve: 'Give every angle in the range, in the unit asked, separated by commas.',
 }
 
 const TITLES: Record<UnitCircleAnswer['question'], string> = {
   exact: 'Exact values on the unit circle',
   point: 'A point on the terminal side',
+  given: 'One value and the quadrant',
+  solve: 'Every angle in one turn',
 }
 
 const FN_ORDER: readonly TrigFn[] = ['sin', 'cos', 'tan', 'csc', 'sec', 'cot']
 
-interface Drafted {
-  question: UnitCircleAnswer['question']
-  prompt: string
-  figure: TrigFigureSpec
-  stages: TrigPart[]
-  promisable: TrigPartTrap[]
-  calc: CalcPanels
-  calcExpr: string
-  ruleCards: string[]
-}
+type Drafted = UcDrafted
 
 /** Every spelling of an exact value that grades right: glyphs, keyboard, sentence, and a decimal that ends. */
 export function valueForms(v: TrigValue): string[] {
@@ -348,7 +345,9 @@ function finish(d: Drafted, rng: Rng): UnitCircleAnswer {
     trapStage: stage!.id,
     trapAnswer: chosen.text,
   }
-  assertTrigProblem(answer, UC_INSTRUCTIONS[d.question], UC_RULES, UC_HINTS)
+  // The second half's templates use its leak matcher: √ and π belong to the number they touch.
+  const second = d.question === 'given' || d.question === 'solve'
+  assertTrigProblem(answer, UC_INSTRUCTIONS[d.question], UC_RULES, UC_HINTS, second ? showsNumber : undefined)
   return answer
 }
 
@@ -401,5 +400,23 @@ export const pointTemplate: TemplateDef = {
   generate: generate('uc.point', 72, drawPoint),
 }
 
-export const UC_TEMPLATES = [exactTemplate, pointTemplate] as const
+export const givenTemplate: TemplateDef = {
+  id: 'uc.given',
+  title: 'One value and the quadrant',
+  description: 'One function’s value and where θ is (a quadrant, an interval, or another function’s sign): the missing coordinate or r, then other functions, exactly.',
+  version: VERSION,
+  knobs: [],
+  generate: generate('uc.given', 73, drawGiven),
+}
+
+export const solveTemplate: TemplateDef = {
+  id: 'uc.solve',
+  title: 'Every angle in one turn',
+  description: 'Every angle in [0°, 360°) or [0, 2π) where sin, cos, tan, csc, sec or cot has a special value, as a list.',
+  version: VERSION,
+  knobs: [],
+  generate: generate('uc.solve', 74, drawSolve),
+}
+
+export const UC_TEMPLATES = [exactTemplate, pointTemplate, givenTemplate, solveTemplate] as const
 

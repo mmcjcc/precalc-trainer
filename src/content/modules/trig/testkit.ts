@@ -1,15 +1,17 @@
 /**
  * Test helpers for the trig templates (imported by tests only): the 300-seed checks every template passes, and an
- * independent re-solve from what the problem shows (the figure's angle, radius and point), with Math only.
+ * independent re-solve from what the problem shows (the figure's angle, radius and point), with Math only. The
+ * second half's templates are re-solved by resolve2.ts, from the triangle's labels and the prompt's words.
  */
 import { generateProblem } from '@/content'
 import type { ProblemInstance, TrigAnswer, TrigPart } from '@/content/types'
 import type { ModuleId } from '@/shared/types'
-import { answerForms, gradeTrigPart, trigLeaks } from './parts'
-import { plain } from './text'
+import { answerForms, gradeTrigPart, trigLeaks, type ShowsAnswer } from './parts'
+import { resolveSecondHalf } from './resolve2'
+import { plain, showsAnswer } from './text'
 
 export function trigAnswerOf(p: ProblemInstance): TrigAnswer {
-  if (p.answer.type !== 'angleMeasure' && p.answer.type !== 'unitCircle') throw new Error(`${p.id} is not a trig problem`)
+  if (p.answer.type !== 'angleMeasure' && p.answer.type !== 'rightTriangle' && p.answer.type !== 'unitCircle') throw new Error(`${p.id} is not a trig problem`)
   return p.answer
 }
 
@@ -60,6 +62,8 @@ function sameNumber(a: number | 'undefined', b: number | 'undefined', tol = 1e-9
 
 /** Each part's answer worked out again from what the problem shows, with Math only. Returns what disagrees. */
 export function resolveAgain(a: TrigAnswer): string[] {
+  const second = resolveSecondHalf(a)
+  if (second) return second
   const bad: string[] = []
   const f = a.figure
   const expect = (part: TrigPart, want: number | 'undefined', places?: number) => {
@@ -119,7 +123,15 @@ export interface SweepResult {
  * promised slip is one of them; nonsense is not an attempt; nothing she sees early spells an answer; the re-solve
  * agrees. Throws on the first failure with the problem's id.
  */
-export function sweep(moduleId: ModuleId, templateId: string, seeds = 300, cards: readonly { id: string; title: string; body: string; example?: string }[] = [], hints: readonly string[] = []): SweepResult {
+export function sweep(
+  moduleId: ModuleId,
+  templateId: string,
+  seeds = 300,
+  cards: readonly { id: string; title: string; body: string; example?: string }[] = [],
+  hints: readonly string[] = [],
+  /** The leak matcher the template's gate uses (the second half's showsNumber for its templates). */
+  shows: ShowsAnswer = showsAnswer,
+): SweepResult {
   const answers = new Map<string, number>()
   const problems = new Set<string>()
   const promised = new Set<string>()
@@ -147,7 +159,7 @@ export function sweep(moduleId: ModuleId, templateId: string, seeds = 300, cards
       if (g.verdict !== 'mistake' || g.mistake !== a.trap) throw new Error(`${p.id}: the promised ${a.trap} graded ${g.verdict}`)
       promised.add(a.trap)
     } else if (a.stages.some((s) => s.traps.length > 0)) throw new Error(`${p.id}: a slip is possible but none is promised`)
-    const leaks = trigLeaks(a, p.instructions, cards, hints)
+    const leaks = trigLeaks(a, p.instructions, cards, hints, shows)
     if (leaks.length) throw new Error(`${p.id}: ${leaks[0]}`)
     const disagree = resolveAgain(a)
     if (disagree.length) throw new Error(`${p.id}: the re-solve disagrees: ${disagree[0]}`)

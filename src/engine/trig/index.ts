@@ -90,3 +90,15 @@ export type { TrigCandidate, TrigGrade, TrigInvalidReason, TrigSpec } from './gr
 export { gradeTrigAnswer, placesPhrase } from './grade'
 export type { TrigMistakeId } from './types'
 export { TRIG_MISTAKE_IDS, isTrigMistake } from './types'
+// The second half of Unit 4 (docs/progress/trig-unit4b.md): right triangles, the special triangles, the inverse
+// functions on the calculator, one value and the quadrant, every angle in one turn.
+export type { RtRole, RtSides } from './triangle'
+export { RATIO_SIDES, ROLE_WORDS, hypotenuseOf, hypotenuseSlips, legOf, legSlips, rtRatio, rtRatioSlips, squareOf } from './triangle'
+export type { SpecialRole, SpecialTriangle } from './special'
+export { specialFactor, specialRoles, specialSide, specialSlips } from './special'
+export type { AngleProblem, DepressionWords, RtFn, RtNames, SideProblem } from './inverse'
+export { angleAnswer, angleSlips, fnDegrees, fnRadians, inverseDegrees, inverseRadians, linkOf, sideAnswer, sideSlips } from './inverse'
+export type { GivenPoint } from './given'
+export { givenCoordinateSlips, givenPoint, givenRSlips, givenValue, givenValueSlips, quadrantSigns, quadrantsWithSign, signIn } from './given'
+export type { AngleListSpec, TrigListGrade, TrigListRead, TrigListSlip } from './solve'
+export { SPECIAL_DEGREES, angleValue, degreesOfValue, gradeAngleList, listSay, listText, readAngleList, solveAnswer, solveSlips } from './solve'

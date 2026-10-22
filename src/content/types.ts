@@ -17,7 +17,7 @@ import type {
   VarName,
 } from '@/shared/types'
 
-export type ProblemKind = 'inequality' | 'numberLine' | 'evenOdd' | 'inverse' | 'drill' | 'sigFigs' | 'atoms' | 'diffQuotient' | 'graphFeatures' | 'domainRange' | 'composition' | 'functionOps' | 'transformations' | 'piecewiseRate' | 'electrons' | 'periodic' | 'quadratics' | 'optimization' | 'polyDivision' | 'polyZeros' | 'rationalFns' | 'signCharts' | 'complexNums' | 'logForms' | 'logProperties' | 'expLogEquations' | 'expLogGraphs' | 'expModels' | 'angleMeasure' | 'unitCircle' | 'geometry' | 'nomenclature'
+export type ProblemKind = 'inequality' | 'numberLine' | 'evenOdd' | 'inverse' | 'drill' | 'sigFigs' | 'atoms' | 'diffQuotient' | 'graphFeatures' | 'domainRange' | 'composition' | 'functionOps' | 'transformations' | 'piecewiseRate' | 'electrons' | 'periodic' | 'quadratics' | 'optimization' | 'polyDivision' | 'polyZeros' | 'rationalFns' | 'signCharts' | 'complexNums' | 'logForms' | 'logProperties' | 'expLogEquations' | 'expLogGraphs' | 'expModels' | 'angleMeasure' | 'rightTriangle' | 'unitCircle' | 'geometry' | 'nomenclature'
 
 /** Precalculus Unit 2, optimization with quadratics: a pen against a wall, pens in a row, two numbers, price and sales. */
 export type OptimizationQuestion = 'wall' | 'pens' | 'numbers' | 'revenue'
@@ -223,17 +223,28 @@ export interface ExpLogPart {
 /** Precalculus Unit 4. Converting units, coterminal angles, the quadrant and reference angle, arcs and sectors. */
 export type AngleMeasureQuestion = 'convert' | 'coterminal' | 'reference' | 'arc'
 
-/** Precalculus Unit 4. An exact value at a special angle, or the ratios of a point on the terminal side. */
-export type UnitCircleQuestion = 'exact' | 'point'
+/**
+ * Precalculus Unit 4. An exact value at a special angle, the ratios of a point on the terminal side, one value and
+ * where θ is (then the other functions), or every angle in one turn where a function has a special value.
+ */
+export type UnitCircleQuestion = 'exact' | 'point' | 'given' | 'solve'
+
+/**
+ * Precalculus Unit 4, second half. The six ratios from two sides (the third side first), the special right triangles,
+ * a side from an acute angle and a side, an acute angle from two sides; word problems with angles of elevation and
+ * depression.
+ */
+export type RightTriangleQuestion = 'ratios' | 'special' | 'side' | 'angle'
 
 /**
  * How one part of a trig problem is answered and read (engine/trig's reader and grader):
  *  - angle: an exact angle, in degrees (a number, the ° optional) or in radians (a multiple of π);
- *  - value: an exact value or the word for no value: a trig value, r, an exact arc length or area (with π);
+ *  - value: an exact value or the word for no value: a trig value, r, an exact arc length or area (with π), a side;
  *  - decimal: a number rounded the way the problem asks;
- *  - choice: one of the listed options (where the terminal side lies).
+ *  - choice: one of the listed options (where the terminal side lies);
+ *  - angles: every angle in one turn, a list with commas in any order (engine/trig gradeAngleList).
  */
-export type TrigPartKind = 'angle' | 'value' | 'decimal' | 'choice'
+export type TrigPartKind = 'angle' | 'value' | 'decimal' | 'choice' | 'angles'
 
 /** What the core's grader checks for a part. Exact values are kept as she would type them and read back exactly. */
 export type TrigPartCheck =
@@ -243,6 +254,11 @@ export type TrigPartCheck =
   | { kind: 'value'; value: string; fn?: 'sin' | 'cos' | 'tan' | 'csc' | 'sec' | 'cot'; units?: string[] }
   | { kind: 'decimal'; value: number; places: number; unit?: 'deg' | 'rad'; units?: string[] }
   | { kind: 'choice' }
+  /**
+   * Every θ in one turn with fn(θ) = value: `degs` the answers in degrees ("240", "300"), `unit` the unit asked,
+   * `value` as typed ("-√3/2"). A trap's `text` is the whole list she would type ("60, 120").
+   */
+  | { kind: 'angles'; unit: 'deg' | 'rad'; degs: string[]; fn: 'sin' | 'cos' | 'tan' | 'csc' | 'sec' | 'cot'; value: string }
 
 /** A slip named on one part, computed by the core for this problem. */
 export interface TrigPartTrap {
@@ -261,7 +277,10 @@ export interface TrigPartTrap {
  * reads them as words.
  */
 export interface TrigPart {
-  /** 'answer', 'quadrant', 'reference', 'r', 'sin', 'cos', 'tan', 'csc', 'sec', 'cot'. */
+  /**
+   * 'answer', 'quadrant', 'reference', 'r', 'sin', 'cos', 'tan', 'csc', 'sec', 'cot'; the second half adds 'side' (the
+   * third side), 'x' and 'y' (lettered sides, or the missing coordinate), 'angle' and 'solutions' (a list of angles).
+   */
   id: string
   kind: TrigPartKind
   /** Card title and box label, plain text: "Reference angle", "sin θ". */
@@ -292,10 +311,14 @@ export interface TrigPart {
  * point on the terminal side, or a circle with a central angle (arc or sector). Labels are what the problem gives.
  */
 export interface TrigFigureSpec {
-  kind: 'circle' | 'point' | 'sector'
-  /** The angle in degrees (a decimal for a plain number of radians); negative turns clockwise. */
+  /**
+   * circle, point, sector: the first half. triangle: a right triangle, plain or in a scene (the second half). solve:
+   * the unit circle, with the answer angles drawn once the problem is done.
+   */
+  kind: 'circle' | 'point' | 'sector' | 'triangle' | 'solve'
+  /** The angle in degrees (a decimal for a plain number of radians); negative turns clockwise. 0 for triangle and solve. */
   deg: number
-  /** The angle's label, display text: "5π/6", "−225°", "2.5". */
+  /** The angle's label, display text: "5π/6", "−225°", "2.5". Empty for triangle and solve. */
   label: string
   /** point: the point on the terminal side and its label "(−3, 4)". */
   point?: { x: number; y: number; label: string }
@@ -303,8 +326,46 @@ export interface TrigFigureSpec {
   sector?: { radiusLabel: string; shade: 'arc' | 'area' }
   /** The reference angle (degrees) and its label. The flow draws it only once she has answered it, or finished. */
   reference?: { deg: number; label: string }
+  /**
+   * point: the part the point waits for. Until that part is answered (or the problem is done) the figure is the axes
+   * with the quadrants numbered, because the point would show the quadrant that part asks her to work out.
+   */
+  waitFor?: string
+  /** triangle: the right triangle. */
+  triangle?: TrigTriangleSpec
+  /** solve: the answer angles in degrees and their labels ("240°", "4π/3"), drawn only once the problem is done. */
+  solve?: { degs: number[]; labels: string[] }
   /** Words for a screen reader and the tutor. Describes the picture, never an answer. */
   ariaLabel: string
+}
+
+/** What a right-triangle figure shows around the triangle. */
+export type TrigScene = 'plain' | 'ladder' | 'ramp' | 'kite' | 'lighthouse' | 'tree'
+
+/**
+ * A right triangle, drawn by components/TrigFigure. Labels are what the problem gives (a length with its unit, an angle
+ * in degrees) or a letter for what she is asked (x, θ); a side she finds is never labelled before she has found it.
+ */
+export interface TrigTriangleSpec {
+  /** The three corners in drawing units, y up (the figure scales them to fit). */
+  corners: { id: string; x: number; y: number }[]
+  /** The corner with the right angle. */
+  right: string
+  /**
+   * The labelled sides. `after`: drawn only once that part is answered (a side she finds). `dimension`: drawn on a
+   * dimension line beside the side, end to end, for a length along part of a scene (up a wall, up a tower).
+   */
+  sides: { from: string; to: string; label: string; after?: string; dimension?: boolean }[]
+  /**
+   * The marked angles: at a corner, between its two sides; or `fromHorizontal`, between the horizontal through that
+   * corner and the side to the far corner (an angle of depression).
+   */
+  angles: { at: string; label: string; fromHorizontal?: boolean }[]
+  /** Tick marks on the two legs: they are equal. */
+  equalLegs?: boolean
+  scene: TrigScene
+  /** False when the shape is not to scale (an angle drawn steeper or flatter, so the labels fit): a caption says so. */
+  toScale: boolean
 }
 
 /**
@@ -1629,6 +1690,16 @@ export type AnswerSpec =
     } & TrigAnswerFields)
   | ({
       /**
+       * Right triangle trigonometry (precalculus Unit 4, second half): the six ratios of an acute angle from two sides
+       * (the third side first), the special right triangles, a side from an acute angle and a side and an angle from
+       * two sides on the calculator (DEGREE mode, rounded as asked), with word problems for angles of elevation and
+       * depression. Grade a part with the module's `gradeRtPart` (engine/trig). Named mistakes are the trig_ ids.
+       */
+      type: 'rightTriangle'
+      question: RightTriangleQuestion
+    } & TrigAnswerFields)
+  | ({
+      /**
        * The unit circle and the trig functions of any angle (precalculus Unit 4): the exact value of one of the six
        * functions at a special angle, or r and the ratios of a point on the terminal side. Grade a part with the
        * module's `gradeUcPart` (engine/trig). Named mistakes are the trig_ ids.
@@ -1665,10 +1736,11 @@ export interface TrigAnswerFields {
   trapAnswer?: string
 }
 
-/** The two trig arms of `AnswerSpec`. */
+/** The three trig arms of `AnswerSpec`. */
 export type AngleMeasureAnswer = Extract<AnswerSpec, { type: 'angleMeasure' }>
+export type RightTriangleAnswer = Extract<AnswerSpec, { type: 'rightTriangle' }>
 export type UnitCircleAnswer = Extract<AnswerSpec, { type: 'unitCircle' }>
-export type TrigAnswer = AngleMeasureAnswer | UnitCircleAnswer
+export type TrigAnswer = AngleMeasureAnswer | RightTriangleAnswer | UnitCircleAnswer
 
 /** The optimization arm of `AnswerSpec`, named so the flow and the generators share it. */
 export type OptimizationAnswer = Extract<AnswerSpec, { type: 'optimization' }>

@@ -5,16 +5,35 @@
  */
 import type { RuleCard, TrigAnswer, TrigPart, TrigPartTrap } from '@/content/types'
 import { ERROR_PATTERNS } from '@/engine'
-import { gradeTrigAnswer, isTrigMistake, q, readExact, type Q, type TrigCandidate, type TrigSpec } from '@/engine/trig'
+import {
+  gradeAngleList,
+  gradeTrigAnswer,
+  isTrigMistake,
+  q,
+  readAngleList,
+  readExact,
+  type Q,
+  type TrigCandidate,
+  type TrigExact,
+  type TrigListSlip,
+  type TrigSpec,
+} from '@/engine/trig'
 import type { ErrorPatternId } from '@/shared/types'
 import { LogSkip } from '../explog/text'
 import { pieces, plain, showsAnswer } from './text'
 
+/**
+ * A graded part. `key` (a list of angles) names her entry independent of its order and spelling, so the same list
+ * checked again is the same attempt.
+ */
 export type TrigPartGrade =
-  | { verdict: 'correct'; message: string }
-  | { verdict: 'mistake'; mistake: ErrorPatternId; witness: string }
-  | { verdict: 'wrong'; message: string }
+  | { verdict: 'correct'; message: string; key?: string }
+  | { verdict: 'mistake'; mistake: ErrorPatternId; witness: string; key?: string }
+  | { verdict: 'wrong'; message: string; key?: string }
   | { verdict: 'invalid'; message: string }
+
+/** Decides whether a text spells one of these answers (trig/text: showsAnswer, or the second half's showsNumber). */
+export type ShowsAnswer = (texts: readonly string[], forms: readonly string[]) => boolean
 
 /** "150" or "45/2" back to an exact number of degrees. */
 export function degreesOf(text: string): Q {
@@ -36,6 +55,39 @@ export function specOf(part: TrigPart): TrigSpec {
       return { kind: 'decimal', value: c.value, places: c.places, ...(c.unit ? { unit: c.unit } : {}), ...(c.units ? { units: c.units } : {}) }
     case 'choice':
       throw new Error('a choice part has no spec')
+    case 'angles':
+      throw new Error('a list of angles is graded with gradeAngleList')
+  }
+}
+
+/** A list part's slips, each read back from the list she would type. */
+export function listCandidatesOf(part: TrigPart): TrigListSlip[] {
+  const out: TrigListSlip[] = []
+  for (const t of part.traps) {
+    if (!isTrigMistake(t.id)) continue
+    const r = readAngleList(t.text)
+    if (!r.ok || r.items.some((i) => !i.exact)) continue
+    out.push({ id: t.id, values: r.items.map((i) => i.exact as TrigExact), witness: t.witness })
+  }
+  return out
+}
+
+function gradeAngles(part: TrigPart, raw: string): TrigPartGrade {
+  const c = part.check
+  if (c.kind !== 'angles') throw new Error('not a list part')
+  const value = readExact(c.value)
+  if (value === null || value === 'undefined') throw new Error(`${part.id}: the value ${c.value} cannot be read`)
+  const g = gradeAngleList({ unit: c.unit, degs: c.degs.map(degreesOf), fn: c.fn, value }, raw, listCandidatesOf(part))
+  const key = 'key' in g && g.key ? { key: g.key } : {}
+  switch (g.verdict) {
+    case 'correct':
+      return { verdict: 'correct', message: g.message, ...key }
+    case 'mistake':
+      return { verdict: 'mistake', mistake: g.mistake, witness: g.witness, ...key }
+    case 'wrong':
+      return { verdict: 'wrong', message: part.wrongNote, ...key }
+    case 'invalid':
+      return { verdict: 'invalid', message: g.message }
   }
 }
 
@@ -64,6 +116,7 @@ function gradeChoice(part: TrigPart, raw: string): TrigPartGrade {
 /** Grade her entry for one part. A plain wrong answer gets the part's own note (what to look at, never the answer). */
 export function gradeTrigPart(part: TrigPart, raw: string): TrigPartGrade {
   if (part.kind === 'choice') return gradeChoice(part, raw)
+  if (part.kind === 'angles') return gradeAngles(part, raw)
   const g = gradeTrigAnswer(specOf(part), raw, candidatesOf(part))
   switch (g.verdict) {
     case 'correct':
@@ -95,10 +148,15 @@ export function trigEntries(stages: readonly TrigPart[]): Record<string, string>
   return Object.fromEntries(stages.map((s) => [s.id, s.answerText]))
 }
 
-/** Spellings of a part's answer that would give it away. A choice's options are on screen by design. */
+/**
+ * Spellings of a part's answer that would give it away. A choice's options are on screen by design. For a list of
+ * angles each angle on its own gives part of it away, so each one counts (in each spelling the list has).
+ */
 export function answerForms(part: TrigPart): string[] {
   if (part.kind === 'choice') return []
-  return [...new Set([part.answerText, ...part.forms])].filter(Boolean)
+  const forms = [part.answerText, ...part.forms]
+  if (part.kind === 'angles') for (const f of [...forms]) forms.push(...f.split(/\s*,\s*/))
+  return [...new Set(forms)].filter(Boolean)
 }
 
 /** What a part shows before she has its answer: its label, question, hint, nudge, the slips' sentences, the plain note. */
@@ -113,18 +171,36 @@ export function partCatalogTexts(part: TrigPart): string[] {
 }
 
 /**
+ * The words the figure draws while part `index` is open: the angle's label, the point's label (once the part it waits
+ * for is answered), the radius, and a triangle's labels (a side she finds only once its part is answered). A solve
+ * figure's angles are drawn once the problem is done, so never while a part is open.
+ */
+export function figureTextsAt(answer: TrigAnswer, index: number): string[] {
+  const f = answer.figure
+  const answered = new Set(answer.stages.slice(0, index).map((s) => s.id))
+  const out = [f.label, f.sector?.radiusLabel ?? '']
+  if (f.point && (!f.waitFor || answered.has(f.waitFor))) out.push(f.point.label)
+  if (f.triangle) {
+    for (const s of f.triangle.sides) if (!s.after || answered.has(s.after)) out.push(s.label)
+    for (const a of f.triangle.angles) out.push(a.label)
+  }
+  return out.filter(Boolean)
+}
+
+/**
  * Texts she can see before each part is answered, checked against that part's answer and every later one: the
  * prompt, the instructions, the figure's words, every rule card and format hint (on screen throughout), and each
- * part's own texts and catalog entries (once it is open).
+ * part's own texts and catalog entries (once it is open). `shows` is the leak matcher (the first half's by default).
  */
-export function trigLeaks(answer: TrigAnswer, instructions: string, cards: readonly RuleCard[], hints: readonly string[]): string[] {
+export function trigLeaks(answer: TrigAnswer, instructions: string, cards: readonly RuleCard[], hints: readonly string[], shows: ShowsAnswer = showsAnswer): string[] {
   const out: string[] = []
   const stages = answer.stages
   const later = (from: number) => stages.slice(from).flatMap(answerForms)
-  const always = [answer.prompt, instructions, answer.figure.ariaLabel, answer.figure.label, answer.figure.point?.label ?? '', answer.figure.sector?.radiusLabel ?? '', ...hints, ...cards.flatMap((c) => [c.title, c.body, c.example ?? ''])]
-  for (const text of always) if (text && showsAnswer([text], later(0))) out.push(text)
+  const always = [answer.prompt, instructions, answer.figure.ariaLabel, ...hints, ...cards.flatMap((c) => [c.title, c.body, c.example ?? ''])]
+  for (const text of always) if (text && shows([text], later(0))) out.push(text)
   stages.forEach((part, i) => {
-    for (const text of [...partShownTexts(part), ...partCatalogTexts(part)]) if (text && showsAnswer([text], later(i))) out.push(`${part.id}: ${plain(text)}`)
+    for (const text of figureTextsAt(answer, i)) if (shows([text], later(i))) out.push(`${part.id}: the figure’s “${text}”`)
+    for (const text of [...partShownTexts(part), ...partCatalogTexts(part)]) if (text && shows([text], later(i))) out.push(`${part.id}: ${plain(text)}`)
   })
   return out
 }
@@ -146,7 +222,7 @@ export function texLeftovers(answer: TrigAnswer): string[] {
  * The gate every generated problem passes; a failure skips the draw (LogSkip) and the seed tries the next one.
  * `promisable` are the slips the template may promise; the chosen one is graded here.
  */
-export function assertTrigProblem(answer: TrigAnswer, instructions: string, cards: readonly RuleCard[], hints: readonly string[]): void {
+export function assertTrigProblem(answer: TrigAnswer, instructions: string, cards: readonly RuleCard[], hints: readonly string[], shows: ShowsAnswer = showsAnswer): void {
   for (const part of answer.stages) {
     for (const form of part.kind === 'choice' ? [part.answerText] : [part.answerText, ...part.forms]) {
       const g = gradeTrigPart(part, form)
@@ -162,7 +238,7 @@ export function assertTrigProblem(answer: TrigAnswer, instructions: string, card
     const stage = answer.stages.find((s) => s.id === answer.trapStage)
     if (!stage?.traps.some((t) => t.id === answer.trap && t.text === answer.trapAnswer)) throw new LogSkip(`the promised ${answer.trap} is not a candidate`)
   }
-  const leaks = trigLeaks(answer, instructions, cards, hints)
+  const leaks = trigLeaks(answer, instructions, cards, hints, shows)
   if (leaks.length) throw new LogSkip(`a text she sees early spells an answer: ${leaks[0]}`)
   const tex = texLeftovers(answer)
   if (tex.length) throw new Error(tex[0])

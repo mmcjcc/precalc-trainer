@@ -81,7 +81,7 @@ export const COURSES: readonly CourseDef[] = [
         id: 'unit4',
         label: 'Unit 4',
         title: 'Trigonometric functions',
-        moduleIds: ['angleMeasure', 'unitCircle'],
+        moduleIds: ['angleMeasure', 'rightTriangle', 'unitCircle'],
       },
     ],
   },

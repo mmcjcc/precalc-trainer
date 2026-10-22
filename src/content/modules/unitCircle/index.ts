@@ -6,6 +6,10 @@ import { UC_RULES } from './rules'
 
 export { UC_RULES, UC_RULE_IDS } from './rules'
 export { R_HINT, UC_HINTS, UC_INSTRUCTIONS, UC_MODULE_ID, UC_TEMPLATES, VALUE_HINT, exactProblem, exactTemplate, pointProblem, pointTemplate, valueForms } from './build'
+export { GIVEN_VALUE_HINT, LIST_DEG_HINT, LIST_RAD_HINT } from './hints'
+export { givenTemplate, solveTemplate } from './build'
+export { givenProblem, type GivenInput } from './given'
+export { SOLVE_VALUES, solveProblem } from './solve'
 
 /** Grade her entry for one part of a unit-circle problem. */
 export function gradeUcPart(answer: UnitCircleAnswer, stageId: string, text: string): TrigPartGrade {
@@ -17,13 +21,14 @@ export function gradeUcPart(answer: UnitCircleAnswer, stageId: string, text: str
 export { trigWork as ucWork }
 
 /**
- * The unit circle and the trig functions of any angle (precalculus Unit 4, first half): exact values at the special
- * angles in every quadrant and on the axes, and the six ratios from a point on the terminal side.
+ * The unit circle and the trig functions of any angle (precalculus Unit 4): exact values at the special angles in every
+ * quadrant and on the axes, the six ratios from a point on the terminal side; and (the second half) one value with
+ * where θ is, and every angle in one turn with a special value.
  */
 export const unitCircleModule: ModuleDef = {
   id: UC_MODULE_ID,
   title: 'The unit circle and trig functions of any angle',
-  blurb: 'Exact values of the six functions at special angles in any quadrant, and from a point on the terminal side.',
+  blurb: 'Exact values at special angles, the ratios of a point, one value and the quadrant, and every angle in one turn with a given value.',
   order: 5.994,
   templates: [...UC_TEMPLATES],
   ruleCards: UC_RULES,
