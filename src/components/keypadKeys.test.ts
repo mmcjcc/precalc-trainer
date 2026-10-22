@@ -92,6 +92,17 @@ describe('keypadLayout: the grid letter and the context row from a box’s strip
     expect(insertKey('150', 3, 3, context.find((k) => k.label === '°')!)).toEqual({ value: '150°', caret: 4 })
   })
 
+  it('optimization: x in the grid, then y and the quantity’s letter; = and x² come from the grid', () => {
+    const { primary, context } = keypadLayout(KEYPAD_SETS.optimization)
+    expect(primary.insert).toBe('x')
+    expect(labels(context)).toEqual(['y', 'A'])
+    expect(labels(keypadLayout(KEYPAD_SETS.optimization, ['x', 'y', 'R']).context)).toEqual(['y', 'R'])
+    expect(GRID_KEYS.some((k) => k.insert.trim() === '=')).toBe(true)
+    expect(grid('squared').insert).toBe('^2')
+    const typed = [primary, grid('squared')].reduce((v, k) => insertKey(v.value, v.caret, v.caret, k), { value: 'A = 500x - 2', caret: 12 })
+    expect(typed.value).toBe('A = 500x - 2x^2')
+  })
+
   it('a strip comma is the grid comma', () => {
     const geo: StripKey[] = [strip('√'), { label: '°', insert: '°', caret: 0, name: 'degrees' }, strip('('), { label: ',', insert: ',', caret: 0, name: 'comma' }]
     expect(labels(keypadLayout(geo).context)).toEqual(['√', '°'])

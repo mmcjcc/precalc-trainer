@@ -6,6 +6,7 @@ import type { CxGrade } from '@/content/modules/complexNums/grade'
 import type { LogGrade } from '@/engine'
 import type { PartGrade } from '@/content/modules/explog/parts'
 import type { TrigPartGrade } from '@/content/modules/trig/parts'
+import type { OptPartGrade } from '@/content/modules/optimization/parts'
 import type { GeoGrade } from '@/content/modules/geometry/grade'
 import type { PtGrade } from '@/content/modules/periodic/grade'
 import type { PwGrade } from '@/content/modules/piecewiseRate/grade'
@@ -415,6 +416,25 @@ export function recordTrigPartGrade(grade: TrigPartGrade): void {
  * exact value is asked, and a number not rounded as asked are not attempts: nothing is logged.
  */
 export function recordExpLogPartGrade(grade: PartGrade): void {
+  if (grade.verdict === 'invalid') return
+  const s = useStore.getState()
+  if (grade.verdict === 'correct') {
+    s.recordFinalAnswer({ correct: true, via: 'text' })
+    return
+  }
+  if (grade.verdict === 'mistake') {
+    s.recordFinalAnswer({ correct: false, pattern: grade.mistake, via: 'text' })
+    return
+  }
+  s.recordFinalAnswer({ correct: false, via: 'text' })
+}
+
+/**
+ * Log one check of a part of an optimization problem (precalculus Unit 2). A named mistake is stored under its opt_
+ * id. Unreadable input, an equation of the wrong kind for the box, a unit of the wrong kind (or none on an area), and
+ * a rounding the problem did not ask for are not attempts: nothing is logged.
+ */
+export function recordOptPartGrade(grade: OptPartGrade): void {
   if (grade.verdict === 'invalid') return
   const s = useStore.getState()
   if (grade.verdict === 'correct') {

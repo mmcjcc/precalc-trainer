@@ -68,6 +68,7 @@ describe('course registry', () => {
     ])
     expect(modulesInUnit(precalc!.units[1]!).map((m) => m.id)).toEqual([
       'quadratics',
+      'optimization',
       'polyDivision',
       'polyZeros',
       'rationalFns',

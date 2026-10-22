@@ -15,7 +15,7 @@
 export type RelOp = '=' | '<' | '<=' | '>' | '>='
 /** `h` is the difference-quotient step; the parser accepts it only when the problem owns it (ctx.vars). */
 export type VarName = 'x' | 'y' | 'n' | 'h'
-export type ModuleId = 'numberLine' | 'inequalities' | 'evenOdd' | 'inverses' | 'propertiesDrill' | 'sigFigs' | 'atoms' | 'diffQuotient' | 'graphFeatures' | 'domainRange' | 'composition' | 'functionOps' | 'transformations' | 'piecewiseRate' | 'electrons' | 'periodic' | 'quadratics' | 'polyDivision' | 'polyZeros' | 'rationalFns' | 'signCharts' | 'complexNums' | 'logForms' | 'logProperties' | 'expLogEquations' | 'expLogGraphs' | 'expModels' | 'angleMeasure' | 'unitCircle' | 'geoSegments' | 'geoAngles' | 'geoLogic' | 'geoProof' | 'geoParallel' | 'geoPolygonAngles' | 'geoCongruence' | 'geoIsosceles' | 'geoTriangleProofs' | 'geoParallelograms' | 'geoSpecialQuads' | 'geoTrapezoids' | 'ionicNames' | 'molecularAcids'
+export type ModuleId = 'numberLine' | 'inequalities' | 'evenOdd' | 'inverses' | 'propertiesDrill' | 'sigFigs' | 'atoms' | 'diffQuotient' | 'graphFeatures' | 'domainRange' | 'composition' | 'functionOps' | 'transformations' | 'piecewiseRate' | 'electrons' | 'periodic' | 'quadratics' | 'optimization' | 'polyDivision' | 'polyZeros' | 'rationalFns' | 'signCharts' | 'complexNums' | 'logForms' | 'logProperties' | 'expLogEquations' | 'expLogGraphs' | 'expModels' | 'angleMeasure' | 'unitCircle' | 'geoSegments' | 'geoAngles' | 'geoLogic' | 'geoProof' | 'geoParallel' | 'geoPolygonAngles' | 'geoCongruence' | 'geoIsosceles' | 'geoTriangleProofs' | 'geoParallelograms' | 'geoSpecialQuads' | 'geoTrapezoids' | 'ionicNames' | 'molecularAcids'
 export type CalcId = 'ti84' | 'nspire'
 
 /** Fine-grained property tags. Canonical steps carry one; the engine's move detector reports one. */
@@ -602,6 +602,31 @@ export type ErrorPatternId =
   | 'trig_sector_no_half'
   | 'trig_sector_r_not_squared'
   | 'trig_arc_sector_swapped'
+  // precalculus Unit 2, optimization with quadratics (engine/optim; content/modules/optimization). Each id is the
+  // equation or number that slip gives on THIS problem, computed by the template; never a right answer.
+  | 'opt_wall_fenced'
+  | 'opt_wall_wrong_side'
+  | 'opt_pen_ends_short'
+  | 'opt_pen_long_short'
+  | 'opt_coefficients_swapped'
+  | 'opt_revenue_wrong_way'
+  | 'opt_revenue_whole_price'
+  | 'opt_revenue_steps'
+  | 'opt_primary_secondary_swapped'
+  | 'opt_area_as_fence'
+  | 'opt_area_one_pen'
+  | 'opt_area_wrong_count'
+  | 'opt_binomial_square'
+  | 'opt_term_dropped'
+  | 'opt_solve_divide'
+  | 'opt_opens_wrong_way'
+  | 'opt_vertex_ab_swapped'
+  | 'opt_vertex_sign'
+  | 'opt_vertex_no_two'
+  | 'opt_max_as_dimension'
+  | 'opt_dimensions_swapped'
+  | 'opt_other_from_primary'
+  | 'opt_x_as_max'
   // behavioral (ui)
   | 'abandoned'
 

@@ -25,6 +25,9 @@ import { logFormsWork } from '@/content/modules/logForms'
 import { partsWork, type PartGrade } from '@/content/modules/explog/parts'
 import { trigWork, type TrigPartGrade } from '@/content/modules/trig/parts'
 import { plain as trigPlain } from '@/content/modules/trig/text'
+import { optWork, stagesFor as optStagesFor, type OptPartGrade } from '@/content/modules/optimization/parts'
+import { plain as optPlain } from '@/content/modules/optimization/text'
+import { finalRoute } from '@/engine/optim'
 import { ERROR_PATTERNS } from '@/engine'
 import type { OpsGrade } from '@/content/modules/functionOps/ops'
 import type { DescriptionGrade, EconfigGrade, FunctionGrade, LogGrade, NmGrade, PolyGrade, SquareLineGrade, TransformGrade } from '@/engine'
@@ -385,6 +388,26 @@ export function verdictFromTrigPart(grade: TrigPartGrade, herText?: string): Tut
   })
 }
 
+/**
+ * One part of an optimization problem (precalculus Unit 2). The mistake id is already an opt_ catalog id; the
+ * sentences hold KaTeX, read back as words. Unreadable input, an equation of the wrong kind for the box, a unit of the
+ * wrong kind (or none on an area) and a rounding not asked for are a parse error: nothing was graded.
+ */
+export function verdictFromOptPart(grade: OptPartGrade, herText?: string): TutorVerdict | null {
+  const line = herText?.trim() ? herText.trim() : undefined
+  if (grade.verdict === 'correct') return withMessage('correct', optPlain(grade.message), line)
+  if (grade.verdict === 'wrong') return withMessage('wrong', optPlain(grade.message), line)
+  if (grade.verdict === 'invalid') return withMessage('parse_error', optPlain(grade.message), line)
+  const info = ERROR_PATTERNS[grade.mistake]
+  const witness = optPlain(grade.witness)
+  return withMessage('wrong', witness, line, {
+    id: grade.mistake,
+    title: clip(info.title, 200),
+    lesson: clip(info.lesson, TUTOR_LIMITS.field),
+    witness: clip(witness, TUTOR_LIMITS.field),
+  })
+}
+
 /** Operations with functions. The mistake id is already an op_ catalog id. */
 export function verdictFromOps(grade: OpsGrade): TutorVerdict {
   if (grade.verdict === 'correct') return withMessage('correct', grade.message)
@@ -485,6 +508,15 @@ function workOf(instance: ProblemInstance, attempt: Attempt | null): string[] {
   // Graphs and inverses, and growth and decay word problems: her boxes, part by part.
   if (instance.answer.type === 'expLogGraphs' || instance.answer.type === 'expModels') {
     return partsWork(instance.answer.stages, attempt.final?.polyEntries)
+      .slice(0, TUTOR_LIMITS.lines)
+      .map((line) => clip(line, TUTOR_LIMITS.line))
+  }
+  // Optimization: her boxes, part by part; the letter of her final equation decides which parts 4 and 5 were.
+  if (instance.answer.type === 'optimization') {
+    const a = instance.answer
+    const entries = attempt.final?.polyEntries
+    const route = entries?.final ? finalRoute(entries.final, a.quantity, a.domain) : null
+    return optWork(optStagesFor(a, route), entries)
       .slice(0, TUTOR_LIMITS.lines)
       .map((line) => clip(line, TUTOR_LIMITS.line))
   }
@@ -622,6 +654,9 @@ function statementOf(instance: ProblemInstance): string {
   } else if (answer.type === 'angleMeasure' || answer.type === 'unitCircle') {
     // The prompt as words (its KaTeX read back), and the figure, which the tutor cannot see.
     text = `${trigPlain(answer.prompt)} Figure: ${answer.figure.ariaLabel}`
+  } else if (answer.type === 'optimization') {
+    // The prompt as words, and the pens' figure when the problem has one.
+    text = `${optPlain(answer.prompt)}${answer.figure ? ` Figure: ${answer.figure.ariaLabel}` : ''}`
   } else if (answer.type === 'geometry') {
     assertGeometryQuestion(answer.question)
     const lines = answer.lines?.length ? ` Lines: ${answer.lines.join(' | ')}` : ''
@@ -667,6 +702,8 @@ function canonicalOf(instance: ProblemInstance): string[] {
     lines = answer.reveal
   } else if (answer.type === 'angleMeasure' || answer.type === 'unitCircle') {
     lines = answer.reveal.map(trigPlain)
+  } else if (answer.type === 'optimization') {
+    lines = answer.reveal.map(optPlain)
   }
   return lines.slice(0, TUTOR_LIMITS.lines).map((line) => clip(line, TUTOR_LIMITS.line))
 }
@@ -703,6 +740,7 @@ function answerOf(instance: ProblemInstance): string | undefined {
     case 'expModels':
     case 'angleMeasure':
     case 'unitCircle':
+    case 'optimization':
     case 'geometry':
     case 'periodic':
     case 'nomenclature':

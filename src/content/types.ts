@@ -17,7 +17,99 @@ import type {
   VarName,
 } from '@/shared/types'
 
-export type ProblemKind = 'inequality' | 'numberLine' | 'evenOdd' | 'inverse' | 'drill' | 'sigFigs' | 'atoms' | 'diffQuotient' | 'graphFeatures' | 'domainRange' | 'composition' | 'functionOps' | 'transformations' | 'piecewiseRate' | 'electrons' | 'periodic' | 'quadratics' | 'polyDivision' | 'polyZeros' | 'rationalFns' | 'signCharts' | 'complexNums' | 'logForms' | 'logProperties' | 'expLogEquations' | 'expLogGraphs' | 'expModels' | 'angleMeasure' | 'unitCircle' | 'geometry' | 'nomenclature'
+export type ProblemKind = 'inequality' | 'numberLine' | 'evenOdd' | 'inverse' | 'drill' | 'sigFigs' | 'atoms' | 'diffQuotient' | 'graphFeatures' | 'domainRange' | 'composition' | 'functionOps' | 'transformations' | 'piecewiseRate' | 'electrons' | 'periodic' | 'quadratics' | 'optimization' | 'polyDivision' | 'polyZeros' | 'rationalFns' | 'signCharts' | 'complexNums' | 'logForms' | 'logProperties' | 'expLogEquations' | 'expLogGraphs' | 'expModels' | 'angleMeasure' | 'unitCircle' | 'geometry' | 'nomenclature'
+
+/** Precalculus Unit 2, optimization with quadratics: a pen against a wall, pens in a row, two numbers, price and sales. */
+export type OptimizationQuestion = 'wall' | 'pens' | 'numbers' | 'revenue'
+
+/** What kind of number a number part asks for, which decides the units it may carry. */
+export type OptPartDimension = 'length' | 'area' | 'money' | 'count' | 'none'
+
+/**
+ * What one optimization part checks, with engine/optim's graders. Equations are app syntax with the problem's
+ * letters (x, y and the quantity's letter); a number is exact ("125", "100/3", "23/2").
+ */
+export type OptPartCheck =
+  /** The secondary equation (the condition: fencing, sales, the numbers), linear in x and y. */
+  | { kind: 'constraint'; equation: string }
+  /** The primary equation: the quantity in terms of x and y. */
+  | { kind: 'primary'; equation: string }
+  /** The final equation: the quantity in x alone (`x`) or in y alone (`y`); either is right. */
+  | { kind: 'final'; x: string; y: string }
+  | {
+      kind: 'number'
+      value: string
+      /** Decimal places the problem asks for; absent when the answers are exact (a fraction is fine). */
+      places?: number
+      dim: OptPartDimension
+      /** An area has to carry its square unit. */
+      unitRequired?: boolean
+      /** The box's letter ('x', 'y', 'A'): "x =" in front is fine, another letter is a note. */
+      name: string
+      /** The box in words for the notes: "x", "the largest area". */
+      what: string
+    }
+
+/** A slip named on one optimization part, computed by the template for this problem. */
+export interface OptPartTrap {
+  id: ErrorPatternId
+  /** What the slip gives, as she would type it: an equation (app syntax) or a number. Never the right answer. */
+  text: string
+  /** The sentence about her answer (math). It never states this problem's answer. */
+  witness: string
+}
+
+/**
+ * One part of an optimization problem, answered and checked on its own. Text fields marked "math" hold KaTeX between
+ * dollar signs; `trig/text.ts` `plain` reads them as words.
+ */
+export interface OptPart {
+  /** 'secondary', 'primary', 'final', 'best', 'other', 'max'. */
+  id: string
+  kind: 'equation' | 'number'
+  /** Card title and box label, plain text: "Secondary equation", "x", "Largest area". */
+  label: string
+  /** The question (math). */
+  ask: string
+  /** Under the box, plain text. No answer a template can generate. */
+  formatHint: string
+  /** Hint rung 1 (math): the method, not this problem's answer. */
+  nudge: string
+  ruleCard: RuleCardId
+  /** Hint rung 3 and the worked lines of this part (math). May state this part's answer, never a later one. */
+  reveal: string[]
+  /** The answer as she would type it. */
+  answerText: string
+  /** Other spellings of the answer that grade right: for the self-check and the leak checks. */
+  forms: string[]
+  check: OptPartCheck
+  /** The note for a plain wrong answer (plain text): what to look at, never the answer. */
+  wrongNote: string
+  /** What a right answer is told (math). */
+  rightNote: string
+  traps: OptPartTrap[]
+}
+
+/**
+ * The pen (or the row of pens) of a fence problem, drawn by components/OptFigure: rectangles side by side, a hatched
+ * wall along the top when there is one, and every fenced side labelled with its letter. Never drawn to scale and never
+ * with a number: the figure shows how the fence runs, not the answer.
+ */
+export interface OptFigureSpec {
+  /** Pens in the row: 1 to 4. A pen with a divider is drawn as 2 with `whole` set. */
+  pens: number
+  /** One letter along the whole row (a divided pen) instead of one per pen. */
+  whole: boolean
+  /** A wall along the top edge: no fence there. */
+  wall: boolean
+  /** The wall's name, drawn on it: "stone wall", "barn". */
+  wallLabel: string
+  /** The letter of the sides across the row (the ends and the dividers), and of the sides along it. */
+  across: 'x' | 'y'
+  along: 'x' | 'y'
+  /** Words for a screen reader and the tutor. Describes the picture, never an answer. */
+  ariaLabel: string
+}
 
 /** Which chemical-nomenclature screen this problem is (CK-12 chapter 7). */
 export type NomenclatureQuestion = 'ion' | 'ionicFormula' | 'ionicName' | 'ionicFromName' | 'molecular' | 'acid' | 'hydrate' | 'classify'
@@ -1489,6 +1581,43 @@ export type AnswerSpec =
       trapStage: string
       trapAnswer: string
     }
+  | {
+      /**
+       * Optimization with quadratics (precalculus Unit 2, after completing the square), the worksheet's way: the
+       * secondary equation (the condition), the primary equation (what is made largest or smallest), the final
+       * equation in one variable, the value that gives the extreme (from the vertex), the other variable, and the
+       * extreme value. Grade a part with the module's `gradeOptPart` (engine/optim). Named mistakes are the opt_ ids.
+       */
+      type: 'optimization'
+      question: OptimizationQuestion
+      /** The problem in words (math). Says what to find; nothing about the method or the trap. */
+      prompt: string
+      /** The quantity's letter: A (area), R (revenue), P (product), S (sum of squares). */
+      quantity: 'A' | 'P' | 'R' | 'S'
+      goal: 'max' | 'min'
+      /** The fence problems' figure; the number and price problems have none. */
+      figure?: OptFigureSpec
+      /** Where x and y live: equations are compared at points inside it. */
+      domain: { x: [number, number]; y: [number, number] }
+      /** The problem's units, for reading her numbers. */
+      units: { lengthUnit?: 'ft' | 'm' | 'yd'; money?: boolean; count?: string[] }
+      /** The six parts, with the final equation in x. */
+      stages: OptPart[]
+      /** Parts 4 and 5 when her final equation is in y: the value of y first, then x. */
+      yStages: OptPart[]
+      expectedDisplay: string
+      nudge: string
+      ruleCard: RuleCardId
+      ruleCards: RuleCardId[]
+      /** Every part's worked lines (math), the final equation in x. May state the answers. */
+      reveal: string[]
+      /** The named mistake this seed promises, when one is possible. */
+      trap?: ErrorPatternId
+      /** The part it is promised on. */
+      trapStage?: string
+      /** What that slip gives, as she would type it. Never the right answer. */
+      trapAnswer?: string
+    }
   | ({
       /**
        * Angles and radian measure (precalculus Unit 4): converting between degrees and radians (exact, or rounded),
@@ -1540,6 +1669,9 @@ export interface TrigAnswerFields {
 export type AngleMeasureAnswer = Extract<AnswerSpec, { type: 'angleMeasure' }>
 export type UnitCircleAnswer = Extract<AnswerSpec, { type: 'unitCircle' }>
 export type TrigAnswer = AngleMeasureAnswer | UnitCircleAnswer
+
+/** The optimization arm of `AnswerSpec`, named so the flow and the generators share it. */
+export type OptimizationAnswer = Extract<AnswerSpec, { type: 'optimization' }>
 
 /** The geometry arm of `AnswerSpec`, named so the flow and the generators share it. */
 export type GeometryAnswer = Extract<AnswerSpec, { type: 'geometry' }>
