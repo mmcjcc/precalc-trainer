@@ -79,9 +79,11 @@ describe('Home on a phone: the Today screen', () => {
     expect(start.getAttribute('aria-describedby')).toBeTruthy()
     expect(document.getElementById(start.getAttribute('aria-describedby')!)?.textContent).toBe('3 problems, about 5 minutes')
     expect(primaryActions()).toEqual([start])
-    // The class and unit lists are still there, their buttons outlined.
+    // The class and unit lists are still there, their buttons outlined; the unit's path (it replaced the module
+    // cards) adds no primary action: its stops are nodes, not filled buttons.
     expect(screen.getByRole('tablist', { name: 'Classes' })).toBeTruthy()
-    expect(screen.getAllByRole('button', { name: 'Random problem' }).length).toBeGreaterThan(0)
+    expect(document.querySelectorAll('[data-path-stop]').length).toBeGreaterThan(0)
+    expect(screen.getByRole('region', { name: 'Modules in this unit' })).toBeTruthy()
     expect(screen.getByRole('button', { name: 'Practice weak spots' })).toBeTruthy()
   })
 
@@ -135,6 +137,11 @@ describe('Home on a wide screen', () => {
     expect(primary).toContain(screen.getByRole('link', { name: 'Continue' }))
     expect(primary).toContain(screen.getByRole('link', { name: 'Resume your set · 2 of 3' }))
     expect(primary).toContain(screen.getByRole('button', { name: 'Practice weak spots' }))
-    for (const random of screen.getAllByRole('button', { name: 'Random problem' })) expect(primary).toContain(random)
+    // The module cards' filled "Random problem" buttons gave way to the path: its stops are not filled actions there
+    // either, and the module pages are a list of links.
+    const stops = [...document.querySelectorAll<HTMLElement>('[data-path-stop]')]
+    expect(stops.length).toBeGreaterThan(0)
+    for (const stop of stops) expect(primary).not.toContain(stop)
+    expect(screen.getByRole('region', { name: 'Modules in this unit' })).toBeTruthy()
   })
 })

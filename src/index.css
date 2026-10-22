@@ -264,8 +264,50 @@ kbd.keycap {
 }
 .milestone-banner { animation: milestone-in 320ms cubic-bezier(0.3, 1.4, 0.5, 1) both; }
 
+/* ---- The unit path on Home (components/path, docs/progress/phone-path.md). A stop's face has a darker edge, like the
+   chunky buttons, and presses down on tap; "You are here" pulses gently; a stop that levelled up pops once. Every
+   animation here is off under reduced motion (the block below). ---- */
+.path-face {
+  --path-edge: #c5cae1;
+  --path-depth: 3px;
+  box-shadow: 0 var(--path-depth) 0 var(--path-edge);
+  transition: transform 70ms ease-out, box-shadow 70ms ease-out, background-color 300ms ease-out;
+}
+.path-face[data-face="practiced"] { --path-edge: #1b2353; }
+.path-face[data-face="solid"], .path-face[data-face="mastered"] { --path-edge: #0a5229; }
+.path-face.path-trophy { --path-edge: #b8972c; --path-depth: 5px; }
+.path-stop { -webkit-tap-highlight-color: transparent; }
+.path-stop:hover .path-caption { text-decoration: underline; }
+.path-stop:active .path-face { transform: translateY(var(--path-depth)); box-shadow: 0 0 0 var(--path-edge); }
+/* "You are here": a tag with a point under it, and a gold halo that swells and fades. */
+.path-here-tag::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 100%;
+  transform: translateX(-50%);
+  border: 5px solid transparent;
+  border-top-color: var(--color-navy);
+}
+@keyframes path-pulse {
+  0% { transform: scale(0.95); opacity: 0.9; }
+  70%, 100% { transform: scale(1.38); opacity: 0; }
+}
+.path-pulse { pointer-events: none; animation: path-pulse 2400ms ease-out infinite; }
+/* A stop that levelled up since the path last showed it: one pop as its ring sweeps on. */
+@keyframes path-levelup {
+  0% { transform: scale(1); }
+  30% { transform: scale(1.3); }
+  55% { transform: scale(0.94); }
+  78% { transform: scale(1.05); }
+  100% { transform: scale(1); }
+}
+.path-levelup { animation: path-levelup 720ms cubic-bezier(0.3, 1.4, 0.5, 1) 1; }
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
   .juice-kept, .juice-pop, .xp-float, .combo-pill, .combo-count, .flame-flare, .confetti-bit, .milestone-banner { animation: none !important; }
+  .path-pulse, .path-levelup { animation: none !important; }
   .btn-chunky:active:not(:disabled) { transform: none; }
+  .path-stop:active .path-face { transform: none; }
 }
