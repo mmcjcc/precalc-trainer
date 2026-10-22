@@ -261,3 +261,24 @@ optional `graphIt` slot), `src/pages/flows/ProblemFrame.tsx` (Graph it under the
 Tests changed on purpose: `src/components/TabBar.test.tsx` (five tabs, /graph, the 360 px check),
 `src/pages/Monsters.test.tsx` (five tabs). No package added; content, grading, the engines, the rewards and deploy
 untouched.
+
+## Review (Claude, 2026-10-22)
+
+Built by one Claude agent (about 0.88M tokens, 2 h 54 min). Read the Graph it rules (graphIt.ts), where the button was
+placed, the problem page's existing reveal gates, and the grapher's store. On the Android emulator in a store-app
+build: the Graph tab with five tabs at phone width, RADIAN/DEGREE, zoom buttons; y = x^2 - 4 typed on the graphing
+keypad (y, a, b, h, k, e, √, |x|, ...) with its KaTeX preview, drawn with dots at (-2, 0), (2, 0) and its minimum
+(0, -4); a second row y = a(x - h)^2 + k with sliders a, h, k and the crossing at (3, 5) (right: x^2 - 4 = (x - 1)^2 + 1
+gives x = 3); a drag pans the plane and relabels the axes; the plane stays in view above the keypad.
+
+Changed in review:
+- Graph it showed the problem's given function under the problem card, in the open: its graph shows the answer of
+  most of these types (a quadratic's vertex, the zeros, f(c)), so one tap handed it over. The app already keeps the
+  graph and the calculator steps behind gates that say they give the answer away; Graph it now lives only inside
+  those (the Graph panel after "Show the graph", the calculator steps after "Show calculator steps"). A problem with
+  neither panel (a piecewise value, synthetic division, rational features) shows none; the Graph tab is always there.
+  Optimization keeps its Graph it of her own final equation, with a note that its graph shows the next parts' answers
+  (the calculator method the class uses).
+
+Left: the problem screen's rail panel is also titled "Graph it" (the button now sits inside it, which reads well);
+arrow-key panning; implicit curves, x = f(y), polar and sec/csc/cot are not drawn; toLatex writes \pix for πx.
