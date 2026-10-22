@@ -51,6 +51,7 @@ const unit2Titles = modulesInUnit(precalc.units[1]!).map((module) => module.titl
 const ch7Titles = ['Ions and ionic compounds', 'Molecular compounds, acids, and hydrates']
 const unit3Titles = modulesInUnit(precalc.units[2]!).map((module) => module.title)
 const unit4Titles = modulesInUnit(precalc.units[3]!).map((module) => module.title)
+const precalcUnit5Titles = modulesInUnit(precalc.units[4]!).map((module) => module.title)
 const unit5Titles = ['Parallelograms', 'Rectangles, rhombuses, and squares', 'Trapezoids, kites, and midsegments']
 const unit6Titles = ['Ratio, proportion and similar polygons', 'Similar triangles', 'Proportional parts']
 
@@ -112,8 +113,8 @@ describe('Home: classes and units', () => {
 
     fireEvent.keyDown(tablist, { key: 'Home' })
     expect(screen.getByRole('tab', { name: 'Honors Precalculus', selected: true })).toBeTruthy()
-    // A first visit lands on the last unit that has modules: Unit 4.
-    expect(moduleTitles()).toEqual(unit4Titles)
+    // A first visit lands on the last unit that has modules: Unit 5.
+    expect(moduleTitles()).toEqual(precalcUnit5Titles)
 
     fireEvent.keyDown(tablist, { key: 'ArrowLeft' })
     expect(screen.getByRole('tab', { name: 'Honors Precalculus', selected: true })).toBeTruthy()
@@ -164,10 +165,14 @@ describe('Home: classes and units', () => {
 
   it('shows only the selected unit, with the review card on precalc Unit 1 only', () => {
     renderHome()
-    // A first visit lands on the last unit that has modules (Unit 4). Unit 1 is one press away.
+    // A first visit lands on the last unit that has modules (Unit 5). Unit 1 is one press away.
+    expect(moduleTitles()).toEqual(precalcUnit5Titles)
+    expect(moduleTitles()).toEqual(['Graphs of sine and cosine', 'Graphs of tangent, cotangent, secant and cosecant', 'Inverse trigonometric functions'])
+    expect(signposts()).toEqual(precalcUnit5Titles)
+    expect(screen.getByRole('button', { name: /Unit 5/, pressed: true }).textContent).toMatch(/Graphs of the trigonometric functions/)
+    fireEvent.click(screen.getByRole('button', { name: /Unit 4/ }))
     expect(moduleTitles()).toEqual(unit4Titles)
     expect(moduleTitles()).toEqual(['Angles and radian measure', 'Right triangle trigonometry', 'The unit circle and trig functions of any angle'])
-    expect(signposts()).toEqual(unit4Titles)
     expect(screen.getByRole('button', { name: /Unit 4/, pressed: true }).textContent).toMatch(/Trigonometric functions/)
     expect(screen.queryByRole('heading', { name: 'Unit 1 review' })).toBeNull()
     fireEvent.click(screen.getByRole('button', { name: /Unit 1/ }))

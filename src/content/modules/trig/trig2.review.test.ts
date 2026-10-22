@@ -61,7 +61,8 @@ function retryInputs(part: TrigPart): string[] {
 
 describe('the second half’s catalog entries', () => {
   it('every new trig_ id has an entry in words: no special value, no digit but the degrees of a right angle and a turn', () => {
-    const second = TRIG_MISTAKE_IDS.slice(TRIG_MISTAKE_IDS.indexOf('trig_opposite_adjacent_swapped'))
+    // The second half's eighteen, up to where Unit 5's begin.
+    const second = TRIG_MISTAKE_IDS.slice(TRIG_MISTAKE_IDS.indexOf('trig_opposite_adjacent_swapped'), TRIG_MISTAKE_IDS.indexOf('trig_amplitude_negative'))
     expect(second).toHaveLength(18)
     for (const id of second) {
       const e = ERROR_PATTERNS[id]

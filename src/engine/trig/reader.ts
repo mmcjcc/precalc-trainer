@@ -532,6 +532,8 @@ function splitLabel(text: string): { body: string; fn: TrigFn | null } {
   const body = eq[1]!.trim()
   if (!body) fail('Type the value after the equals sign.')
   const fn = /^(sin|cos|tan|csc|sec|cot)(?![a-z])/i.exec(left)
+  // Unit 5: an inverse function's name before the answer ("arcsin(1/2) =", "sin⁻¹(1/2) =") names no box's function.
+  if (/^(?:arc(?:sin|cos|tan)|a(?:sin|cos|tan)|(?:sin|cos|tan)\s*(?:⁻¹|\^\s*\(?\s*-\s*1\s*\)?))/i.test(left)) return { body, fn: null }
   if (fn) return { body, fn: fn[1]!.toLowerCase() as TrigFn }
   if (/^[A-Za-zθ]{1,3}$/.test(left)) return { body, fn: null }
   fail('Write just the answer, or a name, an equals sign and the answer.')

@@ -17,7 +17,7 @@ import type {
   VarName,
 } from '@/shared/types'
 
-export type ProblemKind = 'inequality' | 'numberLine' | 'evenOdd' | 'inverse' | 'drill' | 'sigFigs' | 'atoms' | 'diffQuotient' | 'graphFeatures' | 'domainRange' | 'composition' | 'functionOps' | 'transformations' | 'piecewiseRate' | 'electrons' | 'periodic' | 'quadratics' | 'optimization' | 'polyDivision' | 'polyZeros' | 'rationalFns' | 'signCharts' | 'complexNums' | 'logForms' | 'logProperties' | 'expLogEquations' | 'expLogGraphs' | 'expModels' | 'angleMeasure' | 'rightTriangle' | 'unitCircle' | 'geometry' | 'nomenclature'
+export type ProblemKind = 'inequality' | 'numberLine' | 'evenOdd' | 'inverse' | 'drill' | 'sigFigs' | 'atoms' | 'diffQuotient' | 'graphFeatures' | 'domainRange' | 'composition' | 'functionOps' | 'transformations' | 'piecewiseRate' | 'electrons' | 'periodic' | 'quadratics' | 'optimization' | 'polyDivision' | 'polyZeros' | 'rationalFns' | 'signCharts' | 'complexNums' | 'logForms' | 'logProperties' | 'expLogEquations' | 'expLogGraphs' | 'expModels' | 'angleMeasure' | 'rightTriangle' | 'unitCircle' | 'sinusoids' | 'otherTrigGraphs' | 'inverseTrig' | 'geometry' | 'nomenclature'
 
 /** Precalculus Unit 2, optimization with quadratics: a pen against a wall, pens in a row, two numbers, price and sales. */
 export type OptimizationQuestion = 'wall' | 'pens' | 'numbers' | 'revenue'
@@ -237,14 +237,35 @@ export type UnitCircleQuestion = 'exact' | 'point' | 'given' | 'solve'
 export type RightTriangleQuestion = 'ratios' | 'special' | 'side' | 'angle'
 
 /**
+ * Precalculus Unit 5. The features of y = A sin(B(x − C)) + D (amplitude, period, phase shift, midline, range, the key
+ * points), an equation from a graph or a description, and sinusoidal models (a Ferris wheel, tides, daylight,
+ * temperature).
+ */
+export type SinusoidsQuestion = 'features' | 'equation' | 'model'
+
+/** Precalculus Unit 5. The period, asymptotes, zeros and range of tan, cot, sec and csc; which graph is the equation. */
+export type OtherTrigGraphsQuestion = 'features' | 'match'
+
+/** Precalculus Unit 5. Exact and calculator values of arcsin, arccos and arctan; compositions. */
+export type InverseTrigQuestion = 'evaluate' | 'compose'
+
+/**
  * How one part of a trig problem is answered and read (engine/trig's reader and grader):
  *  - angle: an exact angle, in degrees (a number, the ° optional) or in radians (a multiple of π);
  *  - value: an exact value or the word for no value: a trig value, r, an exact arc length or area (with π), a side;
  *  - decimal: a number rounded the way the problem asks;
  *  - choice: one of the listed options (where the terminal side lies);
  *  - angles: every angle in one turn, a list with commas in any order (engine/trig gradeAngleList).
+ * Unit 5 adds:
+ *  - shift: a phase shift, a number and left or right, a signed number, or none (engine/trig gradeShift);
+ *  - midline: the line y = D (a number, "y =" optional);
+ *  - interval: a range, read with the app's interval reader (parseSetAnswer), a union for sec and csc;
+ *  - points: the five key points of one period, a list of exact points in any order (engine/trig gradePoints);
+ *  - function: an equation or an expression in x (or t), graded by equivalence as functions, never by its text;
+ *  - family: x-values as a family x = a + kp (k an integer) or a list in an interval (engine/trig gradeXSet);
+ *  - principal: an inverse function's value, an exact angle in the unit asked, or no value at all.
  */
-export type TrigPartKind = 'angle' | 'value' | 'decimal' | 'choice' | 'angles'
+export type TrigPartKind = 'angle' | 'value' | 'decimal' | 'choice' | 'angles' | 'shift' | 'midline' | 'interval' | 'points' | 'function' | 'family' | 'principal'
 
 /** What the core's grader checks for a part. Exact values are kept as she would type them and read back exactly. */
 export type TrigPartCheck =
@@ -259,6 +280,30 @@ export type TrigPartCheck =
    * `value` as typed ("-√3/2"). A trap's `text` is the whole list she would type ("60, 120").
    */
   | { kind: 'angles'; unit: 'deg' | 'rad'; degs: string[]; fn: 'sin' | 'cos' | 'tan' | 'csc' | 'sec' | 'cot'; value: string }
+  /** The phase shift as a signed exact number she could type: "π/4" (right), "-π/3" (left), "0" (none). */
+  | { kind: 'shift'; value: string }
+  /** The midline's height D, as typed ("2", "-1/2"). */
+  | { kind: 'midline'; value: string }
+  /** A range, as typed ("[-2, 4]", "(-∞, -1] ∪ [3, ∞)"). A trap's `text` is a range too. */
+  | { kind: 'interval'; value: string }
+  /** The key points, exact coordinates as typed (["π/4", "1"], …). A trap's `text` is a whole list. */
+  | { kind: 'points'; points: [string, string][] }
+  /**
+   * A function of `variable`, graded by equivalence: `answer` as typed ("y = 3sin(2(x - π/4)) + 1"); equal exactly at
+   * `exactAt` (exact numbers as typed, "π/4") and as numbers at `samples` points spread over [lo, hi] (two periods, or the
+   * domain). `bare`: the formula alone is fine (an expression part). A trap's `text` is an equation or an expression.
+   */
+  | { kind: 'function'; answer: string; variable: 'x' | 't'; exactAt: string[]; samples: { lo: number; hi: number; n: number }; bare: boolean; algebraic?: boolean }
+  /**
+   * A set of x-values as typed ("x = π/4 + kπ/2", or "x = π/4, x = 3π/4"); `between` makes it a list in that open
+   * interval. `what` names them in the notes ("vertical asymptotes", "x-intercepts"). A trap's `text` is a set.
+   */
+  | { kind: 'family'; answer: string; between?: [number, number]; what: string }
+  /**
+   * An inverse function's value: `deg` the angle in degrees as a fraction ("-60", "135"), or null where there is no
+   * value; `unit` the unit asked. The part offers a "No value" button (TrigPart.noValue).
+   */
+  | { kind: 'principal'; unit: 'deg' | 'rad'; deg: string | null }
 
 /** A slip named on one part, computed by the core for this problem. */
 export interface TrigPartTrap {
@@ -304,6 +349,16 @@ export interface TrigPart {
   /** The note for a plain wrong answer: what to look at, never the answer. */
   wrongNote: string
   traps: TrigPartTrap[]
+  /**
+   * Unit 5: the part offers a "No value" button beside its box (an inverse function, or a composition with one), on
+   * every such problem so the button never hints that there is none. It enters the words "no value".
+   */
+  noValue?: boolean
+  /**
+   * Unit 5: more spellings that would give the answer away, for the leak checks only (they need not grade right): a
+   * family's first members, each a vertical asymptote or a zero of its own.
+   */
+  leakForms?: string[]
 }
 
 /**
@@ -313,9 +368,22 @@ export interface TrigPart {
 export interface TrigFigureSpec {
   /**
    * circle, point, sector: the first half. triangle: a right triangle, plain or in a scene (the second half). solve:
-   * the unit circle, with the answer angles drawn once the problem is done.
+   * the unit circle, with the answer angles drawn once the problem is done. Unit 5: graph, one graph she reads (an
+   * equation from its graph); match, four graphs to choose from; none, no figure (the graph waits in the Graph panel).
    */
-  kind: 'circle' | 'point' | 'sector' | 'triangle' | 'solve'
+  kind: 'circle' | 'point' | 'sector' | 'triangle' | 'solve' | 'graph' | 'match' | 'none'
+  /** graph: the graph she reads. Its labelled points are the problem's, never a period or an amplitude. */
+  graph?: GraphSpec
+  /**
+   * match: the four graphs, in letter order. A graph never announces its formula (GraphSpec.ariaLabel "Graph A");
+   * `formula` is for the tutor only, as expLogGraphs' candidates carry theirs.
+   */
+  graphs?: { letter: string; graph: GraphSpec; formula?: string }[]
+  /**
+   * point, Unit 5 (a reference triangle in a composition): labels on the triangle's sides instead of the point's
+   * coordinates; `after` waits for that part (the side she finds).
+   */
+  legs?: { x?: { label: string; after?: string }; y?: { label: string; after?: string }; r?: { label: string; after?: string } }
   /** The angle in degrees (a decimal for a plain number of radians); negative turns clockwise. 0 for triangle and solve. */
   deg: number
   /** The angle's label, display text: "5π/6", "−225°", "2.5". Empty for triangle and solve. */
@@ -1729,6 +1797,33 @@ export type AnswerSpec =
       type: 'unitCircle'
       question: UnitCircleQuestion
     } & TrigAnswerFields)
+  | ({
+      /**
+       * Graphs of sine and cosine (precalculus Unit 5): the features of y = A sin(B(x − C)) + D or A cos(Bx − C) + D, an
+       * equation from a graph or a description (graded as a function), sinusoidal models. Grade a part with the module's
+       * `gradeSgPart`. Named mistakes are the trig_ ids.
+       */
+      type: 'sinusoids'
+      question: SinusoidsQuestion
+    } & TrigAnswerFields)
+  | ({
+      /**
+       * Graphs of tan, cot, sec and csc (precalculus Unit 5): the period, the vertical asymptotes (a family, or a list in
+       * an interval), the zeros of tan and cot, the range of sec and csc; which of four graphs is the equation. Grade a
+       * part with the module's `gradeOgPart`. Named mistakes are the trig_ ids.
+       */
+      type: 'otherTrigGraphs'
+      question: OtherTrigGraphsQuestion
+    } & TrigAnswerFields)
+  | ({
+      /**
+       * Inverse trig functions (precalculus Unit 5): exact values of arcsin, arccos and arctan (or no value), a value on
+       * the calculator in radians, compositions (with a reference triangle, or as an expression in x). Grade a part with
+       * the module's `gradeItPart`. Named mistakes are the trig_ ids.
+       */
+      type: 'inverseTrig'
+      question: InverseTrigQuestion
+    } & TrigAnswerFields)
   | {
       type: 'drill'
       question: 'which_property' | 'legal_or_illegal'
@@ -1742,6 +1837,18 @@ export type AnswerSpec =
 export interface TrigAnswerFields {
   /** The problem in one or two sentences (math). No method and no trap. */
   prompt: string
+  /**
+   * Unit 5: the given equation or expression (math), drawn on its own line under the prompt ("$y = 3\sin(2x)$"). It is the
+   * problem itself, so it may hold the numbers a part reads off it (the amplitude's |A|); no other number in it is an
+   * answer (the generators check).
+   */
+  display?: string
+  /**
+   * Unit 5: the given function of x in app syntax, for "Graph it" (behind the reveal gates): sec, csc and cot written as
+   * one over cos, sin and tan, which the grapher reads. Absent where the function is the answer (an equation, a model)
+   * or the picture is (matching).
+   */
+  graphIt?: string
   figure: TrigFigureSpec
   stages: TrigPart[]
   expectedDisplay: string
@@ -1762,7 +1869,10 @@ export interface TrigAnswerFields {
 export type AngleMeasureAnswer = Extract<AnswerSpec, { type: 'angleMeasure' }>
 export type RightTriangleAnswer = Extract<AnswerSpec, { type: 'rightTriangle' }>
 export type UnitCircleAnswer = Extract<AnswerSpec, { type: 'unitCircle' }>
-export type TrigAnswer = AngleMeasureAnswer | RightTriangleAnswer | UnitCircleAnswer
+export type SinusoidsAnswer = Extract<AnswerSpec, { type: 'sinusoids' }>
+export type OtherTrigGraphsAnswer = Extract<AnswerSpec, { type: 'otherTrigGraphs' }>
+export type InverseTrigAnswer = Extract<AnswerSpec, { type: 'inverseTrig' }>
+export type TrigAnswer = AngleMeasureAnswer | RightTriangleAnswer | UnitCircleAnswer | SinusoidsAnswer | OtherTrigGraphsAnswer | InverseTrigAnswer
 
 /** The optimization arm of `AnswerSpec`, named so the flow and the generators share it. */
 export type OptimizationAnswer = Extract<AnswerSpec, { type: 'optimization' }>

@@ -8,11 +8,14 @@ import type { ProblemInstance, TrigAnswer, TrigPart } from '@/content/types'
 import type { ModuleId } from '@/shared/types'
 import { answerForms, gradeTrigPart, trigLeaks, type ShowsAnswer } from './parts'
 import { resolveSecondHalf } from './resolve2'
+import { resolveUnit5 } from './resolve5'
 import { plain, showsAnswer } from './text'
 
+const TRIG_TYPES = new Set(['angleMeasure', 'rightTriangle', 'unitCircle', 'sinusoids', 'otherTrigGraphs', 'inverseTrig'])
+
 export function trigAnswerOf(p: ProblemInstance): TrigAnswer {
-  if (p.answer.type !== 'angleMeasure' && p.answer.type !== 'rightTriangle' && p.answer.type !== 'unitCircle') throw new Error(`${p.id} is not a trig problem`)
-  return p.answer
+  if (!TRIG_TYPES.has(p.answer.type)) throw new Error(`${p.id} is not a trig problem`)
+  return p.answer as TrigAnswer
 }
 
 /**
@@ -62,6 +65,8 @@ function sameNumber(a: number | 'undefined', b: number | 'undefined', tol = 1e-9
 
 /** Each part's answer worked out again from what the problem shows, with Math only. Returns what disagrees. */
 export function resolveAgain(a: TrigAnswer): string[] {
+  // Unit 5: its own re-solve, from the given equation, the graphs and the words (resolve5.ts).
+  if (a.type === 'sinusoids' || a.type === 'otherTrigGraphs' || a.type === 'inverseTrig') return resolveUnit5(a)
   const second = resolveSecondHalf(a)
   if (second) return second
   const bad: string[] = []
@@ -165,7 +170,9 @@ export function sweep(
     if (disagree.length) throw new Error(`${p.id}: the re-solve disagrees: ${disagree[0]}`)
     const key = a.stages.map((s) => s.answerText).join(' | ')
     answers.set(key, (answers.get(key) ?? 0) + 1)
-    problems.add(plain(a.prompt))
+    // What she sees: the prompt, and in Unit 5 the given equation and a drawn graph's labelled points.
+    const marks = a.figure.graph?.markers?.map((m) => m.label).join('; ')
+    problems.add([plain(a.prompt), a.display ? plain(a.display) : '', marks ?? ''].join(' | '))
   }
   const [topAnswer, top] = [...answers.entries()].sort((x, y) => y[1] - x[1])[0]!
   return { distinctProblems: problems.size, maxAnswerShare: top / seeds, topAnswer, promised, problems: [...problems] }

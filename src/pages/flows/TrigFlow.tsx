@@ -5,14 +5,18 @@ import { SigFigCorrect, SigFigRejection } from '@/components/SigFigFeedback'
 import { RuleCardView } from '@/components/HintPanel'
 import { useStuckRequest } from '@/components/Stuck'
 import { TrigFigure } from '@/components/TrigFigure'
-import { KEYPAD_SETS } from '@/components/keypadKeys'
+import { KEYPAD_SETS, letterKey } from '@/components/keypadKeys'
 import { insertToken, type StripKey } from '@/components/symbolStrip'
 import { useMathKeypadOn } from '@/components/useMathKeypad'
 import { gradeAmPart } from '@/content/modules/angleMeasure'
+import { gradeItPart } from '@/content/modules/inverseTrig'
+import { gradeOgPart } from '@/content/modules/otherTrigGraphs'
 import { gradeRtPart } from '@/content/modules/rightTriangle'
+import { gradeSgPart } from '@/content/modules/sinusoids'
 import { gradeUcPart } from '@/content/modules/unitCircle'
 import type { TrigPartGrade } from '@/content/modules/trig/parts'
-import { pieces } from '@/content/modules/trig/text'
+import { NO_VALUE_TEXT, isUnit5Part, unit5PreviewTex } from '@/content/modules/trig/parts5'
+import { pieces, plain } from '@/content/modules/trig/text'
 import { getModule } from '@/content/registry'
 import type { RuleCard, TrigAnswer, TrigPart } from '@/content/types'
 import { patternHit } from '@/engine'
@@ -52,10 +56,56 @@ const DOING: Record<string, string> = {
   y: 'find y',
   angle: 'find θ',
   solutions: 'find every angle',
+  // Unit 5.
+  amplitude: 'find the amplitude',
+  period: 'find the period',
+  shift: 'find the phase shift',
+  midline: 'find the midline',
+  range: 'find the range',
+  keypoints: 'list the key points',
+  equation: 'write the equation',
+  model: 'write the model',
+  value: 'find the value',
+  time: 'find the first time',
+  asymptotes: 'find the asymptotes',
+  zeros: 'find the x-intercepts',
+  match: 'pick the graph',
+  expression: 'write the expression',
 }
 
 /** The keys for these answers: π, √, °, the word for no value, and the six functions. */
 const TRIG_KEYS: readonly StripKey[] = KEYPAD_SETS.trig
+
+const UNIT5_TYPES = new Set(['sinusoids', 'otherTrigGraphs', 'inverseTrig'])
+
+/** Each part's keys: Unit 4's trig set, or for Unit 5 the keys its kind of answer is written with. */
+function keysFor(part: TrigPart, answer: TrigAnswer): readonly StripKey[] {
+  const c = part.check
+  switch (c.kind) {
+    case 'function':
+      return c.variable === 't' ? KEYPAD_SETS.trigModel : KEYPAD_SETS.trigGraph
+    case 'shift':
+      return KEYPAD_SETS.trigShift
+    case 'family':
+      return KEYPAD_SETS.trigFamily
+    case 'interval':
+      return KEYPAD_SETS.interval
+    case 'points':
+      return KEYPAD_SETS.trigExact
+    case 'midline':
+      return MIDLINE_KEYS
+    case 'principal':
+      return KEYPAD_SETS.trigInverse
+    case 'decimal':
+      return UNIT5_TYPES.has(answer.type) ? KEYPAD_SETS.number : TRIG_KEYS
+    case 'value':
+      return UNIT5_TYPES.has(answer.type) ? KEYPAD_SETS.trigValue : TRIG_KEYS
+    default:
+      return TRIG_KEYS
+  }
+}
+
+const MIDLINE_KEYS: readonly StripKey[] = [letterKey('y')]
 
 /** A math string: words, with every formula and angle between dollar signs drawn by KaTeX. */
 export function TexText({ text }: { text: string }) {
@@ -169,6 +219,8 @@ function StageCard({ index, total, part, passed, children }: { index: number; to
 /** "Reads as" preview of what she typed, from the trig reader (√, π, ° drawn; a list with its commas). */
 function previewTex(part: TrigPart, value: string): string {
   if (!value.trim() || part.kind === 'choice') return ''
+  // Unit 5: each kind's own reader (a range reads as she typed it, so it has no preview).
+  if (isUnit5Part(part)) return part.kind === 'interval' ? '' : unit5PreviewTex(part, value)
   if (part.kind === 'angles') {
     const list = readAngleList(value)
     return list.ok ? list.tex : ''
@@ -180,11 +232,18 @@ function previewTex(part: TrigPart, value: string): string {
 }
 
 function TrigStatement({ answer, showReference, showAngle, answered, done }: { answer: TrigAnswer; showReference: boolean; showAngle: boolean; answered: readonly string[]; done: boolean }) {
+  // Unit 5: the given equation or expression on its own line, in display KaTeX.
+  const display = answer.display ? pieces(answer.display).find((p) => p.tex)?.text : null
   return (
     <div className="space-y-2">
       <p className="text-navy">
         <TexText text={answer.prompt} />
       </p>
+      {display && (
+        <div className="overflow-x-auto" data-trig="display">
+          <Katex tex={display} display ariaLabel={plain(answer.display!)} />
+        </div>
+      )}
       <TrigFigure spec={answer.figure} showReference={showReference} showAngle={showAngle} answered={answered} done={done} />
     </div>
   )
@@ -209,6 +268,27 @@ export function UnitCircleFlow(props: FlowProps) {
   const answer = props.instance.answer
   if (answer.type !== 'unitCircle') return <p className="text-navy">This problem has no unit-circle question to work with — pick another from the module page.</p>
   return <TrigPartsBody {...props} answer={answer} grade={(id, text) => gradeUcPart(answer, id, text)} />
+}
+
+/** Graphs of sine and cosine (Unit 5): the features, an equation from a graph or a description, models. */
+export function SinusoidsFlow(props: FlowProps) {
+  const answer = props.instance.answer
+  if (answer.type !== 'sinusoids') return <p className="text-navy">This problem has no sine or cosine graph to work with — pick another from the module page.</p>
+  return <TrigPartsBody {...props} answer={answer} grade={(id, text) => gradeSgPart(answer, id, text)} />
+}
+
+/** Graphs of tan, cot, sec and csc (Unit 5): the features, and which graph is the equation. */
+export function OtherTrigGraphsFlow(props: FlowProps) {
+  const answer = props.instance.answer
+  if (answer.type !== 'otherTrigGraphs') return <p className="text-navy">This problem has no tangent or secant graph to work with — pick another from the module page.</p>
+  return <TrigPartsBody {...props} answer={answer} grade={(id, text) => gradeOgPart(answer, id, text)} />
+}
+
+/** Inverse trig functions (Unit 5): values, and compositions. */
+export function InverseTrigFlow(props: FlowProps) {
+  const answer = props.instance.answer
+  if (answer.type !== 'inverseTrig') return <p className="text-navy">This problem has no inverse function to work with — pick another from the module page.</p>
+  return <TrigPartsBody {...props} answer={answer} grade={(id, text) => gradeItPart(answer, id, text)} />
 }
 
 /**
@@ -283,10 +363,13 @@ function TrigPartsBody({ instance, attempt, flags, templateTitle, completion, fi
     })
   }
 
-  function check() {
+  /** Check the open part; `entered` is an answer from a button (Unit 5's "No value"), put in the box as well. */
+  function check(entered?: string) {
     if (done) return
-    savePolyEntries(entries)
-    const text = entries[stage.id] ?? ''
+    const now = entered === undefined ? entries : { ...entries, [stage.id]: entered }
+    if (entered !== undefined) setEntries(now)
+    savePolyEntries(now)
+    const text = now[stage.id] ?? ''
     const g = grade(stage.id, text)
     setFeedback({ stage: passed, grade: g })
     if (g.verdict === 'invalid') {
@@ -396,12 +479,20 @@ function TrigPartsBody({ instance, attempt, flags, templateTitle, completion, fi
                   invalid={Boolean(invalid)}
                   onChange={(v) => update(s.id, v)}
                   inputRef={register(s.id)}
-                  keypad={{ keys: TRIG_KEYS }}
+                  keypad={{ keys: keysFor(s, answer) }}
                 />
-                {!keypadOn && <SymbolStrip onInsert={(k) => insert(s.id, k)} keys={TRIG_KEYS} disabled={false} />}
-                <button type="submit" className="btn-chunky min-h-12 rounded-xl bg-navy px-4 font-semibold text-white hover:bg-navy-600">
-                  Check
-                </button>
+                {!keypadOn && <SymbolStrip onInsert={(k) => insert(s.id, k)} keys={keysFor(s, answer)} disabled={false} />}
+                <div className="flex flex-wrap items-center gap-3">
+                  <button type="submit" className="btn-chunky min-h-12 rounded-xl bg-navy px-4 font-semibold text-white hover:bg-navy-600">
+                    Check
+                  </button>
+                  {/* Unit 5: an expression with no value at all is answered with this button, never a typed word. */}
+                  {s.noValue && (
+                    <button type="button" onClick={() => check(NO_VALUE_TEXT)} className="min-h-12 rounded-xl border border-navy-100 bg-white px-4 font-semibold text-navy hover:bg-navy-50">
+                      No value
+                    </button>
+                  )}
+                </div>
                 {shown && <GradeNote grade={shown.grade} />}
               </form>
             ) : (

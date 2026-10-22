@@ -17,6 +17,10 @@ const OFFERED: Record<string, readonly string[] | 'all'> = {
   expLogGraphs: ['eg.features', 'eg.inverse'],
   transformations: 'all',
   piecewiseRate: ['pw.evaluate', 'pw.domain', 'pw.continuous', 'arc.rate'],
+  // Unit 5: the given function; never an equation she writes (sg.equation), a model (sg.model) or matching (og.match).
+  sinusoids: ['sg.features'],
+  otherTrigGraphs: ['og.features'],
+  inverseTrig: 'all',
 }
 
 const offered = (moduleId: string, templateId: string) => {
@@ -101,6 +105,14 @@ describe('Graph it is offered only for what the problem shows her', () => {
           } else if (a.type === 'quadratics' || a.type === 'polyZeros' || a.type === 'polyDivision' || a.type === 'rationalFns') {
             expect(rows).toHaveLength(1)
             expect(bodyOf(rows[0]!.text)).toBe(a.f)
+          } else if (a.type === 'sinusoids' || a.type === 'otherTrigGraphs' || a.type === 'inverseTrig') {
+            // The given function, as the grapher reads it (sec as one over cos): never an answer she writes.
+            expect(rows).toHaveLength(1)
+            expect(bodyOf(rows[0]!.text)).toBe(a.graphIt)
+            // An equation she writes is never the row (an expression in x is, by design, the same function as the given
+            // composition: the row is the composition as given, not her formula).
+            if (a.type !== 'inverseTrig') expect(a.stages.some((part) => part.check.kind === 'function')).toBe(false)
+            else for (const part of a.stages) if (part.check.kind === 'function') expect(rows[0]!.text).toMatch(/asin|acos|atan/)
           }
         }
       }, 120_000)

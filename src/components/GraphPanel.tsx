@@ -5,9 +5,12 @@ import { NumberLineSet } from './NumberLineSet'
 import { RuleCardView } from './HintPanel'
 import { SampledGraph } from './SampledGraph'
 import { SecantGraph } from './SecantGraph'
+import { TrigGraph } from './TrigGraph'
 
 /** Graph panel: function plot, sampled curve, or number line, from `instance.graph`. */
 export function GraphPanel({ spec, caption }: { spec: GraphSpec; caption?: string }) {
+  // A trig graph (Unit 5): π ticks, labelled points, dashed asymptotes. Every other graph is drawn as before.
+  if (spec.kind === 'function' && spec.ticks) return <TrigGraph spec={spec} />
   const sampled = (spec.samples && spec.samples.length > 0) || (spec.runs && spec.runs.length > 0)
   if (spec.kind === 'function' && sampled) return <SampledGraph spec={spec} />
   if (spec.kind === 'function' && spec.f && spec.secant) return <SecantGraph spec={spec} />

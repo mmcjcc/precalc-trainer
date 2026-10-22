@@ -37,8 +37,8 @@ function sameExpr(a: string, b: string): boolean {
 }
 
 describe('module registry', () => {
-  it('registers all forty-eight modules in display order', () => {
-    expect(MODULES).toHaveLength(48)
+  it('registers all fifty-one modules in display order', () => {
+    expect(MODULES).toHaveLength(51)
     expect(MODULES.map((m) => m.id)).toEqual([
       'numberLine',
       'graphFeatures',
@@ -67,6 +67,9 @@ describe('module registry', () => {
       'angleMeasure',
       'rightTriangle',
       'unitCircle',
+      'sinusoids',
+      'otherTrigGraphs',
+      'inverseTrig',
       'sigFigs',
       'atoms',
       'electrons',

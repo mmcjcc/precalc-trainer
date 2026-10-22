@@ -83,6 +83,12 @@ export const COURSES: readonly CourseDef[] = [
         title: 'Trigonometric functions',
         moduleIds: ['angleMeasure', 'rightTriangle', 'unitCircle'],
       },
+      {
+        id: 'unit5',
+        label: 'Unit 5',
+        title: 'Graphs of the trigonometric functions',
+        moduleIds: ['sinusoids', 'otherTrigGraphs', 'inverseTrig'],
+      },
     ],
   },
   {

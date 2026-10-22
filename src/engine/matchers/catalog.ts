@@ -2784,6 +2784,196 @@ export const ERROR_PATTERNS: Record<ErrorPatternId, ErrorPatternInfo> = {
     lesson: 'All Students Take Calculus: all six functions are positive in Quadrant I, sin in II, tan in III and cos in IV, each with its reciprocal. A negative value puts θ in the two quadrants where that function is negative.',
     example: 'sin θ negative: Quadrants I and II ✗ → Quadrants III and IV',
   },
+  // --- precalculus Unit 5, graphs of the trig functions (engine/trig: wave, shift, xset, points, principal; content/
+  // modules/sinusoids, otherTrigGraphs, inverseTrig). Letters (A, B, C, D, d, s, α) and words only, π only glued to a
+  // letter or a slash (2π/B, πB), so no example or lesson can show an amplitude, period, shift, set, angle or equation
+  // she is asked for. ---
+  trig_amplitude_negative: {
+    id: 'trig_amplitude_negative',
+    title: 'The amplitude is never negative',
+    lesson: 'The amplitude is a distance: how far the graph rises above its midline. In y = A sin(Bx − C) + D it is |A|. A negative A flips the graph over its midline, but the amplitude stays positive.',
+    example: 'y = −A sin x: amplitude −A ✗ → |A|',
+  },
+  trig_amplitude_with_d: {
+    id: 'trig_amplitude_with_d',
+    title: 'Leave the vertical shift out of the amplitude',
+    lesson: 'The amplitude is measured from the midline y = D, not from the x-axis. Adding D gives the height of the highest point instead; the amplitude is |A| whatever D is.',
+    example: 'y = A sin x + D: A + D ✗ → |A|',
+  },
+  trig_amplitude_as_span: {
+    id: 'trig_amplitude_as_span',
+    title: 'The amplitude is half the height',
+    lesson: 'From the lowest point to the highest is twice the amplitude. The amplitude is half of that distance: from the midline up to the top.',
+    example: 'amplitude = max − min ✗ → half of max − min',
+  },
+  trig_period_as_b: {
+    id: 'trig_period_as_b',
+    title: 'The period is not B',
+    lesson: 'B squeezes or stretches the graph: it says how many cycles fit where the parent graph has one. The length of one cycle, the period, is 2π/B for sin, cos, sec and csc, and π/B for tan and cot.',
+    example: 'y = sin(Bx): period B ✗ → 2π/B',
+  },
+  trig_period_times_b: {
+    id: 'trig_period_times_b',
+    title: 'Divide by B for the period',
+    lesson: 'A bigger B makes the cycles shorter, so the period divides by B: 2π/B, not 2πB. Multiplying by B makes a squeezed graph look stretched.',
+    example: 'y = sin(Bx): period 2πB ✗ → 2π/B',
+  },
+  trig_period_base_mixed: {
+    id: 'trig_period_base_mixed',
+    title: 'tan and cot repeat twice as often',
+    lesson: 'sin, cos, sec and csc repeat every full turn, so their period is 2π/B. tan and cot repeat every half turn: their period is π/B.',
+    example: 'y = tan(Bx): period 2π/B ✗ → π/B',
+  },
+  trig_shift_not_divided: {
+    id: 'trig_shift_not_divided',
+    title: 'Factor out B before you read the shift',
+    lesson: 'In y = A sin(Bx − C) + D the phase shift is C/B, not C. Factor B out of the inside first: Bx − C = B(x − C/B). The cycle starts where the inside is zero, at x = C/B.',
+    example: 'sin(Bx − C): shift C ✗ → shift C/B',
+  },
+  trig_shift_wrong_way: {
+    id: 'trig_shift_wrong_way',
+    title: 'x − c moves the graph right',
+    lesson: 'Inside the function the sign works backwards: a cycle starts where the inside is zero. x − c is zero at x = c, to the right; x + c is zero at x = −c, to the left.',
+    example: 'sin(x + c): right c ✗ → left c',
+  },
+  trig_midline_zero: {
+    id: 'trig_midline_zero',
+    title: 'The midline moves with D',
+    lesson: 'The number added at the end shifts the whole graph up or down, midline and all. The midline is y = D, halfway between the highest and lowest points; only with no vertical shift is it the x-axis.',
+    example: 'y = A sin x + D: the x-axis ✗ → y = D',
+  },
+  trig_range_ignores_d: {
+    id: 'trig_range_ignores_d',
+    title: 'Shift the range with the midline',
+    lesson: 'The heights go |A| above and below the midline y = D, so the range is [D − |A|, D + |A|], not [−|A|, |A|]. For sec and csc the same shift moves both pieces of the range.',
+    example: 'y = A sin x + D: [−|A|, |A|] ✗ → [D − |A|, D + |A|]',
+  },
+  trig_sec_range_as_sinusoid: {
+    id: 'trig_sec_range_as_sinusoid',
+    title: 'sec and csc live outside the band',
+    lesson: 'sec is one over cos and csc is one over sin. Where cos or sin is small its reciprocal is large, so sec and csc take every height outside the band of the matching curve: (−∞, D − |A|] ∪ [D + |A|, ∞).',
+    example: 'y = A sec x + D: [D − |A|, D + |A|] ✗ → (−∞, D − |A|] ∪ [D + |A|, ∞)',
+  },
+  trig_reflection_missed: {
+    id: 'trig_reflection_missed',
+    title: 'A minus sign in front flips the graph',
+    lesson: 'A negative A reflects the graph across its midline: where y = A sin x would rise from the midline, it falls. Read the sign of A, or on a graph, whether the curve goes up or down from where a cycle starts.',
+    example: 'y = −A sin x: starts going up ✗ → starts going down',
+  },
+  trig_asymptotes_zeros_swapped: {
+    id: 'trig_asymptotes_zeros_swapped',
+    title: 'Asymptotes and zeros are different places',
+    lesson: 'tan = sin/cos has its vertical asymptotes where cos is zero and its zeros where sin is zero; cot = cos/sin is the other way round. The zeros sit halfway between the asymptotes.',
+    example: 'y = tan x: asymptotes where sin x is zero ✗ → where cos x is zero',
+  },
+  trig_sec_asymptotes_at_sin_zeros: {
+    id: 'trig_sec_asymptotes_at_sin_zeros',
+    title: 'sec goes with cos, csc with sin',
+    lesson: 'sec is one over cos, so its asymptotes are where cos is zero; csc is one over sin, so its asymptotes are where sin is zero. Swapped, they land where the graph turns.',
+    example: 'y = sec x: asymptotes where sin x is zero ✗ → where cos x is zero',
+  },
+  trig_period_half: {
+    id: 'trig_period_half',
+    title: 'High to low is half a period',
+    lesson: 'From a highest point to the next lowest point is half a cycle. A full period runs from a highest point to the next highest point, twice as far.',
+    example: 'period = from a high to the next low ✗ → from a high to the next high',
+  },
+  trig_period_quarter: {
+    id: 'trig_period_quarter',
+    title: 'High to the midline is a quarter period',
+    lesson: 'From a highest point down to where the graph crosses its midline is a quarter of a cycle. A full period is four times as long: from a highest point to the next highest point.',
+    example: 'period = from a high to the midline ✗ → from a high to the next high',
+  },
+  trig_b_as_period: {
+    id: 'trig_b_as_period',
+    title: 'B is not the period',
+    lesson: 'The number multiplying x is B, not the period. They are linked by P = 2π/B, so B = 2π/P: a long period means a small B.',
+    example: 'period P: sin(Px) ✗ → sin((2π/P)x)',
+  },
+  trig_midline_at_extreme: {
+    id: 'trig_midline_at_extreme',
+    title: 'The midline is halfway up',
+    lesson: 'The midline is halfway between the highest and lowest points: y is the average of the max and the min. The lowest or highest height is where the graph turns, not its middle.',
+    example: 'midline y = min ✗ → y = the average of max and min',
+  },
+  trig_cofunction_graph: {
+    id: 'trig_cofunction_graph',
+    title: 'Which function is it?',
+    lesson: 'Each function starts its cycle its own way: sin on its midline going up, cos at its highest point, tan at a zero going up, cot at an asymptote, sec at a turning point like cos, csc at an asymptote like sin. Look at what the graph does where a cycle starts.',
+    example: 'y = cot x drawn as tan x ✗ → an asymptote where x is zero',
+  },
+  trig_vertical_shift_sign: {
+    id: 'trig_vertical_shift_sign',
+    title: 'Down means minus',
+    lesson: 'A vertical shift down by d subtracts d at the end: y = f(x) − d. Adding d moves the graph up instead, and the midline with it.',
+    example: 'shifted down by d: y = sin x + d ✗ → y = sin x − d',
+  },
+  trig_amplitude_as_diameter: {
+    id: 'trig_amplitude_as_diameter',
+    title: 'The amplitude is the radius',
+    lesson: 'A rider rises one radius above the center and sinks one radius below it, so the amplitude of the height is the radius, half the diameter. The whole diameter is the distance from the lowest point to the highest.',
+    example: 'diameter d, radius r: h = c − d cos(Bt) ✗ → h = c − r cos(Bt)',
+  },
+  trig_model_start_point: {
+    id: 'trig_model_start_point',
+    title: 'Start the curve where the story starts',
+    lesson: 'cos starts at its highest point, −cos at its lowest, and sin on the midline going up. A ride boarded at the bottom starts at its lowest height, so its model is the midline minus a cosine; a story that starts at a high tide or a peak is the midline plus one.',
+    example: 'starts at the bottom: h = c + a cos(Bt) ✗ → h = c − a cos(Bt)',
+  },
+  trig_degree_mode: {
+    id: 'trig_degree_mode',
+    title: 'Set the calculator to RADIAN mode',
+    lesson: 'A model in radians, and an inverse value in radians, need RADIAN mode. In DEGREE mode the calculator reads every angle as degrees and gives inverse values in degrees, with no warning. Press MODE and choose RADIAN.',
+    example: 'cos(Bt) worked out in DEGREE mode ✗ → in RADIAN mode',
+  },
+  trig_model_later_time: {
+    id: 'trig_model_later_time',
+    title: 'The first time is the earliest one',
+    lesson: 'A sinusoid reaches each height between its lowest and highest twice in every cycle, once going up and once going down. The first time is the earliest of them after the start: in intersect, guess near the first crossing.',
+    example: 'the later crossing in the first cycle ✗ → the earlier one',
+  },
+  trig_inverse_other_angle: {
+    id: 'trig_inverse_other_angle',
+    title: 'The inverse gives just one angle',
+    lesson: 'Many angles share a sine, but arcsin gives only the one on the right half of the unit circle. arctan does the same, without the top and the bottom; arccos gives the one on the top half.',
+    example: 'arcsin of a negative: Quadrant III ✗ → Quadrant IV',
+  },
+  trig_inverse_not_principal: {
+    id: 'trig_inverse_not_principal',
+    title: 'Negative inputs give negative angles',
+    lesson: 'For a negative input, arcsin and arctan give a negative angle, measured clockwise from the positive x-axis. The positive angle that ends in the same place is not in their range.',
+    example: 'arcsin(−s) = a full turn minus α ✗ → −α',
+  },
+  trig_arccos_range_as_arcsin: {
+    id: 'trig_arccos_range_as_arcsin',
+    title: 'arccos is never negative',
+    lesson: 'arccos gives angles on the top half of the unit circle, from zero up to a half turn. A negative input gives an angle in Quadrant II, not a negative angle: arccos(−s) is a half turn minus arccos(s).',
+    example: 'arccos(−s) = −arccos(s) ✗ → a half turn minus arccos(s)',
+  },
+  trig_inverse_as_reciprocal: {
+    id: 'trig_inverse_as_reciprocal',
+    title: 'sin⁻¹ is not one over sin',
+    lesson: 'The ⁻¹ in sin⁻¹ x means the inverse function: the angle whose sine is x. One over sin x is csc x, a different thing. On the calculator, sin⁻¹ is printed above the SIN key.',
+    example: 'sin⁻¹ s = one over sin s ✗ → the angle whose sine is s',
+  },
+  trig_inverse_cancel_outside: {
+    id: 'trig_inverse_cancel_outside',
+    title: 'arcsin undoes sin only in its range',
+    lesson: 'arcsin(sin θ) = θ only when θ is on the right half of the unit circle, where arcsin gives its angles. Otherwise find sin θ first, then the angle in that range with that sine. arccos works the same way on the top half, and arctan on the right half.',
+    example: 'arcsin(sin θ), θ in Quadrant II: θ ✗ → a half turn minus θ',
+  },
+  trig_inverse_outside_domain: {
+    id: 'trig_inverse_outside_domain',
+    title: 'Check the input before the angle',
+    lesson: 'A sine or a cosine is always between minus one and one, so arcsin and arccos only take inputs in that interval. For an input outside it there is no angle at all. arctan takes every input.',
+    example: 'arcsin(s), s past one: an angle ✗ → no angle at all',
+  },
+  trig_inverse_sign_dropped: {
+    id: 'trig_inverse_sign_dropped',
+    title: 'Keep the sign of the input',
+    lesson: 'arcsin and arctan are odd: a negative input gives the negative of the angle for the positive input. arccos of a negative input is a half turn minus the angle for the positive input, in Quadrant II.',
+    example: 'arcsin(−s) = arcsin(s) ✗ → −arcsin(s)',
+  },
   // --- precalculus Unit 2, optimization with quadratics (engine/optim). Examples use l and w, letters no problem
   // uses, so no example can be a generated answer. ---
   opt_wall_fenced: {
