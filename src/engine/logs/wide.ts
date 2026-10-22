@@ -19,7 +19,8 @@ import type { Relation, Statement } from '../types'
 const ROOT_TOL = 1e-7
 const DEDUPE_TOL = 1e-9
 
-type G = (t: number) => { g: number; scale: number } | 'undef'
+/** g = lhs − rhs at t, its scale, and whether both sides are within ROOT_TOL of 0 there (`small`: says nothing). */
+type G = (t: number) => { g: number; scale: number; small?: boolean } | 'undef'
 
 let BASE_GRID: number[] | null = null
 
@@ -149,17 +150,25 @@ export function dedupe(values: readonly number[]): number[] {
  * golden section drives to a root (a tangential root such as (x − 3)² = 0). A grid point merely CLOSE to 0
  * is not a root by itself: the geometric grid has points like 10⁻⁹, where g = x is "small" but x = 0 is
  * the only root. A region where g ≡ 0 gives no roots (the relation holds on a whole stretch).
+ *
+ * "A whole stretch" is measured by LENGTH along x, each grid point weighted by its spacing, not by counting points:
+ * the geometric part of the grid crowds around 0, so a shallow root at 0 put hundreds of points within ROOT_TOL of
+ * it, and 4^(x − 3) = 8^(x − 2) (x = 0) was read as holding on a stretch and given no roots (review 2026-10-22).
+ * Points where both sides are within ROOT_TOL of 0 (2^(2x − 6) and 2^(3x − 6) at x = −20) say nothing either way and
+ * are left out of the measure, as underflowed ones are.
  */
 export function rootsOnGrid(gf: G, grid: readonly number[]): number[] {
   const vals = grid.map((t) => gf(t))
-  let zeros = 0
-  let defined = 0
-  for (const v of vals) {
-    if (v === 'undef') continue
-    defined++
-    if (Math.abs(v.g) <= ROOT_TOL * v.scale) zeros++
+  let zeroLength = 0
+  let definedLength = 0
+  for (let i = 0; i < grid.length; i++) {
+    const v = vals[i]!
+    if (v === 'undef' || v.small) continue
+    const w = (grid[Math.min(i + 1, grid.length - 1)]! - grid[Math.max(i - 1, 0)]!) / 2
+    definedLength += w
+    if (Math.abs(v.g) <= ROOT_TOL * v.scale) zeroLength += w
   }
-  if (!defined || zeros > defined * 0.3) return []
+  if (!(definedLength > 0) || zeroLength > definedLength * 0.3) return []
   const roots: number[] = []
   const mag = (i: number) => {
     const v = vals[i]
@@ -210,7 +219,9 @@ function relationG(rel: Relation, v: string, fixed: Scope): G {
     const r = evalNode(rel.rhs, scope)
     if (l === 'undef' || r === 'undef') return 'undef'
     if (Math.abs(l) < TINY && Math.abs(r) < TINY && (l !== 0 || r !== 0 || underflows(rel, scope))) return 'undef'
-    return { g: l - r, scale: Math.max(1, Math.abs(l), Math.abs(r)) }
+    // Both sides within ROOT_TOL of 0 but not both exactly 0 (log(1) = log(1) at a real root is exact).
+    const small = Math.abs(l) <= ROOT_TOL && Math.abs(r) <= ROOT_TOL && (l !== 0 || r !== 0)
+    return { g: l - r, scale: Math.max(1, Math.abs(l), Math.abs(r)), small }
   }
 }
 

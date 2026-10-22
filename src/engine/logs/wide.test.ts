@@ -73,6 +73,20 @@ describe('solutions on the wide grid', () => {
     ['log(x) + log(x - 3) = 1', [5]],
     ['ln(x^2) = 4', [-(Math.E ** 2), Math.E ** 2]],
     ['5000(1 + 0.04/12)^(12x) = 10000', [Math.log(2) / (12 * Math.log(1 + 0.04 / 12))]],
+    // Review 2026-10-22: a shallow root at 0, where the grid crowds, with both sides shrinking to 0 for x → −∞, read
+    // as "holds on a stretch" and had no roots.
+    ['4^(x - 3) = 8^(x - 2)', [0]],
+    ['2^(2x - 6) = 2^(3x - 6)', [0]],
+    ['2^(x - 10) = 4^(x - 5)', [0]],
+    ['2^(x - 12) = 4^(x - 6)', [0]],
+    ['3^(x - 8) = 9^(x - 4)', [0]],
+    ['5^(x + 2) = 25^(x + 1)', [0]],
+    ['4^(x - 1) = 8^(x - 1)', [1]],
+    // Identities still have no roots: they hold on a whole stretch.
+    ['ln(e^x) = x', []],
+    ['log(x^3) = 3log(x)', []],
+    ['2^(x + 1) = 2 * 2^x', []],
+    ['log_2(8x) = 3 + log_2(x)', []],
   ] as [string, number[]][])('%s', (text, expected) => {
     const got = solutionsWide(stmt(text), 'x')
     expect(got.length, JSON.stringify(got)).toBe(expected.length)
