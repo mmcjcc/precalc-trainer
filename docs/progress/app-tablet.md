@@ -233,3 +233,29 @@ for md:)}`, `docs/BUILD_GUIDE.md` (§0 UI row, §7). Tests changed on purpose: `
 `src/components/rewards/Rewards.test.tsx`.
 
 Untouched: content, engines, grading, the rewards', quests' and monsters' rules, `src/session/breaks.ts`, deploy, server.
+
+## Review (Claude, 2026-10-22)
+
+Built by one Claude agent (1 h 37 min, 214 tool calls). Checked on the Android emulator in a store build, at the phone's
+own size (411 x 914), at 360 x 640 (wm size 945x1680) and as a tablet (wm size 2560x1600, density 320: 1280 x 800):
+- Phone, an exponential equation with the keypad up: after the keypad's Check, the pinned problem strip, the start line
+  and her three lines show above the composer; the extras fold to one line ("✓ Kept · Stuck? ⌃", a wrong line's title
+  cut to fit with Why?); the box sits on the keypad with no blank band.
+- 360 x 640: the strip and her newest line show (a long line wraps to three rows there, so only one line fits with the
+  empty preview box); acceptable on the smallest phones.
+- Tablet: the rail on every screen; the problem in two panes (problem, tools and rule cards left; her work, the answer
+  box and the composer right), the keypad docked under her work in the right pane with her lines in view; the scratch
+  pad as the left pane's second view (graph paper, three pens, highlighter, eraser, undo, redo, clear), saved per attempt
+  and back after a reload; Home in two columns with the store app's test banner at the bottom and room under it.
+- The store fork merged with conflicts in App.tsx, BottomSheet.tsx, index.css and Settings.tsx (its ad banner room and
+  "Privacy and ads"); resolved there, keeping the banner room on sheets, dialogs and toasts.
+
+Changed in review:
+- The phone composer now brings her newest lines above it when the keypad OPENS too, not only after a Check: a problem
+  resumed at the top of the page (or the keypad closed and opened again) left her lines hidden behind the composer
+  (keypadDom.ts; a PhoneComposer test that fails without it).
+- Home's mistake cards went two-across by the screen's width and, in the tablet layout's 22rem Today column, wrapped
+  their titles one letter a line: the list now goes two-across by a container query (@xl).
+
+Seen once and not reproduced: the very first stroke on a fresh pad drew a dot; every stroke after, and the first after
+reopening the pad, drew in full.
