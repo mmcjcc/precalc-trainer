@@ -13,7 +13,7 @@
  */
 import { useCallback, useEffect, useId, useRef, useSyncExternalStore } from 'react'
 import { useStore } from '@/store'
-import { pressedRecently, useKeypadStore, type InputMode } from './keypadStore'
+import { pressedRecently, useKeypadStore, type InputMode, type KeypadEnter } from './keypadStore'
 import type { StripKey } from './symbolStrip'
 
 const COARSE = '(pointer: coarse)'
@@ -62,6 +62,8 @@ export interface MathKeypadOptions {
   disabled?: boolean
   /** false: an ordinary box that never uses the keypad. */
   enabled?: boolean
+  /** The Check key's words in a box that checks nothing (a grapher row: "Next"). Absent: "✓ Check". */
+  enter?: KeypadEnter
 }
 
 export interface MathKeypadBinding {
@@ -77,20 +79,20 @@ export interface MathKeypadBinding {
 
 const NO_KEYS: readonly StripKey[] = []
 
-export function useMathKeypad({ keys = NO_KEYS, vars, inputMode = 'text', disabled = false, enabled = true }: MathKeypadOptions = {}): MathKeypadBinding {
+export function useMathKeypad({ keys = NO_KEYS, vars, inputMode = 'text', disabled = false, enabled = true, enter }: MathKeypadOptions = {}): MathKeypadBinding {
   const id = useId()
   const on = useMathKeypadOn() && enabled
   const live = on && !disabled
   const mode = useKeypadStore((s) => s.modes[id] ?? 'keypad')
   const elRef = useRef<HTMLInputElement | null>(null)
-  const spec = useRef({ keys, vars, inputMode, live })
-  spec.current = { keys, vars, inputMode, live }
+  const spec = useRef({ keys, vars, inputMode, live, enter })
+  spec.current = { keys, vars, inputMode, live, enter }
 
   const activate = useCallback(() => {
     const el = elRef.current
     const s = spec.current
     if (!el || !s.live) return
-    useKeypadStore.getState().activate({ id, el, keys: s.keys, vars: s.vars, inputMode: s.inputMode })
+    useKeypadStore.getState().activate({ id, el, keys: s.keys, vars: s.vars, inputMode: s.inputMode, ...(s.enter ? { enter: s.enter } : {}) })
   }, [id])
 
   const ref = useCallback((el: HTMLInputElement | null) => {
@@ -120,7 +122,7 @@ export function useMathKeypad({ keys = NO_KEYS, vars, inputMode = 'text', disabl
 
   // Keep the keypad's target current while this box has it: the keys of a new part; the keypad closes
   // when the box is disabled or the setting is switched off.
-  const signature = `${keys.map((k) => k.insert).join('\u0001')}|${(vars ?? []).join(',')}|${inputMode}`
+  const signature = `${keys.map((k) => k.insert).join('\u0001')}|${(vars ?? []).join(',')}|${inputMode}|${enter?.label ?? ''}`
   useEffect(() => {
     const store = useKeypadStore.getState()
     if (!live) {

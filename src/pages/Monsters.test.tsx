@@ -252,7 +252,7 @@ describe('getting there', () => {
     renderAt('/monsters')
     expect(await screen.findByRole('heading', { level: 1, name: 'Monsters' }, LAZY)).toBeTruthy()
     const bar = document.querySelector<HTMLElement>('[data-tab-bar]')!
-    expect(within(bar).getAllByRole('link').map((a) => a.textContent)).toEqual(['Home', 'Monsters', 'Progress', 'Settings'])
+    expect(within(bar).getAllByRole('link').map((a) => a.textContent)).toEqual(['Home', 'Monsters', 'Graph', 'Progress', 'Settings'])
     expect(within(bar).getByRole('link', { name: 'Monsters' }).getAttribute('aria-current')).toBe('page')
   })
 

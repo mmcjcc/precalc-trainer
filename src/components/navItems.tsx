@@ -1,12 +1,13 @@
 /**
- * The app's destinations (docs/progress/phone-monsters.md). The bottom tab bar on a phone shows four, on every screen
- * and in both editions: Home, Monsters, Progress, Settings. The top navigation on a wide screen shows the same four,
- * then Ask while the tutor is configured and the Sandbox in the family app (it has the room). The drill has neither: it
- * keeps its route and is reached from its module in Unit 1 and from Progress; Ask and the Sandbox are on Home too.
+ * The app's destinations (docs/progress/phone-monsters.md, docs/progress/app-grapher.md). The bottom tab bar on a phone
+ * shows five, on every screen and in both editions: Home, Monsters, Graph, Progress, Settings. The top navigation on a
+ * wide screen shows the same five, then Ask while the tutor is configured and the Sandbox in the family app (it has the
+ * room). The drill has neither: it keeps its route and is reached from its module in Unit 1 and from Progress; Ask and
+ * the Sandbox are on Home too.
  */
 import { STORE } from '@/edition'
 
-export type NavIcon = 'home' | 'monsters' | 'progress' | 'settings' | 'ask' | 'sandbox'
+export type NavIcon = 'home' | 'monsters' | 'graph' | 'progress' | 'settings' | 'ask' | 'sandbox'
 
 export interface NavItem {
   to: string
@@ -19,18 +20,19 @@ export interface NavItem {
 const TABS: readonly NavItem[] = [
   { to: '/', label: 'Home', icon: 'home', end: true },
   { to: '/monsters', label: 'Monsters', icon: 'monsters' },
+  { to: '/graph', label: 'Graph', icon: 'graph' },
   { to: '/progress', label: 'Progress', icon: 'progress' },
   { to: '/settings', label: 'Settings', icon: 'settings' },
 ]
 const ASK: NavItem = { to: '/ask', label: 'Ask', icon: 'ask' }
 const SANDBOX: NavItem = { to: '/sandbox', label: 'Sandbox', icon: 'sandbox' }
 
-/** The phone's bottom tab bar: the four, always. */
+/** The phone's bottom tab bar: the five, always. */
 export function tabItems(): readonly NavItem[] {
   return TABS
 }
 
-/** The wide top navigation: the four, then Ask (tutor configured) and the Sandbox (family app). */
+/** The wide top navigation: the five, then Ask (tutor configured) and the Sandbox (family app). */
 export function navItems(askOn: boolean): NavItem[] {
   return [...TABS, ...(askOn ? [ASK] : []), ...(STORE ? [] : [SANDBOX])]
 }
@@ -86,6 +88,14 @@ export function NavIconSvg({ icon }: { icon: NavIcon }) {
           <path d="M8.6 7.3 7 3.6M15.4 7.3 17 3.6" />
           <circle cx="9.5" cy="12" r="1.1" fill="currentColor" stroke="none" />
           <circle cx="14.5" cy="12" r="1.1" fill="currentColor" stroke="none" />
+        </svg>
+      )
+    case 'graph':
+      // Crossed axes and a parabola (Progress has the L-shaped axes and bars).
+      return (
+        <svg {...common}>
+          <path d="M12 3v18M3 13h18" strokeOpacity={0.55} />
+          <path d="M5.5 4c1.8 9.5 4.3 13 6.5 13s4.7-3.5 6.5-13" />
         </svg>
       )
     case 'progress':

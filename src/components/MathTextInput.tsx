@@ -1,5 +1,5 @@
 import { useCallback, type InputHTMLAttributes, type Ref } from 'react'
-import type { InputMode } from './keypadStore'
+import type { InputMode, KeypadEnter } from './keypadStore'
 import type { StripKey } from './symbolStrip'
 import { useMathKeypad } from './useMathKeypad'
 
@@ -9,6 +9,8 @@ export interface KeypadBox {
   keys?: readonly StripKey[]
   /** Letters (x, y, n, …) when they are not the letters among `keys`. */
   vars?: readonly string[]
+  /** The Check key's words in a box that checks nothing (a grapher row). Absent: "✓ Check". */
+  enter?: KeypadEnter
 }
 
 type Props = Omit<InputHTMLAttributes<HTMLInputElement>, 'inputMode'> & {
@@ -29,7 +31,7 @@ function assignRef<T>(ref: Ref<T> | undefined, value: T | null): void {
  * so value, onChange, Enter and the box's form behave exactly as before.
  */
 export function MathTextInput({ ref, keypad, inputMode = 'text', disabled, onFocus, onBlur, onClick, ...rest }: Props) {
-  const kp = useMathKeypad({ keys: keypad?.keys, vars: keypad?.vars, inputMode, disabled, enabled: keypad !== undefined })
+  const kp = useMathKeypad({ keys: keypad?.keys, vars: keypad?.vars, inputMode, disabled, enabled: keypad !== undefined, ...(keypad?.enter ? { enter: keypad.enter } : {}) })
   const keypadRef = kp.ref
   // Stable while the caller's ref is, so a ref object is not detached and re-attached on every render.
   const setRefs = useCallback(

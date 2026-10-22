@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useState } from 'react'
+import { Fragment, useEffect, useState, type ReactNode } from 'react'
 import { CALC_LABEL, type CalcId, type CalcPanels } from '@/shared/types'
 import { useSettings, useStore } from '@/store'
 import { tokenizeKeys } from './calcKeys'
@@ -11,6 +11,8 @@ type Props = {
   footer?: string
   /** Start collapsed (mobile default per UX-17); remembered per session. */
   collapsible?: boolean
+  /** The problem's "Graph it" (the grapher with its function), where the problem offers one. */
+  graphIt?: ReactNode
 }
 
 const CALC_IDS: CalcId[] = ['ti84', 'nspire']
@@ -39,7 +41,7 @@ function KeysLine({ keys }: { keys: string }) {
  * Calculator panel: segmented control (persisted in settings.calculator), ordered keycap steps,
  * cautions in coral-700 with an icon and the word "Careful", and a copy-expression button.
  */
-export function CalcPanel({ panels, expression, footer, collapsible = false }: Props) {
+export function CalcPanel({ panels, expression, footer, collapsible = false, graphIt }: Props) {
   const settings = useSettings()
   const setSettings = useStore((s) => s.setSettings)
   const calc = settings.calculator
@@ -124,6 +126,7 @@ export function CalcPanel({ panels, expression, footer, collapsible = false }: P
           </span>
         </div>
       )}
+      {graphIt && <div className="mt-3">{graphIt}</div>}
       {footer && <p className="mt-4 text-xs text-navy/50">{footer}</p>}
     </section>
   )

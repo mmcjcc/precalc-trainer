@@ -2,8 +2,8 @@
 /**
  * Navigation by screen size: on a phone the menu screens get the bottom tab bar (the top navigation hides), and a
  * problem screen or a running set gets neither; a wide screen keeps today's top navigation everywhere. The tab bar is
- * Home, Monsters, Progress, Settings on every screen; the top navigation shows the same four first, then Ask (tutor
- * configured) and the Sandbox (family app) (docs/progress/phone-monsters.md).
+ * Home, Monsters, Graph, Progress, Settings on every screen; the top navigation shows the same five first, then Ask
+ * (tutor configured) and the Sandbox (family app) (docs/progress/phone-monsters.md, docs/progress/app-grapher.md).
  */
 import { render, screen, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
@@ -52,15 +52,15 @@ afterEach(() => {
 })
 
 describe('a phone: the bottom tab bar on menu screens', () => {
-  it('Home: Home, Monsters, Progress, Settings, icons and labels, 48 px tall, Home marked; no top navigation', { timeout: PAGE_TIMEOUT }, () => {
+  it('Home: Home, Monsters, Graph, Progress, Settings, icons and labels, 48 px tall, Home marked; no top navigation', { timeout: PAGE_TIMEOUT }, () => {
     installPointer(true)
     renderAt('/')
     const bar = tabBar()!
     expect(bar).toBeTruthy()
     expect(bar.getAttribute('aria-label')).toBe('Main')
     const links = within(bar).getAllByRole('link')
-    expect(links.map((a) => a.textContent)).toEqual(['Home', 'Monsters', 'Progress', 'Settings'])
-    expect(links.map((a) => a.getAttribute('href'))).toEqual(['/', '/monsters', '/progress', '/settings'])
+    expect(links.map((a) => a.textContent)).toEqual(['Home', 'Monsters', 'Graph', 'Progress', 'Settings'])
+    expect(links.map((a) => a.getAttribute('href'))).toEqual(['/', '/monsters', '/graph', '/progress', '/settings'])
     for (const a of links) {
       expect(a.className).toContain('min-h-12')
       expect(a.querySelector('svg')).toBeTruthy()
@@ -79,6 +79,7 @@ describe('a phone: the bottom tab bar on menu screens', () => {
 
   it.each([
     ['/monsters', 'Monsters'],
+    ['/graph', 'Graph'],
     ['/progress', 'Progress'],
     ['/settings', 'Settings'],
     ['/tutor-log', 'Settings'],
@@ -139,7 +140,7 @@ describe('a wide screen keeps today’s top navigation', () => {
     expect(tabBar()).toBeNull()
     expect(brand()).toBeTruthy()
     const nav = screen.getByRole('navigation', { name: 'Main' })
-    expect(within(nav).getAllByRole('link').map((a) => a.textContent)).toEqual(['Home', 'Monsters', 'Progress', 'Settings', 'Sandbox'])
+    expect(within(nav).getAllByRole('link').map((a) => a.textContent)).toEqual(['Home', 'Monsters', 'Graph', 'Progress', 'Settings', 'Sandbox'])
     expect(within(nav).getByRole('link', { name: 'Home' }).getAttribute('aria-current')).toBe('page')
     expect(nav.querySelector('svg')).toBeNull()
   })
@@ -153,19 +154,34 @@ describe('a wide screen keeps today’s top navigation', () => {
   })
 })
 
+describe('five tabs on a phone', () => {
+  it('fit a 360 px screen: about 70 px a tab, and the longest label (8 letters at 12 px) is about 55 px', () => {
+    const items = tabItems()
+    expect(items).toHaveLength(5)
+    // The bar's side padding is 4 px each side; each tab is flex-1 with 2 px of padding each side.
+    const tabWidth = (360 - 8) / items.length
+    // Inter at 12 px, overestimated on purpose: 8 px a capital, 9.5 px an m or w, 6.6 px any other letter.
+    const width = (label: string) => [...label].reduce((w, c) => w + (/[A-Z]/.test(c) ? 8 : /[mw]/.test(c) ? 9.5 : 6.6), 0)
+    for (const t of items) expect(width(t.label) + 4).toBeLessThan(tabWidth)
+    // The pill behind the icon is 56 px and shrinks to the tab (max-w-full) if it must.
+    expect(tabWidth).toBeGreaterThan(56)
+  })
+})
+
 describe('which item is current', () => {
   const items = tabItems()
 
   it('the tab bar always marks the page’s tab; the top navigation is as it was', () => {
-    expect(items.map((i) => i.label)).toEqual(['Home', 'Monsters', 'Progress', 'Settings'])
-    // The wide top navigation: the four, then Ask while the tutor is configured, then the Sandbox (family app).
-    expect(navItems(true).map((i) => i.label)).toEqual(['Home', 'Monsters', 'Progress', 'Settings', 'Ask', 'Sandbox'])
-    expect(navItems(false).map((i) => i.label)).toEqual(['Home', 'Monsters', 'Progress', 'Settings', 'Sandbox'])
+    expect(items.map((i) => i.label)).toEqual(['Home', 'Monsters', 'Graph', 'Progress', 'Settings'])
+    // The wide top navigation: the five, then Ask while the tutor is configured, then the Sandbox (family app).
+    expect(navItems(true).map((i) => i.label)).toEqual(['Home', 'Monsters', 'Graph', 'Progress', 'Settings', 'Ask', 'Sandbox'])
+    expect(navItems(false).map((i) => i.label)).toEqual(['Home', 'Monsters', 'Graph', 'Progress', 'Settings', 'Sandbox'])
     expect(tabOf('/', items)).toBe('/')
     expect(tabOf('/c/precalc/unit2', items)).toBe('/')
     expect(tabOf('/m/inequalities', items)).toBe('/')
     expect(tabOf('/review/unit1', items)).toBe('/')
     expect(tabOf('/monsters', items)).toBe('/monsters')
+    expect(tabOf('/graph', items)).toBe('/graph')
     // Pages without a tab of their own, reached from Home: the drill, Ask, the Sandbox.
     expect(tabOf('/ask', items)).toBe('/')
     expect(tabOf('/drill', items)).toBe('/')

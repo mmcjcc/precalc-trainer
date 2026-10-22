@@ -22,6 +22,16 @@ export interface KeypadTarget {
   vars?: readonly string[]
   /** The box's inputMode on the phone's keyboard ('text', 'numeric', …). */
   inputMode: InputMode
+  /**
+   * What the Check key says and is called in this box, when the box checks nothing (a grapher row: "Next"). It still
+   * does what Enter does. Absent: "✓ Check".
+   */
+  enter?: KeypadEnter
+}
+
+export interface KeypadEnter {
+  label: string
+  name: string
 }
 
 interface KeypadState {
@@ -50,7 +60,9 @@ function sameTarget(a: KeypadTarget | null, b: KeypadTarget): boolean {
     a.el === b.el &&
     a.inputMode === b.inputMode &&
     a.keys === b.keys &&
-    (a.vars ?? []).join() === (b.vars ?? []).join()
+    (a.vars ?? []).join() === (b.vars ?? []).join() &&
+    a.enter?.label === b.enter?.label &&
+    a.enter?.name === b.enter?.name
   )
 }
 

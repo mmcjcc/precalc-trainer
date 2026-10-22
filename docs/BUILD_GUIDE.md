@@ -15,7 +15,7 @@ disagree, research wins** (the spec's random-sampling equivalence test is vacuou
 | Content | `src/content/modules` | 5 modules: number line (1 template), inequalities (4), even/odd (2), inverses (6: linear, cube root, fraction coefficient, rational, Möbius, quadratic not one-to-one), properties drill (twin-pair bank), difference quotient (4: linear, quadratic, rational, radical; see docs/progress/diff-quotient.md). Tests push every canonical path, and the solve-first alternative for inverses, through the context engine for 25 seeds. |
 | Calculator panels | `src/content/calc` | TI-84 Plus CE and TI-Nspire CX II for 11 problem families, expression / k / f(k) / twin substituted. |
 | Store | `src/store` | Append-only event log with weekly compaction, attempt resume, selectors (mastery, first-try, hint rate, property accuracy, pattern counts, habits, streak, weak spots), rewards (`rewards.ts`: XP, daily goal, goal streak, mistake cards, type rings; slice `pct.rewards`), export/import. |
-| UI | `src/App.tsx`, `src/pages`, `src/pages/flows`, `src/problem`, `src/components` | Complete. `pages/Problem.tsx` dispatches to the inequality, number-line, even/odd and inverse flows; Home, Module, Progress, Settings, Drill, Sandbox and the PIN gate. Graph and calculator panels stay behind a reveal button until the problem is complete (they show the answer). On phones the panel toolbar sits in the composer, or at the top when a screen has no composer. The first-spike demo UI is removed. Sets of three problems (`/set`, `src/session`) and the phone's bottom tab bar: §7. Guided mode (pick the next line from three cards; exponential and log equations): §7. Juice (sounds, the combo, confetti and motion, the streak flame and milestones; `src/components/juice`): §7. Home's unit path (the unit as a road of its problem types, "You are here", no locks; `src/components/path`): §7. Mistake Monsters (every named mistake a monster to catch and squash, the Monsters tab; `src/components/monsters`): §7. |
+| UI | `src/App.tsx`, `src/pages`, `src/pages/flows`, `src/problem`, `src/components` | Complete. `pages/Problem.tsx` dispatches to the inequality, number-line, even/odd and inverse flows; Home, Module, Progress, Settings, Drill, Sandbox and the PIN gate. Graph and calculator panels stay behind a reveal button until the problem is complete (they show the answer). On phones the panel toolbar sits in the composer, or at the top when a screen has no composer. The first-spike demo UI is removed. Sets of three problems (`/set`, `src/session`) and the phone's bottom tab bar: §7. Guided mode (pick the next line from three cards; exponential and log equations): §7. Juice (sounds, the combo, confetti and motion, the streak flame and milestones; `src/components/juice`): §7. Home's unit path (the unit as a road of its problem types, "You are here", no locks; `src/components/path`): §7. Mistake Monsters (every named mistake a monster to catch and squash, the Monsters tab; `src/components/monsters`): §7. The grapher (the Graph tab, "Graph it" from a problem; `src/grapher`, `src/components/grapher`): §7. |
 | Deploy | `Dockerfile`, `nginx.conf`, `docker/`, `.github/workflows`, `deploy/azure.md` | Written. The image builds and passes `deploy/smoke.sh` in GitHub Actions (Docker is not installed on the dev box). On Azure it runs behind Container Apps sign-in with Google plus an email allowlist in nginx (`docker/25-allowlist.sh`, `deploy/azure-setup.sh`). |
 
 **Verification** (2026-09-15): `npm test` 28 files / 297 tests; `npm run test:sweep` pushes every canonical step and its mutations through the engine; browser QA and a two-agent review are recorded in `docs/progress/qa.md` and `docs/progress/review-findings.md` (all 23 findings fixed).
@@ -239,8 +239,8 @@ store app registers its announced interstitial with `registerSetEndBreak`. Nothi
 `session/summary.ts`) add up the rewards' own awards and rings; no XP rules of their own.
 
 Navigation by screen size: on a phone, menu screens show the bottom tab bar (`components/TabBar.tsx`: Home, Monsters,
-Progress, Settings on every screen, `tabItems` in `components/navItems.tsx`; the wide top navigation shows the same
-four, then Ask while the tutor is configured and the Sandbox in the family app; the drill has no tab and keeps `/drill`,
+Graph, Progress, Settings on every screen, `tabItems` in `components/navItems.tsx`; the wide top navigation shows the same
+five, then Ask while the tutor is configured and the Sandbox in the family app; the drill has no tab and keeps `/drill`,
 reached from its module in Unit 1 and from Progress) and the top navigation hides; a problem screen or a
 running set shows neither (`components/appChrome.ts`: the `/p` and `/set` routes, and any page that calls
 `useFullScreenPage()`, as ProblemFrame and the review's running set do). While the bar is up, `--tabbar-h` on `<html>`
@@ -314,6 +314,18 @@ species by species (open once she has met one), caught in colour with ×count an
 as a silhouette, rare ones (`RARE`, hand-marked special cases) in a sparkle frame; a tile opens the monster's card
 (`MonsterCard.tsx`: lesson, example, where she last caught it, "Practice this"; focus kept in, Escape closes). XP only
 with rewards on. Reduced motion: no flip, wiggle, splat or twinkle. See `docs/progress/phone-monsters.md`.
+
+The grapher (the Graph tab, `/graph`, `pages/Grapher.tsx`, lazy; every screen size, both editions): rows typed on the math
+keypad (`KEYPAD_SETS.graph`; the keypad's Check key reads "Next" there, `enter` on `useMathKeypad`), each with a swatch
+(show or hide), a KaTeX preview and an error that says what it cannot read; a canvas plane with pan, pinch, wheel, + and −,
+Zoom to fit and the standard window; points of interest (zeros, maxima and minima, y-intercepts, crossings) as dots and as
+a list of buttons; sliders for any other letter; the TI-84's TABLE; RADIAN or DEGREE. The pure core is `src/grapher`
+(parse.ts reads rows with the engine's own `parseExpression`, compile.ts makes fast closures with the engine's meaning,
+sample.ts cuts each curve at the zeros of its critical sub-expressions, poi.ts, fit.ts, view.ts, table.ts, format.ts,
+state.ts, graphIt.ts); the React parts are `components/grapher`. The graph stays on the device (`pct.graph`, not in
+backups). "Graph it" (`GraphItButton`) opens the grapher from a problem with what the problem shows her (its given
+function, or her own final equation in optimization), never its hidden answer (`grapher/graphIt.ts` per problem type),
+in the problem's window; Back returns to the problem with her work. See `docs/progress/app-grapher.md`.
 
 Problem-page flows by kind:
 - **inequality**: worked column starts at `instance.start`; steps until progress says solved; then

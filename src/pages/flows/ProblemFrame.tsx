@@ -19,6 +19,8 @@ import { isStepKind, pickModule } from '@/problem/solveStyle'
 import { completionWords, type Completion } from '@/problem/useAttempt'
 import type { ProgressLine } from '@/problem/stepEngine'
 import { useFullScreenPage } from '@/components/appChrome'
+import { GraphItButton } from '@/components/grapher/GraphItButton'
+import { graphItFromStatement } from '@/grapher/graphIt'
 import { BottomSheet } from '@/components/BottomSheet'
 import { CalcPanel } from '@/components/CalcPanel'
 import { Composer } from '@/components/Composer'
@@ -169,6 +171,12 @@ export function ProblemFrame({ instance, attempt, flags, templateTitle, progress
     else dropFinishedThreads(attempt.id)
   }, [attempt?.id, completion])
 
+  // "Graph it": the problem's own function in the grapher (only what the problem shows her; src/grapher/graphIt.ts),
+  // while she works on it. Its graph shows the answer (a vertex, the zeros, f(c)), so like the graph and the calculator
+  // steps it sits behind their reveal gates, never in the open (review: a button under the problem handed it over in one
+  // tap). A finished problem is not kept on its page, so Back would find it gone: not offered then.
+  const graphIt = useMemo(() => (completion ? null : graphItFromStatement(instance)), [instance, completion])
+
   // Graph and calculator steps show the answer: student-invoked, open by themselves once finished.
   const [revealed, setRevealed] = useState<{ graph: boolean; calc: boolean }>({ graph: false, calc: false })
   // A panel with nothing in it is left out entirely: no rail section, no toolbar button, no reveal
@@ -190,6 +198,7 @@ export function ProblemFrame({ instance, attempt, flags, templateTitle, progress
         >
           <GraphPanel spec={instance.graph} caption={graphCaption ?? `solution set of ${instance.statementText}`} />
           {graphFooter}
+          {graphIt && <GraphItButton request={graphIt} className="mt-2" />}
         </RevealGate>
       ),
     },
@@ -204,7 +213,13 @@ export function ProblemFrame({ instance, attempt, flags, templateTitle, progress
           label="Show calculator steps"
           onReveal={() => setRevealed((r) => ({ ...r, calc: true }))}
         >
-          <CalcPanel panels={instance.calc} expression={instance.graph.f ?? instance.statementText} footer={CALC_FOOTER} collapsible={bp === 'mobile'} />
+          <CalcPanel
+            panels={instance.calc}
+            expression={instance.graph.f ?? instance.statementText}
+            footer={CALC_FOOTER}
+            collapsible={bp === 'mobile'}
+            graphIt={graphIt ? <GraphItButton request={graphIt} /> : undefined}
+          />
         </RevealGate>
       ),
     },
@@ -475,8 +490,10 @@ export function ProblemFrame({ instance, attempt, flags, templateTitle, progress
                 {attempt?.mode === 'timed' && <p className="font-mono text-sm text-navy/70">test mode · {elapsed}</p>}
               </header>
               {!composerOpen && (
-                <div className="flex flex-wrap gap-2" role="group" aria-label="Side panels">
-                  <RailToolbar rail={rail} onOpen={setOpenPanel} />
+                <div className="flex flex-wrap gap-2">
+                  <div className="flex flex-wrap gap-2" role="group" aria-label="Side panels">
+                    <RailToolbar rail={rail} onOpen={setOpenPanel} />
+                  </div>
                 </div>
               )}
             </>
