@@ -1,6 +1,7 @@
 import type { MouseEvent, PointerEvent, ReactNode } from 'react'
 import type { PatternHit, StepResult } from '@/shared/types'
 import { rejectionView } from '@/problem/stepEngine'
+import { CaughtBanner, MistakeAvatar } from './monsters/MonsterTag'
 import { CaveatText, RejectionDetails } from './RejectionCard'
 import { PatternLesson } from './SigFigFeedback'
 import { StuckButton } from './Stuck'
@@ -11,11 +12,12 @@ import { StuckButton } from './Stuck'
  *  - ok:   "✓ Kept" (and a short note when the line was kept with a caveat)
  *  - bad:  the named mistake's title plus one sentence
  *  - info: a check that did not count (unreadable, the same line again)
- * `why` is what the "Why?" button opens in a bottom sheet: the full lesson.
+ * `why` is what the "Why?" button opens in a bottom sheet: the full lesson. `pattern` is the named mistake's catalog id:
+ * its monster stands beside the title (caught, the first time).
  */
 export type LineVerdict =
   | { tone: 'ok'; text: string; why?: VerdictWhy }
-  | { tone: 'bad'; title: string; sentence?: string; why: VerdictWhy }
+  | { tone: 'bad'; title: string; sentence?: string; why: VerdictWhy; pattern?: string }
   | { tone: 'info'; text: string }
 
 export interface VerdictWhy {
@@ -46,6 +48,7 @@ export function stepVerdict(result: StepResult): LineVerdict {
     title: v.title,
     sentence: sentence && sentence !== v.title ? sentence : undefined,
     why: { title: v.title, body: <div className="text-navy"><RejectionDetails result={result} /></div> },
+    ...(result.pattern?.id ? { pattern: result.pattern.id } : {}),
   }
 }
 
@@ -65,6 +68,7 @@ export function patternVerdict(hit: PatternHit | null, message: string): LineVer
   return {
     tone: 'bad',
     title,
+    ...(hit?.id ? { pattern: hit.id } : {}),
     sentence: firstSentence(hit?.lesson) ?? firstSentence(message),
     why: {
       title,
@@ -120,6 +124,7 @@ function VerdictText({ verdict }: { verdict: LineVerdict }) {
   }
   return (
     <p className="line-clamp-2 text-sm text-navy">
+      <MistakeAvatar pattern={verdict.pattern} size={22} className="mr-1" />
       <span aria-hidden className="font-semibold text-bad">
         ✗{' '}
       </span>
@@ -138,21 +143,25 @@ export function ComposerStatus({ verdict, onWhy, onStuck }: { verdict: LineVerdi
   if (!verdict && !onStuck) return null
   const why = verdict && verdict.tone !== 'info' ? verdict.why : undefined
   return (
-    <div className="mb-2 flex min-h-9 items-center gap-2" data-composer-status="">
-      <div className="min-w-0 flex-1">{verdict && <VerdictText verdict={verdict} />}</div>
-      {why && (
-        <button
-          type="button"
-          {...keepFocus}
-          onClick={onWhy}
-          aria-haspopup="dialog"
-          aria-label={`Why? ${why.title}`}
-          className="min-h-9 shrink-0 rounded-lg px-2 text-sm font-semibold text-navy underline hover:bg-navy-50"
-        >
-          Why?
-        </button>
-      )}
-      {onStuck && <StuckButton onClick={onStuck} />}
+    <div className="mb-2" data-composer-status="">
+      {/* A mistake made for the first time: its monster, caught, right where she is looking. */}
+      {verdict?.tone === 'bad' && <CaughtBanner pattern={verdict.pattern} compact />}
+      <div className="flex min-h-9 items-center gap-2">
+        <div className="min-w-0 flex-1">{verdict && <VerdictText verdict={verdict} />}</div>
+        {why && (
+          <button
+            type="button"
+            {...keepFocus}
+            onClick={onWhy}
+            aria-haspopup="dialog"
+            aria-label={`Why? ${why.title}`}
+            className="min-h-9 shrink-0 rounded-lg px-2 text-sm font-semibold text-navy underline hover:bg-navy-50"
+          >
+            Why?
+          </button>
+        )}
+        {onStuck && <StuckButton onClick={onStuck} />}
+      </div>
     </div>
   )
 }

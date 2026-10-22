@@ -24,6 +24,7 @@
  */
 import { STORE } from '@/edition'
 import { MASTERY_WINDOW, cancelledSteps, inMasteryWindow } from './compaction'
+import { mergeCatches, normalizeCatches } from './catches'
 import { mergeMilestones, normalizeMilestones } from './milestones'
 import { MASTERY_THRESHOLD, windowMastered, type MasteryEntry } from './selectors'
 import { dayKey, daysBetweenKeys, startOfIsoWeek } from './time'
@@ -651,6 +652,9 @@ export function mergeRewards(a: RewardsState, b: RewardsState): RewardsState {
   // A streak milestone celebrated on either device is not celebrated again.
   const milestones = mergeMilestones(a.milestones, b.milestones)
   if (milestones.length > 0) merged.milestones = milestones
+  // A monster caught on either device is not caught again.
+  const caught = mergeCatches(a.caught, b.caught)
+  if (caught.length > 0) merged.caught = caught
   return merged
 }
 
@@ -702,6 +706,8 @@ export function normalizeRewards(raw: unknown): RewardsState {
   }
   const milestones = normalizeMilestones(raw.milestones)
   if (milestones) out.milestones = milestones
+  const caught = normalizeCatches(raw.caught)
+  if (caught) out.caught = caught
   return out
 }
 

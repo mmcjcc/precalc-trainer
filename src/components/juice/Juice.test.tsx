@@ -102,6 +102,8 @@ afterEach(() => {
 describe('sounds follow the event log', () => {
   it('a chime that climbs with the combo, the nope for a slip, the arpeggio at the finish (rewards off too)', { timeout: PAGE_TIMEOUT }, async () => {
     soundsOnHere()
+    // A mistake she has made before (the first time is a catch, components/monsters/Catch.test.tsx).
+    useStore.setState({ rewards: { ...emptyRewards(), caught: ['no_sign_flip'] } })
     render(<Harness />)
     startAttempt()
     for (const n of [3, 4, 5]) {

@@ -4,7 +4,8 @@ import { isFullScreenPath, useFullScreenPageShown } from '@/components/appChrome
 import { MathKeypad } from '@/components/MathKeypad'
 import { JuiceLayers } from '@/components/juice/JuiceLayers'
 import { useJuice } from '@/components/juice/useJuice'
-import { isNavActive, navItems, type NavItem } from '@/components/navItems'
+import { useMonsterCatches } from '@/components/monsters/catchMoment'
+import { isNavActive, navItems, tabItems, type NavItem } from '@/components/navItems'
 import { useRewardTicks } from '@/components/rewards/haptics'
 import { TabBar } from '@/components/TabBar'
 import { Toasts } from '@/components/Toast'
@@ -24,6 +25,7 @@ const ProblemPage = lazy(() => import('./pages/Problem'))
 const ReviewPage = lazy(() => import('./pages/Review'))
 const SetPage = lazy(() => import('./pages/SetPage'))
 const DrillPage = lazy(() => import('./pages/Drill'))
+const MonstersPage = lazy(() => import('./pages/Monsters'))
 const SandboxPage = lazy(() => import('./pages/Sandbox'))
 const AskPage = lazy(() => import('./pages/AskAnything'))
 
@@ -112,9 +114,9 @@ function ScrollToTopOnNavigate() {
 
 /**
  * The unlocked app: navigation, routes, keypad, toasts. Wide screens keep the top navigation on every page. On a
- * phone the top navigation gives way to a bottom tab bar on menu screens (Home, Drill, Progress, Settings, Ask, the
- * class and module pages...), and a problem screen or a running set has neither: it is full screen with its own
- * compact header.
+ * phone the top navigation gives way to a bottom tab bar (Home, Monsters, Progress, Settings) on menu screens (those
+ * four, the class and module pages, the drill, Ask...), and a problem screen or a running set has neither: it is full
+ * screen with its own compact header.
  */
 function UnlockedShell() {
   const { pathname } = useLocation()
@@ -144,6 +146,7 @@ function UnlockedShell() {
             <Route path="/review/:reviewId" element={<ReviewPage />} />
             <Route path="/set" element={<SetPage />} />
             <Route path="/drill" element={<DrillPage />} />
+            <Route path="/monsters" element={<MonstersPage />} />
             <Route path="/progress" element={<ProgressPage />} />
             <Route path="/settings" element={<SettingsPage />} />
             <Route path="/ask" element={<AskPage />} />
@@ -153,7 +156,7 @@ function UnlockedShell() {
           </Routes>
         </Suspense>
       </main>
-      {tabs && <TabBar items={items} />}
+      {tabs && <TabBar items={tabItems()} />}
       {/* One math keypad for every page; it only ever opens on a touch screen, for a math box. */}
       <MathKeypad />
       <Toasts />
@@ -171,6 +174,8 @@ export function AppShell() {
   useRewardTicks()
   // Sounds (the chime, the nope, the arpeggio...), the "+10" floats, the goal's confetti and the streak milestones.
   useJuice()
+  // Mistake Monsters: the first time she makes a mistake, the verdict shows its monster, caught (once per mistake).
+  useMonsterCatches()
 
   if (pinHash && !unlocked) {
     return (

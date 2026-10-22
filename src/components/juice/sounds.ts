@@ -24,6 +24,8 @@ export type Cue =
   | 'sparkle'
   /** A mistake squashed: a pop. */
   | 'pop'
+  /** A mistake made for the first time, its monster caught (components/monsters): a springy "gotcha". */
+  | 'catch'
 
 /** "Sounds" (Settings): absent means the edition's default, on in the store app and off in the family web app. */
 export function soundsOn(settings: Pick<Settings, 'sounds'>, store: boolean = STORE): boolean {
@@ -60,6 +62,7 @@ const C5 = 523.25
 const E5 = 659.25
 const G5 = 783.99
 const C6 = 1046.5
+const E6 = 1318.51
 
 export function cueTones(cue: Cue, step = 0): Tone[] {
   switch (cue) {
@@ -93,6 +96,14 @@ export function cueTones(cue: Cue, step = 0): Tone[] {
       return [1318.51, 1567.98, 1760.0, 2093.0, 2637.02].map((freq, i) => ({ freq, at: i * 0.05, dur: 0.24, peak: 0.055 }))
     case 'pop':
       return [{ freq: 880, at: 0, dur: 0.13, peak: 0.2, glide: 220 }]
+    case 'catch':
+      // A spring up (a soft triangle gliding an octave), then two bright notes: caught!
+      return [
+        { freq: G4, at: 0, dur: 0.16, peak: 0.15, type: 'triangle', glide: G5, lowpass: 2400 },
+        { freq: C6, at: 0.13, dur: 0.22, peak: 0.12 },
+        { freq: E6, at: 0.22, dur: 0.34, peak: 0.12 },
+        { freq: C6 * 2, at: 0.22, dur: 0.18, peak: 0.02 },
+      ]
   }
 }
 

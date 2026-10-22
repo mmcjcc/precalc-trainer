@@ -13,6 +13,7 @@ import { useShallow } from 'zustand/react/shallow'
 import type { ChipId } from '@/shared/types'
 import { buildBackup, importBackup, normalizeSettings, settingsAfterImport, type ImportMode } from './backup'
 import { compact } from './compaction'
+import { mergeCatches } from './catches'
 import { mergeMilestones } from './milestones'
 import { computeRewards, dailyGoalOf, foldRewards, normalizeRewards, rewardsOn, settleDays, type RewardsView } from './rewards'
 import {
@@ -54,6 +55,7 @@ export * from './types'
 export * from './selectors'
 export * from './rewards'
 export * from './milestones'
+export * from './catches'
 export { compact } from './compaction'
 export { STORAGE_KEYS, saveReturnTo, takeReturnTo } from './storage'
 export { relativeDays, daysAgo, dayKey, isoWeekKey, startOfIsoWeek } from './time'
@@ -168,6 +170,8 @@ interface Actions {
   // celebrations
   /** Streak milestones now celebrated (store/milestones.ts): kept in the rewards' slice so each happens once. */
   noteMilestones: (milestones: readonly number[]) => void
+  /** Mistake Monsters caught for the first time (store/catches.ts): kept in the rewards' slice so each catch shows once. */
+  noteCatches: (patterns: readonly string[]) => void
   // maintenance
   resetProgress: () => void
   exportJson: () => string
@@ -550,6 +554,13 @@ export const useStore = create<StoreState>()(
           const had = s.rewards.milestones ?? []
           if (merged.length === had.length && merged.every((m, i) => m === had[i])) return {}
           return { rewards: { ...s.rewards, milestones: merged } }
+        }),
+      noteCatches: (patterns) =>
+        set((s) => {
+          const merged = mergeCatches(s.rewards.caught, patterns)
+          const had = s.rewards.caught ?? []
+          if (merged.length === had.length && merged.every((p, i) => p === had[i])) return {}
+          return { rewards: { ...s.rewards, caught: merged } }
         }),
 
       // --- maintenance ------------------------------------------------------

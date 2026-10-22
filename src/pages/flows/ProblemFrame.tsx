@@ -31,6 +31,7 @@ import { isNativeApp } from '@/components/nativeApp'
 import { PageLayout, RailToolbar, type RailPanel } from '@/components/PageLayout'
 import { PickLineOffer } from '@/components/LineCards'
 import { FinishRewards, FinishSheet, useFinish } from '@/components/rewards/Finish'
+import { SquashMoment, useSquashedBy } from '@/components/monsters/SquashMoment'
 import { StepGuide } from '@/components/StepGuide'
 import { StuckProvider, type StuckApi } from '@/components/Stuck'
 import { useBreakpoint } from '@/components/useBreakpoint'
@@ -394,6 +395,8 @@ export function ProblemFrame({ instance, attempt, flags, templateTitle, progress
   const rewardsOn = useRewardsOn()
   const stepGuideSeen = useStore((s) => s.settings.seenStepGuide === true)
   const finishData = useFinish(rewardsOn && completion ? attempt?.id : undefined, instance.skill)
+  // Rewards off: the monsters this problem squashed still show in the card (no XP; the collection works either way).
+  const squashedHere = useSquashedBy(!rewardsOn && completion ? attempt?.id : undefined)
   const phoneFinish = phone && finishData !== null
   const [sheetClosedFor, setSheetClosedFor] = useState<Completion | null>(null)
   const sheetOpen = phoneFinish && completion !== null && sheetClosedFor !== completion
@@ -540,6 +543,7 @@ export function ProblemFrame({ instance, attempt, flags, templateTitle, progress
                 </p>
               )}
               {finishData && !phone && <FinishRewards data={finishData} templateTitle={templateTitle} />}
+              {!finishData && <SquashMoment patterns={squashedHere} />}
               {/* A wide screen shows the set's progress here; a phone has it in its header. */}
               {set && !phone && <SetDots index={set.index} total={set.total} status={set.status} prefix="Your set ·" />}
               <div className="flex flex-wrap items-center gap-2">

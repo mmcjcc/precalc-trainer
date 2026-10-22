@@ -1,4 +1,5 @@
 import { Fragment, useId, useMemo, useRef, useState, type ChangeEvent } from 'react'
+import { Link } from 'react-router-dom'
 import { allTemplates, COURSES, courseOfModule, courseOfSkill, modulesInUnit, unitsWithModules } from '@/content'
 import { ERROR_PATTERNS } from '@/engine'
 import type { ErrorPatternId } from '@/shared/types'
@@ -773,6 +774,9 @@ export function ProgressPage() {
             Mistake collection
           </h2>
           <MistakeCollection />
+          <Link to="/monsters" className="inline-flex min-h-11 items-center text-sm font-semibold text-navy underline">
+            See them all as monsters
+          </Link>
         </section>
       )}
 
@@ -836,6 +840,10 @@ export function ProgressPage() {
           <div className="mt-1">
             <DrillRows />
           </div>
+          {/* The drill has no tab of its own: it is here, and in Unit 1's modules on Home. */}
+          <Link to="/drill" className="mt-2 inline-flex min-h-11 items-center font-semibold text-navy underline">
+            Open the properties drill
+          </Link>
         </section>
       </div>
 

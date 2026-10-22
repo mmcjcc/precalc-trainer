@@ -1,10 +1,12 @@
 /**
- * The app's destinations: the top navigation on a wide screen and the bottom tab bar on a phone show the same ones
- * (Ask only while the tutor is configured; no Sandbox in the store app, which has no engine playground).
+ * The app's destinations (docs/progress/phone-monsters.md). The bottom tab bar on a phone shows four, on every screen
+ * and in both editions: Home, Monsters, Progress, Settings. The top navigation on a wide screen shows the same four,
+ * then Ask while the tutor is configured and the Sandbox in the family app (it has the room). The drill has neither: it
+ * keeps its route and is reached from its module in Unit 1 and from Progress; Ask and the Sandbox are on Home too.
  */
 import { STORE } from '@/edition'
 
-export type NavIcon = 'home' | 'ask' | 'drill' | 'progress' | 'settings' | 'sandbox'
+export type NavIcon = 'home' | 'monsters' | 'progress' | 'settings' | 'ask' | 'sandbox'
 
 export interface NavItem {
   to: string
@@ -14,18 +16,27 @@ export interface NavItem {
   end?: boolean
 }
 
-const HOME: NavItem = { to: '/', label: 'Home', icon: 'home', end: true }
-const ASK: NavItem = { to: '/ask', label: 'Ask', icon: 'ask' }
-const REST: NavItem[] = [
-  { to: '/drill', label: 'Drill', icon: 'drill' },
+const TABS: readonly NavItem[] = [
+  { to: '/', label: 'Home', icon: 'home', end: true },
+  { to: '/monsters', label: 'Monsters', icon: 'monsters' },
   { to: '/progress', label: 'Progress', icon: 'progress' },
   { to: '/settings', label: 'Settings', icon: 'settings' },
-  ...(STORE ? [] : [{ to: '/sandbox', label: 'Sandbox', icon: 'sandbox' } as const]),
 ]
+const ASK: NavItem = { to: '/ask', label: 'Ask', icon: 'ask' }
+const SANDBOX: NavItem = { to: '/sandbox', label: 'Sandbox', icon: 'sandbox' }
 
-export function navItems(askOn: boolean): NavItem[] {
-  return askOn ? [HOME, ASK, ...REST] : [HOME, ...REST]
+/** The phone's bottom tab bar: the four, always. */
+export function tabItems(): readonly NavItem[] {
+  return TABS
 }
+
+/** The wide top navigation: the four, then Ask (tutor configured) and the Sandbox (family app). */
+export function navItems(askOn: boolean): NavItem[] {
+  return [...TABS, ...(askOn ? [ASK] : []), ...(STORE ? [] : [SANDBOX])]
+}
+
+/** Pages Home leads to without a tab of their own: the tab bar marks Home on them. */
+const UNDER_HOME = ['/drill', '/ask', '/sandbox']
 
 /** Top navigation: Home stays current on `/` and on a class deep link (`/c/...`). Other items match their path. */
 export function isNavActive(pathname: string, to: string, end?: boolean): boolean {
@@ -35,11 +46,12 @@ export function isNavActive(pathname: string, to: string, end?: boolean): boolea
 }
 
 /**
- * The tab a page belongs to, so the tab bar always marks one: Home for a class, a module page and the unit review
- * (Home opens them), Settings for the tutor log (Settings links to it).
+ * The tab a page belongs to, so the tab bar always marks one: Home for a class, a module page, the unit review, the
+ * drill, Ask and the Sandbox (Home leads to them), Settings for the tutor log (Settings links to it).
  */
 export function tabOf(pathname: string, items: readonly NavItem[]): string | null {
   if (pathname === '/' || pathname === '/c' || /^\/(c|m|review)\//.test(pathname)) return '/'
+  if (UNDER_HOME.some((p) => pathname === p || pathname.startsWith(`${p}/`))) return '/'
   if (pathname === '/tutor-log' || pathname.startsWith('/tutor-log/')) return items.some((i) => i.to === '/settings') ? '/settings' : null
   return items.find((i) => i.to !== '/' && isNavActive(pathname, i.to, i.end))?.to ?? null
 }
@@ -66,18 +78,14 @@ export function NavIconSvg({ icon }: { icon: NavIcon }) {
           <path d="M5 9.5V20h5v-6h4v6h5V9.5" />
         </svg>
       )
-    case 'ask':
+    case 'monsters':
+      // A little monster: horns, two eyes, a ragged hem.
       return (
         <svg {...common}>
-          <path d="M4 5h16v11H9l-5 4z" />
-          <path d="M10 8.5a2 2 0 1 1 2.5 1.9c-.4.1-.5.4-.5.8v.3" />
-          <path d="M12 13.6v.1" />
-        </svg>
-      )
-    case 'drill':
-      return (
-        <svg {...common}>
-          <path d="M13 2 4 14h7l-1 8 9-12h-7z" />
+          <path d="M5 20v-7a7 7 0 0 1 14 0v7l-2.3-1.6L14.3 20 12 18.4 9.7 20l-2.4-1.6z" />
+          <path d="M8.6 7.3 7 3.6M15.4 7.3 17 3.6" />
+          <circle cx="9.5" cy="12" r="1.1" fill="currentColor" stroke="none" />
+          <circle cx="14.5" cy="12" r="1.1" fill="currentColor" stroke="none" />
         </svg>
       )
     case 'progress':
@@ -102,6 +110,14 @@ export function NavIconSvg({ icon }: { icon: NavIcon }) {
           <path d="M4 18h11" />
           <path d="M19 18h1" />
           <circle cx="17" cy="18" r="2" />
+        </svg>
+      )
+    case 'ask':
+      return (
+        <svg {...common}>
+          <path d="M4 5h16v11H9l-5 4z" />
+          <path d="M10 8.5a2 2 0 1 1 2.5 1.9c-.4.1-.5.4-.5.8v.3" />
+          <path d="M12 13.6v.1" />
         </svg>
       )
     case 'sandbox':

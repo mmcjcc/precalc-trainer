@@ -259,7 +259,8 @@ describe('the top of Home', () => {
     expect(items[1]!.textContent).toContain('1 of 3')
     expect(items[2]!.textContent).toContain(ERROR_PATTERNS.dropped_union.title)
     expect(within(items[0]!).getByRole('link').getAttribute('href')).toMatch(/^\/p\/inequalities\/ineq\.linear\//)
-    expect(within(today).getByRole('link', { name: 'The whole collection' }).getAttribute('href')).toBe('/progress')
+    // The whole collection is the Monsters tab (components/monsters).
+    expect(within(today).getByRole('link', { name: 'The whole collection' }).getAttribute('href')).toBe('/monsters')
   })
 
   it('a streak: “N-day streak”, the week’s days, and the rest days saved', { timeout: PAGE_TIMEOUT }, () => {

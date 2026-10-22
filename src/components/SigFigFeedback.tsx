@@ -1,4 +1,5 @@
 import type { PatternHit } from '@/shared/types'
+import { CaughtBanner, MistakeAvatar } from './monsters/MonsterTag'
 import { StuckChip } from './Stuck'
 
 /** Split a catalog example ("0.00450 → 6 figures ✗ → 3 figures") into arrow-joined plain segments. */
@@ -23,13 +24,20 @@ function ExampleLine({ example }: { example: string }) {
 
 /**
  * One named mistake: title, lesson, the witness about her numbers, and the wrong → right example. `showTitle`
- * false leaves the title to what frames it (the phone composer's "Why?" sheet has it as its heading).
+ * false leaves the title to what frames it (the phone composer's "Why?" sheet has it as its heading). With its title,
+ * the mistake's monster stands beside it (caught, the first time: components/monsters).
  */
 export function PatternLesson({ hit, witness, heading = 'p', showTitle = true }: { hit: PatternHit; witness?: string; heading?: 'p' | 'h3'; showTitle?: boolean }) {
   const Title = heading
   return (
     <div>
-      {showTitle && <Title className="font-semibold">{hit.title}</Title>}
+      {showTitle && <CaughtBanner pattern={hit.id} />}
+      {showTitle && (
+        <Title className="font-semibold">
+          <MistakeAvatar pattern={hit.id} size={24} className="mr-1.5" />
+          {hit.title}
+        </Title>
+      )}
       {hit.lesson && <p className="mt-1 text-sm">{hit.lesson}</p>}
       {witness && <p className="mt-1 text-sm font-medium">{witness}</p>}
       {hit.example && <ExampleLine example={hit.example} />}
@@ -55,7 +63,9 @@ function SigFigRejectionCard({ message, patterns }: { message: string; patterns:
   const single = patterns.length === 1 ? patterns[0]! : null
   return (
     <div role="alert" className="rounded-2xl border border-bad bg-bad-100 p-3 text-navy">
+      {single && <CaughtBanner pattern={single.id} />}
       <p className="font-semibold">
+        {single && <MistakeAvatar pattern={single.id} className="mr-1.5" />}
         <span aria-hidden>✗ </span>
         {single ? `Not quite: ${single.title}` : patterns.length > 1 ? `Not quite: ${patterns.length} things to look at` : 'Not quite'}
       </p>

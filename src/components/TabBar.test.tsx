@@ -1,7 +1,9 @@
 // @vitest-environment jsdom
 /**
  * Navigation by screen size: on a phone the menu screens get the bottom tab bar (the top navigation hides), and a
- * problem screen or a running set gets neither; a wide screen keeps today's top navigation everywhere.
+ * problem screen or a running set gets neither; a wide screen keeps today's top navigation everywhere. The tab bar is
+ * Home, Monsters, Progress, Settings on every screen; the top navigation shows the same four first, then Ask (tutor
+ * configured) and the Sandbox (family app) (docs/progress/phone-monsters.md).
  */
 import { render, screen, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
@@ -13,7 +15,7 @@ import { newActiveSet, saveActiveSet } from '@/session/activeSet'
 import { buildSet } from '@/session/buildSet'
 import { getCourse } from '@/content'
 import { emptyRewards, resetStoreForTests } from '@/store'
-import { isNavActive, navItems, tabOf } from './navItems'
+import { isNavActive, navItems, tabItems, tabOf } from './navItems'
 
 vi.mock('@/components/Graph', () => ({ Graph: () => <div data-testid="graph-stub" /> }))
 
@@ -50,15 +52,15 @@ afterEach(() => {
 })
 
 describe('a phone: the bottom tab bar on menu screens', () => {
-  it('Home: the same destinations as the top navigation, icons and labels, 48 px tall, Home marked; no top navigation', { timeout: PAGE_TIMEOUT }, () => {
+  it('Home: Home, Monsters, Progress, Settings, icons and labels, 48 px tall, Home marked; no top navigation', { timeout: PAGE_TIMEOUT }, () => {
     installPointer(true)
     renderAt('/')
     const bar = tabBar()!
     expect(bar).toBeTruthy()
     expect(bar.getAttribute('aria-label')).toBe('Main')
     const links = within(bar).getAllByRole('link')
-    expect(links.map((a) => a.textContent)).toEqual(['Home', 'Drill', 'Progress', 'Settings', 'Sandbox'])
-    expect(links.map((a) => a.getAttribute('href'))).toEqual(['/', '/drill', '/progress', '/settings', '/sandbox'])
+    expect(links.map((a) => a.textContent)).toEqual(['Home', 'Monsters', 'Progress', 'Settings'])
+    expect(links.map((a) => a.getAttribute('href'))).toEqual(['/', '/monsters', '/progress', '/settings'])
     for (const a of links) {
       expect(a.className).toContain('min-h-12')
       expect(a.querySelector('svg')).toBeTruthy()
@@ -76,11 +78,13 @@ describe('a phone: the bottom tab bar on menu screens', () => {
   })
 
   it.each([
+    ['/monsters', 'Monsters'],
     ['/progress', 'Progress'],
     ['/settings', 'Settings'],
     ['/tutor-log', 'Settings'],
     ['/m/inequalities', 'Home'],
     ['/c/chemistry/ch5', 'Home'],
+    ['/sandbox', 'Home'],
   ])('%s shows the bar with %s marked', (path, current) => {
     installPointer(true)
     renderAt(path)
@@ -90,11 +94,12 @@ describe('a phone: the bottom tab bar on menu screens', () => {
     expect(brand()).toBeNull()
   }, PAGE_TIMEOUT)
 
-  it('the Drill (a lazy page) has the bar from its first frame, Drill marked', { timeout: PAGE_TIMEOUT }, async () => {
+  it('the Drill (a lazy page) keeps its route and has the bar from its first frame, Home marked', { timeout: PAGE_TIMEOUT }, async () => {
     installPointer(true)
     renderAt('/drill')
     expect(await screen.findByRole('heading', { level: 1, name: 'Properties drill' }, LAZY)).toBeTruthy()
-    expect(within(tabBar()!).getByRole('link', { name: 'Drill' }).getAttribute('aria-current')).toBe('page')
+    expect(within(tabBar()!).getByRole('link', { name: 'Home' }).getAttribute('aria-current')).toBe('page')
+    expect(within(tabBar()!).queryByRole('link', { name: 'Drill' })).toBeNull()
   })
 })
 
@@ -134,7 +139,7 @@ describe('a wide screen keeps today’s top navigation', () => {
     expect(tabBar()).toBeNull()
     expect(brand()).toBeTruthy()
     const nav = screen.getByRole('navigation', { name: 'Main' })
-    expect(within(nav).getAllByRole('link').map((a) => a.textContent)).toEqual(['Home', 'Drill', 'Progress', 'Settings', 'Sandbox'])
+    expect(within(nav).getAllByRole('link').map((a) => a.textContent)).toEqual(['Home', 'Monsters', 'Progress', 'Settings', 'Sandbox'])
     expect(within(nav).getByRole('link', { name: 'Home' }).getAttribute('aria-current')).toBe('page')
     expect(nav.querySelector('svg')).toBeNull()
   })
@@ -149,19 +154,23 @@ describe('a wide screen keeps today’s top navigation', () => {
 })
 
 describe('which item is current', () => {
-  const items = navItems(true)
+  const items = tabItems()
 
   it('the tab bar always marks the page’s tab; the top navigation is as it was', () => {
-    expect(items.map((i) => i.label)).toEqual(['Home', 'Ask', 'Drill', 'Progress', 'Settings', 'Sandbox'])
-    expect(navItems(false).map((i) => i.label)).toEqual(['Home', 'Drill', 'Progress', 'Settings', 'Sandbox'])
+    expect(items.map((i) => i.label)).toEqual(['Home', 'Monsters', 'Progress', 'Settings'])
+    // The wide top navigation: the four, then Ask while the tutor is configured, then the Sandbox (family app).
+    expect(navItems(true).map((i) => i.label)).toEqual(['Home', 'Monsters', 'Progress', 'Settings', 'Ask', 'Sandbox'])
+    expect(navItems(false).map((i) => i.label)).toEqual(['Home', 'Monsters', 'Progress', 'Settings', 'Sandbox'])
     expect(tabOf('/', items)).toBe('/')
     expect(tabOf('/c/precalc/unit2', items)).toBe('/')
     expect(tabOf('/m/inequalities', items)).toBe('/')
     expect(tabOf('/review/unit1', items)).toBe('/')
-    expect(tabOf('/ask', items)).toBe('/ask')
-    expect(tabOf('/drill', items)).toBe('/drill')
+    expect(tabOf('/monsters', items)).toBe('/monsters')
+    // Pages without a tab of their own, reached from Home: the drill, Ask, the Sandbox.
+    expect(tabOf('/ask', items)).toBe('/')
+    expect(tabOf('/drill', items)).toBe('/')
+    expect(tabOf('/sandbox', items)).toBe('/')
     expect(tabOf('/tutor-log', items)).toBe('/settings')
-    expect(tabOf('/sandbox', items)).toBe('/sandbox')
     expect(tabOf('/nowhere', items)).toBeNull()
     // The top navigation: unchanged (a module page marks nothing there).
     expect(isNavActive('/m/inequalities', '/', true)).toBe(false)

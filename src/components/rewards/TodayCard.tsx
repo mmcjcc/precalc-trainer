@@ -58,7 +58,8 @@ let lastSeen: { day: string; xp: number } | null = null
 /**
  * The top of Home with rewards on: today's goal ring (sweeping on from where it stood when she last saw it), the
  * streak's flame (bigger with the streak, lit once today's goal is met) with "N of 7 this week" and the week's days,
- * the rest days saved, and her top three open mistake cards (each opens a problem of its type).
+ * the rest days saved, and her top three open mistake cards, each with its monster (each opens a problem of its type),
+ * and the way to the whole collection: the Monsters tab.
  */
 export function TodayCard() {
   const view = useRewards()
@@ -104,7 +105,7 @@ export function TodayCard() {
         {open.length > 0 ? (
           <>
             <MistakeCardList cards={open} practice label="Mistakes to squash" />
-            <Link to="/progress" className="inline-flex min-h-11 items-center text-sm font-semibold text-navy underline">
+            <Link to="/monsters" className="inline-flex min-h-11 items-center text-sm font-semibold text-navy underline">
               The whole collection
             </Link>
           </>
@@ -112,7 +113,7 @@ export function TodayCard() {
           <p className="text-sm text-navy/80">
             {view.cards.length > 0
               ? 'Every mistake you caught is squashed. A new one lands here the moment the checker names it.'
-              : 'When the checker names a mistake, it lands here. Three clean problems of that type squash it.'}
+              : 'When the checker names a mistake, you catch its monster and it lands here. Three clean problems of that type squash it.'}
           </p>
         )}
       </div>
