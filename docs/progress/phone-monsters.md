@@ -234,3 +234,23 @@ Changed: `src/store/{types.ts, rewards.ts (normalize and merge the slice), index
 TodayCard.tsx}`, `src/components/set/SetSummary.tsx`, `src/pages/{Progress.tsx}`, `src/pages/flows/ProblemFrame.tsx`,
 `src/App.tsx`, `src/index.css`, `docs/BUILD_GUIDE.md` (§0 UI row, §7); tests `src/components/TabBar.test.tsx`,
 `src/components/rewards/Rewards.test.tsx`, `src/components/juice/Juice.test.tsx`, `src/pages/Progress.test.tsx`.
+
+## Review (Claude, 2026-10-22)
+
+Built by one Claude agent (about 0.77M tokens, 107 minutes). Read the species table, the catch moment (decided from
+the event log the moment a mistake is recorded, remembered in the rewards slice) and the collection. Looked at every
+species' art on the Android emulator's WebView (a sheet of all 33 species, their silhouettes and first variants): each
+reads as its family at 34 px, siblings differ, the style is bold sticker art, not babyish. On the emulator in a
+store-app build: the Monsters tab (species she has met open, the others one line each), a repeated mistake showing
+its small avatar, a new one caught ("Caught: The Mismeasurer, New in your monster collection", flipping in, scrolled
+into view above the keypad), the tab bar Home, Monsters, Progress, Settings.
+
+Changed in review:
+- The 23 optimization mistakes (built beside this) placed in their species, family lines widened.
+- The optimization screen writes its own mistake card and showed no monster: it now carries the catch and the
+  avatar, and a source check fails on any card that writes "Not quite: <title>" without them or a shared card.
+- Her one catch sat after 24 silhouettes, below the fold: monsters she has met now come first in each species (on the
+  loose, then squashed, latest first), then the ones not seen yet in table order.
+
+Left: the rare list is hand-marked (37) and worth a pass by someone who knows each module; a species with many
+variants is a long grid of silhouettes (the plan's collection feel; could fold the unseen ones later).
