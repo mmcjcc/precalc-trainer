@@ -158,7 +158,9 @@ export function revealAboveKeypad(el: HTMLInputElement, keypadHeight: number, re
     return
   }
   if (keypadHeight <= 0) return
-  if (reason === 'check' && el.closest('[data-keypad-scroll="end"]')) {
+  // The line-by-line composer, after a Check AND when the keypad opens: on the emulator, a problem resumed (or the
+  // keypad closed and opened again) at the top of the page left her lines hidden behind the composer (review 2026-10-22).
+  if (el.closest('[data-keypad-scroll="end"]')) {
     revealLastLines(el, keypadHeight)
     return
   }

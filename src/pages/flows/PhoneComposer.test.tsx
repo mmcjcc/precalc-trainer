@@ -273,4 +273,37 @@ describe.each([
     },
     FLOW_TIMEOUT,
   )
+
+  it(
+    'when the keypad opens with the page at its top (a resumed problem), her newest line comes right above the composer',
+    async () => {
+      // Review 2026-10-22, on the emulator: her lines stayed hidden behind the composer until the next Check.
+      setWindowSize(width, height)
+      const KEYPAD = Math.round(keypadHeight(height, true))
+      const COMPOSER = 155
+      const LAST_BOTTOM = height + 300
+      vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (this: HTMLElement) {
+        const rect = (top: number, bottom: number) => ({ top, bottom, height: bottom - top, left: 0, right: width, width, x: 0, y: top, toJSON: () => ({}) }) as DOMRect
+        if (this.classList.contains('math-keypad')) return rect(height - KEYPAD, height)
+        if (this.hasAttribute('data-keypad-region')) return rect(height - KEYPAD - COMPOSER, height - KEYPAD)
+        if (this.hasAttribute('data-work-line')) {
+          const all = Array.from(document.querySelectorAll('[data-work-line]'))
+          const i = all.indexOf(this)
+          return rect(LAST_BOTTOM - 60 * (all.length - i), LAST_BOTTOM - 60 * (all.length - 1 - i))
+        }
+        return rect(0, 0)
+      })
+      renderAt(PATH)
+      await screen.findByRole('textbox', { name: 'Next line' }, LAZY)
+      const scrollBy = window.scrollBy as unknown as ReturnType<typeof vi.fn>
+      scrollBy.mockClear()
+      tapBox(line())
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 200))
+      })
+      const want = Math.round(LAST_BOTTOM - (height - KEYPAD - COMPOSER - LINE_GAP))
+      expect(scrollBy).toHaveBeenCalledWith({ top: want, behavior: 'smooth' })
+    },
+    FLOW_TIMEOUT,
+  )
 })

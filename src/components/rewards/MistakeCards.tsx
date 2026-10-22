@@ -69,13 +69,17 @@ export function MistakeCardView({ card, practice = false }: { card: MistakeCard;
 }
 
 export function MistakeCardList({ cards, practice = false, label }: { cards: readonly MistakeCard[]; practice?: boolean; label: string }) {
+  // Two across only when the list itself is wide (a container query, not the screen's width): in the tablet layout
+  // Home's Today column is about 22rem, and two cards there wrapped their titles one letter a line (review 2026-10-22).
   return (
-    <ul aria-label={label} className="grid gap-2 sm:grid-cols-2">
-      {cards.map((card) => (
-        <li key={card.key}>
-          <MistakeCardView card={card} practice={practice} />
-        </li>
-      ))}
-    </ul>
+    <div className="@container">
+      <ul aria-label={label} className="grid gap-2 @xl:grid-cols-2">
+        {cards.map((card) => (
+          <li key={card.key}>
+            <MistakeCardView card={card} practice={practice} />
+          </li>
+        ))}
+      </ul>
+    </div>
   )
 }
