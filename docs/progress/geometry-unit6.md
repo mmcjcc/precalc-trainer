@@ -230,3 +230,22 @@ Changed: `src/shared/types.ts`, `src/content/types.ts`, `src/content/modules/geo
   are 4, then FQ = 12).
 - `#/p/geoProportionalParts/gp.bisector/4`: SB bisects ∠GSZ; x as 45/2 (GB/BZ = SZ/SG) is
   `geo_bisector_ratio_swapped` (the answer is 10).
+
+## Review (Claude, 2026-10-22)
+
+Built by one Claude agent (about 0.94M tokens, 2 h 13 min). Checked:
+- 30 sample problems by hand, five per template: every proportion, scale factor, missing side, angle and perimeter;
+  the AA, SSS, SAS and "Not enough information" answers from the marks shown (including crossing segments drawn to look
+  parallel but not marked, which is correctly not enough); the shadow and mirror heights; the splitter and its
+  converse; the angle-bisector and three-parallel-lines ratios. All right.
+- On the Android emulator in a store-app build: similar triangles drawn turned (the correspondence comes from the
+  letters), the shadow and mirror scenes, three parallel lines with every length on its own dimension line, the
+  splitter's parts, the choice screens.
+
+Changed in review: in the shadow problems the object's shadow length was left to the label placer, which tries every
+side (all above first) and keeps the first clean layout; it often sat above the ground, inside the triangle, as close
+to the sun's ray as to the shadow, while the person's shadow had a dimension line. Both shadows are now forced onto
+dimension lines below the ground (as the mirror's distances are); a test checks every shadow figure over 300 seeds.
+
+Left: the crossing-segments "not enough" figures are drawn so the sides look parallel (textbook practice: the marks,
+not the look, decide); mirrored polygon figures are rare (9%), by design.
