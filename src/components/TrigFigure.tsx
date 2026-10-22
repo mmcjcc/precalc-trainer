@@ -8,6 +8,7 @@
  */
 import { useId } from 'react'
 import type { TrigFigureSpec } from '@/content/types'
+import { TrigGraph } from './TrigGraph'
 import { triangleLayout, type SceneShape } from './trigTriangle'
 
 const NAVY = 'var(--color-navy)'
@@ -156,7 +157,34 @@ export function pointLabelAt(P: { x: number; y: number }, u: { x: number; y: num
   }
 }
 
-function PointFigure({ spec, marker }: { spec: TrigFigureSpec; marker: string }) {
+/**
+ * Where a reference triangle's side labels go (Unit 5, `spec.legs`): the side along the x-axis labelled on the far side of
+ * the axis from the point, the drop labelled outside the triangle, r across the terminal side from the drop. Pure, for
+ * the figure's tests. Returns the centre of each label, in SVG units.
+ */
+export function legLabelsAt(P: { x: number; y: number }, texts: { x: string; y: string; r: string }): { x: { x: number; y: number }; y: { x: number; y: number }; r: { x: number; y: number } } {
+  const above = P.y < CY
+  const right = P.x > CX
+  const hx = labelHalfSize(texts.x)
+  const hy = labelHalfSize(texts.y)
+  const hr = labelHalfSize(texts.r)
+  const len = Math.hypot(P.x - CX, P.y - CY) || 1
+  const u = { x: (P.x - CX) / len, y: (P.y - CY) / len }
+  // The normal to the terminal side pointing away from the drop (the triangle's inside is toward the foot).
+  let n = { x: -u.y, y: u.x }
+  const toFoot = { x: P.x - (CX + P.x) / 2, y: CY - (CY + P.y) / 2 }
+  if (n.x * toFoot.x + n.y * toFoot.y > 0) n = { x: -n.x, y: -n.y }
+  const dr = hr.w * Math.abs(n.x) + hr.h * Math.abs(n.y) + 6
+  const clampX = (x: number, w: number) => Math.min(Math.max(x, w + 2), VW - w - 2)
+  const clampY = (y: number, h: number) => Math.min(Math.max(y, h + 2), VH - h - 2)
+  return {
+    x: { x: clampX((CX + P.x) / 2, hx.w), y: clampY(above ? CY + hx.h + 7 : CY - hx.h - 7, hx.h) },
+    y: { x: clampX(right ? P.x + hy.w + 7 : P.x - hy.w - 7, hy.w), y: clampY((CY + P.y) / 2, hy.h) },
+    r: { x: clampX((CX + P.x) / 2 + n.x * dr, hr.w), y: clampY((CY + P.y) / 2 + n.y * dr, hr.h) },
+  }
+}
+
+function PointFigure({ spec, marker, answered }: { spec: TrigFigureSpec; marker: string; answered: ReadonlySet<string> }) {
   const pt = spec.point!
   const scale = 96 / Math.max(Math.abs(pt.x), Math.abs(pt.y))
   const P = { x: CX + pt.x * scale, y: CY - pt.y * scale }
@@ -170,18 +198,26 @@ function PointFigure({ spec, marker }: { spec: TrigFigureSpec; marker: string })
   const rAt = { x: (CX + P.x) / 2 - uy * 14, y: (CY + P.y) / 2 + ux * 14 }
   const thetaAt = polar(spec.deg / 2, 36)
   const pointLabel = pointLabelAt(P, { x: ux, y: uy }, pt.label)
+  // Unit 5: a reference triangle labels its sides (a side she finds once she has found it); a negative θ turns clockwise.
+  const legs = spec.legs
+  const shown = (leg?: { label: string; after?: string }) => (leg && (!leg.after || answered.has(leg.after)) ? leg.label : '')
+  const legTexts = legs ? { x: shown(legs.x), y: shown(legs.y), r: shown(legs.r) } : null
+  const legAt = legTexts ? legLabelsAt(P, legTexts) : null
+  const clockwise = spec.deg < 0
   return (
     <>
       <Axes marker={marker} />
-      <line data-trig="drop" x1={f(P.x)} y1={f(P.y)} x2={f(foot.x)} y2={f(foot.y)} stroke={NAVY} strokeOpacity={0.6} strokeWidth={1.5} strokeDasharray="4 4" />
+      {legs && <line data-trig="leg-x" x1={CX} y1={CY} x2={f(foot.x)} y2={f(foot.y)} stroke={NAVY} strokeWidth={2.5} />}
+      <line data-trig="drop" x1={f(P.x)} y1={f(P.y)} x2={f(foot.x)} y2={f(foot.y)} stroke={NAVY} strokeOpacity={legs ? 1 : 0.6} strokeWidth={legs ? 2.5 : 1.5} strokeDasharray={legs ? undefined : '4 4'} />
       <line data-trig="terminal" x1={CX} y1={CY} x2={f(ray.x)} y2={f(ray.y)} stroke={NAVY} strokeWidth={2.5} markerEnd={`url(#${marker})`} />
       <circle data-trig="point" cx={f(P.x)} cy={f(P.y)} r={4.5} fill={NAVY} />
-      <g data-trig="angle-arc" data-direction="counterclockwise">
+      <g data-trig="angle-arc" data-direction={clockwise ? 'clockwise' : 'counterclockwise'}>
         <path d={arc.d} fill="none" stroke={CORAL} strokeWidth={2} />
-        <path d={arrowHead(arc.end, spec.deg, false)} fill={CORAL} />
+        <path d={arrowHead(arc.end, spec.deg, clockwise)} fill={CORAL} />
       </g>
-      <Label x={pointLabel.x} y={pointLabel.y} text={pt.label} data="point-label" />
-      <Label x={rAt.x} y={rAt.y} text="r" italic data="r-label" />
+      {!legs && <Label x={pointLabel.x} y={pointLabel.y} text={pt.label} data="point-label" />}
+      {!legs && <Label x={rAt.x} y={rAt.y} text="r" italic data="r-label" />}
+      {legTexts && legAt && (['x', 'y', 'r'] as const).map((k) => (legTexts[k] ? <Label key={k} x={legAt[k].x} y={legAt[k].y} text={legTexts[k]} data={`leg-${k}`} /> : null))}
       <Label x={thetaAt.x} y={thetaAt.y} text={spec.label} color={CORAL} italic data="angle-label" />
     </>
   )
@@ -358,6 +394,20 @@ function TriangleFigure({ spec, answered }: { spec: TrigFigureSpec; answered: Re
   )
 }
 
+/** Four graphs to choose from (Unit 5, og.match), the matching cards of expLogGraphs: each named by its letter only. */
+function MatchCards({ graphs }: { graphs: { letter: string; graph: TrigFigureSpec['graph'] }[] }) {
+  return (
+    <div className="grid gap-3 sm:grid-cols-2" data-trig="match">
+      {graphs.map((g) => (
+        <figure key={g.letter} className="space-y-1 rounded-xl border border-navy-100 bg-white p-2">
+          <figcaption className="text-sm font-semibold text-navy">Graph {g.letter}</figcaption>
+          {g.graph && <TrigGraph spec={g.graph} />}
+        </figure>
+      ))}
+    </div>
+  )
+}
+
 /**
  * `answered`: the parts she has answered (a triangle's side she found gets its length, a uc.given point appears once
  * the part it waits for is answered). `done`: the problem is finished (a solve figure draws its angles).
@@ -366,12 +416,24 @@ export function TrigFigure({ spec, showReference = false, showAngle = true, answ
   const marker = `trig-arrow-${useId().replace(/:/g, '')}`
   const answeredSet = new Set(answered)
   if (spec.kind === 'triangle' && spec.triangle) return <TriangleFigure spec={spec} answered={answeredSet} />
+  // Unit 5: no figure (the graph waits behind the Graph panel's gate), the graph she reads, or four graphs to choose from.
+  if (spec.kind === 'none') return null
+  if (spec.kind === 'graph' && spec.graph) return <TrigGraph spec={spec.graph} />
+  if (spec.kind === 'match' && spec.graphs) return <MatchCards graphs={spec.graphs} />
   const hidden = spec.kind === 'circle' && !showAngle
   // A uc.given point waits for the part that settles its quadrant.
   const waiting = spec.kind === 'point' && Boolean(spec.waitFor) && !done && !answeredSet.has(spec.waitFor!)
+  const legWords = spec.legs
+    ? (['y', 'x', 'r'] as const)
+        .map((k) => spec.legs![k])
+        .filter((leg) => leg && (!leg.after || done || answeredSet.has(leg.after)))
+        .map((leg) => leg!.label)
+    : []
   const ariaLabel = hidden
     ? `The unit circle and its axes. The angle ${spec.label} is drawn once you have said where its terminal side lies.`
-    : spec.kind === 'point' && spec.waitFor && !waiting
+    : spec.kind === 'point' && spec.legs && !waiting
+      ? `Axes with the angle θ and its reference triangle: the terminal side, the drop to the x-axis, and the sides labelled ${legWords.join(', ')}.`
+      : spec.kind === 'point' && spec.waitFor && !waiting
       ? `Axes with the point ${spec.point!.label} and the terminal side of the angle θ, drawn from the origin through the point.`
       : spec.kind === 'solve' && done
         ? `The unit circle with the terminal sides of ${spec.solve!.labels.join(' and ')}.`
@@ -397,7 +459,7 @@ export function TrigFigure({ spec, showReference = false, showAngle = true, answ
           </>
         )}
         {spec.kind === 'circle' && !hidden && <CircleFigure spec={spec} showReference={showReference} marker={marker} />}
-        {spec.kind === 'point' && !waiting && <PointFigure spec={spec} marker={marker} />}
+        {spec.kind === 'point' && !waiting && <PointFigure spec={spec} marker={marker} answered={done ? new Set([...answeredSet, ...[spec.legs?.x?.after, spec.legs?.y?.after, spec.legs?.r?.after].filter((a): a is string => Boolean(a))]) : answeredSet} />}
         {spec.kind === 'sector' && <SectorFigure spec={spec} />}
         {spec.kind === 'solve' && spec.solve && <SolveFigure spec={spec} done={done} marker={marker} />}
       </svg>

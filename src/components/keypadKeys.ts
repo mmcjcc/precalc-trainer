@@ -227,6 +227,58 @@ export const KEYPAD_SETS = {
     { label: 'cot', insert: 'cot()', caret: -1, name: 'cotangent' },
   ] as readonly StripKey[],
   /**
+   * Unit 5, graphs of the trig functions: an equation or an expression in x. x in the grid's first cell, then π, √ and
+   * the six functions (sin( lands inside its parenthesis). The grid has =, ^, the comma and the digits.
+   */
+  trigGraph: [
+    letterKey('x'),
+    ...keysWith(['π', '√']),
+    { label: 'sin', insert: 'sin()', caret: -1, name: 'sine' },
+    { label: 'cos', insert: 'cos()', caret: -1, name: 'cosine' },
+    { label: 'tan', insert: 'tan()', caret: -1, name: 'tangent' },
+    { label: 'csc', insert: 'csc()', caret: -1, name: 'cosecant' },
+    { label: 'sec', insert: 'sec()', caret: -1, name: 'secant' },
+    { label: 'cot', insert: 'cot()', caret: -1, name: 'cotangent' },
+  ] as readonly StripKey[],
+  /** Unit 5, a sinusoidal model in t: t in the grid, then π, sin and cos. */
+  trigModel: [
+    letterKey('t'),
+    ...keysWith(['π']),
+    { label: 'sin', insert: 'sin()', caret: -1, name: 'sine' },
+    { label: 'cos', insert: 'cos()', caret: -1, name: 'cosine' },
+  ] as readonly StripKey[],
+  /** Unit 5, a phase shift: π, then the direction in one tap each. */
+  trigShift: [
+    ...keysWith(['π']),
+    { label: 'right', insert: ' right', caret: 0, name: 'to the right' },
+    { label: 'left', insert: ' left', caret: 0, name: 'to the left' },
+  ] as readonly StripKey[],
+  /** Unit 5, x-values as a family x = a + kp: x, the integer k, π. The grid has = and the comma for a list. */
+  trigFamily: [letterKey('x'), letterKey('k'), ...keysWith(['π'])] as readonly StripKey[],
+  /** Unit 5, exact points and values: π and √ (the grid has the parentheses and the comma). */
+  trigExact: keysWith(['π', '√']),
+  /**
+   * Unit 5, an inverse function's value: π, √, the degree sign, then the inverse functions (a name she may write before
+   * her answer, "sin⁻¹(1/2) = …"). No word for a missing value: the part has its own button.
+   */
+  trigInverse: [
+    ...keysWith(['π', '√']),
+    { label: '°', insert: '°', caret: 0, name: 'degrees' },
+    { label: 'sin⁻¹', insert: 'sin⁻¹()', caret: -1, name: 'inverse sine' },
+    { label: 'cos⁻¹', insert: 'cos⁻¹()', caret: -1, name: 'inverse cosine' },
+    { label: 'tan⁻¹', insert: 'tan⁻¹()', caret: -1, name: 'inverse tangent' },
+  ] as readonly StripKey[],
+  /** Unit 5, a value at a reference triangle's point: π, √, then the six functions (a name before her answer). */
+  trigValue: [
+    ...keysWith(['π', '√']),
+    { label: 'sin', insert: 'sin()', caret: -1, name: 'sine' },
+    { label: 'cos', insert: 'cos()', caret: -1, name: 'cosine' },
+    { label: 'tan', insert: 'tan()', caret: -1, name: 'tangent' },
+    { label: 'csc', insert: 'csc()', caret: -1, name: 'cosecant' },
+    { label: 'sec', insert: 'sec()', caret: -1, name: 'secant' },
+    { label: 'cot', insert: 'cot()', caret: -1, name: 'cotangent' },
+  ] as readonly StripKey[],
+  /**
    * The grapher's rows (pages/Grapher.tsx). Letters first, as every box's keypad puts them: x in the grid's first cell,
    * then y, the usual slider letters (y = a(x − h)² + k, y = mx + b... ) and e; then √, |x|, the trig functions, ln,
    * log, π, the inequality signs for shading, braces for a restriction ({x > 0}) and f(x). The grid has ^, =, x² and

@@ -15,6 +15,9 @@ import { partEntries, partsWork } from '@/content/modules/explog/parts'
 import { gradeAmPart } from '@/content/modules/angleMeasure'
 import { gradeRtPart } from '@/content/modules/rightTriangle'
 import { gradeUcPart } from '@/content/modules/unitCircle'
+import { gradeSgPart } from '@/content/modules/sinusoids'
+import { gradeOgPart } from '@/content/modules/otherTrigGraphs'
+import { gradeItPart } from '@/content/modules/inverseTrig'
 import { trigEntries } from '@/content/modules/trig/parts'
 import { gradeNmStage, NM_KEYS, nmWork } from '@/content/modules/nomenclature'
 import { reasonLabel } from '@/content/modules/geometry/reasons'
@@ -1165,6 +1168,51 @@ describe('buildTutorContext', () => {
     expect(done.work).toEqual([`Every solution: ${l.stages[0]!.answerText}`])
     expect(verdictFromTrigPart(gradeUcPart(l, 'solutions', l.trapAnswer!), l.trapAnswer)?.mistake?.id).toBe(l.trap)
     expect(verdictFromTrigPart(gradeUcPart(l, 'solutions', '1, 1'))?.status).toBe('parse_error')
+  })
+
+  it('describes Unit 5 part by part in words: the given equation, four graphs by their formulas, a reference triangle, and the named trig_ slip', { timeout: 120_000 }, () => {
+    // A sinusoid's features: the given equation is in the statement, as words.
+    const wave = generateProblem('sinusoids', 'sg.features', 1)
+    if (wave.answer.type !== 'sinusoids') throw new Error('expected a sinusoid problem')
+    const w = wave.answer
+    const ctx = buildTutorContext(wave, attempt('sg-1', { moduleId: 'sinusoids', final: { polyEntries: { amplitude: '2' } } }), null, false)
+    expect(ctx.subject).toBe('precalculus')
+    expect(ctx.kind).toBe('sinusoids')
+    expect(ctx.statement).toContain('y = −2cos(2x/3 − π/3) + 3')
+    expect(ctx.statement).not.toMatch(/\\|\$/)
+    expect(ctx.work).toEqual(['Amplitude: 2'])
+    expect(ctx.answer).toBe(w.expectedDisplay)
+    for (const line of ctx.canonical) expect(line).not.toMatch(/\\|\$/)
+    const slip = verdictFromTrigPart(gradeSgPart(w, w.trapStage!, w.trapAnswer!), w.trapAnswer)
+    expect(slip?.status).toBe('wrong')
+    expect(slip?.mistake?.id).toBe(w.trap)
+    expect(slip?.mistake?.lesson).toBe(ERROR_PATTERNS[w.trap!].lesson)
+    // A shift with no direction words it cannot read is not an attempt: a parse error for the tutor.
+    expect(verdictFromTrigPart(gradeSgPart(w, 'shift', 'π/2 up'))?.status).toBe('parse_error')
+
+    // Four graphs to choose from: the tutor, which cannot see them, gets each card's formula; never a formula as a name.
+    const match = generateProblem('otherTrigGraphs', 'og.match', 1)
+    if (match.answer.type !== 'otherTrigGraphs') throw new Error('expected a matching problem')
+    const g = match.answer
+    const mctx = buildTutorContext(match, attempt('og-1', { moduleId: 'otherTrigGraphs', final: { polyEntries: { match: 'A' } } }), null, false)
+    expect(mctx.kind).toBe('otherTrigGraphs')
+    expect(mctx.statement).toMatch(/Graphs: A: y = .+; B: y = .+; C: y = .+; D: y = .+\./)
+    expect(mctx.work).toEqual(['The matching graph: Graph A'])
+    expect(verdictFromTrigPart(gradeOgPart(g, 'match', g.trapAnswer!), g.trapAnswer)?.mistake?.id).toBe(g.trap)
+
+    // A reference triangle: the quadrant by its name, then the side and the value she typed.
+    let seed = 1
+    let tri = generateProblem('inverseTrig', 'it.compose', seed)
+    while (tri.answer.type !== 'inverseTrig' || tri.answer.stages[0]!.id !== 'quadrant') tri = generateProblem('inverseTrig', 'it.compose', ++seed)
+    if (tri.answer.type !== 'inverseTrig') throw new Error('expected an inverse problem')
+    const t = tri.answer
+    const done = buildTutorContext(tri, attempt('it-1', { moduleId: 'inverseTrig', final: { polyEntries: trigEntries(t.stages) } }), null, true)
+    expect(done.kind).toBe('inverseTrig')
+    expect(done.finished).toBe(true)
+    expect(done.statement).toContain(`Figure: ${t.figure.ariaLabel}`)
+    expect(done.work[0]).toBe(`${t.stages[0]!.label}: ${t.stages[0]!.choices!.find((c) => c.value === t.stages[0]!.answerText)!.label}`)
+    expect(done.work.slice(1)).toEqual(t.stages.slice(1).map((s) => `${s.label}: ${s.answerText}`))
+    expect(verdictFromTrigPart(gradeItPart(t, t.trapStage!, t.trapAnswer!), t.trapAnswer)?.mistake?.id).toBe(t.trap)
   })
 
   it('describes an optimization problem part by part, in words, with the figure and the named opt_ slip, on either route', () => {

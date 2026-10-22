@@ -102,3 +102,74 @@ export type { GivenPoint } from './given'
 export { givenCoordinateSlips, givenPoint, givenRSlips, givenValue, givenValueSlips, quadrantSigns, quadrantsWithSign, signIn } from './given'
 export type { AngleListSpec, TrigListGrade, TrigListRead, TrigListSlip } from './solve'
 export { SPECIAL_DEGREES, angleValue, degreesOfValue, gradeAngleList, listSay, listText, readAngleList, solveAnswer, solveSlips } from './solve'
+// Unit 5 (docs/progress/trig-unit5.md): the graphs of the six functions, their equations and models, the inverse
+// functions.
+export type { ExactValue, ExprFn, ExprNode, ExprOptions, ExprRead, FunctionAnswerOptions, FunctionRead, SameFunctionCheck } from './expr'
+export {
+  evalExprExact,
+  evalExprNum,
+  exprTex,
+  hasDecimal,
+  hasTrigFunction,
+  nearlySameFunction,
+  normalizeExprText,
+  principalDegrees,
+  readExpr,
+  readFunctionAnswer,
+  sameFunction,
+  spreadSamples,
+} from './expr'
+export type { Wave, WaveFn, WaveForm, WavePointsSlip, WaveRangeSlip, WaveSetSlip, WaveSlip, XFamily } from './wave'
+export {
+  addExact,
+  amplitudeSlips,
+  asymptoteSlips,
+  baseTurn,
+  familyTex,
+  familyText,
+  isSinusoid,
+  keyPointSlips,
+  midlineSlips,
+  normalFamily,
+  periodSlips,
+  pointsText,
+  rangeSlips,
+  shiftSlips,
+  waveAmplitude,
+  waveAsymptotes,
+  waveExtremes,
+  waveInnerShift,
+  waveInsideTex,
+  waveInsideText,
+  waveKeyPoints,
+  wavePeriod,
+  waveRangeText,
+  waveRhsText,
+  waveTex,
+  waveText,
+  waveValue,
+  waveZeros,
+  zeroSlips,
+} from './wave'
+export type { ShiftCandidate, ShiftRead } from './shift'
+export { gradeShift, readShift } from './shift'
+export type { XSet, XSetCandidate, XSetRead, XSetSpec } from './xset'
+export { gradeXSet, membersBetween, readXSet, sameXSet, xSetTex } from './xset'
+export type { PointsCandidate, PointsRead, XYPoint } from './points'
+export { gradePoints, readPointList, samePoints } from './points'
+export type { InvFn, InvUnit, InverseDecimalSlip, InverseSlip } from './principal'
+export {
+  INV_BASE,
+  INV_WORD,
+  RANGE_WORDS,
+  angleIn,
+  cancelSlips,
+  cancelValue,
+  evaluateSlips,
+  inPrincipalRange,
+  inverseDecimalSlips,
+  inverseRad,
+  outsideDomainTrap,
+  outsideDomainWitness,
+  principalValue,
+} from './principal'

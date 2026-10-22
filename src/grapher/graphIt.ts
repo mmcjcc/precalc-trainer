@@ -85,6 +85,15 @@ export function graphItFromStatement(instance: ProblemInstance): GraphItRequest 
       const g = { text: `g(x) = ${a.notation}` }
       return { rows: [f, g], ...(window ? { window } : {}), label: `${f.text} and ${g.text}` }
     }
+    case 'sinusoids':
+    case 'otherTrigGraphs':
+    case 'inverseTrig':
+      // Unit 5: the given function (its graph shows the features, like a quadratic's: behind the gates). Never an
+      // equation she writes, a model, or the matching graphs: there the formula or the picture is the answer, and the
+      // template leaves `graphIt` unset.
+      if (a.type === 'sinusoids' && a.question !== 'features') return null
+      if (a.type === 'otherTrigGraphs' && a.question !== 'features') return null
+      return a.graphIt ? given('f', a.graphIt, windowOf(instance.graph)) : null
     case 'piecewiseRate': {
       if (a.question === 'rate') return a.f ? given('f', a.f) : null
       const pieces = a.pieces ?? []

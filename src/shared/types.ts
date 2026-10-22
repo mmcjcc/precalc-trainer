@@ -15,7 +15,7 @@
 export type RelOp = '=' | '<' | '<=' | '>' | '>='
 /** `h` is the difference-quotient step; the parser accepts it only when the problem owns it (ctx.vars). */
 export type VarName = 'x' | 'y' | 'n' | 'h'
-export type ModuleId = 'numberLine' | 'inequalities' | 'evenOdd' | 'inverses' | 'propertiesDrill' | 'sigFigs' | 'atoms' | 'diffQuotient' | 'graphFeatures' | 'domainRange' | 'composition' | 'functionOps' | 'transformations' | 'piecewiseRate' | 'electrons' | 'periodic' | 'quadratics' | 'optimization' | 'polyDivision' | 'polyZeros' | 'rationalFns' | 'signCharts' | 'complexNums' | 'logForms' | 'logProperties' | 'expLogEquations' | 'expLogGraphs' | 'expModels' | 'angleMeasure' | 'rightTriangle' | 'unitCircle' | 'geoSegments' | 'geoAngles' | 'geoLogic' | 'geoProof' | 'geoParallel' | 'geoPolygonAngles' | 'geoCongruence' | 'geoIsosceles' | 'geoTriangleProofs' | 'geoParallelograms' | 'geoSpecialQuads' | 'geoTrapezoids' | 'geoRatios' | 'geoSimilarTriangles' | 'geoProportionalParts' | 'ionicNames' | 'molecularAcids'
+export type ModuleId = 'numberLine' | 'inequalities' | 'evenOdd' | 'inverses' | 'propertiesDrill' | 'sigFigs' | 'atoms' | 'diffQuotient' | 'graphFeatures' | 'domainRange' | 'composition' | 'functionOps' | 'transformations' | 'piecewiseRate' | 'electrons' | 'periodic' | 'quadratics' | 'optimization' | 'polyDivision' | 'polyZeros' | 'rationalFns' | 'signCharts' | 'complexNums' | 'logForms' | 'logProperties' | 'expLogEquations' | 'expLogGraphs' | 'expModels' | 'angleMeasure' | 'rightTriangle' | 'unitCircle' | 'sinusoids' | 'otherTrigGraphs' | 'inverseTrig' | 'geoSegments' | 'geoAngles' | 'geoLogic' | 'geoProof' | 'geoParallel' | 'geoPolygonAngles' | 'geoCongruence' | 'geoIsosceles' | 'geoTriangleProofs' | 'geoParallelograms' | 'geoSpecialQuads' | 'geoTrapezoids' | 'geoRatios' | 'geoSimilarTriangles' | 'geoProportionalParts' | 'ionicNames' | 'molecularAcids'
 export type CalcId = 'ti84' | 'nspire'
 
 /** Fine-grained property tags. Canonical steps carry one; the engine's move detector reports one. */
@@ -644,6 +644,40 @@ export type ErrorPatternId =
   | 'trig_solve_one_answer'
   | 'trig_solve_out_of_range'
   | 'trig_solve_wrong_sign_quadrant'
+  // precalculus Unit 5, graphs of the trig functions (engine/trig: wave, shift, xset, points, principal, expr;
+  // content/modules/sinusoids, otherTrigGraphs, inverseTrig). Same rule: the value, set, equation or angle that slip
+  // gives on THIS problem; never a right answer.
+  | 'trig_amplitude_negative'
+  | 'trig_amplitude_with_d'
+  | 'trig_amplitude_as_span'
+  | 'trig_period_as_b'
+  | 'trig_period_times_b'
+  | 'trig_period_base_mixed'
+  | 'trig_shift_not_divided'
+  | 'trig_shift_wrong_way'
+  | 'trig_midline_zero'
+  | 'trig_range_ignores_d'
+  | 'trig_sec_range_as_sinusoid'
+  | 'trig_reflection_missed'
+  | 'trig_asymptotes_zeros_swapped'
+  | 'trig_sec_asymptotes_at_sin_zeros'
+  | 'trig_period_half'
+  | 'trig_period_quarter'
+  | 'trig_b_as_period'
+  | 'trig_midline_at_extreme'
+  | 'trig_cofunction_graph'
+  | 'trig_vertical_shift_sign'
+  | 'trig_amplitude_as_diameter'
+  | 'trig_model_start_point'
+  | 'trig_degree_mode'
+  | 'trig_model_later_time'
+  | 'trig_inverse_other_angle'
+  | 'trig_inverse_not_principal'
+  | 'trig_arccos_range_as_arcsin'
+  | 'trig_inverse_as_reciprocal'
+  | 'trig_inverse_cancel_outside'
+  | 'trig_inverse_outside_domain'
+  | 'trig_inverse_sign_dropped'
   // precalculus Unit 2, optimization with quadratics (engine/optim; content/modules/optimization). Each id is the
   // equation or number that slip gives on THIS problem, computed by the template; never a right answer.
   | 'opt_wall_fenced'
@@ -901,6 +935,21 @@ export interface GraphSpec {
    * `expr`. Existing graphs leave this unset.
    */
   guides?: GraphGuide[]
+  /**
+   * A trig graph's ticks (Unit 5), drawn by components/TrigGraph with `runs` (or `samples`), `markers` and `guides`:
+   * x ticks at every multiple of π/xPiOver, labelled the way a textbook writes them (π/4, π/2, 3π/4, π, 5π/4 …), or at
+   * every multiple of `xStep` when the period has no π; y ticks every `yStep`, or at every multiple of π/yPiOver (the
+   * angles of an inverse function). Existing graphs leave this unset and are drawn as before.
+   */
+  ticks?: GraphTicks
+}
+
+/** The ticks of a trig graph (GraphSpec.ticks): one of xPiOver and xStep, one of yStep and yPiOver. */
+export interface GraphTicks {
+  xPiOver?: number
+  xStep?: number
+  yStep?: number
+  yPiOver?: number
 }
 
 /** One endpoint of a piecewise graph. Filled when the piece includes it, hollow when it does not. */

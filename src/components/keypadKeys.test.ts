@@ -114,6 +114,32 @@ describe('keypadLayout: the grid letter and the context row from a box’s strip
     expect(typed.value).toBe('A = 500x - 2x^2')
   })
 
+  it('Unit 5: the inverse set has π, √, ° and the three inverse functions, never a word for a missing value', () => {
+    const { primary, context } = keypadLayout(KEYPAD_SETS.trigInverse)
+    expect(primary.insert).toBe('x')
+    expect(labels(context)).toEqual(['π', '√', '°', 'sin⁻¹', 'cos⁻¹', 'tan⁻¹'])
+    expect(context.some((k) => /undefined|value/i.test(k.insert))).toBe(false)
+    const asin = context.find((k) => k.label === 'sin⁻¹')!
+    expect(insertKey('', 0, 0, asin)).toEqual({ value: 'sin⁻¹()', caret: 6 })
+    expect(deleteBackward('sin⁻¹()', 6, 6, allKeys(keypadLayout(KEYPAD_SETS.trigInverse)))).toEqual({ value: '', caret: 0 })
+    // The comma is the grid's: a list of x-values or of key points needs no key of its own.
+    for (const set of [KEYPAD_SETS.trigFamily, KEYPAD_SETS.trigExact, KEYPAD_SETS.trigInverse]) expect(allKeys(keypadLayout(set)).some((k) => k.insert === ',' && k.name === 'comma')).toBe(true)
+  })
+
+  it('Unit 5: a family has x and k, a shift its two directions, a graph x and the six functions, a model t', () => {
+    expect(labels(keypadLayout(KEYPAD_SETS.trigFamily).context)).toEqual(['k', 'π'])
+    expect(keypadLayout(KEYPAD_SETS.trigFamily).primary.insert).toBe('x')
+    const shift = keypadLayout(KEYPAD_SETS.trigShift).context
+    expect(labels(shift)).toEqual(['π', 'right', 'left'])
+    const right = shift.find((k) => k.label === 'right')!
+    expect(insertKey('pi/4', 4, 4, right).value).toBe('pi/4 right')
+    expect(labels(keypadLayout(KEYPAD_SETS.trigGraph).context)).toEqual(['π', '√', 'sin', 'cos', 'tan', 'csc', 'sec', 'cot'])
+    const model = keypadLayout(KEYPAD_SETS.trigModel)
+    expect(model.primary.insert).toBe('t')
+    expect(labels(model.context)).toEqual(['π', 'sin', 'cos'])
+    expect(labels(keypadLayout(KEYPAD_SETS.trigValue).context)).toEqual(['π', '√', 'sin', 'cos', 'tan', 'csc', 'sec', 'cot'])
+  })
+
   it('a strip comma is the grid comma', () => {
     const geo: StripKey[] = [strip('√'), { label: '°', insert: '°', caret: 0, name: 'degrees' }, strip('('), { label: ',', insert: ',', caret: 0, name: 'comma' }]
     expect(labels(keypadLayout(geo).context)).toEqual(['√', '°'])

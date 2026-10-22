@@ -6,6 +6,8 @@
 import type { RuleCard, TrigAnswer, TrigPart, TrigPartTrap } from '@/content/types'
 import { ERROR_PATTERNS } from '@/engine'
 import {
+  exactAscii,
+  exactText,
   gradeAngleList,
   gradeTrigAnswer,
   isTrigMistake,
@@ -20,6 +22,7 @@ import {
 } from '@/engine/trig'
 import type { ErrorPatternId } from '@/shared/types'
 import { LogSkip } from '../explog/text'
+import { gradeUnit5Part, isUnit5Part, shiftSize } from './parts5'
 import { pieces, plain, showsAnswer } from './text'
 
 /**
@@ -57,6 +60,8 @@ export function specOf(part: TrigPart): TrigSpec {
       throw new Error('a choice part has no spec')
     case 'angles':
       throw new Error('a list of angles is graded with gradeAngleList')
+    default:
+      throw new Error(`a ${c.kind} part is graded by parts5.ts`)
   }
 }
 
@@ -115,8 +120,23 @@ function gradeChoice(part: TrigPart, raw: string): TrigPartGrade {
 
 /** Grade her entry for one part. A plain wrong answer gets the part's own note (what to look at, never the answer). */
 export function gradeTrigPart(part: TrigPart, raw: string): TrigPartGrade {
+  const g = gradeOne(part, raw)
+  // Unit 5: where a part has the button for an input with no value, a note points to the button, never to a word.
+  return part.noValue && g.verdict === 'invalid' ? { verdict: 'invalid', message: noValueWords(g.message) } : g
+}
+
+/** The reader's "say so in a word" sentences, for a part with the no-value button. */
+function noValueWords(message: string): string {
+  return message
+    .replace(/\s*If there is no value, say so in a word\./, ' If it has none, use the button under the box.')
+    .replace(/Give a number, or a word if the value does not exist\./, 'Give a number, or use the button under the box.')
+}
+
+function gradeOne(part: TrigPart, raw: string): TrigPartGrade {
   if (part.kind === 'choice') return gradeChoice(part, raw)
   if (part.kind === 'angles') return gradeAngles(part, raw)
+  // Unit 5: a phase shift, a midline, a range, key points, a function, x-values, an inverse function's value.
+  if (isUnit5Part(part)) return gradeUnit5Part(part, raw)
   const g = gradeTrigAnswer(specOf(part), raw, candidatesOf(part))
   switch (g.verdict) {
     case 'correct':
@@ -156,6 +176,16 @@ export function answerForms(part: TrigPart): string[] {
   if (part.kind === 'choice') return []
   const forms = [part.answerText, ...part.forms]
   if (part.kind === 'angles') for (const f of [...forms]) forms.push(...f.split(/\s*,\s*/))
+  // Unit 5. A phase shift's size alone gives it away (π/4 is π/4 to the left or right); each key point gives part of
+  // the list away; a family's first members are asymptotes of their own.
+  const c = part.check
+  if (c.kind === 'shift' && c.value !== '0') {
+    const size = shiftSize(c.value)
+    forms.push(exactText(size), exactAscii(size))
+  }
+  if (c.kind === 'points') forms.push(...c.points.map(([x, y]) => `(${x}, ${y})`))
+  if (c.kind === 'family') forms.push(...(part.leakForms ?? []))
+  if (c.kind === 'principal' && c.deg === null) forms.push('undefined', 'no value')
   return [...new Set(forms)].filter(Boolean)
 }
 
@@ -179,11 +209,18 @@ export function figureTextsAt(answer: TrigAnswer, index: number): string[] {
   const f = answer.figure
   const answered = new Set(answer.stages.slice(0, index).map((s) => s.id))
   const out = [f.label, f.sector?.radiusLabel ?? '']
-  if (f.point && (!f.waitFor || answered.has(f.waitFor))) out.push(f.point.label)
+  if (f.point && (!f.waitFor || answered.has(f.waitFor))) {
+    out.push(f.point.label)
+    // Unit 5: a reference triangle's sides, each once the part it waits for is answered.
+    for (const leg of [f.legs?.x, f.legs?.y, f.legs?.r]) if (leg && (!leg.after || answered.has(leg.after))) out.push(leg.label)
+  }
   if (f.triangle) {
     for (const s of f.triangle.sides) if (!s.after || answered.has(s.after)) out.push(s.label)
     for (const a of f.triangle.angles) out.push(a.label)
   }
+  // Unit 5: the graph she reads (its labelled points), and the four graphs to choose from (their names only).
+  if (f.graph) out.push(...(f.graph.markers ?? []).map((m) => m.label), f.graph.ariaLabel ?? '')
+  for (const g of f.graphs ?? []) out.push(...(g.graph.markers ?? []).map((m) => m.label), g.graph.ariaLabel ?? '')
   return out.filter(Boolean)
 }
 

@@ -59,6 +59,10 @@ export function texPlain(tex: string): string {
   s = s.replace(/\\text\{([^{}]*)\}/g, '$1')
   s = s.replace(/\^\{\\circ\}/g, '°').replace(/\^\\circ/g, '°')
   s = s.replace(/\\pi/g, 'π').replace(/\\theta/g, 'θ').replace(/\\alpha/g, 'α')
+  // Unit 5: arcsin, arccos, arctan (\sin^{-1} reads as Unit 4's reveals have always read it, "sin^−1"), ranges
+  // (\infty, \cup) and absolute values (\left| \right|). None of these appears in a Unit 4 text but \tan^{-1}.
+  s = s.replace(/\\(arcsin|arccos|arctan)(?![a-z])/g, '$1')
+  s = s.replace(/\\infty/g, '∞').replace(/\\cup/g, '∪').replace(/\\left\|/g, '|').replace(/\\right\|/g, '|')
   s = s.replace(/\\(sin|cos|tan|csc|sec|cot)\s*(?=[θA-Za-z0-9])/g, '$1 ').replace(/\\(sin|cos|tan|csc|sec|cot)(?![a-z])/g, '$1')
   s = s.replace(/\\cdot/g, '·').replace(/\\times/g, '×').replace(/\\approx/g, '≈').replace(/\\le(?![a-z])/g, '≤').replace(/\\ge(?![a-z])/g, '≥')
   s = s.replace(/\\(?:,|;|!|quad)/g, ' ')

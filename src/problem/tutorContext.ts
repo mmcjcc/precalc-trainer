@@ -521,7 +521,7 @@ function workOf(instance: ProblemInstance, attempt: Attempt | null): string[] {
       .map((line) => clip(line, TUTOR_LIMITS.line))
   }
   // Angles, right triangles and the unit circle: her boxes, part by part (a quadrant by its name).
-  if (instance.answer.type === 'angleMeasure' || instance.answer.type === 'rightTriangle' || instance.answer.type === 'unitCircle') {
+  if (instance.answer.type === 'angleMeasure' || instance.answer.type === 'rightTriangle' || instance.answer.type === 'unitCircle' || instance.answer.type === 'sinusoids' || instance.answer.type === 'otherTrigGraphs' || instance.answer.type === 'inverseTrig') {
     return trigWork(instance.answer.stages, attempt.final?.polyEntries)
       .slice(0, TUTOR_LIMITS.lines)
       .map((line) => clip(line, TUTOR_LIMITS.line))
@@ -657,9 +657,13 @@ function statementOf(instance: ProblemInstance): string {
     text = answer.matchMode === 'equation' ? `${answer.prompt}${candidates}` : `${answer.fnName}(x) = ${answer.f}. ${answer.prompt}${candidates}`
   } else if (answer.type === 'expModels') {
     text = answer.prompt
-  } else if (answer.type === 'angleMeasure' || answer.type === 'rightTriangle' || answer.type === 'unitCircle') {
-    // The prompt as words (its KaTeX read back), and the figure, which the tutor cannot see.
-    text = `${trigPlain(answer.prompt)} Figure: ${answer.figure.ariaLabel}`
+  } else if (answer.type === 'angleMeasure' || answer.type === 'rightTriangle' || answer.type === 'unitCircle' || answer.type === 'sinusoids' || answer.type === 'otherTrigGraphs' || answer.type === 'inverseTrig') {
+    // The prompt as words (its KaTeX read back), the given equation (Unit 5), and the figure, which the tutor cannot
+    // see; four graphs to match are said by their formulas, as expLogGraphs' candidates are.
+    const display = answer.display ? ` ${trigPlain(answer.display)}` : ''
+    const figure = answer.figure.ariaLabel.trim() ? ` Figure: ${answer.figure.ariaLabel}` : ''
+    const graphs = answer.figure.graphs?.length ? ` Graphs: ${answer.figure.graphs.map((g) => `${g.letter}: ${g.formula ?? 'a graph'}`).join('; ')}.` : ''
+    text = `${trigPlain(answer.prompt)}${display}${figure}${graphs}`
   } else if (answer.type === 'optimization') {
     // The prompt as words, and the pens' figure when the problem has one.
     text = `${optPlain(answer.prompt)}${answer.figure ? ` Figure: ${answer.figure.ariaLabel}` : ''}`
@@ -706,7 +710,7 @@ function canonicalOf(instance: ProblemInstance): string[] {
     answer.type === 'nomenclature'
   ) {
     lines = answer.reveal
-  } else if (answer.type === 'angleMeasure' || answer.type === 'rightTriangle' || answer.type === 'unitCircle') {
+  } else if (answer.type === 'angleMeasure' || answer.type === 'rightTriangle' || answer.type === 'unitCircle' || answer.type === 'sinusoids' || answer.type === 'otherTrigGraphs' || answer.type === 'inverseTrig') {
     lines = answer.reveal.map(trigPlain)
   } else if (answer.type === 'optimization') {
     lines = answer.reveal.map(optPlain)
@@ -747,6 +751,9 @@ function answerOf(instance: ProblemInstance): string | undefined {
     case 'angleMeasure':
     case 'rightTriangle':
     case 'unitCircle':
+    case 'sinusoids':
+    case 'otherTrigGraphs':
+    case 'inverseTrig':
     case 'optimization':
     case 'geometry':
     case 'periodic':
