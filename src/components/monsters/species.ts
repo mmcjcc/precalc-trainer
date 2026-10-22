@@ -212,6 +212,9 @@ export const SPECIES: readonly Species[] = [
       'sc_wrong_intervals',
       'log_value_sign',
       'trig_sign_quadrant',
+      'trig_coordinate_sign',
+      'trig_r_negative',
+      'trig_solve_wrong_sign_quadrant',
     ],
   },
   {
@@ -276,6 +279,7 @@ export const SPECIES: readonly Species[] = [
       'exp_growth_no_log',
       'exp_growth_log_diff',
       'opt_solve_divide',
+      'trig_special_wrong_way',
     ],
   },
   {
@@ -295,6 +299,8 @@ export const SPECIES: readonly Species[] = [
       'fn_domain_odd_root_restricted',
       'geo_distance_no_root',
       'trig_r_not_rooted',
+      'trig_side_not_rooted',
+      'trig_special_45_two',
     ],
   },
   {
@@ -313,6 +319,7 @@ export const SPECIES: readonly Species[] = [
       'trig_tan_inverted',
       'exp_halflife_inverted',
       'opt_opens_wrong_way',
+      'trig_hypotenuse_as_leg',
     ],
   },
   {
@@ -414,13 +421,14 @@ export const SPECIES: readonly Species[] = [
       'exp_inverse_shift',
       'exp_inverse_reciprocal',
       'opt_primary_secondary_swapped',
+      'trig_ratio_for_angle',
     ],
   },
   {
     id: 'fence',
     name: 'The Fence Jumper',
     personality: 'Hops the domain’s fence and lets forbidden numbers in.',
-    family: 'Domain and range slips: what may go in, what comes out, and where a function is undefined.',
+    family: 'Domain and range slips: what may go in, what comes out, where a function is undefined, an answer outside the range asked.',
     subject: 'math',
     look: { body: 'bean', hue: 96, sat: 52, light: 50, accent: 32, top: 'spikes', eyes: 'wide', mouth: 'grin', feet: 'stubs', arms: 'up', mark: 'fence' },
     variants: [
@@ -434,6 +442,7 @@ export const SPECIES: readonly Species[] = [
       'fn_composite_domain_inner_only',
       'op_undefined_missed',
       'exp_domain_range_swapped',
+      'trig_solve_out_of_range',
     ],
   },
   {
@@ -536,7 +545,7 @@ export const SPECIES: readonly Species[] = [
     id: 'phantom',
     name: 'The Phantom',
     personality: 'Haunts your answers: keeps the fake ones, spooks off the real ones.',
-    family: 'Ghost-answer slips: extraneous answers kept, real ones dropped, a solution lost by dividing.',
+    family: 'Ghost-answer slips: extraneous answers kept, real ones dropped, a solution lost by dividing, an angle left out of the range.',
     subject: 'math',
     look: { body: 'ghost', hue: 248, sat: 40, light: 78, accent: 300, top: 'none', eyes: 'hollow', mouth: 'o', feet: 'none', arms: 'stubs', mark: 'none' },
     variants: ['dropped_pm', 'divide_by_variable', 'rf_extraneous_kept', 'rf_valid_dropped', 'log_extraneous_kept', 'log_valid_rejected'],
@@ -566,6 +575,8 @@ export const SPECIES: readonly Species[] = [
       'opt_vertex_sign',
       'opt_vertex_no_two',
       'opt_coefficients_swapped',
+      'trig_solve_reference_only',
+      'trig_solve_one_answer',
     ],
   },
   {
@@ -640,13 +651,15 @@ export const SPECIES: readonly Species[] = [
       'opt_area_one_pen',
       'opt_area_wrong_count',
       'opt_area_as_fence',
+      'trig_pythag_added',
+      'trig_pythag_subtracted',
     ],
   },
   {
     id: 'angle',
     name: 'The Angle Swapper',
     personality: 'Trades angle partners: vertical for linear, alternate for corresponding.',
-    family: 'Angle-pair mix-ups: complementary or supplementary, vertical or linear, the transversal pairs, the angles of a quadrilateral.',
+    family: 'Angle mix-ups: complementary or supplementary, vertical or linear, the transversal pairs, the angles of a quadrilateral, which side is across from which angle.',
     subject: 'math',
     look: { body: 'tri', hue: 122, sat: 44, light: 52, accent: 340, top: 'horns', eyes: 'round', mouth: 'smirk', feet: 'stubs', arms: 'stubs', mark: 'arc' },
     variants: [
@@ -667,6 +680,9 @@ export const SPECIES: readonly Species[] = [
       'geo_opposite_angles_supplementary',
       'geo_consecutive_marks_as_opposite',
       'geo_kite_angles_wrong_pair',
+      'trig_special_legs_swapped',
+      'trig_depression_from_vertical',
+      'trig_opposite_adjacent_swapped',
     ],
   },
   {
@@ -737,7 +753,7 @@ export const SPECIES: readonly Species[] = [
     id: 'spin',
     name: 'The Spinner',
     personality: 'Spins angles the wrong way around the circle.',
-    family: 'Trig slips: radians and degrees, coterminal and reference angles, the unit circle’s values, arcs and sectors.',
+    family: 'Trig slips: radians and degrees, coterminal and reference angles, the unit circle’s values, arcs and sectors, special triangles, the calculator’s mode.',
     subject: 'math',
     look: { body: 'round', hue: 186, sat: 50, light: 40, accent: 52, top: 'antennae', eyes: 'wide', mouth: 'o', feet: 'stubs', arms: 'stubs', mark: 'swirl', face: 'high' },
     variants: [
@@ -758,6 +774,8 @@ export const SPECIES: readonly Species[] = [
       'trig_arc_degrees',
       'trig_sector_no_half',
       'trig_arc_sector_swapped',
+      'trig_special_root3_two_swapped',
+      'trig_radian_mode',
     ],
   },
   // ------------------------------------------------------------------ chemistry (the family app)
