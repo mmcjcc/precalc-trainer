@@ -2538,6 +2538,51 @@ export const ERROR_PATTERNS: Record<ErrorPatternId, ErrorPatternInfo> = {
     lesson: 'A proportion stays true when both ratios are turned upside down. Turning only one of them over, which is the same as multiplying the two numerators together and the two denominators together, writes a different equation.',
     example: 'j/k = l/m: k/j = l/m ✗ → k/j = m/l',
   },
+  // --- honors geometry Unit 7 (right triangles). Examples use the letters j, k, l, m and words, no digit at all, so no
+  // example can show a generated answer. The three converse slips can be named where the answer is a kind of triangle,
+  // so their titles, lessons and examples never name a kind: a "square corner" stands in for the angle that names one.
+  geo_leg_far_segment: {
+    id: 'geo_leg_far_segment',
+    title: 'Each leg goes with the segment next to it',
+    lesson: 'When the altitude is drawn to the hypotenuse, each leg is the geometric mean of the whole hypotenuse and the segment of the hypotenuse that touches that leg. The segment at the other end of the hypotenuse belongs to the other leg.',
+    example: 'leg l touches segment j, the far segment is k: l² = (j + k) · k ✗ → l² = (j + k) · j',
+  },
+  geo_altitude_leg_mixed: {
+    id: 'geo_altitude_leg_mixed',
+    title: 'The altitude and the legs use different means',
+    lesson: 'The altitude to the hypotenuse is the geometric mean of the two segments of the hypotenuse. A leg is the geometric mean of the whole hypotenuse and the segment next to that leg. A leg and a segment for the altitude, or the two segments for a leg, pairs lengths that are not in proportion.',
+    example: 'altitude² = leg · segment ✗ → altitude² = one segment · the other segment',
+  },
+  geo_converse_wrong_side: {
+    id: 'geo_converse_wrong_side',
+    title: 'Square the longest side',
+    lesson: 'The converse of the Pythagorean Theorem compares c², the square of the longest length, with the sum of the squares of the other two, wherever the longest length sits in the list. Squaring a shorter length always comes out less than the other two squares together, whatever the triangle, so that comparison tells you nothing.',
+    example: 'lengths j, l, k with l the longest: k² against j² + l² ✗ → l² against j² + k²',
+  },
+  geo_triangle_inequality_skipped: {
+    id: 'geo_triangle_inequality_skipped',
+    title: 'First make sure the sides can meet',
+    lesson: 'Three lengths close up into a triangle only when the two shorter ones add up to more than the longest one: that is the Triangle Inequality. Check it before you compare any squares. When the two shorter lengths add up to the longest or less, their ends cannot meet, and there are no angles to classify.',
+    example: 'j + k less than l: compare l² with j² + k² ✗ → check j + k against l first',
+  },
+  geo_acute_obtuse_swapped: {
+    id: 'geo_acute_obtuse_swapped',
+    title: 'A bigger c² means a wider angle',
+    lesson: 'Compare c², the square of the longest side, with a² + b². When c² is larger, the angle across from c is wider than a square corner. When c² is smaller, that angle, and so every angle of the triangle, is narrower than a square corner. Reading the comparison the other way round swaps the two kinds of triangle.',
+    example: 'c² more than a² + b²: every angle narrower than a square corner ✗ → one angle wider than a square corner',
+  },
+  geo_coefficient_not_squared: {
+    id: 'geo_coefficient_not_squared',
+    title: 'Square the number in front too',
+    lesson: 'To square a number times a radical, square both factors: (k√m)² = k² · m. Squaring only the radical leaves the number in front unsquared, so the square comes out too small and everything built on it is off.',
+    example: '(k√m)² = k · m ✗ → (k√m)² = k² · m',
+  },
+  geo_half_not_taken: {
+    id: 'geo_half_not_taken',
+    title: 'The right triangle inside has half of it',
+    lesson: 'The altitude to the base of an isosceles triangle cuts the base in half, the diagonals of a rhombus cut each other in half, and an altitude of an equilateral triangle cuts a side in half. The right triangle inside the figure has the half as a leg, not the whole length.',
+    example: 'base j: a leg of j ✗ → a leg of half of j',
+  },
   // --- precalculus Unit 4, trigonometric functions (engine/trig; content/modules/angleMeasure, unitCircle). Answers
   // there are angles, π-multiples and the special values, so examples use letters (d, k, θ, x, y, r) and numbers are
   // written as words: no example or lesson can show a generated answer.

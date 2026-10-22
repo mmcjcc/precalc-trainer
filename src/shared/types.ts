@@ -15,7 +15,7 @@
 export type RelOp = '=' | '<' | '<=' | '>' | '>='
 /** `h` is the difference-quotient step; the parser accepts it only when the problem owns it (ctx.vars). */
 export type VarName = 'x' | 'y' | 'n' | 'h'
-export type ModuleId = 'numberLine' | 'inequalities' | 'evenOdd' | 'inverses' | 'propertiesDrill' | 'sigFigs' | 'atoms' | 'diffQuotient' | 'graphFeatures' | 'domainRange' | 'composition' | 'functionOps' | 'transformations' | 'piecewiseRate' | 'electrons' | 'periodic' | 'quadratics' | 'optimization' | 'polyDivision' | 'polyZeros' | 'rationalFns' | 'signCharts' | 'complexNums' | 'logForms' | 'logProperties' | 'expLogEquations' | 'expLogGraphs' | 'expModels' | 'angleMeasure' | 'rightTriangle' | 'unitCircle' | 'sinusoids' | 'otherTrigGraphs' | 'inverseTrig' | 'geoSegments' | 'geoAngles' | 'geoLogic' | 'geoProof' | 'geoParallel' | 'geoPolygonAngles' | 'geoCongruence' | 'geoIsosceles' | 'geoTriangleProofs' | 'geoParallelograms' | 'geoSpecialQuads' | 'geoTrapezoids' | 'geoRatios' | 'geoSimilarTriangles' | 'geoProportionalParts' | 'ionicNames' | 'molecularAcids'
+export type ModuleId = 'numberLine' | 'inequalities' | 'evenOdd' | 'inverses' | 'propertiesDrill' | 'sigFigs' | 'atoms' | 'diffQuotient' | 'graphFeatures' | 'domainRange' | 'composition' | 'functionOps' | 'transformations' | 'piecewiseRate' | 'electrons' | 'periodic' | 'quadratics' | 'optimization' | 'polyDivision' | 'polyZeros' | 'rationalFns' | 'signCharts' | 'complexNums' | 'logForms' | 'logProperties' | 'expLogEquations' | 'expLogGraphs' | 'expModels' | 'angleMeasure' | 'rightTriangle' | 'unitCircle' | 'sinusoids' | 'otherTrigGraphs' | 'inverseTrig' | 'geoSegments' | 'geoAngles' | 'geoLogic' | 'geoProof' | 'geoParallel' | 'geoPolygonAngles' | 'geoCongruence' | 'geoIsosceles' | 'geoTriangleProofs' | 'geoParallelograms' | 'geoSpecialQuads' | 'geoTrapezoids' | 'geoRatios' | 'geoSimilarTriangles' | 'geoProportionalParts' | 'geoRightSimilar' | 'geoPythagorean' | 'geoSpecialRight' | 'ionicNames' | 'molecularAcids'
 export type CalcId = 'ti84' | 'nspire'
 
 /** Fine-grained property tags. Canonical steps carry one; the engine's move detector reports one. */
@@ -599,6 +599,17 @@ export type ErrorPatternId =
   | 'geo_mean_not_rooted'
   | 'geo_angle_scaled'
   | 'geo_one_ratio_inverted'
+  // honors geometry Unit 7, right triangles (content/modules/geometry). Each id is the exact number or pick that slip
+  // produces on this problem: a geometric mean in a right triangle paired with the wrong lengths, the converse of the
+  // Pythagorean Theorem read from the wrong side or the wrong way, a radical squared without its coefficient, or the
+  // whole of a length where the right triangle inside a figure has half of it.
+  | 'geo_leg_far_segment'
+  | 'geo_altitude_leg_mixed'
+  | 'geo_converse_wrong_side'
+  | 'geo_triangle_inequality_skipped'
+  | 'geo_acute_obtuse_swapped'
+  | 'geo_coefficient_not_squared'
+  | 'geo_half_not_taken'
   // precalculus Unit 4, trigonometric functions (engine/trig; content/modules/angleMeasure, unitCircle). Each id is
   // the exact value, angle or quadrant that slip gives on THIS problem, computed by the core; never a right answer.
   | 'trig_conversion_inverted'

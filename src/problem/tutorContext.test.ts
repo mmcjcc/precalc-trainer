@@ -1400,6 +1400,52 @@ describe('buildTutorContext', () => {
     expect(picked.work).toEqual([`${statement.label}: ${statement.choices!.find((c) => c.id === statement.answerText)!.text}`])
   }, 120_000)
 
+  it('describes the Unit 7 right-triangle problems without changing the geometry kind', () => {
+    const cases = [
+      ['geoRightSimilar', 'rs.mean', 'geometricMean'],
+      ['geoRightSimilar', 'rs.altitude', 'rightAltitude'],
+      ['geoPythagorean', 'py.side', 'pythagorean'],
+      ['geoPythagorean', 'py.classify', 'pythagoreanConverse'],
+      ['geoPythagorean', 'py.apply', 'pythagoreanWords'],
+      ['geoSpecialRight', 'sp.special', 'specialRight'],
+    ] as const
+    for (const [moduleId, templateId, question] of cases) {
+      const instance = generateProblem(moduleId, templateId, 1)
+      if (instance.answer.type !== 'geometry') throw new Error(`${templateId} is not geometry`)
+      const a = instance.answer
+      expect(a.question).toBe(question)
+      assertGeometryQuestion(a.question)
+      const ctx = buildTutorContext(instance, attempt(`u7-${templateId}`, { moduleId }), null, false)
+      expect(ctx.kind).toBe('geometry')
+      expect(ctx.subject).toBe('geometry')
+      // A problem in words alone (a geometric mean, three lengths to classify) has no figure, so no "Figure:".
+      expect(ctx.statement).toBe(a.figure.ariaLabel ? `${a.prompt} Figure: ${a.figure.ariaLabel}` : a.prompt)
+      expect(ctx.canonical[0]).toBe(a.reveal[0])
+      for (const stage of a.stages) expect(ctx.statement).not.toContain(stage.reveal[0]!)
+      const slip = gradeGeoStage(a, a.trapStage, a.trapAnswer)
+      expect(slip.verdict).toBe('mistake')
+      if (slip.verdict !== 'mistake') continue
+      // A slip borrowed from the trig core keeps its own id for the tutor.
+      expect(verdictFromGeo(slip)?.mistake?.id).toBe(a.trap)
+      expect(verdictFromGeo(slip)?.status).toBe('wrong')
+      expect(verdictFromGeo(gradeGeoStage(a, a.stages[0]!.id, a.stages[0]!.kind === 'choice' ? '' : '???'))?.status).toBe('parse_error')
+      const filled = buildTutorContext(instance, attempt(`u7-${templateId}-done`, { moduleId, final: { polyEntries: geoEntries(a) } }), null, true)
+      expect(filled.work).toEqual(geoWork(a, geoEntries(a)))
+      expect(filled.answer).toBe(a.expectedDisplay)
+    }
+    // The tutor sees the kind of triangle she picked, not its id, and a rounded length as she typed it.
+    const classify = generateProblem('geoPythagorean', 'py.classify', 1)
+    if (classify.answer.type !== 'geometry') throw new Error('py.classify is not geometry')
+    const pick = classify.answer.stages[0]!
+    const picked = buildTutorContext(classify, attempt('u7-classify', { moduleId: 'geoPythagorean', final: { polyEntries: { [GEO_KEYS[pick.id]]: 'none' } } }), null, false)
+    expect(picked.work).toEqual([`${pick.label}: Not a triangle`])
+    const story = generateProblem('geoPythagorean', 'py.apply', 1)
+    if (story.answer.type !== 'geometry') throw new Error('py.apply is not geometry')
+    const typed = buildTutorContext(story, attempt('u7-story', { moduleId: 'geoPythagorean', final: { polyEntries: { [GEO_KEYS[story.answer.stages[0]!.id]]: '222 ft' } } }), null, false)
+    expect(typed.work).toEqual([`${story.answer.stages[0]!.label}: 222 ft`])
+    expect(story.answer.stages[0]!.round).toBe(0)
+  }, 120_000)
+
   it('never adds a name, email, or account field', () => {
     const instance = generateProblem('inequalities', 'ineq.linear', 4)
     const ctx = buildTutorContext(instance, attempt('attempt-1', { steps: [step('x <= 3')] }), null, true)

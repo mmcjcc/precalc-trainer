@@ -439,7 +439,8 @@ export interface TrigTriangleSpec {
 /**
  * Which geometry screen this problem is. Unit 2 adds logic and proof; Unit 3 adds parallels and polygons; Unit 4 adds
  * congruent triangles; Unit 5 adds quadrilaterals; Unit 6 adds similarity (proportions, similar polygons, similar
- * triangles, proportional parts).
+ * triangles, proportional parts); Unit 7 adds right triangles (the geometric mean, the altitude to the hypotenuse, the
+ * Pythagorean Theorem and its converse, word problems rounded as asked, the special right triangles).
  */
 export type GeometryQuestion =
   | 'addition'
@@ -479,6 +480,12 @@ export type GeometryQuestion =
   | 'similarSolve'
   | 'splitter'
   | 'angleBisector'
+  | 'geometricMean'
+  | 'rightAltitude'
+  | 'pythagorean'
+  | 'pythagoreanConverse'
+  | 'pythagoreanWords'
+  | 'specialRight'
 
 /**
  * One checked part of a geometry problem. `x` and `result` are the Unit 1 boxes.
@@ -1422,8 +1429,19 @@ export type AnswerSpec =
          * them. Off unless set.
          */
         ratio?: boolean
-        /** A length measured in this unit (a story problem): "12 ft" or "12 feet" is read as 12. Off unless set. */
-        lengthUnit?: 'ft' | 'm'
+        /**
+         * A length measured in this unit (a story problem): "12 ft" or "12 feet" is read as 12. Off unless set.
+         * Unit 7's word problems add inches, yards, kilometers and miles; a length in another unit is a note.
+         */
+        lengthUnit?: 'ft' | 'm' | 'in' | 'yd' | 'km' | 'mi'
+        /**
+         * Unit 7: the answer is a decimal rounded to this many places (0 the nearest whole number, 1 the nearest tenth,
+         * 2 the nearest hundredth), and `answerText` is that rounded decimal. A correctly rounded decimal is right, more
+         * places too when they round to it; fewer places, or the exact radical, is a note. `exact` is the value before
+         * rounding, in the reader's syntax ("sqrt(130)"). Off unless set: every other part is exact.
+         */
+        round?: 0 | 1 | 2
+        exact?: string
         /** Box label, e.g. "x", "AB", "Reason for line 2". */
         label: string
         /** Line under the box or the choices. Never this part's answer. */
