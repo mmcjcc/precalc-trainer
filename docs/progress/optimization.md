@@ -222,3 +222,25 @@ Changed: `src/shared/types.ts`, `src/content/types.ts`, `src/engine/matchers/cat
 `src/content/modules/index.ts`, `src/components/keypadKeys.ts`, `src/pages/Problem.tsx`, `src/pages/flows/record.ts`,
 `src/problem/tutorContext.ts`, `docs/roadmap.md`. Tests changed: `keypadKeys.test.ts`, `courses.test.ts`,
 `generators.test.ts` (44 modules), `tutorContext.test.ts`.
+
+## Review (Claude, 2026-10-21)
+
+Built by one Claude agent (about 3 hours, 444 tool calls). Checked:
+- Sixteen sample problems by hand, four per template: every equation and number right.
+- An independent re-solve of 1600 problems (400 per template) from the words she reads, with my own model: a pen
+  against a wall fences 2 sides that meet the wall (3 with a divider) and 1 across; n pens in a row fence n + 1 sides
+  across and 2n along (n with a barn behind them); the four number conditions; the two price rules. Every part was
+  compared: the secondary equation on my line and off it, the primary and the final equation by value, the x of the
+  extreme, the other value, and the extreme with the rounding the prompt asks. No mismatch.
+- The grader on her own slips and on common forms: 0.002 (a and b swapped in -b/(2a)), A = 2xy for three pens and
+  A = -4x^2/3 are named; 500 = x + x + y, y = 500 - 2x, A = x(500 - 2x), 125 ft, 31,250 ft^2, 31250 sq ft and
+  33 1/3 are right; a bare area asks for its unit (the keypad has ft, ft^2 and $ keys on the number parts).
+- On the Android emulator in a store-app build: the module in Unit 2; a play area against a school wall with a
+  dividing fence; 3x+y=660 typed on the keypad (x, y and A on it) and kept; all six parts to "Problem complete"
+  (+90 XP), the worked solution under it.
+
+Changed in review: with a dividing fence, y (the whole side across from the wall) was labelled under one half of the
+pen, which reads as each half being y and invites 3x + 2y; it now sits in a gap of a dimension line that runs the
+whole side, with end ticks, and the figure tests check labels against those lines too.
+
+Left: a mixed number needs a space (100/3 and 33⅓ work too); the calculator panel graphs the final equation in x.
