@@ -11,6 +11,7 @@ import { generateProblem, getModule } from '@/content'
 import { plain, showsNumber } from '../trig/text'
 import { sweep, trigAnswerOf } from '../trig/testkit'
 import { RT_HINTS, RT_RULES } from '.'
+import { answerIsGiven } from './build'
 
 const LOOP_TIMEOUT = 120_000
 
@@ -118,6 +119,23 @@ describe('what the templates draw', () => {
         }
         for (const s of ['plain', 'ladder', 'ramp', 'kite', 'lighthouse', 'tree']) expect(scenes.get(s) ?? 0, `${t}: ${s}`).toBeGreaterThan(10)
         expect([...places].sort(), t).toEqual(t === 'rt.side' ? [0, 1, 2] : [1])
+      }
+    },
+    LOOP_TIMEOUT,
+  )
+
+  it(
+    'a rounded answer is never a number the problem gives (copying it would be right)',
+    () => {
+      // The draw review found: a 13-foot ramp at 3° reaches 13.0 feet along the ground.
+      const ramp = { prompt: 'A ramp $13$ feet long rises from the ground at an angle of $3^{\\circ}$.', stages: [{ answerText: '13.0', check: { kind: 'decimal', places: 1 } }] }
+      expect(answerIsGiven(ramp as never)).toBe(true)
+      expect(answerIsGiven({ ...ramp, stages: [{ answerText: '12.98', check: { kind: 'decimal', places: 2 } }] } as never)).toBe(false)
+      for (const t of ['rt.side', 'rt.angle']) {
+        for (let seed = 1; seed <= 400; seed++) {
+          const a = trigAnswerOf(generateProblem('rightTriangle', t, seed))
+          expect(answerIsGiven(a as never), `${t}/${seed}: ${a.prompt}`).toBe(false)
+        }
       }
     },
     LOOP_TIMEOUT,

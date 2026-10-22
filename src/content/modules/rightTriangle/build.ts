@@ -25,6 +25,9 @@ const VERSION = 1
 export function finishRt(d: Drafted, rng: Rng): RightTriangleAnswer {
   // Every problem here can promise a slip; a draw whose slips all round to the answer is redrawn.
   if (!d.promisable.length) throw new LogSkip(`${d.question}: no slip to promise`)
+  // A rounded answer equal to a number she is given would be right for copying it (found in review: a 13-foot ramp at
+  // 3° reaches 13.0 feet along the ground): redrawn.
+  if (answerIsGiven(d)) throw new LogSkip(`${d.question}: the answer is a number the problem gives`)
   const chosen = rng.pick(d.promisable)
   const stage = d.stages.find((s) => s.traps.includes(chosen))!
   const answer: RightTriangleAnswer = {
@@ -44,6 +47,12 @@ export function finishRt(d: Drafted, rng: Rng): RightTriangleAnswer {
   }
   assertTrigProblem(answer, RT_INSTRUCTIONS[d.question], RT_RULES, RT_HINTS, showsNumber)
   return answer
+}
+
+/** Does a rounded part's answer equal, at its own places, a number the prompt shows (a length or an angle)? */
+export function answerIsGiven(d: Pick<Drafted, 'prompt' | 'stages'>): boolean {
+  const givens = [...d.prompt.matchAll(/\$(\d+(?:\.\d+)?)(?:\^\{\\circ\})?\$/g)].map((g) => Number(g[1]))
+  return d.stages.some((s) => s.check.kind === 'decimal' && givens.some((g) => Number(g.toFixed((s.check as { places: number }).places)) === Number(s.answerText)))
 }
 
 function generate(templateId: string, salt: number, draw: (rng: Rng) => Drafted) {
