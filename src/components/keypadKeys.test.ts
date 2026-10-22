@@ -92,6 +92,17 @@ describe('keypadLayout: the grid letter and the context row from a box’s strip
     expect(insertKey('150', 3, 3, context.find((k) => k.label === '°')!)).toEqual({ value: '150°', caret: 4 })
   })
 
+  it('a list of angles on the trig set: the comma is the grid’s own key, so the set needs none of its own', () => {
+    const keys = allKeys(keypadLayout(KEYPAD_SETS.trig))
+    const comma = keys.find((k) => k.insert === ',')!
+    expect(comma).toMatchObject({ name: 'comma' })
+    expect(keypadLayout(KEYPAD_SETS.trig).context.some((k) => k.insert === ',')).toBe(false)
+    // "7π/6, 11π/6" typed key by key.
+    const typed = [strip('π'), grid('divide')].reduce((v, k) => insertKey(v.value, v.caret, v.caret, k), { value: '7', caret: 1 })
+    const listed = insertKey(`${typed.value}6`, typed.caret + 1, typed.caret + 1, comma)
+    expect(listed.value).toBe('7pi/6,')
+  })
+
   it('optimization: x in the grid, then y and the quantity’s letter; = and x² come from the grid', () => {
     const { primary, context } = keypadLayout(KEYPAD_SETS.optimization)
     expect(primary.insert).toBe('x')

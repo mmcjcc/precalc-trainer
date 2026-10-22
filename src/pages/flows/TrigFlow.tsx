@@ -9,13 +9,14 @@ import { KEYPAD_SETS } from '@/components/keypadKeys'
 import { insertToken, type StripKey } from '@/components/symbolStrip'
 import { useMathKeypadOn } from '@/components/useMathKeypad'
 import { gradeAmPart } from '@/content/modules/angleMeasure'
+import { gradeRtPart } from '@/content/modules/rightTriangle'
 import { gradeUcPart } from '@/content/modules/unitCircle'
 import type { TrigPartGrade } from '@/content/modules/trig/parts'
 import { pieces } from '@/content/modules/trig/text'
 import { getModule } from '@/content/registry'
 import type { RuleCard, TrigAnswer, TrigPart } from '@/content/types'
 import { patternHit } from '@/engine'
-import { readTrigAnswer } from '@/engine/trig'
+import { readAngleList, readTrigAnswer } from '@/engine/trig'
 import type { ProgressLine } from '@/problem/stepEngine'
 import { verdictFromTrigPart } from '@/problem/tutorContext'
 import { useStore } from '@/store'
@@ -46,6 +47,11 @@ const DOING: Record<string, string> = {
   csc: 'find csc θ',
   sec: 'find sec θ',
   cot: 'find cot θ',
+  side: 'find the third side',
+  x: 'find x',
+  y: 'find y',
+  angle: 'find θ',
+  solutions: 'find every angle',
 }
 
 /** The keys for these answers: π, √, °, the word for no value, and the six functions. */
@@ -160,22 +166,26 @@ function StageCard({ index, total, part, passed, children }: { index: number; to
   )
 }
 
-/** "Reads as" preview of what she typed, from the trig reader (√, π, ° drawn). */
+/** "Reads as" preview of what she typed, from the trig reader (√, π, ° drawn; a list with its commas). */
 function previewTex(part: TrigPart, value: string): string {
   if (!value.trim() || part.kind === 'choice') return ''
+  if (part.kind === 'angles') {
+    const list = readAngleList(value)
+    return list.ok ? list.tex : ''
+  }
   const units = part.check.kind === 'value' || part.check.kind === 'decimal' ? part.check.units : undefined
   const r = readTrigAnswer(value, units ? { units } : {})
   if (!r.ok) return ''
   return r.tex
 }
 
-function TrigStatement({ answer, showReference, showAngle }: { answer: TrigAnswer; showReference: boolean; showAngle: boolean }) {
+function TrigStatement({ answer, showReference, showAngle, answered, done }: { answer: TrigAnswer; showReference: boolean; showAngle: boolean; answered: readonly string[]; done: boolean }) {
   return (
     <div className="space-y-2">
       <p className="text-navy">
         <TexText text={answer.prompt} />
       </p>
-      <TrigFigure spec={answer.figure} showReference={showReference} showAngle={showAngle} />
+      <TrigFigure spec={answer.figure} showReference={showReference} showAngle={showAngle} answered={answered} done={done} />
     </div>
   )
 }
@@ -187,7 +197,14 @@ export function AngleMeasureFlow(props: FlowProps) {
   return <TrigPartsBody {...props} answer={answer} grade={(id, text) => gradeAmPart(answer, id, text)} />
 }
 
-/** The unit circle: exact values at special angles, and the ratios of a point on the terminal side. */
+/** Right triangle trigonometry: the ratios, the special triangles, sides and angles on the calculator. */
+export function RightTriangleFlow(props: FlowProps) {
+  const answer = props.instance.answer
+  if (answer.type !== 'rightTriangle') return <p className="text-navy">This problem has no right triangle to work with — pick another from the module page.</p>
+  return <TrigPartsBody {...props} answer={answer} grade={(id, text) => gradeRtPart(answer, id, text)} />
+}
+
+/** The unit circle: exact values, a point on the terminal side, one value and the quadrant, every angle in one turn. */
 export function UnitCircleFlow(props: FlowProps) {
   const answer = props.instance.answer
   if (answer.type !== 'unitCircle') return <p className="text-navy">This problem has no unit-circle question to work with — pick another from the module page.</p>
@@ -207,6 +224,8 @@ function TrigPartsBody({ instance, attempt, flags, templateTitle, completion, fi
   const [passed, setPassed] = useState(() => Math.min(attempt?.final?.polyStage ?? 0, last))
   const [feedback, setFeedback] = useState<Feedback | null>(null)
   const lastChecked = useRef<string | null>(null)
+  // Every list of angles checked on this attempt, by part: the same list is never logged twice, whatever came between.
+  const checkedLists = useRef(new Set<string>())
   const boxes = useRef(new Map<string, HTMLInputElement>())
   const stage = stages[passed]!
   const hint = useHintLadder(attempt, done, passed)
@@ -274,9 +293,13 @@ function TrigPartsBody({ instance, attempt, flags, templateTitle, completion, fi
       focusBox(stage.id)
       return
     }
-    const sig = `${attempt?.id ?? ''} ${passed} ${squash(text)}`
-    if (lastChecked.current === sig) return
+    // A list of angles is the same attempt in any order or spelling (its key), and is logged once however often she
+    // checks it; any other answer is the same attempt when it is the text she just checked.
+    const listKey = 'key' in g && g.key ? g.key : null
+    const sig = `${attempt?.id ?? ''} ${passed} ${listKey ?? squash(text)}`
+    if (lastChecked.current === sig || (listKey && checkedLists.current.has(sig))) return
     lastChecked.current = sig
+    if (listKey) checkedLists.current.add(sig)
     recordTrigPartGrade(g)
     const s = useStore.getState()
     if (g.verdict !== 'correct') {
@@ -312,6 +335,8 @@ function TrigPartsBody({ instance, attempt, flags, templateTitle, completion, fi
   // Where she is asked where the terminal side lies, the angle itself waits for that answer: drawn, it shows the quadrant.
   const quadrantIndex = stages.findIndex((s) => s.id === 'quadrant')
   const showAngle = done || quadrantIndex < 0 || passed > quadrantIndex
+  // The parts she has answered: a triangle's side she found gets its length, a uc.given point appears.
+  const answered = (done ? stages : stages.slice(0, passed)).map((s) => s.id)
 
   const progress: ProgressLine = {
     stage: done ? stages.length : passed,
@@ -332,7 +357,7 @@ function TrigPartsBody({ instance, attempt, flags, templateTitle, completion, fi
       tutorVerdict={shown ? verdictFromTrigPart(shown.grade, entries[stage.id] ?? '') : undefined}
       nudgeText="Still here? The part that is open is waiting for you below. The hint button is right there."
       keymap={{ onHint: hint.advance }}
-      statement={<TrigStatement answer={answer} showReference={showReference} showAngle={showAngle} />}
+      statement={<TrigStatement answer={answer} showReference={showReference} showAngle={showAngle} answered={answered} done={done} />}
       hints={<TrigHintLadder rung={hint.rung} nudge={stage.nudge} card={card} related={related} explanation={stage.reveal} onAdvance={hint.advance} disabled={done} />}
     >
       {stages.map((s, i) => {

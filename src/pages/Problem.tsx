@@ -21,7 +21,7 @@ import { ComplexNumsFlow } from './flows/ComplexNumsFlow'
 import { ExpLogEquationsFlow, LogPropertiesFlow } from './flows/LogLineFlow'
 import { LogFormsFlow } from './flows/LogFormsFlow'
 import { ExpLogGraphsFlow, ExpModelsFlow } from './flows/ExpLogPartsFlow'
-import { AngleMeasureFlow, UnitCircleFlow } from './flows/TrigFlow'
+import { AngleMeasureFlow, RightTriangleFlow, UnitCircleFlow } from './flows/TrigFlow'
 import { OptimizationFlow } from './flows/OptimizationFlow'
 import { GeometryFlow } from './flows/GeometryFlow'
 import { assertGeometryQuestion } from '@/problem/tutorContext'
@@ -163,6 +163,8 @@ function flowFor(props: FlowProps): ReactNode {
       return <ExpModelsFlow {...props} />
     case 'angleMeasure':
       return <AngleMeasureFlow {...props} />
+    case 'rightTriangle':
+      return <RightTriangleFlow {...props} />
     case 'unitCircle':
       return <UnitCircleFlow {...props} />
     case 'geometry':

@@ -520,8 +520,8 @@ function workOf(instance: ProblemInstance, attempt: Attempt | null): string[] {
       .slice(0, TUTOR_LIMITS.lines)
       .map((line) => clip(line, TUTOR_LIMITS.line))
   }
-  // Angles and the unit circle: her boxes, part by part (a quadrant by its name).
-  if (instance.answer.type === 'angleMeasure' || instance.answer.type === 'unitCircle') {
+  // Angles, right triangles and the unit circle: her boxes, part by part (a quadrant by its name).
+  if (instance.answer.type === 'angleMeasure' || instance.answer.type === 'rightTriangle' || instance.answer.type === 'unitCircle') {
     return trigWork(instance.answer.stages, attempt.final?.polyEntries)
       .slice(0, TUTOR_LIMITS.lines)
       .map((line) => clip(line, TUTOR_LIMITS.line))
@@ -651,7 +651,7 @@ function statementOf(instance: ProblemInstance): string {
     text = answer.matchMode === 'equation' ? `${answer.prompt}${candidates}` : `${answer.fnName}(x) = ${answer.f}. ${answer.prompt}${candidates}`
   } else if (answer.type === 'expModels') {
     text = answer.prompt
-  } else if (answer.type === 'angleMeasure' || answer.type === 'unitCircle') {
+  } else if (answer.type === 'angleMeasure' || answer.type === 'rightTriangle' || answer.type === 'unitCircle') {
     // The prompt as words (its KaTeX read back), and the figure, which the tutor cannot see.
     text = `${trigPlain(answer.prompt)} Figure: ${answer.figure.ariaLabel}`
   } else if (answer.type === 'optimization') {
@@ -700,7 +700,7 @@ function canonicalOf(instance: ProblemInstance): string[] {
     answer.type === 'nomenclature'
   ) {
     lines = answer.reveal
-  } else if (answer.type === 'angleMeasure' || answer.type === 'unitCircle') {
+  } else if (answer.type === 'angleMeasure' || answer.type === 'rightTriangle' || answer.type === 'unitCircle') {
     lines = answer.reveal.map(trigPlain)
   } else if (answer.type === 'optimization') {
     lines = answer.reveal.map(optPlain)
@@ -739,6 +739,7 @@ function answerOf(instance: ProblemInstance): string | undefined {
     case 'expLogGraphs':
     case 'expModels':
     case 'angleMeasure':
+    case 'rightTriangle':
     case 'unitCircle':
     case 'optimization':
     case 'geometry':

@@ -87,6 +87,28 @@ export function showsAnswer(texts: readonly string[], forms: readonly string[]):
   return anyShows(texts.map(plain), forms, { sentenceEnd: true })
 }
 
+const escapeRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+
+/**
+ * The second half's leak check: `showsAnswer` with √ and π bound to the number they touch, so a side given as 6√2
+ * does not show a leg of 6, √3 in a rule does not show a side of 3, and 5π/6 does not show π/6; 6√2 itself, −12 in
+ * "(−12, 5)", 240 in "240°" and an answer ending a sentence ("x = 5√3.") still count.
+ */
+export function showsNumber(texts: readonly string[], forms: readonly string[]): boolean {
+  const norm = (s: string) => s.replace(/[−–]/g, '-')
+  const words = texts.map((t) => norm(plain(t)))
+  return forms.some((form) => {
+    const f = norm(form).trim()
+    if (!f) return false
+    const tight = f.replace(/\s+/g, '')
+    const before = '(?<![\\d./A-Za-z_√π])'
+    const after = '(?![\\d/A-Za-z√π]|\\.\\d)'
+    const tightRe = new RegExp(`${before}${escapeRe(tight)}${after}`)
+    const looseRe = new RegExp(`${before}${escapeRe(f.replace(/\s+/g, ' ')).replace(/ /g, '\\s+')}${after}`)
+    return words.some((w) => tightRe.test(w.replace(/\s+/g, '')) || looseRe.test(w))
+  })
+}
+
 /** A minus sign for a sentence. */
 export function minus(s: string): string {
   return s.replace(/-/g, '−')

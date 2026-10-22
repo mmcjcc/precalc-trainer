@@ -15,7 +15,7 @@
 export type RelOp = '=' | '<' | '<=' | '>' | '>='
 /** `h` is the difference-quotient step; the parser accepts it only when the problem owns it (ctx.vars). */
 export type VarName = 'x' | 'y' | 'n' | 'h'
-export type ModuleId = 'numberLine' | 'inequalities' | 'evenOdd' | 'inverses' | 'propertiesDrill' | 'sigFigs' | 'atoms' | 'diffQuotient' | 'graphFeatures' | 'domainRange' | 'composition' | 'functionOps' | 'transformations' | 'piecewiseRate' | 'electrons' | 'periodic' | 'quadratics' | 'optimization' | 'polyDivision' | 'polyZeros' | 'rationalFns' | 'signCharts' | 'complexNums' | 'logForms' | 'logProperties' | 'expLogEquations' | 'expLogGraphs' | 'expModels' | 'angleMeasure' | 'unitCircle' | 'geoSegments' | 'geoAngles' | 'geoLogic' | 'geoProof' | 'geoParallel' | 'geoPolygonAngles' | 'geoCongruence' | 'geoIsosceles' | 'geoTriangleProofs' | 'geoParallelograms' | 'geoSpecialQuads' | 'geoTrapezoids' | 'ionicNames' | 'molecularAcids'
+export type ModuleId = 'numberLine' | 'inequalities' | 'evenOdd' | 'inverses' | 'propertiesDrill' | 'sigFigs' | 'atoms' | 'diffQuotient' | 'graphFeatures' | 'domainRange' | 'composition' | 'functionOps' | 'transformations' | 'piecewiseRate' | 'electrons' | 'periodic' | 'quadratics' | 'optimization' | 'polyDivision' | 'polyZeros' | 'rationalFns' | 'signCharts' | 'complexNums' | 'logForms' | 'logProperties' | 'expLogEquations' | 'expLogGraphs' | 'expModels' | 'angleMeasure' | 'rightTriangle' | 'unitCircle' | 'geoSegments' | 'geoAngles' | 'geoLogic' | 'geoProof' | 'geoParallel' | 'geoPolygonAngles' | 'geoCongruence' | 'geoIsosceles' | 'geoTriangleProofs' | 'geoParallelograms' | 'geoSpecialQuads' | 'geoTrapezoids' | 'ionicNames' | 'molecularAcids'
 export type CalcId = 'ti84' | 'nspire'
 
 /** Fine-grained property tags. Canonical steps carry one; the engine's move detector reports one. */
@@ -602,6 +602,27 @@ export type ErrorPatternId =
   | 'trig_sector_no_half'
   | 'trig_sector_r_not_squared'
   | 'trig_arc_sector_swapped'
+  // precalculus Unit 4, second half (engine/trig; content/modules/rightTriangle, unitCircle uc.given and uc.solve):
+  // right-triangle ratios, the special triangles, sides and angles on the calculator, one value and the quadrant, every
+  // angle in one turn. Same rule: the value, rounding or list that slip gives on THIS problem; never a right answer.
+  | 'trig_opposite_adjacent_swapped'
+  | 'trig_hypotenuse_as_leg'
+  | 'trig_pythag_added'
+  | 'trig_pythag_subtracted'
+  | 'trig_side_not_rooted'
+  | 'trig_special_root3_two_swapped'
+  | 'trig_special_45_two'
+  | 'trig_special_wrong_way'
+  | 'trig_special_legs_swapped'
+  | 'trig_depression_from_vertical'
+  | 'trig_radian_mode'
+  | 'trig_ratio_for_angle'
+  | 'trig_coordinate_sign'
+  | 'trig_r_negative'
+  | 'trig_solve_reference_only'
+  | 'trig_solve_one_answer'
+  | 'trig_solve_out_of_range'
+  | 'trig_solve_wrong_sign_quadrant'
   // precalculus Unit 2, optimization with quadratics (engine/optim; content/modules/optimization). Each id is the
   // equation or number that slip gives on THIS problem, computed by the template; never a right answer.
   | 'opt_wall_fenced'

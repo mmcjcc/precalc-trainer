@@ -8,6 +8,7 @@
  */
 import { useId } from 'react'
 import type { TrigFigureSpec } from '@/content/types'
+import { triangleLayout, type SceneShape } from './trigTriangle'
 
 const NAVY = 'var(--color-navy)'
 const CORAL = 'var(--color-coral-700)'
@@ -209,10 +210,172 @@ function SectorFigure({ spec }: { spec: TrigFigureSpec }) {
   )
 }
 
-export function TrigFigure({ spec, showReference = false, showAngle = true }: { spec: TrigFigureSpec; showReference?: boolean; showAngle?: boolean }) {
+/** The quadrants numbered I to IV, for a point that is not drawn yet. */
+function QuadrantNumerals() {
+  const at: [string, number, number][] = [
+    ['I', CX + 72, CY - 72],
+    ['II', CX - 72, CY - 72],
+    ['III', CX - 72, CY + 72],
+    ['IV', CX + 72, CY + 72],
+  ]
+  return (
+    <g data-trig="quadrant-numerals">
+      {at.map(([t, x, y]) => (
+        <Label key={t} x={x} y={y} text={t} color={NAVY} size={15} data="quadrant-numeral" />
+      ))}
+    </g>
+  )
+}
+
+/**
+ * Where an answer angle's label goes on the solve figure: outside the circle at the angle, turned a little off an axis
+ * so the axis line never runs through it.
+ */
+export function solveLabelAt(deg: number, text: string): { x: number; y: number } {
+  const { w, h } = labelHalfSize(text)
+  for (let turn = 0; turn <= 40; turn += 4) {
+    const p = polar(deg + turn, R + 18 + w * Math.abs(Math.cos(rad(deg + turn))) + h * Math.abs(Math.sin(rad(deg + turn))) - 4)
+    const onX = Math.abs(p.y - CY) < h + 2
+    const onY = Math.abs(p.x - CX) < w + 2
+    if (!onX && !onY) return p
+  }
+  return polar(deg + 20, R + 30)
+}
+
+/** Every angle in one turn: the unit circle and its axes; once she is done, the terminal side of each answer. */
+function SolveFigure({ spec, done, marker }: { spec: TrigFigureSpec; done: boolean; marker: string }) {
+  const s = spec.solve!
+  return (
+    <>
+      <circle data-trig="unit-circle" cx={CX} cy={CY} r={R} fill="none" stroke={NAVY} strokeOpacity={0.35} strokeWidth={1.5} />
+      <Axes marker={marker} />
+      {done &&
+        s.degs.map((d, i) => {
+          const end = polar(d, R)
+          const at = solveLabelAt(d, s.labels[i]!)
+          return (
+            <g key={d} data-trig="solution">
+              <line data-trig="terminal" x1={CX} y1={CY} x2={f(end.x)} y2={f(end.y)} stroke={NAVY} strokeWidth={2.5} />
+              <circle data-trig="point" cx={f(end.x)} cy={f(end.y)} r={4.5} fill={CORAL} />
+              <Label x={at.x} y={at.y} text={s.labels[i]!} color={CORAL} data="solution-label" />
+            </g>
+          )
+        })}
+    </>
+  )
+}
+
+const FILL: Record<SceneShape['fill'], string> = {
+  none: 'none',
+  wall: 'var(--color-navy-100)',
+  ground: 'var(--color-navy-100)',
+  ramp: 'var(--color-gold-100)',
+  kite: 'var(--color-gold)',
+  crown: 'var(--color-ok-100)',
+  trunk: 'var(--color-navy-100)',
+  tower: 'var(--color-navy-50)',
+  boat: 'var(--color-coral-100)',
+  sun: 'var(--color-gold)',
+  water: 'var(--color-navy-50)',
+  light: 'var(--color-gold)',
+}
+
+const pts = (p: { x: number; y: number }[]) => p.map((q) => `${f(q.x)},${f(q.y)}`).join(' ')
+
+/** A right triangle, plain or in its scene, from the pure layout (components/trigTriangle.ts). */
+function TriangleFigure({ spec, answered }: { spec: TrigFigureSpec; answered: ReadonlySet<string> }) {
+  const tri = spec.triangle!
+  const lay = triangleLayout(tri, (after) => !after || answered.has(after))
+  const found = tri.sides.filter((sd) => sd.after && answered.has(sd.after))
+  const ariaLabel = found.length ? `${spec.ariaLabel} ${found.map((sd) => `The side you found is now labelled ${sd.label}.`).join(' ')}` : spec.ariaLabel
+  return (
+    <div className="mx-auto w-full max-w-[320px] overflow-hidden">
+      <svg role="img" aria-label={ariaLabel} viewBox={`0 0 ${lay.width} ${lay.height}`} width="100%" className="block h-auto max-w-full">
+        {lay.scene.map((sh, i) => {
+          const common = { 'data-trig': sh.name, fill: FILL[sh.fill], stroke: sh.stroke ? NAVY : 'none', strokeWidth: sh.width ?? 1.5, strokeOpacity: sh.stroke ? 0.8 : undefined }
+          if (sh.kind === 'circle') return <circle key={i} {...common} cx={f(sh.c!.x)} cy={f(sh.c!.y)} r={sh.r} />
+          if (sh.kind === 'line' || sh.kind === 'polyline') return <polyline key={i} {...common} fill="none" points={pts(sh.points!)} strokeLinecap="round" />
+          return <polygon key={i} {...common} points={pts(sh.points!)} />
+        })}
+        {lay.sides.map((sd) =>
+          sd.style === 'ladder' || sd.style === 'shadow' ? null : (
+            <line
+              key={`${sd.from}-${sd.to}`}
+              data-trig="tri-side"
+              data-from={sd.from}
+              data-to={sd.to}
+              data-style={sd.style}
+              x1={f(sd.a.x)}
+              y1={f(sd.a.y)}
+              x2={f(sd.b.x)}
+              y2={f(sd.b.y)}
+              stroke={NAVY}
+              strokeWidth={sd.style === 'string' ? 1.5 : 2.5}
+              strokeDasharray={sd.style === 'dashed' ? '6 4' : undefined}
+              strokeLinecap="round"
+            />
+          ),
+        )}
+        <polyline data-trig="right-mark" points={pts(lay.rightMark)} fill="none" stroke={NAVY} strokeWidth={1.5} />
+        {lay.equalTicks.map(([a, b], i) => (
+          <line key={i} data-trig="equal-tick" x1={f(a.x)} y1={f(a.y)} x2={f(b.x)} y2={f(b.y)} stroke={CORAL} strokeWidth={2} />
+        ))}
+        {lay.horizontal && <line data-trig="horizontal" x1={f(lay.horizontal[0].x)} y1={f(lay.horizontal[0].y)} x2={f(lay.horizontal[1].x)} y2={f(lay.horizontal[1].y)} stroke={NAVY} strokeWidth={1.5} strokeDasharray="5 4" />}
+        {lay.arcs.map((a) => (
+          <path key={a.key} data-trig="angle-arc" data-at={a.key} d={a.d} fill="none" stroke={CORAL} strokeWidth={2} />
+        ))}
+        {lay.dims.map((d) => (
+          <g key={d.key} data-trig="dimension" data-side={d.key}>
+            {[...d.line, ...d.ticks].map(([a, b], i) => (
+              <line key={i} x1={f(a.x)} y1={f(a.y)} x2={f(b.x)} y2={f(b.y)} stroke={INK} strokeWidth={1} />
+            ))}
+            {d.ext.map(([a, b], i) => (
+              <line key={`e${i}`} x1={f(a.x)} y1={f(a.y)} x2={f(b.x)} y2={f(b.y)} stroke={INK} strokeWidth={0.75} strokeDasharray="2 3" />
+            ))}
+          </g>
+        ))}
+        {lay.labels.map((l) => (
+          <text
+            key={`${l.kind}-${l.key}`}
+            data-trig={l.kind === 'angle' ? 'angle-label' : l.kind === 'dimension' ? 'dim-label' : 'side-label'}
+            data-key={l.key}
+            x={f(l.x)}
+            y={f(l.y)}
+            textAnchor="middle"
+            dominantBaseline="middle"
+            fill={l.kind === 'angle' ? CORAL : INK}
+            fontSize={14}
+            fontWeight={600}
+            fontStyle={/^[a-zθ]$/.test(l.text) ? 'italic' : undefined}
+            {...HALO}
+          >
+            {l.text}
+          </text>
+        ))}
+      </svg>
+      {!tri.toScale && <p className="mt-1 text-center text-xs text-navy/70">Not drawn to scale.</p>}
+    </div>
+  )
+}
+
+/**
+ * `answered`: the parts she has answered (a triangle's side she found gets its length, a uc.given point appears once
+ * the part it waits for is answered). `done`: the problem is finished (a solve figure draws its angles).
+ */
+export function TrigFigure({ spec, showReference = false, showAngle = true, answered = [], done = false }: { spec: TrigFigureSpec; showReference?: boolean; showAngle?: boolean; answered?: readonly string[]; done?: boolean }) {
   const marker = `trig-arrow-${useId().replace(/:/g, '')}`
+  const answeredSet = new Set(answered)
+  if (spec.kind === 'triangle' && spec.triangle) return <TriangleFigure spec={spec} answered={answeredSet} />
   const hidden = spec.kind === 'circle' && !showAngle
-  const ariaLabel = hidden ? `The unit circle and its axes. The angle ${spec.label} is drawn once you have said where its terminal side lies.` : spec.ariaLabel
+  // A uc.given point waits for the part that settles its quadrant.
+  const waiting = spec.kind === 'point' && Boolean(spec.waitFor) && !done && !answeredSet.has(spec.waitFor!)
+  const ariaLabel = hidden
+    ? `The unit circle and its axes. The angle ${spec.label} is drawn once you have said where its terminal side lies.`
+    : spec.kind === 'point' && spec.waitFor && !waiting
+      ? `Axes with the point ${spec.point!.label} and the terminal side of the angle θ, drawn from the origin through the point.`
+      : spec.kind === 'solve' && done
+        ? `The unit circle with the terminal sides of ${spec.solve!.labels.join(' and ')}.`
+        : spec.ariaLabel
   return (
     <div className="mx-auto w-full max-w-[320px] overflow-hidden">
       <svg role="img" aria-label={ariaLabel} viewBox={`0 0 ${VW} ${VH}`} width="100%" className="block h-auto max-w-full">
@@ -227,9 +390,16 @@ export function TrigFigure({ spec, showReference = false, showAngle = true }: { 
             <Axes marker={marker} />
           </>
         )}
+        {waiting && (
+          <>
+            <Axes marker={marker} />
+            <QuadrantNumerals />
+          </>
+        )}
         {spec.kind === 'circle' && !hidden && <CircleFigure spec={spec} showReference={showReference} marker={marker} />}
-        {spec.kind === 'point' && <PointFigure spec={spec} marker={marker} />}
+        {spec.kind === 'point' && !waiting && <PointFigure spec={spec} marker={marker} />}
         {spec.kind === 'sector' && <SectorFigure spec={spec} />}
+        {spec.kind === 'solve' && spec.solve && <SolveFigure spec={spec} done={done} marker={marker} />}
       </svg>
     </div>
   )

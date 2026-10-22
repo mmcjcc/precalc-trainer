@@ -2562,6 +2562,117 @@ export const ERROR_PATTERNS: Record<ErrorPatternId, ErrorPatternInfo> = {
     lesson: 'Arc length s = rθ is a distance along the circle, in units like cm. Sector area A = ½r²θ is the slice, in square units like cm². Read which one the problem asks for.',
     example: 'arc length: ½r²θ ✗ → rθ',
   },
+  // --- precalculus Unit 4, second half (engine/trig: triangle, special, inverse, given, solve; content/modules/
+  // rightTriangle and unitCircle uc.given, uc.solve). The same rule as above: letters and words, no number but the
+  // ninety degrees of a right angle, so no example or lesson can show a side, a ratio, an angle or a list she is asked for.
+  trig_opposite_adjacent_swapped: {
+    id: 'trig_opposite_adjacent_swapped',
+    title: 'Opposite is across from the angle',
+    lesson: 'Name the sides from the angle you are using: the opposite side is across from it, and the adjacent side is the leg that touches it. Swap the two and you get the ratio of the other acute angle; SOH CAH TOA keeps them straight: sin = opposite/hypotenuse, cos = adjacent/hypotenuse, tan = opposite/adjacent.',
+    example: 'sin θ = adjacent/hypotenuse ✗ → opposite/hypotenuse',
+  },
+  trig_hypotenuse_as_leg: {
+    id: 'trig_hypotenuse_as_leg',
+    title: 'The hypotenuse goes on the bottom',
+    lesson: 'The hypotenuse is the side across from the right angle and the longest side, so it is on the bottom of sin and cos. With the hypotenuse on top, or a leg in its place, the ratio comes out upside down: a sine or cosine above one is the sign of it.',
+    example: 'sin θ = hypotenuse/opposite ✗ → opposite/hypotenuse',
+  },
+  trig_pythag_added: {
+    id: 'trig_pythag_added',
+    title: 'Subtract to find a leg',
+    lesson: 'In a² + b² = c², c is the hypotenuse, the longest side. With a leg and the hypotenuse, the missing leg is √(c² − a²): adding the squares makes it longer than the hypotenuse.',
+    example: 'a leg from a and c: √(a² + c²) ✗ → √(c² − a²)',
+  },
+  trig_pythag_subtracted: {
+    id: 'trig_pythag_subtracted',
+    title: 'Add the squares of two legs',
+    lesson: 'When both sides you know are legs, the missing side is the hypotenuse: c = √(a² + b²). Subtracting the squares gives a side shorter than a leg, and the hypotenuse is the longest side.',
+    example: 'legs a and b: √(b² − a²) ✗ → √(a² + b²)',
+  },
+  trig_side_not_rooted: {
+    id: 'trig_side_not_rooted',
+    title: 'Take the square root',
+    lesson: 'The Pythagorean theorem gives the square of the missing side, not the side itself. Finish with the square root, and simplify the radical.',
+    example: 'c² = a² + b², so c = a² + b² ✗ → c = √(a² + b²)',
+  },
+  trig_special_root3_two_swapped: {
+    id: 'trig_special_root3_two_swapped',
+    title: 'Twice the short leg is the hypotenuse',
+    lesson: 'In the triangle with angles of thirty, sixty and ninety degrees, the hypotenuse is twice the short leg and the long leg is the short leg times the square root of three. Swapping the two factors makes the long leg the longest side, and the hypotenuse is always the longest.',
+    example: 'long leg = twice the short leg ✗ → the short leg times the square root of three',
+  },
+  trig_special_45_two: {
+    id: 'trig_special_45_two',
+    title: 'A leg times the square root of two',
+    lesson: 'In an isosceles right triangle, with two angles of forty-five degrees, the legs are equal and the hypotenuse is a leg times the square root of two, not twice the leg. Going back, a leg is the hypotenuse divided by the square root of two.',
+    example: 'hypotenuse = twice a leg ✗ → a leg times the square root of two',
+  },
+  trig_special_wrong_way: {
+    id: 'trig_special_wrong_way',
+    title: 'Multiply going up, divide going down',
+    lesson: 'In a special right triangle the factor takes you from a shorter side to a longer one: multiply by it on the way up toward the hypotenuse, and divide by it on the way back down. Divide on the way up and the hypotenuse comes out shorter than a leg.',
+    example: 'a leg from the hypotenuse: times the square root of two ✗ → divided by the square root of two',
+  },
+  trig_special_legs_swapped: {
+    id: 'trig_special_legs_swapped',
+    title: 'The short leg is across from the smallest angle',
+    lesson: 'In the triangle with angles of thirty, sixty and ninety degrees, the short leg is across from the thirty-degree angle and the long leg is across from the sixty-degree angle. The hypotenuse is twice the short leg, never twice the long one.',
+    example: 'hypotenuse = twice the long leg ✗ → twice the short leg',
+  },
+  trig_depression_from_vertical: {
+    id: 'trig_depression_from_vertical',
+    title: 'Depression is measured from the horizontal',
+    lesson: 'An angle of depression is measured down from a horizontal line at the high point, not from the tower, cliff or post below it. It equals the angle of elevation looking back up from the low point, so that is where it goes in the triangle.',
+    example: 'the angle at the top, between the tower and the line of sight ✗ → the angle at the bottom, between the ground and the line of sight',
+  },
+  trig_radian_mode: {
+    id: 'trig_radian_mode',
+    title: 'Set the calculator to DEGREE mode',
+    lesson: 'In RADIAN mode the calculator reads every angle as radians and gives angles back in radians, with no warning. When the angles are in degrees, press MODE and choose DEGREE before SIN, COS, TAN or their inverses.',
+    example: 'sin of an angle in degrees, worked out in RADIAN mode ✗ → in DEGREE mode',
+  },
+  trig_ratio_for_angle: {
+    id: 'trig_ratio_for_angle',
+    title: 'Undo the ratio with the inverse',
+    lesson: 'sin turns an angle into a ratio, and sin⁻¹ turns a ratio back into the angle. To find an angle from two sides, work out their ratio, then use the inverse key: SIN⁻¹, COS⁻¹ or TAN⁻¹, printed above SIN, COS and TAN.',
+    example: 'the angle whose sine is s: sin s ✗ → sin⁻¹ s',
+  },
+  trig_coordinate_sign: {
+    id: 'trig_coordinate_sign',
+    title: 'The quadrant gives the coordinate its sign',
+    lesson: 'The Pythagorean theorem gives only the size of the missing coordinate. Put the sign on from the quadrant: x is negative in Quadrants II and III, and y is negative in Quadrants III and IV.',
+    example: 'θ in Quadrant II: x = +√(r² − y²) ✗ → x = −√(r² − y²)',
+  },
+  trig_r_negative: {
+    id: 'trig_r_negative',
+    title: 'r is never negative',
+    lesson: 'r is the distance from the origin to the point, and a distance is never negative. The quadrant shows up in the signs of x and y, so r = √(x² + y²) is positive in every quadrant.',
+    example: 'θ in Quadrant III: r = −√(x² + y²) ✗ → r = √(x² + y²)',
+  },
+  trig_solve_reference_only: {
+    id: 'trig_solve_reference_only',
+    title: 'The reference angle is a step, not the answer',
+    lesson: 'The reference angle gives the size of θ, and the sign of the value picks the quadrants. Put the reference angle into each quadrant where the function has that sign: a half turn minus it in Quadrant II, a half turn plus it in III, a full turn minus it in IV.',
+    example: 'sin θ negative, reference angle α: α ✗ → a half turn plus α, and a full turn minus α',
+  },
+  trig_solve_one_answer: {
+    id: 'trig_solve_one_answer',
+    title: 'Find every angle in the range',
+    lesson: 'In one full turn a function is positive in two quadrants and negative in two, so most values come up twice. List each angle in the range, separated by commas.',
+    example: 'cos θ positive: α alone ✗ → α, and a full turn minus α',
+  },
+  trig_solve_out_of_range: {
+    id: 'trig_solve_out_of_range',
+    title: 'Stay inside the range asked',
+    lesson: 'The inverse key gives one angle, and sometimes it is negative. Add or subtract full turns until each angle is in the range the problem asks for, then check that you have them all.',
+    example: 'θ = −α ✗ → θ = a full turn minus α',
+  },
+  trig_solve_wrong_sign_quadrant: {
+    id: 'trig_solve_wrong_sign_quadrant',
+    title: 'Use the quadrants with the right sign',
+    lesson: 'All Students Take Calculus: all six functions are positive in Quadrant I, sin in II, tan in III and cos in IV, each with its reciprocal. A negative value puts θ in the two quadrants where that function is negative.',
+    example: 'sin θ negative: Quadrants I and II ✗ → Quadrants III and IV',
+  },
   // --- precalculus Unit 2, optimization with quadratics (engine/optim). Examples use l and w, letters no problem
   // uses, so no example can be a generated answer. ---
   opt_wall_fenced: {

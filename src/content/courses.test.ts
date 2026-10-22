@@ -83,7 +83,7 @@ describe('course registry', () => {
       'expModels',
     ])
     expect(precalc!.units[2]).toMatchObject({ id: 'unit3', label: 'Unit 3', title: 'Exponential and logarithmic functions' })
-    expect(modulesInUnit(precalc!.units[3]!).map((m) => m.id)).toEqual(['angleMeasure', 'unitCircle'])
+    expect(modulesInUnit(precalc!.units[3]!).map((m) => m.id)).toEqual(['angleMeasure', 'rightTriangle', 'unitCircle'])
     expect(precalc!.units[3]).toMatchObject({ id: 'unit4', label: 'Unit 4', title: 'Trigonometric functions' })
     expect(unitsWithModules(precalc!).map((u) => u.id)).toEqual(['unit1', 'unit2', 'unit3', 'unit4'])
     expect(precalc!.units.map((u) => u.id)).toEqual(['unit1', 'unit2', 'unit3', 'unit4'])

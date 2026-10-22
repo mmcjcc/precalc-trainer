@@ -13,6 +13,7 @@ import { gradeEgPart } from '@/content/modules/expLogGraphs'
 import { gradeEmPart } from '@/content/modules/expModels'
 import { partEntries, partsWork } from '@/content/modules/explog/parts'
 import { gradeAmPart } from '@/content/modules/angleMeasure'
+import { gradeRtPart } from '@/content/modules/rightTriangle'
 import { gradeUcPart } from '@/content/modules/unitCircle'
 import { trigEntries } from '@/content/modules/trig/parts'
 import { gradeNmStage, NM_KEYS, nmWork } from '@/content/modules/nomenclature'
@@ -1134,6 +1135,36 @@ describe('buildTutorContext', () => {
     expect(done.finished).toBe(true)
     expect(verdictFromTrigPart(gradeUcPart(c, c.trapStage!, c.trapAnswer!), c.trapAnswer)?.mistake?.id).toBe(c.trap)
     expect(verdictFromTrigPart(gradeUcPart(c, 'r', '1/√2'))?.status).toBe('parse_error')
+  })
+
+  it('describes a right-triangle problem and a list of angles part by part, in words, with the figure and the named trig_ slip', () => {
+    const tri = generateProblem('rightTriangle', 'rt.side', 2)
+    if (tri.answer.type !== 'rightTriangle') throw new Error('expected a right-triangle problem')
+    const a = tri.answer
+    const ctx = buildTutorContext(tri, attempt('rt-1', { moduleId: 'rightTriangle', final: { polyEntries: { x: '12.3' } } }), null, false)
+    expect(ctx.subject).toBe('precalculus')
+    expect(ctx.kind).toBe('rightTriangle')
+    // The prompt read back as words, and the figure (which the tutor cannot see) described.
+    expect(ctx.statement).not.toMatch(/\\|\$/)
+    expect(ctx.statement).toContain(`Figure: ${a.figure.ariaLabel}`)
+    expect(ctx.work).toEqual(['x: 12.3'])
+    expect(ctx.answer).toBe(a.expectedDisplay)
+    for (const line of ctx.canonical) expect(line).not.toMatch(/\\|\$/)
+    const slip = verdictFromTrigPart(gradeRtPart(a, a.trapStage!, a.trapAnswer!), a.trapAnswer)
+    expect(slip?.status).toBe('wrong')
+    expect(slip?.mistake?.id).toBe(a.trap)
+    expect(slip?.mistake?.lesson).toBe(ERROR_PATTERNS[a.trap!].lesson)
+    // A note (a degree sign on a length) is not a graded answer: a parse error for the tutor.
+    expect(verdictFromTrigPart(gradeRtPart(a, 'x', '12°'))?.status).toBe('parse_error')
+
+    const list = generateProblem('unitCircle', 'uc.solve', 3)
+    if (list.answer.type !== 'unitCircle') throw new Error('expected a unit-circle problem')
+    const l = list.answer
+    const done = buildTutorContext(list, attempt('uc-2', { moduleId: 'unitCircle', final: { polyEntries: trigEntries(l.stages) } }), null, true)
+    expect(done.kind).toBe('unitCircle')
+    expect(done.work).toEqual([`Every solution: ${l.stages[0]!.answerText}`])
+    expect(verdictFromTrigPart(gradeUcPart(l, 'solutions', l.trapAnswer!), l.trapAnswer)?.mistake?.id).toBe(l.trap)
+    expect(verdictFromTrigPart(gradeUcPart(l, 'solutions', '1, 1'))?.status).toBe('parse_error')
   })
 
   it('describes an optimization problem part by part, in words, with the figure and the named opt_ slip, on either route', () => {

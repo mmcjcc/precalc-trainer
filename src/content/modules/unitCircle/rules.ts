@@ -1,7 +1,8 @@
 /**
  * Rule cards for the unit circle. They stay on screen while she answers, and the answers here are the special values
- * themselves, so the cards give the method in words (half the hypotenuse, the square root of three, zero on the
- * bottom) and never write a value a template can ask for.
+ * themselves and (uc.solve) the special angles, so the cards give the method in words (half the hypotenuse, the square
+ * root of three, zero on the bottom, a half turn, the thirty-degree angle) and never write a value or an angle a
+ * template can ask for.
  */
 import type { RuleCard } from '@/content/types'
 
@@ -12,6 +13,8 @@ export const UC_RULE_IDS = {
   reciprocal: 'uc-reciprocal',
   axes: 'uc-axes',
   point: 'uc-point',
+  given: 'uc-given',
+  solve: 'uc-solve',
 } as const
 
 export const UC_RULES: RuleCard[] = [
@@ -24,8 +27,8 @@ export const UC_RULES: RuleCard[] = [
   {
     id: UC_RULE_IDS.special,
     title: 'Special angles',
-    body: 'Work with the reference angle and its right triangle, hypotenuse one. In a 45°-45°-90° triangle the two legs are equal. In a 30°-60°-90° triangle the leg across from 30° is half the hypotenuse, and the leg across from 60° is that short leg times the square root of three.',
-    example: 'leg across from 30° = half the hypotenuse',
+    body: 'Work with the reference angle and its right triangle, hypotenuse one. In the isosceles right triangle the two legs are equal. In the right triangle with angles of thirty and sixty degrees, the leg across from the thirty-degree angle is half the hypotenuse, and the leg across from the sixty-degree angle is that short leg times the square root of three.',
+    example: 'leg across from the thirty-degree angle = half the hypotenuse',
   },
   {
     id: UC_RULE_IDS.signs,
@@ -50,5 +53,17 @@ export const UC_RULES: RuleCard[] = [
     title: 'A point on the terminal side',
     body: 'For a point (x, y) on the terminal side, r = √(x² + y²) is its distance from the origin. Then sin θ = y/r, cos θ = x/r, tan θ = y/x, csc θ = r/y, sec θ = r/x and cot θ = x/y. Keep the signs of x and y, and rationalize a square root in the denominator.',
     example: 'r = √(x² + y²), then sin θ = y/r',
+  },
+  {
+    id: UC_RULE_IDS.given,
+    title: 'One value and the quadrant',
+    body: 'Read the value as a ratio of two of x, y and r: sin θ = y/r, cos θ = x/r, tan θ = y/x, and their reciprocals. The quadrant gives the signs of x and y, r is always positive, and x² + y² = r² gives the third. Then every other function is a ratio of x, y and r.',
+    example: 'sin θ = y/r: take y and r, then x² = r² − y², with the sign of x from the quadrant',
+  },
+  {
+    id: UC_RULE_IDS.solve,
+    title: 'Every angle in one turn',
+    body: 'Find the reference angle from the size of the value, then the quadrants where the function has the value’s sign (All Students Take Calculus). Put the reference angle into each: a half turn minus it in Quadrant II, a half turn plus it in Quadrant III, a full turn minus it in Quadrant IV. Most values give two angles in one turn; a value on an axis gives one.',
+    example: 'a negative sine: Quadrants III and IV',
   },
 ]

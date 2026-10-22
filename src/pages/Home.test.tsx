@@ -160,7 +160,7 @@ describe('Home: classes and units', () => {
     renderHome()
     // A first visit lands on the last unit that has modules (Unit 4). Unit 1 is one press away.
     expect(moduleTitles()).toEqual(unit4Titles)
-    expect(moduleTitles()).toEqual(['Angles and radian measure', 'The unit circle and trig functions of any angle'])
+    expect(moduleTitles()).toEqual(['Angles and radian measure', 'Right triangle trigonometry', 'The unit circle and trig functions of any angle'])
     expect(signposts()).toEqual(unit4Titles)
     expect(screen.getByRole('button', { name: /Unit 4/, pressed: true }).textContent).toMatch(/Trigonometric functions/)
     expect(screen.queryByRole('heading', { name: 'Unit 1 review' })).toBeNull()
