@@ -69,12 +69,22 @@ export function monsterEntry(id: string, cards: readonly MistakeCard[]): Monster
   }
 }
 
-/** The collection for these species (the edition's), from her mistake cards. */
+/** Where a monster sits in its species' grid: on the loose first, then squashed, then not seen yet. */
+const STATUS_ORDER: Record<MonsterStatus, number> = { caught: 0, squashed: 1, unseen: 2 }
+
+/**
+ * The collection for these species (the edition's), from her mistake cards. In each species the monsters she has met
+ * come first, the latest first (found on a phone: her one catch sat after 24 silhouettes, below the fold), then the
+ * ones not seen yet, in catalog order.
+ */
 export function monsterCollection(cards: readonly MistakeCard[], species: readonly Species[]): Collection {
   let squashed = 0
   let onTheLoose = 0
   const out: SpeciesEntry[] = species.map((s) => {
-    const monsters = s.variants.map((id) => monsterEntry(id, cards))
+    const monsters = s.variants
+      .map((id, i) => ({ m: monsterEntry(id, cards), i }))
+      .sort((a, b) => STATUS_ORDER[a.m.status] - STATUS_ORDER[b.m.status] || (b.m.lastAt ?? 0) - (a.m.lastAt ?? 0) || a.i - b.i)
+      .map((x) => x.m)
     const sq = monsters.filter((m) => m.status === 'squashed').length
     const loose = monsters.filter((m) => m.status === 'caught').length
     squashed += sq

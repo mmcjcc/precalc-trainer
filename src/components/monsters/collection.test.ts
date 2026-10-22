@@ -80,7 +80,7 @@ describe('a monster’s state', () => {
 })
 
 describe('the collection', () => {
-  it('every species of the edition, every variant in table order; "N squashed · M on the loose"', () => {
+  it('every species of the edition, every variant once, the met ones first; "N squashed · M on the loose"', () => {
     const events = [
       rejected('a', 'ineq.linear', at(6), 'flip_on_add'),
       done('b', 'ineq.linear', at(5)),
@@ -95,7 +95,13 @@ describe('the collection', () => {
     expect(c.onTheLoose).toBe(2)
     expect(tallyLine(c)).toBe('1 squashed · 2 on the loose')
     const sign = c.species.find((s) => s.species.id === 'sign')!
-    expect(sign.monsters.map((m) => m.id)).toEqual([...sign.species.variants])
+    // Every variant once: on the loose first, then squashed, then the ones not seen yet in table order.
+    expect([...sign.monsters.map((m) => m.id)].sort()).toEqual([...sign.species.variants].sort())
+    expect(sign.monsters.slice(0, 2).map((m) => [m.id, m.status])).toEqual([
+      ['no_sign_flip', 'caught'],
+      ['flip_on_add', 'squashed'],
+    ])
+    expect(sign.monsters.slice(2).map((m) => m.id)).toEqual(sign.species.variants.filter((v) => v !== 'no_sign_flip' && v !== 'flip_on_add'))
     expect(sign).toMatchObject({ squashed: 1, onTheLoose: 1 })
     expect(c.species.find((s) => s.species.id === 'bracket')).toMatchObject({ squashed: 0, onTheLoose: 1 })
     expect(c.species.filter((s) => s.squashed + s.onTheLoose === 0)).toHaveLength(SPECIES.length - 2)
