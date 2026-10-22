@@ -112,7 +112,11 @@ export interface Species {
   family: string
   subject: MonsterSubject
   look: SpeciesLook
-  /** Catalog ids, in the order the collection shows them. */
+  /**
+   * Catalog ids, in the order the collection shows the ones not seen yet. A variant's look depends on the ones before
+   * it (art.ts speciesTraits redraws a clash with an earlier sibling), so a NEW MISTAKE GOES AT THE END: inserted
+   * earlier, it would change the looks of monsters children have already caught.
+   */
   variants: readonly string[]
 }
 

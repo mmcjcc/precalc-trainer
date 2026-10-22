@@ -62,7 +62,8 @@ describe('the art', () => {
     expect(hashString(artMarkup(monsterArt('no_sign_flip')!)).toString(16)).toBe(PINNED)
   })
 
-  it('is valid SVG, every shape inside its viewBox: each variant, plain or as a sticker, and each silhouette', () => {
+  // Every variant twice and every silhouette: a long loop (it ran past 20 s on a loaded machine), so the usual 120 s.
+  it('is valid SVG, every shape inside its viewBox: each variant, plain or as a sticker, and each silhouette', { timeout: 120_000 }, () => {
     for (const id of VARIANTS) {
       for (const sticker of [false, true]) {
         const art = monsterArt(id, { sticker })!
