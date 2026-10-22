@@ -13,6 +13,11 @@
  * Never offered: a polynomial built from its zeros (f is the answer), writing a piecewise function or reading one off
  * its graph (the formulas are the answer, or were never shown), matching a graph (the picture is the answer), a
  * rational equation (where the sides meet is the answer), and every other type. Pure.
+ *
+ * WHERE IT SHOWS (review, 2026-10-22): the graph of the given f still shows the answer of most of these (a vertex, the
+ * zeros, f(c)), so the problem page puts the button only behind the reveal gates that already say so: inside the
+ * Graph panel after "Show the graph" and inside the calculator steps after "Show calculator steps"
+ * (pages/flows/ProblemFrame.tsx). A problem with neither panel shows no Graph it; the Graph tab is always there.
  */
 import type { MathNode } from 'mathjs'
 import type { OptimizationAnswer, ProblemInstance } from '@/content/types'

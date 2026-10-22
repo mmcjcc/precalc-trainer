@@ -442,7 +442,12 @@ function OptPartsBody({ instance, attempt, flags, templateTitle, completion, fin
               <>
                 <PolyTextBox id={`opt-${s.id}`} label={s.label} hint={s.formatHint} placeholder="" value={value} disabled invalid={false} onChange={() => {}} />
                 {s.id === 'final' && finalGraph && (
-                  <GraphItButton request={finalGraph} note={finalGraph.inX ? 'Your equation is in y: the grapher draws it in x, as the TI-84 does.' : undefined} />
+                  // Graphing her own equation to find its maximum is the calculator method the class uses; the graph
+                  // shows the next parts' answers, and the note says so (as the graph and calculator gates do).
+                  <GraphItButton
+                    request={finalGraph}
+                    note={`${finalGraph.inX ? 'Your equation is in y: the grapher draws it in x, as the TI-84 does. ' : ''}Its graph shows the answers to the next parts: use it to check them, or to find them the calculator way.`}
+                  />
                 )}
               </>
             )}

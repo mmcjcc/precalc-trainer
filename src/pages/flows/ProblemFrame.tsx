@@ -172,7 +172,9 @@ export function ProblemFrame({ instance, attempt, flags, templateTitle, progress
   }, [attempt?.id, completion])
 
   // "Graph it": the problem's own function in the grapher (only what the problem shows her; src/grapher/graphIt.ts),
-  // while she works on it. A finished problem is not kept on its page, so Back would find it gone: not offered then.
+  // while she works on it. Its graph shows the answer (a vertex, the zeros, f(c)), so like the graph and the calculator
+  // steps it sits behind their reveal gates, never in the open (review: a button under the problem handed it over in one
+  // tap). A finished problem is not kept on its page, so Back would find it gone: not offered then.
   const graphIt = useMemo(() => (completion ? null : graphItFromStatement(instance)), [instance, completion])
 
   // Graph and calculator steps show the answer: student-invoked, open by themselves once finished.
@@ -196,6 +198,7 @@ export function ProblemFrame({ instance, attempt, flags, templateTitle, progress
         >
           <GraphPanel spec={instance.graph} caption={graphCaption ?? `solution set of ${instance.statementText}`} />
           {graphFooter}
+          {graphIt && <GraphItButton request={graphIt} className="mt-2" />}
         </RevealGate>
       ),
     },
@@ -484,8 +487,6 @@ export function ProblemFrame({ instance, attempt, flags, templateTitle, progress
                 <div ref={cardRef} tabIndex={-1} className="problem-card rounded-2xl bg-gold-100 px-4 py-3 text-navy outline-none">
                   {statementNode}
                 </div>
-                {/* With a composer the panel buttons are down in it: Graph it sits right under the problem. */}
-                {graphIt && composerOpen && <GraphItButton request={graphIt} />}
                 {attempt?.mode === 'timed' && <p className="font-mono text-sm text-navy/70">test mode · {elapsed}</p>}
               </header>
               {!composerOpen && (
@@ -493,7 +494,6 @@ export function ProblemFrame({ instance, attempt, flags, templateTitle, progress
                   <div className="flex flex-wrap gap-2" role="group" aria-label="Side panels">
                     <RailToolbar rail={rail} onOpen={setOpenPanel} />
                   </div>
-                  {graphIt && <GraphItButton request={graphIt} />}
                 </div>
               )}
             </>
@@ -514,7 +514,6 @@ export function ProblemFrame({ instance, attempt, flags, templateTitle, progress
               <h1 className="text-2xl font-semibold text-navy">{instance.title}</h1>
               <p className="text-sm text-navy/80">{instance.instructions}</p>
               <div className="rounded-2xl bg-gold-100 px-4 py-3 text-navy">{statementNode}</div>
-              {graphIt && <GraphItButton request={graphIt} className="pt-1" />}
               <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-navy/70" aria-live="polite">
                 {progress && (
                   <span>
