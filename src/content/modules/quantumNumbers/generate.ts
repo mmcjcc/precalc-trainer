@@ -244,7 +244,8 @@ function allowedSet(rng: Rng): BuiltSet {
   // 45 is the top of the 30–45 band, so each break reason stays under 15% of seeds.
   if (rng.int(1, 100) <= 45) {
     const n = rng.int(1, 5)
-    const l = rng.int(0, n - 1)
+    // s, p, d and f only: the course never names a g sublevel (its second part asks for the sublevel's name).
+    const l = rng.int(0, Math.min(3, n - 1))
     const ml = rng.int(-l, l)
     const ms2 = rng.pick([1, -1] as const)
     return { q: { n, l, ml, ms2 }, broken: false }
@@ -282,7 +283,11 @@ function allowedSet(rng: Rng): BuiltSet {
 function allowed(rng: Rng): QuantumAnswer {
   const built = allowedSet(rng)
   const q = built.q
-  let prompt = `Can an electron have the quantum numbers n = ${q.n}, l = ${q.l}, ml = ${formatInt(q.ml)}, and ms = ${formatMs(q.ms2)}?`
+  // The same prompt and the same two parts whatever the answer (review 2026-10-23): "Which quantum number is outside its
+  // range?" in the prompt, and a second part, came only with the sets that are not allowed, so the question answered
+  // the first part. The second part, shown once the first is answered, asks which number breaks the rules, or for an
+  // allowed set which sublevel the electron is in.
+  const prompt = `Can an electron have the quantum numbers n = ${q.n}, l = ${q.l}, ml = ${formatInt(q.ml)}, and ms = ${formatMs(q.ms2)}?`
   const decision = choicePart(rng, {
     label: 'Decision',
     nudge: 'Check the shell, then the sublevel, then the orientation, then the spin.',
@@ -290,20 +295,20 @@ function allowed(rng: Rng): QuantumAnswer {
     check: { kind: 'allowed', n: q.n, l: q.l, ml: q.ml, ms2: q.ms2 },
     options: ['Allowed', 'Not allowed'],
   })
-  const stages = [decision]
-  if (built.broken && breaks(q.n, q.l, q.ml, q.ms2)) {
-    prompt = `${prompt} Which quantum number is outside its range?`
-    stages.push(
-      choicePart(rng, {
-        label: 'Which quantum number',
-        nudge: 'Only one of the four numbers is outside its range.',
-        ruleCard: QN_RULE_IDS.four,
-        check: { kind: 'breaks', n: q.n, l: q.l, ml: q.ml, ms2: q.ms2 },
-        options: WHICH.map((id) => JOB[id]),
-      }),
-    )
-  }
-  return pack(rng, 'allowed', prompt, stages)
+  const second =
+    built.broken && breaks(q.n, q.l, q.ml, q.ms2)
+      ? {
+          ...choicePart(rng, {
+            label: 'Number out of range',
+            nudge: 'Only one of the four numbers is outside its range.',
+            ruleCard: QN_RULE_IDS.four,
+            check: { kind: 'breaks', n: q.n, l: q.l, ml: q.ml, ms2: q.ms2 },
+            options: WHICH.map((id) => JOB[id]),
+          }),
+          hint: 'Which of the four quantum numbers is outside its range? Choose one.',
+        }
+      : { ...nameForward(rng, q.n, q.l), hint: 'Which sublevel is this electron in? Choose one.' }
+  return pack(rng, 'allowed', prompt, [decision, second])
 }
 
 const WHOLE = 'A whole number.'
@@ -379,7 +384,8 @@ function countRows(): Row<CountQ>[] {
       label: 'Electrons',
     })
     add(2, {
-      prompt: `How many electrons are in ${shellPhrase(n)}?`,
+      // "How many electrons are in shell 5?" depends on the atom; the count is the most the shell can hold.
+      prompt: `What is the most electrons ${shellPhrase(n)} can hold?`,
       check: { kind: 'shell-electrons', n },
       hint: WHOLE,
       nudge: 'A shell\'s orbitals and its electrons are different counts.',
@@ -468,8 +474,10 @@ function realNames(except: string): string[] {
 function nameForward(rng: Rng, n: number, l: number): Stage {
   const right = sublevelName(n, l)
   if (!right) throw new Error(`missing name ${n} ${l}`)
-  const bad = `${n}${letterOf(n) ?? 'x'}`
-  const other = rng.pick(realNames(right).filter((name) => name !== bad))
+  // The impossible name (l = n) only through 3f: the course never writes a g sublevel.
+  const others = rng.shuffle(realNames(right))
+  const bad = n <= 3 ? `${n}${letterOf(n) ?? 'x'}` : others[1]!
+  const other = others.find((name) => name !== bad)!
   return choicePart(rng, {
     label: 'Sublevel',
     nudge: 'The letter comes from the angular momentum quantum number, and that number has to stay smaller than the shell.',
@@ -500,12 +508,14 @@ function name(rng: Rng): QuantumAnswer {
     { w: 16, item: 'read-ml' as const },
   ])
   if (kind === 'impossible') {
-    const n = rng.int(1, 5)
+    // 1p, 2d and 3f: the impossible names the course can write.
+    const n = rng.int(1, 3)
     const prompt = `An electron has the principal quantum number ${n} and the angular momentum quantum number ${n}. What is the sublevel called?`
     return pack(rng, 'name', prompt, [nameImpossible(rng, n)])
   }
   const n = rng.int(1, 5)
-  const lMax = kind === 'read-ml' ? Math.min(3, n - 1) : n - 1
+  // s, p, d and f only (review 2026-10-23: 5g appeared).
+  const lMax = Math.min(3, n - 1)
   if (lMax < 0 || (kind === 'read-ml' && lMax < 1)) {
     const prompt = `An electron has the principal quantum number ${n} and the angular momentum quantum number 0. What is the sublevel called?`
     return pack(rng, 'name', prompt, [nameForward(rng, n, 0)])

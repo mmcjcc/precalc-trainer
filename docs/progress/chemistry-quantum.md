@@ -101,3 +101,22 @@ All fifteen are variants of species `orbital`, The Orbital Overstuffer, appended
 | `qn_p_axis_mixed` | px, py, and pz mixed |
 | `qn_same_spin` | the second electron given the same spin |
 | `qn_same_four` | two electrons given the same four numbers |
+
+## Review (Claude, 2026-10-24)
+
+Built by Grok (one run overnight). Checked:
+- Twenty-four sample problems by hand (four per template): what each number tells, the allowed and broken sets (and
+  which number breaks), the counts (14 in an f sublevel, 4 orbitals in shell 2, 50 electrons in shell 5, ml for l = 2),
+  the names (3d, 4s), the pictures and words for the orbitals, and the Pauli partners and pairs. All right.
+- Every prompt pattern over 300 seeds per template, and the nine orbital figures rendered on the Android emulator.
+
+Changed in review:
+- qn.allowed leaked its answer: "Which quantum number is outside its range?" was added to the prompt, and a second
+  part, only for the sets that are not allowed (167 of 300). Every set now has the same prompt and two parts; the
+  second, shown after the first is answered, asks which number breaks the rules or, for an allowed set, the sublevel.
+- "How many electrons are in shell 5?" depends on the atom: it now asks for the most the shell can hold.
+- g sublevels (5g, and 4g among the choices) appeared in 73 of 1,800 problems; the course names s, p, d and f only
+  (impossible names are 1p, 2d and 3f).
+- The orbital figure's view drew the x + y direction nearly straight down, so dxy's lobes looked as if they lay
+  along z: the view is now the textbook's (y to the right, x shorter toward the lower left, z up).
+A reviewer test (quantumNumbers.reviewer.test.ts) covers the first three over 300 seeds per template.

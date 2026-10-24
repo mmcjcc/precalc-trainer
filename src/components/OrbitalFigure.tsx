@@ -6,8 +6,11 @@ import type { OrbitalId } from '@/content/types'
 import { orbitalAlt } from '@/content/modules/quantumNumbers/facts'
 
 const O = { x: 188, y: 176 }
-const X = { x: -86, y: 52 }
-const Y = { x: 124, y: 28 }
+// The textbook's oblique view (as in her class notes): y straight to the right, x shorter toward the lower left, z up.
+// Review 2026-10-23: with x steep and y sloping down, the x + y direction drew nearly straight down, so dxy's lobes
+// looked as if they lay along the z axis.
+const X = { x: -66, y: 50 }
+const Y = { x: 132, y: 0 }
 const Z = { x: 0, y: -118 }
 
 function unit(a: number, b: number, c: number): [number, number, number] {

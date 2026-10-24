@@ -305,7 +305,7 @@ function solveText(prompt: string): string {
   if (m) return String(shellN(m[1]!) ** 2)
   m = /^How many electrons can (the first shell|shell \d+) hold\?$/.exec(prompt)
   if (m) return String(2 * shellN(m[1]!) ** 2)
-  m = /^How many electrons are in (the first shell|shell \d+)\?$/.exec(prompt)
+  m = /^What is the most electrons (the first shell|shell \d+) can hold\?$/.exec(prompt)
   if (m) return String(2 * shellN(m[1]!) ** 2)
   m = /^List the values of the magnetic quantum number when the angular momentum quantum number is (\d+)\.$/.exec(prompt)
   if (m) return mlList(Number(m[1]))
@@ -361,6 +361,8 @@ function expected(prompt: string, aria: string | undefined, choices: string[]): 
   if (m) return sublevelCalled(Number(m[1]), Number(m[2]))
   const nums = readNums(prompt)
   if (nums && (choices.includes('Allowed') || choices.includes('Not allowed'))) return broken(nums.n, nums.l, nums.ml, nums.ms) ? 'Not allowed' : 'Allowed'
+  // Review 2026-10-23: an allowed set's second part asks for the electron's sublevel.
+  if (nums && choices.includes('Does not exist')) return sublevelCalled(nums.n, nums.l)
   if (nums && choices.every((choice) => (Object.values(JOB) as string[]).includes(choice))) {
     const why = broken(nums.n, nums.l, nums.ml, nums.ms)
     if (!why) throw new Error('which number on an allowed set')
