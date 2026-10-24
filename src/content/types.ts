@@ -17,7 +17,7 @@ import type {
   VarName,
 } from '@/shared/types'
 
-export type ProblemKind = 'inequality' | 'numberLine' | 'evenOdd' | 'inverse' | 'drill' | 'sigFigs' | 'atoms' | 'diffQuotient' | 'graphFeatures' | 'domainRange' | 'composition' | 'functionOps' | 'transformations' | 'piecewiseRate' | 'electrons' | 'periodic' | 'quadratics' | 'optimization' | 'polyDivision' | 'polyZeros' | 'rationalFns' | 'signCharts' | 'complexNums' | 'logForms' | 'logProperties' | 'expLogEquations' | 'expLogGraphs' | 'expModels' | 'angleMeasure' | 'rightTriangle' | 'unitCircle' | 'sinusoids' | 'otherTrigGraphs' | 'inverseTrig' | 'geometry' | 'nomenclature'
+export type ProblemKind = 'inequality' | 'numberLine' | 'evenOdd' | 'inverse' | 'drill' | 'sigFigs' | 'atoms' | 'diffQuotient' | 'graphFeatures' | 'domainRange' | 'composition' | 'functionOps' | 'transformations' | 'piecewiseRate' | 'electrons' | 'quantumNumbers' | 'periodic' | 'quadratics' | 'optimization' | 'polyDivision' | 'polyZeros' | 'rationalFns' | 'signCharts' | 'complexNums' | 'logForms' | 'logProperties' | 'expLogEquations' | 'expLogGraphs' | 'expModels' | 'angleMeasure' | 'rightTriangle' | 'unitCircle' | 'sinusoids' | 'otherTrigGraphs' | 'inverseTrig' | 'geometry' | 'nomenclature'
 
 /** Precalculus Unit 2, optimization with quadratics: a pen against a wall, pens in a row, two numbers, price and sales. */
 export type OptimizationQuestion = 'wall' | 'pens' | 'numbers' | 'revenue'
@@ -504,6 +504,58 @@ export type PtWhyReason = 'protons' | 'shells' | 'shielding'
 
 /** One checked part of a periodic-table problem. */
 export type PtStageId = 'a' | 'b' | 'c' | 'd' | 'e'
+
+/** One orbital the shapes screen can draw. The figure never prints this id. */
+export type OrbitalId = 's' | 'px' | 'py' | 'pz' | 'dxy' | 'dxz' | 'dyz' | 'dx2y2' | 'dz2'
+
+/** One checked part of a quantum-number problem. */
+export type QnStageId = 'a' | 'b' | 'c' | 'd'
+
+/** Which quantum number a meaning question is about. */
+export type QnWhich = 'n' | 'l' | 'ml' | 'ms'
+
+/**
+ * How to recompute one quantum-number part. The grader uses this. The solve-again test does not:
+ * it reads the prompt and the figure's description.
+ * `ms2` is twice the spin: 1 is +1/2, −1 is −1/2, 0 is 0, 2 is +1, −2 is −1.
+ */
+export type QnCheck =
+  | { kind: 'tells'; which: QnWhich }
+  | { kind: 'symbol'; which: QnWhich }
+  | { kind: 'which-job'; which: QnWhich }
+  | { kind: 'values-n' }
+  | { kind: 'values-ms' }
+  | { kind: 'values-l'; n: number }
+  | { kind: 'values-ml'; l: number }
+  | { kind: 'allowed'; n: number; l: number; ml: number; ms2: number }
+  | { kind: 'breaks'; n: number; l: number; ml: number; ms2: number }
+  | { kind: 'sub-orbitals'; l: number }
+  | { kind: 'orbital-electrons' }
+  | { kind: 'sub-electrons'; l: number }
+  | { kind: 'shell-orbitals'; n: number }
+  | { kind: 'shell-electrons'; n: number }
+  | { kind: 'ml-list'; l: number; n?: number }
+  | { kind: 'sublevels'; n: number }
+  | { kind: 'nl-electrons'; n: number; l: number }
+  | { kind: 'nlm-electrons'; n: number; l: number; ml: number }
+  | { kind: 'name'; n: number; l: number }
+  | { kind: 'read-n'; n: number; l: number }
+  | { kind: 'read-l'; n: number; l: number }
+  | { kind: 'read-ml'; n: number; l: number }
+  | { kind: 'shape'; orbital: OrbitalId }
+  | {
+      kind: 'shape-words'
+      ask: 'd-along-xy' | 'd-between-xy' | 'd-between-xz' | 'd-between-yz' | 'd-ring' | 'p-x' | 'p-y' | 'p-z' | 'sphere' | 's-orientations'
+    }
+  | { kind: 'partner'; n: number; l: number; ml: number; ms2: 1 | -1 }
+  | {
+      kind: 'pair'
+      n: number
+      l: number
+      ml: number
+      ms2: 1 | -1
+    }
+  | { kind: 'set-count'; n: number; l: number; ml: number; ms2: 1 | -1 }
 
 /**
  * How to recompute one part from the tables. The grader uses this. The solve-again test does not:
@@ -1526,6 +1578,50 @@ export type AnswerSpec =
     }
   | {
       /**
+       * Quantum numbers and orbitals (chemistry, CK-12 chapter 5). Parts are checked one at a time.
+       * Grade a part with `gradeQnStage`. Named mistakes are the `qn_` ids.
+       */
+      type: 'quantum'
+      question: 'meaning' | 'allowed' | 'count' | 'name' | 'shapes' | 'pauli'
+      /** What the problem is. No method and no trap. */
+      prompt: string
+      /**
+       * Present only when she has to name the orbital in the picture. The description is the
+       * picture, never the name.
+       */
+      figure?: { orbital: OrbitalId; ariaLabel: string }
+      stages: {
+        id: QnStageId
+        kind: 'text' | 'choice'
+        /** Box or choice legend. */
+        label: string
+        /** Line under the box or the choices. Never this part's answer. */
+        hint: string
+        /** What a correct answer looks like. Choice parts use the choice id. */
+        answerText: string
+        /** Other spellings that grade correct. */
+        accept?: string[]
+        /** Choice parts only. `trap` is set when that pick is a named mistake. */
+        choices?: { id: string; text: string; trap?: ErrorPatternId; witness?: string }[]
+        nudge: string
+        ruleCard: RuleCardId
+        /** Hint rung 3. May state this part's answer. */
+        reveal: string[]
+        /** Slips on this part. `text` is the typed value or the choice id. */
+        traps: { id: ErrorPatternId; text: string; witness: string }[]
+        check: QnCheck
+      }[]
+      expectedDisplay: string
+      reveal: string[]
+      ruleCards: RuleCardId[]
+      /** The named mistake this seed promises, when one is possible. */
+      trap?: ErrorPatternId
+      trapStage?: QnStageId
+      /** What that slip produces. Never the right answer. */
+      trapAnswer?: string
+    }
+  | {
+      /**
        * Chemical nomenclature (chemistry, CK-12 chapter 7): single ions, ionic compounds, binary molecular
        * compounds, acids and hydrates, named from a formula or written from a name, and classified. Parts are
        * checked one at a time with the module's `gradeNmStage`, which calls the engine's grader named by the
@@ -1900,6 +1996,9 @@ export type GeometryAnswer = Extract<AnswerSpec, { type: 'geometry' }>
 
 /** The periodic-table arm of `AnswerSpec`, named so the flow and the generators share it. */
 export type PeriodicAnswer = Extract<AnswerSpec, { type: 'periodic' }>
+
+/** The quantum-number arm of `AnswerSpec`, named so the flow and the generators share it. */
+export type QuantumAnswer = Extract<AnswerSpec, { type: 'quantum' }>
 
 /** The exponential/log graphs arm of `AnswerSpec`. */
 export type ExpLogGraphsAnswer = Extract<AnswerSpec, { type: 'expLogGraphs' }>

@@ -93,7 +93,7 @@ describe('course registry', () => {
     expect(chemistry!.units.map((u) => [u.id, u.moduleIds])).toEqual([
       ['ch3', ['sigFigs']],
       ['ch4', ['atoms']],
-      ['ch5', ['electrons']],
+      ['ch5', ['electrons', 'quantumNumbers']],
       ['ch6', ['periodic']],
       ['ch7', ['ionicNames', 'molecularAcids']],
     ])

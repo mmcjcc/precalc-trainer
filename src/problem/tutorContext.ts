@@ -16,6 +16,8 @@ import type { GeoGrade } from '@/content/modules/geometry/grade'
 import { geoWork } from '@/content/modules/geometry/build'
 import type { PtGrade } from '@/content/modules/periodic/grade'
 import { ptWork } from '@/content/modules/periodic/grade'
+import type { QnGrade } from '@/content/modules/quantumNumbers/grade'
+import { qnWork } from '@/content/modules/quantumNumbers/grade'
 import { nmWork } from '@/content/modules/nomenclature/grade'
 import { EC_PATTERN } from '@/content/modules/electrons/patterns'
 import { POLY_PATTERN } from '@/content/modules/polynomials/patterns'
@@ -305,6 +307,20 @@ export function verdictFromCx(grade: CxGrade): TutorVerdict | null {
   })
 }
 
+/** Quantum numbers. The mistake id is already a qn_ catalog id. Unreadable input is a parse error. */
+export function verdictFromQn(grade: QnGrade): TutorVerdict | null {
+  if (grade.verdict === 'correct') return withMessage('correct', grade.message)
+  if (grade.verdict === 'wrong') return withMessage('wrong', grade.message)
+  if (grade.verdict === 'invalid') return withMessage('parse_error', grade.message)
+  const info = ERROR_PATTERNS[grade.mistake]
+  return withMessage('wrong', grade.witness, undefined, {
+    id: grade.mistake,
+    title: clip(info.title, 200),
+    lesson: clip(info.lesson, TUTOR_LIMITS.field),
+    witness: clip(grade.witness, TUTOR_LIMITS.field),
+  })
+}
+
 /** The periodic table. The mistake id is already a pt_ catalog id. Unreadable input is a parse error. */
 export function verdictFromPt(grade: PtGrade): TutorVerdict | null {
   if (grade.verdict === 'correct') return withMessage('correct', grade.message)
@@ -536,6 +552,11 @@ function workOf(instance: ProblemInstance, attempt: Attempt | null): string[] {
       .slice(0, TUTOR_LIMITS.lines)
       .map((line) => clip(line, TUTOR_LIMITS.line))
   }
+  if (instance.answer.type === 'quantum') {
+    return qnWork(instance.answer, attempt.final?.polyEntries)
+      .slice(0, TUTOR_LIMITS.lines)
+      .map((line) => clip(line, TUTOR_LIMITS.line))
+  }
   if (instance.answer.type === 'nomenclature') {
     return nmWork(instance.answer, attempt.final?.polyEntries)
       .slice(0, TUTOR_LIMITS.lines)
@@ -679,6 +700,8 @@ function statementOf(instance: ProblemInstance): string {
     // A problem stated in words alone (a list of facts) has no figure to describe.
     const figure = answer.figure.ariaLabel.trim() ? ` Figure: ${answer.figure.ariaLabel}` : ''
     text = `${answer.prompt}${lines}${figure}`
+  } else if (answer.type === 'quantum') {
+    text = answer.figure ? `${answer.prompt} Figure: ${answer.figure.ariaLabel}` : answer.prompt
   } else if (answer.type === 'periodic' || answer.type === 'nomenclature') {
     text = answer.prompt
   }
@@ -713,7 +736,8 @@ function canonicalOf(instance: ProblemInstance): string[] {
     answer.type === 'expModels' ||
     answer.type === 'geometry' ||
     answer.type === 'periodic' ||
-    answer.type === 'nomenclature'
+    answer.type === 'nomenclature' ||
+    answer.type === 'quantum'
   ) {
     lines = answer.reveal
   } else if (answer.type === 'angleMeasure' || answer.type === 'rightTriangle' || answer.type === 'unitCircle' || answer.type === 'sinusoids' || answer.type === 'otherTrigGraphs' || answer.type === 'inverseTrig') {
@@ -764,6 +788,7 @@ function answerOf(instance: ProblemInstance): string | undefined {
     case 'geometry':
     case 'periodic':
     case 'nomenclature':
+    case 'quantum':
       text = answer.expectedDisplay
       break
     case 'graphFeatures':

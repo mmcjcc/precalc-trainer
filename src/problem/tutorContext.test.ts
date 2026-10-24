@@ -9,6 +9,7 @@ import { canonicalEntries as scEntries, gradeScStage, SC_KEYS, scWork } from '@/
 import { canonicalEntries as cxEntries, gradeCxStage, CX_KEYS, cxWork } from '@/content/modules/complexNums'
 import { canonicalEntries as geoEntries, gradeGeoStage, GEO_KEYS, geoWork } from '@/content/modules/geometry'
 import { gradePtStage, PT_KEYS, ptWork } from '@/content/modules/periodic'
+import { gradeQnStage, QN_KEYS, qnWork } from '@/content/modules/quantumNumbers'
 import { gradeEgPart } from '@/content/modules/expLogGraphs'
 import { gradeEmPart } from '@/content/modules/expModels'
 import { partEntries, partsWork } from '@/content/modules/explog/parts'
@@ -43,6 +44,7 @@ import {
   verdictFromGeo,
   verdictFromLog,
   verdictFromPt,
+  verdictFromQn,
   verdictFromExpLogPart,
   verdictFromNm,
   verdictFromTrigPart,
@@ -915,6 +917,62 @@ describe('buildTutorContext', () => {
     expect(bad.verdict?.mistake?.id).toBe(a.trap)
     expect(verdictFromPt(gradePtStage(a, a.stages[0]!.id, '???'))?.status).toBe('parse_error')
     expect(buildTutorContext(instance, attempt('pt-3', { moduleId: 'periodic' }), null, false).work).toEqual([])
+  })
+
+  it('describes a quantum-number problem, the figure, and the named slip', () => {
+    const instance = generateProblem('quantumNumbers', 'qn.count', 1)
+    if (instance.answer.type !== 'quantum') throw new Error('expected a quantum-number problem')
+    const a = instance.answer
+    const entries: Record<string, string> = {}
+    for (const stage of a.stages) entries[QN_KEYS[stage.id]] = stage.answerText
+    const ctx = buildTutorContext(instance, attempt('qn-1', { moduleId: 'quantumNumbers', final: { polyEntries: entries } }), null, false)
+    expect(ctx.subject).toBe('chemistry')
+    expect(ctx.kind).toBe('quantumNumbers')
+    expect(ctx.moduleId).toBe('quantumNumbers')
+    expect(ctx.statement).toBe(a.prompt)
+    expect(ctx.work).toEqual(qnWork(a, entries))
+    expect(ctx.answer).toBe(a.expectedDisplay)
+    expect(ctx.canonical[0]).toBe(a.reveal[0])
+    expect(ctx.finished).toBe(false)
+    expect(buildTutorContext(instance, attempt('qn-0', { moduleId: 'quantumNumbers' }), null, false).work).toEqual([])
+
+    let pictured = generateProblem('quantumNumbers', 'qn.shapes', 1)
+    for (let seed = 1; seed <= 40 && (pictured.answer.type !== 'quantum' || !pictured.answer.figure); seed++) {
+      pictured = generateProblem('quantumNumbers', 'qn.shapes', seed)
+    }
+    if (pictured.answer.type !== 'quantum' || !pictured.answer.figure) throw new Error('no orbital figure in the first 40 seeds')
+    const shown = buildTutorContext(pictured, attempt('qn-fig', { moduleId: 'quantumNumbers' }), null, false)
+    expect(shown.statement).toContain(pictured.answer.prompt)
+    expect(shown.statement).toContain(`Figure: ${pictured.answer.figure.ariaLabel}`)
+
+    let trapped = generateProblem('quantumNumbers', 'qn.pauli', 1)
+    for (let seed = 1; seed <= 40; seed++) {
+      const next = generateProblem('quantumNumbers', 'qn.pauli', seed)
+      if (next.answer.type === 'quantum' && next.answer.trap && next.answer.trapStage && next.answer.trapAnswer != null) {
+        trapped = next
+        break
+      }
+    }
+    if (trapped.answer.type !== 'quantum' || !trapped.answer.trap || !trapped.answer.trapStage || trapped.answer.trapAnswer == null) {
+      throw new Error('no promised Pauli trap in the first 40 seeds')
+    }
+    const trap = gradeQnStage(trapped.answer, trapped.answer.trapStage, trapped.answer.trapAnswer)
+    expect(trap.verdict).toBe('mistake')
+    if (trap.verdict !== 'mistake') return
+    const verdict = verdictFromQn(trap)
+    expect(verdict?.status).toBe('wrong')
+    expect(verdict?.mistake?.id).toBe(trapped.answer.trap)
+    expect(verdict?.mistake?.lesson).toBeTruthy()
+    expect(verdict?.mistake?.witness).toBe(trap.witness)
+    const bad = buildTutorContext(
+      trapped,
+      attempt('qn-2', { moduleId: 'quantumNumbers', final: { polyEntries: { [QN_KEYS[trapped.answer.trapStage]]: trapped.answer.trapAnswer } } }),
+      verdict,
+      false,
+    )
+    expect(bad.work).toEqual([expect.stringContaining(trapped.answer.trapAnswer)])
+    expect(bad.verdict?.mistake?.id).toBe(trapped.answer.trap)
+    expect(verdictFromQn(gradeQnStage(trapped.answer, trapped.answer.stages[0]!.id, '???'))?.status).toBe('parse_error')
   })
 
   it('describes a nomenclature problem and her parts, with the named nm_ slip', () => {

@@ -79,7 +79,7 @@ function mistake(answer: PeriodicAnswer, text: string) {
 }
 
 describe('periodic module registration', () => {
-  it('is Chemistry, ordered after electrons and before geometry, with five templates', () => {
+  it('is Chemistry, ordered after quantum numbers and before the nomenclature modules, with five templates', () => {
     const m = getModule('periodic')
     expect(m.subject).toBe('Chemistry')
     expect(m.title).toBe('The periodic table')
@@ -87,7 +87,7 @@ describe('periodic module registration', () => {
     expect(m.order).toBeGreaterThan(getModule('electrons').order)
     expect(m.order).toBeLessThan(getModule('geoSegments').order)
     const ids = MODULES.map((mod) => mod.id)
-    expect(ids.indexOf('periodic')).toBe(ids.indexOf('electrons') + 1)
+    expect(ids.indexOf('periodic')).toBe(ids.indexOf('quantumNumbers') + 1)
     expect(m.templates.map((t) => t.id)).toEqual([...TEMPLATES])
     expect(m.ruleCards.map((card) => card.id)).toEqual(PT_RULES.map((card) => card.id))
     const sample = generateProblem('periodic', 'pt.locate', 1)
