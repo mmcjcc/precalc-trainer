@@ -80,7 +80,7 @@ beforeEach(() => {
 })
 
 describe('Home: classes and units', () => {
-  it('shows one tab per ready class (including SAT Math Prep), and the row does not wrap', () => {
+  it('shows one tab per ready class (including SAT Math Prep); the rows scroll on a narrow column and wrap on a wide one', () => {
     renderHome()
     expect(screen.getByRole('heading', { level: 1, name: 'Math & Science Trainer' })).toBeTruthy()
     const tabs = screen.getAllByRole('tab')
@@ -91,13 +91,16 @@ describe('Home: classes and units', () => {
       'SAT Math Prep',
     ])
     expect(screen.queryByRole('tab', { name: 'Geometry' })).toBeNull()
+    // The rows sit in a container: they scroll sideways on a phone's or tablet's column and wrap from @4xl (a
+    // desktop window's class column), so no pill hides in overflow there (review 2026-10-26).
+    expect(screen.getByRole('tablist', { name: 'Classes' }).closest('.\\@container')).toBeTruthy()
     const tablist = screen.getByRole('tablist', { name: 'Classes' })
-    expect(tablist.className).toMatch(/flex-nowrap/)
     expect(tablist.className).toMatch(/overflow-x-auto/)
+    expect(tablist.className).toMatch(/@4xl:flex-wrap/)
     for (const tab of tabs) expect(tab.className).toMatch(/min-h-11/)
     const units = screen.getByRole('group', { name: 'Honors Precalculus units' })
-    expect(units.className).toMatch(/flex-nowrap/)
     expect(units.className).toMatch(/overflow-x-auto/)
+    expect(units.className).toMatch(/@4xl:flex-wrap/)
   })
 
   it('moves and selects a class with the arrow keys, Home and End', () => {
@@ -400,6 +403,14 @@ describe('Home: classes and units', () => {
     // SAT practice set card appears above the domain cards.
     expect(practiceSetHeading.compareDocumentPosition(algebraHeading) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
     expect(screen.getByRole('button', { name: 'Start SAT practice set' })).toBeTruthy()
+
+    // On a wide class column (a desktop window) the cards pair up: About with the practice set, the domains two by
+    // two; the queries are on the section's own container so a phone stays one column.
+    expect(document.querySelector('[data-sat-home]')!.className).toContain('@container')
+    const pair = header.closest('.grid') as HTMLElement
+    expect(pair.className).toContain('@4xl:grid-cols-2')
+    expect(within(pair).getByRole('heading', { name: 'SAT practice set' })).toBeTruthy()
+    expect(document.querySelector('[data-sat-domains]')!.className).toContain('@4xl:grid-cols-2')
 
     // All four domain cards are rendered with their test shares and Practice <domain> buttons.
     const algebraCard = screen.getByRole('region', { name: 'Algebra' })

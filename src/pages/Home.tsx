@@ -502,27 +502,31 @@ function SatPrepSection({ selectedUnitId, primary }: { selectedUnitId: string; p
   const headerId = useId()
   const coverageLine = useMemo(() => satCoverageSummary(), [])
 
+  // A container: when the class column is wide enough (a desktop window), the About and practice-set cards sit
+  // side by side and the four domain cards go two by two; on a phone or a tablet everything stays one column.
   return (
-    <div className="space-y-4" data-sat-home="">
-      <section aria-labelledby={headerId} className="space-y-2 rounded-2xl border border-navy-100 bg-white p-4">
-        <h2 id={headerId} className="text-lg font-semibold text-navy">
-          About the SAT Math section
-        </h2>
-        <p className="text-sm text-navy/80">
-          The digital SAT&apos;s math section is 44 questions in 70 minutes, in two adaptive modules of 22 questions and
-          35 minutes each, with a Desmos calculator and a reference sheet throughout. About three quarters of the
-          questions are multiple choice and a quarter are typed answers. They cover four content domains: Algebra (about
-          35%), Advanced Math (about 35%), Problem-Solving and Data Analysis (about 15%), and Geometry and Trigonometry
-          (about 15%).
-        </p>
-        <p className="text-sm font-semibold text-navy" data-sat-coverage="">
-          {coverageLine}.
-        </p>
-      </section>
+    <div className="@container space-y-4" data-sat-home="">
+      <div className="grid gap-4 @4xl:grid-cols-2">
+        <section aria-labelledby={headerId} className="space-y-2 rounded-2xl border border-navy-100 bg-white p-4">
+          <h2 id={headerId} className="text-lg font-semibold text-navy">
+            About the SAT Math section
+          </h2>
+          <p className="text-sm text-navy/80">
+            The digital SAT&apos;s math section is 44 questions in 70 minutes, in two adaptive modules of 22 questions
+            and 35 minutes each, with a Desmos calculator and a reference sheet throughout. About three quarters of the
+            questions are multiple choice and a quarter are typed answers. They cover four content domains: Algebra
+            (about 35%), Advanced Math (about 35%), Problem-Solving and Data Analysis (about 15%), and Geometry and
+            Trigonometry (about 15%).
+          </p>
+          <p className="text-sm font-semibold text-navy" data-sat-coverage="">
+            {coverageLine}.
+          </p>
+        </section>
 
-      <SatPracticeSetCard primary={primary} />
+        <SatPracticeSetCard primary={primary} />
+      </div>
 
-      <div className="space-y-4" data-sat-domains="">
+      <div className="grid gap-4 @4xl:grid-cols-2" data-sat-domains="">
         {SAT_DOMAINS.map((domain) => (
           <SatDomainCard
             key={domain.id}
@@ -766,12 +770,15 @@ function HomeScreen() {
   )
   const classPart = (
     <>
-      <div className="space-y-3">
+      {/* A container: on a narrow column (a phone, a tablet) the class and unit rows scroll sideways; on a wide
+          desktop column they wrap instead (review 2026-10-26: the SAT domain pills scrolled while half the window
+          sat empty). */}
+      <div className="@container space-y-3">
         <div
           role="tablist"
           aria-label="Classes"
           onKeyDown={onTabKey}
-          className="flex flex-nowrap gap-2 overflow-x-auto py-1"
+          className="flex flex-nowrap gap-2 overflow-x-auto py-1 @4xl:flex-wrap @4xl:overflow-x-visible"
         >
           {courses.map((c) => {
             const selected = c.id === course.id
@@ -800,7 +807,12 @@ function HomeScreen() {
 
         <WeakSpots course={course} primary={!phone} />
 
-        <div ref={unitRow} role="group" aria-label={`${course.title} units`} className="flex flex-nowrap gap-2 overflow-x-auto py-1">
+        <div
+          ref={unitRow}
+          role="group"
+          aria-label={`${course.title} units`}
+          className="flex flex-nowrap gap-2 overflow-x-auto py-1 @4xl:flex-wrap @4xl:overflow-x-visible"
+        >
           {course.units.map((u) => {
             const pressed = u.id === unit.id
             const empty = modulesInUnit(u).length === 0 && !getSatDomainByUnit(u.id)
@@ -858,7 +870,7 @@ function HomeScreen() {
       {classPart}
     </div>
   ) : (
-    <div className="mx-auto grid max-w-6xl grid-cols-[minmax(0,22rem)_minmax(0,1fr)] items-start gap-8" data-columns={2}>
+    <div className="mx-auto grid max-w-[88rem] grid-cols-[minmax(0,22rem)_minmax(0,1fr)] items-start gap-8" data-columns={2}>
       <div className="space-y-6" data-home-column="today">
         {today}
       </div>

@@ -56,7 +56,7 @@ describe.each([
     renderAt('/', '/', <Home />)
     const root = document.querySelector<HTMLElement>('[data-columns]')!
     expect(root.getAttribute('data-columns')).toBe(String(n))
-    expect(root.className).toMatch(/max-w-(4xl|6xl)/)
+    expect(root.className).toMatch(/max-w-(4xl|\[88rem\])/)
     const title = screen.getByRole('heading', { level: 1, name: 'Math & Science Trainer' })
     const start = screen.getByRole('button', { name: 'Start a set' })
     const classes = screen.getByRole('tablist', { name: 'Classes' })

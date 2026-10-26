@@ -71,6 +71,15 @@ describe('the tablet layout: the rail', () => {
     PAGE_TIMEOUT,
   )
 
+  it('gives Home a wider page than a reading page (review 2026-10-26: desktop gutters)', { timeout: PAGE_TIMEOUT }, () => {
+    setWindowSize(1920, 1000)
+    const view = renderAt('/')
+    expect(main().className).toContain('max-w-[88rem]')
+    view.unmount()
+    renderAt('/progress')
+    expect(main().className).toContain('max-w-6xl')
+  })
+
   it('starts at exactly 840 px: 839 px is still the phone layout', { timeout: PAGE_TIMEOUT }, () => {
     setWindowSize(840, 700)
     const view = renderAt('/')
