@@ -17,8 +17,9 @@
  * A mastered type that is not due never comes back through (c) or (d): (b) is how mastered types come back.
  * Each problem is at its type's default difficulty, with a fresh seed.
  */
-import { modulesInUnit, type CourseDef } from '@/content'
+import { domainTypeRefs, getModule, getSatDomainByUnit, hasModule, modulesInUnit, type CourseDef } from '@/content'
 import { mixSeed } from '@/content/rng'
+import { includesSubject } from '@/edition'
 import { stepByStepModule } from '@/problem/solveStyle'
 import { defaultKnobs, flagsFromKnobs } from '@/problem/url'
 import { computeRewards, DEFAULT_DAILY_GOAL, openCards, REVIEW_AFTER_MS, skillRings, type RingLevel } from '@/store/rewards'
@@ -49,22 +50,50 @@ export interface PickedType extends ClassType {
   pick: SetPick
 }
 
-/** Every problem type of the class (a module without templates, the properties drill, has none). */
+/**
+ * Every problem type of the class (a module without templates, the properties drill, has none).
+ * For a class whose units own no modules directly but map to SAT domains (`course.id === 'sat'`),
+ * types come from each domain's mapped problem types in curriculum order.
+ */
 export function classTypes(course: CourseDef): ClassType[] {
   const out: ClassType[] = []
   const seen = new Set<string>()
   for (const unit of course.units) {
-    for (const module of modulesInUnit(unit)) {
-      for (const template of module.templates) {
-        if (seen.has(template.id)) continue
-        seen.add(template.id)
-        out.push({
-          unitId: unit.id,
-          moduleId: module.id,
-          templateId: template.id,
-          flags: flagsFromKnobs(defaultKnobs(template.knobs)),
-          ...(stepByStepModule(module.id) ? { steps: true } : {}),
-        })
+    const unitMods = modulesInUnit(unit)
+    if (unitMods.length > 0) {
+      for (const module of unitMods) {
+        if (!includesSubject(module.subject)) continue
+        for (const template of module.templates) {
+          if (seen.has(template.id)) continue
+          seen.add(template.id)
+          out.push({
+            unitId: unit.id,
+            moduleId: module.id,
+            templateId: template.id,
+            flags: flagsFromKnobs(defaultKnobs(template.knobs)),
+            ...(stepByStepModule(module.id) ? { steps: true } : {}),
+          })
+        }
+      }
+      continue
+    }
+    const satDomain = getSatDomainByUnit(unit.id)
+    if (satDomain) {
+      for (const ref of domainTypeRefs(satDomain.id)) {
+        if (!hasModule(ref.moduleId)) continue
+        const module = getModule(ref.moduleId)
+        const wanted = new Set(ref.templateIds)
+        for (const template of module.templates) {
+          if (!wanted.has(template.id) || seen.has(template.id)) continue
+          seen.add(template.id)
+          out.push({
+            unitId: unit.id,
+            moduleId: module.id,
+            templateId: template.id,
+            flags: flagsFromKnobs(defaultKnobs(template.knobs)),
+            ...(stepByStepModule(module.id) ? { steps: true } : {}),
+          })
+        }
       }
     }
   }

@@ -1,32 +1,48 @@
 import { useState } from 'react'
 import { COURSES, unitsWithModules, type CourseDef } from '@/content'
+import { classTypes } from '@/session/buildSet'
 import { useStore } from '@/store'
 
 /** The classes with problems, in Home's order. */
 function readyCourses(): CourseDef[] {
-  return COURSES.filter((course) => unitsWithModules(course).length > 0)
+  return COURSES.filter((course) => classTypes(course).length > 0)
 }
 
 /** "Functions and their graphs, polynomial and rational functions, ...": what a class covers, from its units. */
 export function courseBlurb(course: CourseDef): string {
-  const titles = unitsWithModules(course).map((u, i) => (i === 0 ? u.title : u.title.charAt(0).toLowerCase() + u.title.slice(1)))
+  const units = unitsWithModules(course)
+  if (units.length === 0) {
+    return course.units.map((u) => u.title).join(', ')
+  }
+  const titles = units.map((u, i) => (i === 0 ? u.title : u.title.charAt(0).toLowerCase() + u.title.slice(1)))
   return titles.join(', ')
 }
 
 /**
  * The store app's first screen for someone new (no class chosen, nothing done yet): which class, then which unit her
- * class is on. It saves the choice the way Home's class and unit buttons do (settings.courseId, unitByCourse), so
- * Home opens on it and a first set comes from that unit. Home can change both any time.
+ * class is on (when the class has module units). It saves the choice the way Home's class and unit buttons do
+ * (settings.courseId, unitByCourse), so Home opens on it and a first set comes from that unit. Home can change both any time.
  */
 export function Welcome() {
   const setSettings = useStore((s) => s.setSettings)
   const [course, setCourse] = useState<CourseDef | null>(null)
   const courses = readyCourses()
 
-  function choose(unitId: string) {
-    if (!course) return
+  function choose(targetCourse: CourseDef, unitId?: string) {
     const current = useStore.getState().settings
-    setSettings({ courseId: course.id, unitByCourse: { ...current.unitByCourse, [course.id]: unitId } })
+    const resolvedUnit = unitId ?? targetCourse.units[0]?.id
+    setSettings({
+      courseId: targetCourse.id,
+      unitByCourse: resolvedUnit ? { ...current.unitByCourse, [targetCourse.id]: resolvedUnit } : current.unitByCourse,
+    })
+  }
+
+  function pickCourse(c: CourseDef) {
+    if (unitsWithModules(c).length === 0) {
+      choose(c, c.units[0]?.id)
+      return
+    }
+    setCourse(c)
   }
 
   if (!course) {
@@ -46,7 +62,7 @@ export function Welcome() {
             <li key={c.id}>
               <button
                 type="button"
-                onClick={() => setCourse(c)}
+                onClick={() => pickCourse(c)}
                 className="flex min-h-16 w-full flex-col items-start gap-1 rounded-2xl border-2 border-navy-100 bg-white px-4 py-3 text-left hover:border-navy hover:bg-navy-50"
               >
                 <span className="text-lg font-semibold text-navy">{c.title}</span>
@@ -76,7 +92,7 @@ export function Welcome() {
           <li key={u.id}>
             <button
               type="button"
-              onClick={() => choose(u.id)}
+              onClick={() => choose(course, u.id)}
               aria-label={`${u.label}: ${u.title}`}
               className="flex min-h-14 w-full items-center gap-2 rounded-2xl border-2 border-navy-100 bg-white px-4 py-2 text-left font-semibold text-navy hover:border-navy hover:bg-navy-50"
             >
@@ -90,7 +106,7 @@ export function Welcome() {
         ))}
       </ul>
       {units[0] && (
-        <button type="button" onClick={() => choose(units[0]!.id)} className="inline-flex min-h-11 items-center font-semibold text-navy underline">
+        <button type="button" onClick={() => choose(course, units[0]!.id)} className="inline-flex min-h-11 items-center font-semibold text-navy underline">
           Not sure? Start at the beginning
         </button>
       )}

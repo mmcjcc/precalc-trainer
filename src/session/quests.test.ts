@@ -134,6 +134,19 @@ describe('the day’s quests', () => {
       if (path) expect(classTypes(getCourse('geometry')!).some((t) => t.templateId === path.skill)).toBe(true)
     }
   })
+
+  it('never offers "Practice the next stop on your path" for SAT Math Prep (whose units have no path of their own)', () => {
+    for (const day of year(90)) {
+      for (const events of Object.values(states(day))) {
+        for (const goal of GOALS) {
+          const specs = questSpecs(day, questInput(events, goal, { courseId: 'sat' }))
+          expect(specs).toHaveLength(QUESTS_PER_DAY)
+          expect(specs.some((s) => s.kind === 'pathStop')).toBe(false)
+          expect(specs.map((s) => questTitle(s))).not.toContain('Practice the next stop on your path')
+        }
+      }
+    }
+  })
 })
 
 describe('progress, from the log', () => {

@@ -160,21 +160,29 @@ export function canPractise(skill: string): boolean {
 }
 
 function questCourses(): CourseDef[] {
-  return COURSES.filter((c) => unitsWithModules(c).length > 0 && classTypes(c).some((t) => canPractise(t.templateId)))
+  return COURSES.filter((c) => classTypes(c).some((t) => canPractise(t.templateId)))
 }
 
 /** Her class for the day: the class of her latest problem before it, else the one chosen on Home, else the first. */
 export function questCourse(before: readonly Ev[], courseId?: string): CourseDef | null {
   const courses = questCourses()
+  // A class whose units have no modules of their own (SAT Math Prep) shares problem types with other math classes:
+  // when she has it selected on Home, keep that selection rather than attributing shared types back to Precalculus/Geometry.
+  const selected = courseId ? courses.find((c) => c.id === courseId) : undefined
+  if (selected && unitsWithModules(selected).length === 0) return selected
+
   const ofSkill = new Map<string, string>()
-  for (const c of courses) for (const t of classTypes(c)) if (!ofSkill.has(t.templateId)) ofSkill.set(t.templateId, c.id)
+  for (const c of courses) {
+    if (unitsWithModules(c).length === 0) continue
+    for (const t of classTypes(c)) if (!ofSkill.has(t.templateId)) ofSkill.set(t.templateId, c.id)
+  }
   for (let i = before.length - 1; i >= 0; i--) {
     const e = before[i]!
     if (!('attemptId' in e)) continue
     const id = ofSkill.get(e.skill)
     if (id) return courses.find((c) => c.id === id) ?? null
   }
-  return courses.find((c) => c.id === courseId) ?? courses[0] ?? null
+  return selected ?? courses[0] ?? null
 }
 
 /** The unit Home shows for a class with nothing chosen: its last unit with problems (Home's own default). */
@@ -182,7 +190,7 @@ function homeUnit(course: CourseDef, unitByCourse?: Record<string, string>): str
   const saved = unitByCourse?.[course.id]
   if (saved && course.units.some((u) => u.id === saved)) return saved
   const ready = unitsWithModules(course)
-  return ready[ready.length - 1]?.id ?? null
+  return ready[ready.length - 1]?.id ?? course.units[0]?.id ?? null
 }
 
 // ---------------------------------------------------------------------------------------------------------------
@@ -232,11 +240,13 @@ function eligibleKinds(day: string, before: readonly Ev[], input: QuestInput): {
       if (input.goal >= 60) kinds.add('perfectSet')
     }
     if (types.some((t) => !mastered.has(t.templateId))) kinds.add('unmastered')
-    // The path's "You are here" when the day began: the type the set builder would start a set with (the path's rule).
-    const first = pickSetTypes({ types, events: before, rewards: input.rewards, now: start, startUnit: homeUnit(course, input.unitByCourse) }).types[0]
-    if (first) {
-      skill = first.templateId
-      kinds.add('pathStop')
+    // The path's "You are here" when the day began: only offered when the class has a unit path of its own.
+    if (unitsWithModules(course).length > 0) {
+      const first = pickSetTypes({ types, events: before, rewards: input.rewards, now: start, startUnit: homeUnit(course, input.unitByCourse) }).types[0]
+      if (first) {
+        skill = first.templateId
+        kinds.add('pathStop')
+      }
     }
     // Her homework, one school day a week, where her class takes her own problem.
     const modules = new Set(types.map((t) => t.moduleId))

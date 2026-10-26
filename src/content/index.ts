@@ -20,15 +20,21 @@ import './modules'
 
 export {
   DEFAULT_REVIEW_COUNT,
+  DEFAULT_SAT_REVIEW_COUNT,
   REVIEW_COUNTS,
   REVIEWS,
+  SAT_DOMAIN_REVIEW_COUNT,
+  SAT_PRACTICE_REVIEW_ID,
+  SAT_REVIEW_COUNTS,
   getReview,
   resolveReview,
+  satReviews,
   type ReviewCount,
   type ReviewDef,
   type ReviewTopicRef,
   type ResolvedTemplate,
   type ResolvedTopic,
+  type SatReviewCount,
 } from './reviews'
 export {
   COURSES,
@@ -40,3 +46,23 @@ export {
   type CourseDef,
   type UnitDef,
 } from './courses'
+export {
+  SAT_DOMAINS,
+  SAT_SKILLS,
+  domainTemplateIds,
+  domainTypeRefs,
+  getSatDomain,
+  getSatDomainByReview,
+  getSatDomainByUnit,
+  satCoverage,
+  satCoverageSummary,
+  skillStatus,
+  skillTemplateIds,
+  skillsInDomain,
+  type SatCoverage,
+  type SatDomainDef,
+  type SatDomainId,
+  type SatSkillDef,
+  type SatSkillStatus,
+  type SatTypeRef,
+} from './sat/skills'

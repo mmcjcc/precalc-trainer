@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState, type KeyboardEvent } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { A2HSCard } from '@/components/A2HSCard'
-import { STORE } from '@/edition'
+import { includesSubject, STORE } from '@/edition'
 import { UnitPath } from '@/components/path/UnitPath'
 import { TodayCard } from '@/components/rewards/TodayCard'
 import { ResumeSetCard, StartSetButton } from '@/components/set/TodaySet'
@@ -10,25 +10,45 @@ import {
   COURSES,
   courseOfModule,
   courseOfSkill,
+  DEFAULT_SAT_REVIEW_COUNT,
+  getModule,
   getReview,
+  getSatDomainByUnit,
   getTemplate,
   hasModule,
   modulesInUnit,
   randomSeed,
+  SAT_DOMAIN_REVIEW_COUNT,
+  SAT_DOMAINS,
+  SAT_PRACTICE_REVIEW_ID,
+  SAT_REVIEW_COUNTS,
+  satCoverageSummary,
+  skillsInDomain,
+  skillStatus,
   unitsWithModules,
   type CourseDef,
   type ModuleDef,
+  type SatDomainDef,
+  type SatReviewCount,
+  type SatSkillStatus,
   type TemplateDef,
   type UnitDef,
 } from '@/content'
-import { loadReview } from '@/pages/review/session'
+import {
+  createReviewSession,
+  loadReview,
+  SAT_FULL_MODULE_COUNT,
+  SAT_FULL_MODULE_MINUTES,
+  satTimerMinutes,
+  saveReview,
+} from '@/pages/review/session'
 import { startSet } from '@/pages/set/startSet'
 import { attemptResolves } from '@/problem/attemptResolves'
 import { attemptPath } from '@/problem/ownUrl'
 import { stepByStepModule } from '@/problem/solveStyle'
 import { defaultKnobs, flagsFromKnobs, problemPath } from '@/problem/url'
 import { loadActiveSet, resumePosition, resumeSet, sameSetProblem, setFinished, type ActiveSet } from '@/session/activeSet'
-import { setSizeFor } from '@/session/buildSet'
+import { classTypes, setSizeFor } from '@/session/buildSet'
 import {
   mastery,
   pickWeakSpot,
@@ -72,12 +92,18 @@ function templateTitle(moduleId: string, templateId: string): string {
   }
 }
 
-/** Courses that have something to practise. A course with no registered module stays hidden. */
+/** Courses that have something to practise in the active edition. A course with no problem types stays hidden. */
 function visibleCourses(): CourseDef[] {
-  return COURSES.filter((course) => unitsWithModules(course).length > 0)
+  return COURSES.filter((course) => {
+    const units = unitsWithModules(course)
+    if (units.length > 0) {
+      return units.some((unit) => modulesInUnit(unit).some((m) => includesSubject(m.subject)))
+    }
+    return classTypes(course).length > 0
+  })
 }
 
-/** Last unit that already has modules — where a first visit to this class lands. */
+/** Last unit that already has modules — where a first visit to this class lands (or the first unit when units own no modules). */
 function defaultUnit(course: CourseDef): UnitDef {
   const ready = unitsWithModules(course)
   return ready[ready.length - 1] ?? course.units[0]!
@@ -132,10 +158,21 @@ function resolveSelection(input: {
 
 function courseTemplates(course: CourseDef): { module: ModuleDef; template: TemplateDef }[] {
   const out: { module: ModuleDef; template: TemplateDef }[] = []
-  for (const unit of course.units) {
-    for (const module of modulesInUnit(unit)) {
-      for (const template of module.templates) out.push({ module, template })
+  if (unitsWithModules(course).length > 0) {
+    for (const unit of course.units) {
+      for (const module of modulesInUnit(unit)) {
+        if (!includesSubject(module.subject)) continue
+        for (const template of module.templates) out.push({ module, template })
+      }
     }
+    return out
+  }
+  for (const ct of classTypes(course)) {
+    if (!hasModule(ct.moduleId)) continue
+    const module = getModule(ct.moduleId)
+    if (!includesSubject(module.subject)) continue
+    const template = module.templates.find((t) => t.id === ct.templateId)
+    if (template) out.push({ module, template })
   }
   return out
 }
@@ -264,6 +301,238 @@ function ReviewCard({ reviewId, unitLabel, primary }: { reviewId: string; unitLa
   )
 }
 
+const SKILL_STATUS_LABEL: Record<SatSkillStatus, string> = {
+  practiced: 'Practiced',
+  'not-yet': 'Not yet',
+  coming: 'Coming',
+}
+
+const SKILL_STATUS_STYLE: Record<SatSkillStatus, string> = {
+  practiced: 'bg-ok-100 text-ok font-semibold',
+  'not-yet': 'bg-navy-50 text-navy font-semibold',
+  coming: 'bg-navy-50 text-navy/60 font-medium',
+}
+
+function SatPracticeSetCard({ primary }: { primary: boolean }) {
+  const navigate = useNavigate()
+  const settings = useSettings()
+  const saved = useMemo(() => loadReview(SAT_PRACTICE_REVIEW_ID), [])
+  const [count, setCount] = useState<SatReviewCount>(DEFAULT_SAT_REVIEW_COUNT)
+  const [timed, setTimed] = useState<boolean>(settings.testMode)
+  const titleId = useId()
+  const timedLabelId = useId()
+  const timedDescId = useId()
+  const targetMins = satTimerMinutes(count)
+  const inProgress = saved != null && saved.index < saved.problems.length
+
+  function startMixedSet() {
+    const testModeBefore = useStore.getState().settings.testMode
+    useStore.getState().setSettings({ testMode: timed })
+    const session = createReviewSession(SAT_PRACTICE_REVIEW_ID, { count, timed, testModeBefore })
+    saveReview(session)
+    navigate(`/review/${SAT_PRACTICE_REVIEW_ID}`)
+  }
+
+  return (
+    <section aria-labelledby={titleId} data-sat-practice-set="" className="space-y-4 rounded-2xl border border-coral bg-white p-4">
+      <div>
+        <p className="text-xs font-semibold uppercase tracking-wide text-coral-700">Mixed practice</p>
+        <h2 id={titleId} className="mt-1 text-xl font-semibold text-navy">
+          SAT practice set
+        </h2>
+        <p className="mt-1 text-sm text-navy/80">
+          8, 12 or 22 problems drawn from all four domains weighted like the test (35% Algebra, 35% Advanced Math, 15%
+          Problem-Solving and Data Analysis, 15% Geometry and Trigonometry, with at least one problem from each domain).
+        </p>
+      </div>
+
+      <fieldset>
+        <legend className="text-sm font-semibold text-navy">How many problems</legend>
+        <div className="mt-2 flex flex-wrap gap-2">
+          {SAT_REVIEW_COUNTS.map((n) => {
+            const checked = count === n
+            return (
+              <label
+                key={n}
+                className={`flex min-h-11 min-w-11 cursor-pointer items-center justify-center rounded-xl px-4 text-base font-semibold ${
+                  checked ? 'bg-navy text-white' : 'border border-navy-100 bg-white text-navy hover:bg-navy-50'
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="sat-practice-count"
+                  value={n}
+                  checked={checked}
+                  onChange={() => setCount(n)}
+                  className="sr-only"
+                />
+                {n}
+              </label>
+            )
+          })}
+        </div>
+      </fieldset>
+
+      <div className="flex items-start justify-between gap-4 border-t border-navy-100 pt-3">
+        <div className="min-w-0">
+          <p id={timedLabelId} className="font-semibold text-navy">
+            Optional timer
+          </p>
+          <p id={timedDescId} className="mt-0.5 text-sm text-navy/80">
+            {targetMins} minutes for {count} problems ({SAT_FULL_MODULE_MINUTES} minutes for {SAT_FULL_MODULE_COUNT}{' '}
+            problems, scaled for fewer). The timer only shows the time; it never stops you.
+          </p>
+        </div>
+        <button
+          type="button"
+          role="switch"
+          aria-checked={timed}
+          aria-labelledby={timedLabelId}
+          aria-describedby={timedDescId}
+          onClick={() => setTimed((v) => !v)}
+          className={`min-h-11 min-w-20 shrink-0 rounded-full px-3 text-sm font-semibold ${
+            timed ? 'bg-navy text-white hover:bg-navy-600' : 'border-2 border-navy-100 bg-white text-navy hover:bg-navy-50'
+          }`}
+        >
+          {timed ? (
+            <>
+              <span aria-hidden>✓ </span>On
+            </>
+          ) : (
+            'Off'
+          )}
+        </button>
+      </div>
+
+      <div className="flex flex-wrap gap-2">
+        <button
+          type="button"
+          onClick={startMixedSet}
+          className={`min-h-11 rounded-xl px-4 font-semibold ${actionLook(primary)}`}
+        >
+          Start SAT practice set
+        </button>
+        {inProgress && (
+          <Link
+            to={`/review/${SAT_PRACTICE_REVIEW_ID}`}
+            className="inline-flex min-h-11 items-center rounded-xl border border-navy-100 bg-white px-4 font-semibold text-navy hover:bg-navy-50"
+          >
+            Continue — problem {saved.index + 1} of {saved.problems.length}
+          </Link>
+        )}
+      </div>
+    </section>
+  )
+}
+
+function SatDomainCard({
+  domain,
+  events,
+  selected,
+  primary,
+}: {
+  domain: SatDomainDef
+  events: readonly Ev[]
+  selected: boolean
+  primary: boolean
+}) {
+  const navigate = useNavigate()
+  const titleId = useId()
+  const skills = useMemo(() => skillsInDomain(domain.id), [domain.id])
+
+  function startDomainPractice() {
+    const session = createReviewSession(domain.reviewId, {
+      count: SAT_DOMAIN_REVIEW_COUNT,
+      timed: false,
+      testModeBefore: useStore.getState().settings.testMode,
+    })
+    saveReview(session)
+    navigate(`/review/${domain.reviewId}`)
+  }
+
+  return (
+    <section
+      aria-labelledby={titleId}
+      data-sat-domain={domain.id}
+      data-selected-domain={selected ? 'true' : undefined}
+      className={`space-y-3 rounded-2xl border bg-white p-4 ${selected ? 'border-navy' : 'border-navy-100'}`}
+    >
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <h2 id={titleId} className="text-lg font-semibold text-navy">
+          {domain.title}
+        </h2>
+        <span className="text-sm font-semibold text-coral-700">{domain.shareLabel} of the test</span>
+      </div>
+
+      <ul aria-label={`${domain.title} skills`} className="divide-y divide-navy-100">
+        {skills.map((skill) => {
+          const status = skillStatus(skill, events)
+          return (
+            <li
+              key={skill.id}
+              data-sat-skill={skill.id}
+              data-skill-status={status}
+              className="flex items-center justify-between gap-3 py-2 text-sm"
+            >
+              <span className="text-navy">{skill.title}</span>
+              <span className={`shrink-0 rounded-full px-2.5 py-0.5 text-xs ${SKILL_STATUS_STYLE[status]}`}>
+                {SKILL_STATUS_LABEL[status]}
+              </span>
+            </li>
+          )
+        })}
+      </ul>
+
+      <button
+        type="button"
+        onClick={startDomainPractice}
+        className={`min-h-11 rounded-xl px-4 font-semibold ${actionLook(primary)}`}
+      >
+        Practice {domain.title}
+      </button>
+    </section>
+  )
+}
+
+function SatPrepSection({ selectedUnitId, primary }: { selectedUnitId: string; primary: boolean }) {
+  const events = useEvents()
+  const headerId = useId()
+  const coverageLine = useMemo(() => satCoverageSummary(), [])
+
+  return (
+    <div className="space-y-4" data-sat-home="">
+      <section aria-labelledby={headerId} className="space-y-2 rounded-2xl border border-navy-100 bg-white p-4">
+        <h2 id={headerId} className="text-lg font-semibold text-navy">
+          About the SAT Math section
+        </h2>
+        <p className="text-sm text-navy/80">
+          The digital SAT&apos;s math section is 44 questions in 70 minutes, in two adaptive modules of 22 questions and
+          35 minutes each, with a Desmos calculator and a reference sheet throughout. About three quarters are multiple
+          choice and a quarter are typed answers across four content domains: Algebra (about 35%), Advanced Math (about
+          35%), Problem-Solving and Data Analysis (about 15%), and Geometry and Trigonometry (about 15%).
+        </p>
+        <p className="text-sm font-semibold text-navy" data-sat-coverage="">
+          {coverageLine}.
+        </p>
+      </section>
+
+      <SatPracticeSetCard primary={primary} />
+
+      <div className="space-y-4" data-sat-domains="">
+        {SAT_DOMAINS.map((domain) => (
+          <SatDomainCard
+            key={domain.id}
+            domain={domain}
+            events={events}
+            selected={domain.unitId === selectedUnitId}
+            primary={primary}
+          />
+        ))}
+      </div>
+    </div>
+  )
+}
+
 /**
  * "Modules in this unit", under the path: a compact list of links to each module page, where the rule cards, every
  * type with its difficulty, and the mastery explanation stay. The properties drill (no problem types, so no stretch of
@@ -388,7 +657,8 @@ function HomeScreen() {
   const { course, unit } = selection
   const courses = visibleCourses()
   const modules = modulesInUnit(unit)
-  const reviewId = unit.reviewId && getReview(unit.reviewId) ? unit.reviewId : undefined
+  const isSat = course.id === 'sat'
+  const reviewId = !isSat && unit.reviewId && getReview(unit.reviewId) ? unit.reviewId : undefined
 
   function selectCourse(id: string) {
     const next = courses.find((c) => c.id === id)
@@ -428,7 +698,12 @@ function HomeScreen() {
   // One problem solved line by line: the unit's first step-by-step module (else the class's), a random type of it.
   const stepModule =
     modulesInUnit(unit).find((m) => stepByStepModule(m.id) && m.templates.length > 0) ??
-    course.units.flatMap((u) => modulesInUnit(u)).find((m) => stepByStepModule(m.id) && m.templates.length > 0)
+    course.units.flatMap((u) => modulesInUnit(u)).find((m) => stepByStepModule(m.id) && m.templates.length > 0) ??
+    (() => {
+      const hit = classTypes(course).find((t) => t.steps && hasModule(t.moduleId))
+      return hit && hasModule(hit.moduleId) ? getModule(hit.moduleId) : undefined
+    })()
+
   function solveStepByStep() {
     if (!stepModule) return
     const template = stepModule.templates[Math.floor(Math.random() * stepModule.templates.length)]!
@@ -524,7 +799,7 @@ function HomeScreen() {
         <div ref={unitRow} role="group" aria-label={`${course.title} units`} className="flex flex-nowrap gap-2 overflow-x-auto py-1">
           {course.units.map((u) => {
             const pressed = u.id === unit.id
-            const empty = modulesInUnit(u).length === 0
+            const empty = modulesInUnit(u).length === 0 && !getSatDomainByUnit(u.id)
             return (
               <button
                 key={u.id}
@@ -549,7 +824,9 @@ function HomeScreen() {
 
       {reviewId && <ReviewCard reviewId={reviewId} unitLabel={unit.label} primary={!phone} />}
 
-      {modules.length > 0 ? (
+      {isSat ? (
+        <SatPrepSection selectedUnitId={unit.id} primary={!phone} />
+      ) : modules.length > 0 ? (
         <>
           {/* The unit as a road she walks (components/path), then the module pages. Keyed: the path decides on mount
               which of this unit's stops levelled up since she last saw them. */}

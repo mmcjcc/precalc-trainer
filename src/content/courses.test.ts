@@ -45,6 +45,19 @@ describe('course registry', () => {
     }
     expect(getCourse('geometry')?.title).toBe('Honors Geometry')
     expect(getCourse('geometry')?.short).toBe('Geometry')
+    const sat = getCourse('sat')
+    expect(sat?.title).toBe('SAT Math Prep')
+    expect(sat?.short).toBe('SAT')
+    expect(sat?.units.map((u) => [u.id, u.title, u.moduleIds])).toEqual([
+      ['sat-algebra', 'Algebra', []],
+      ['sat-advanced-math', 'Advanced Math', []],
+      ['sat-data-analysis', 'Problem-Solving and Data Analysis', []],
+      ['sat-geometry-trig', 'Geometry and Trigonometry', []],
+    ])
+    expect(unitsWithModules(sat!)).toEqual([])
+    for (const unit of sat!.units) {
+      expect(modulesInUnit(unit)).toEqual([])
+    }
   })
 
   it('sorts a unit by module order and skips units that have no modules', () => {

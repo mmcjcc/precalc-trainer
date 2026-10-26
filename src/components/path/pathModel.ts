@@ -5,7 +5,7 @@
  *
  * Nothing on the path is ever locked: her class's order is not ours to enforce. A stop's state is a label.
  */
-import { getModule, hasModule, type CourseDef, type UnitDef } from '@/content'
+import { getModule, hasModule, modulesInUnit, unitsWithModules, type CourseDef, type UnitDef } from '@/content'
 import { pickModule, stepByStepModule } from '@/problem/solveStyle'
 import { classTypes, pickSetTypes } from '@/session/buildSet'
 import { MASTERY_WINDOW } from '@/store/compaction'
@@ -41,10 +41,12 @@ const NEW_RING: SkillRingInfo = { level: 'new', fill: 0, strong: 0, count: 0 }
 
 /**
  * The unit's stops, module by module, in course order: the set builder's own list of the class's types
- * (`classTypes`, so the path and "Start a set" always know the same types), kept to this unit. A module with no
- * problem types (the properties drill) has no stretch of road; the module list under the path still links to it.
+ * (`classTypes`, so the path and "Start a set" always know the same types), kept to this unit. A unit whose own
+ * `moduleIds` are empty (such as SAT Math Prep's domain units) or a module with no problem types (the properties
+ * drill) has no stretch of road.
  */
 export function unitPath(course: CourseDef, unit: UnitDef, rings: ReadonlyMap<string, SkillRingInfo>): PathModule[] {
+  if (modulesInUnit(unit).length === 0) return []
   const out: PathModule[] = []
   let index = 0
   for (const t of classTypes(course)) {
@@ -84,9 +86,10 @@ export interface SetStart {
 /**
  * The type the next set starts with, by the set builder itself (`pickSetTypes`, with what Home's "Start a set" passes
  * it: the class, the log, the rewards slice, now, and the unit Home shows), so the path and the set never disagree.
- * Null when the class has no problem types.
+ * Null when the class has no unit path (`unitsWithModules(course).length === 0`) or no problem types.
  */
 export function setStart(course: CourseDef, events: readonly Ev[], rewards: RewardsState, now: number, startUnit: string | null): SetStart | null {
+  if (unitsWithModules(course).length === 0) return null
   const first = pickSetTypes({ types: classTypes(course), events, rewards, now, startUnit }).types[0]
   return first ? { templateId: first.templateId, moduleId: first.moduleId, unitId: first.unitId } : null
 }

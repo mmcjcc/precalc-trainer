@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { generateProblem, getCourse, getTemplate, modulesInUnit } from '@/content'
+import { generateProblem, getCourse, getTemplate, modulesInUnit, type CourseDef } from '@/content'
 import { defaultKnobs, flagsFromKnobs } from '@/problem/url'
 import type { ModuleId } from '@/shared/types'
 import { emptyRewards, type Ev, type MistakeCardState, type RewardsState } from '@/store/types'
@@ -241,6 +241,7 @@ describe('pickSetTypes: the rules in order', () => {
 describe('buildSet on a real class', () => {
   const precalc = getCourse('precalc')!
   const chemistry = getCourse('chemistry')!
+  const sat = getCourse('sat')!
   const unit1Types = modulesInUnit(precalc.units[0]!).flatMap((m) => m.templates.map((t) => t.id))
 
   it('an empty history: the first unit in Home’s order, one of them step by step, at the default difficulty, with fresh seeds', () => {
@@ -278,5 +279,26 @@ describe('buildSet on a real class', () => {
     expect(setSizeFor(precalc)).toBe(3)
     expect(setSizeFor(chemistry)).toBe(3)
     expect(setSizeFor(getCourse('geometry')!)).toBe(3)
+    expect(setSizeFor(sat)).toBe(3)
+  })
+
+  it('handles SAT Math Prep (units with no modules of their own, mapped via domains) and an empty-unit class', () => {
+    const satTypes = classTypes(sat)
+    expect(satTypes.length).toBeGreaterThan(0)
+    const satSet = buildSet({ course: sat, events: [], rewards: emptyRewards(), now: NOW, seed: 12, startUnit: 'sat-algebra' })
+    expect(satSet.courseId).toBe('sat')
+    expect(satSet.unitId).toBe('sat-algebra')
+    expect(satSet.problems).toHaveLength(3)
+
+    const emptyCourse: CourseDef = {
+      id: 'empty-class',
+      title: 'Empty Class',
+      short: 'Empty',
+      units: [{ id: 'empty-u1', label: 'Unit 1', title: 'Empty', moduleIds: [] }],
+    }
+    expect(classTypes(emptyCourse)).toEqual([])
+    expect(setSizeFor(emptyCourse)).toBe(0)
+    const emptyBuilt = buildSet({ course: emptyCourse, events: [], rewards: emptyRewards(), now: NOW, seed: 1 })
+    expect(emptyBuilt).toEqual({ courseId: 'empty-class', unitId: null, problems: [] })
   })
 })

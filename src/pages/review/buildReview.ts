@@ -56,38 +56,96 @@ function takeOne<T>(rng: Rng, items: readonly T[], weight: (item: T) => number):
   return { picked: items[index]!, rest: items.filter((_, i) => i !== index) }
 }
 
+interface TopicGroup {
+  key: string
+  weight: number
+  items: { topic: ResolvedTopic; templateId: string; baseWeight: number }[]
+}
+
+function buildTopicGroups(topics: readonly ResolvedTopic[]): TopicGroup[] {
+  const byKey = new Map<string, TopicGroup>()
+  for (const topic of topics) {
+    const key = topic.domainId ?? topic.id
+    const tWeight = topic.weight && topic.weight > 0 ? topic.weight : 1
+    const perTemplate = tWeight / Math.max(1, topic.templates.length)
+    let group = byKey.get(key)
+    if (!group) {
+      group = { key, weight: 0, items: [] }
+      byKey.set(key, group)
+    }
+    group.weight += tWeight
+    for (const tp of topic.templates) {
+      group.items.push({ topic, templateId: tp.id, baseWeight: perTemplate })
+    }
+  }
+  return [...byKey.values()]
+}
+
 /**
  * Cover as many topics as the count allows (every topic, when it fits), one template each,
  * weighted inside the topic. Fill the remaining slots with replacement, weighted across templates.
+ * When topics carry explicit weights (such as the SAT domain shares 35 / 35 / 15 / 15), cover each
+ * weighted domain/topic group first, then draw the remaining slots so the expected count matches each
+ * group's target share while favoring weak spots inside each group.
  * Then shuffle. Problem seeds come from the review seed and the final position.
  */
 export function buildReviewSet(reviewId: string, opts: { seed: number; events: Ev[]; count?: number }): BuiltReview {
   const review = getReview(reviewId)
   if (!review) throw new Error(`Unknown review: ${reviewId}`)
   const topics = resolveReview(review)
-  const requested = opts.count ?? DEFAULT_REVIEW_COUNT
-  const count = Number.isFinite(requested) ? Math.max(1, Math.floor(requested)) : DEFAULT_REVIEW_COUNT
+  const fallbackCount = review.defaultCount ?? DEFAULT_REVIEW_COUNT
+  const requested = opts.count ?? fallbackCount
+  const count = Number.isFinite(requested) ? Math.max(1, Math.floor(requested)) : fallbackCount
   const seed = opts.seed >>> 0
-  const ids = topics.flatMap((t) => t.templates.map((tp) => tp.id))
+  const ids = [...new Set(topics.flatMap((t) => t.templates.map((tp) => tp.id)))]
   const weights = reviewTemplateWeights(opts.events, ids)
   const w = (id: string) => weights.get(id) ?? 0.6
-  const topicWeight = (topic: ResolvedTopic) => topic.templates.reduce((s, tp) => s + w(tp.id), 0)
   const rng = makeRng(seed || 1)
-
-  let pool = topics.slice()
   const drafts: Draft[] = []
-  const cover = Math.min(count, pool.length)
-  for (let i = 0; i < cover; i++) {
-    const { picked, rest } = takeOne(rng, pool, topicWeight)
-    pool = rest
-    const template = takeOne(rng, picked.templates, (tp) => w(tp.id)).picked
-    drafts.push({ topicId: picked.id, moduleId: picked.moduleId, templateId: template.id })
-  }
 
-  const all = topics.flatMap((topic) => topic.templates.map((template) => ({ topic, template })))
-  while (drafts.length < count) {
-    const { topic, template } = takeOne(rng, all, (item) => w(item.template.id)).picked
-    drafts.push({ topicId: topic.id, moduleId: topic.moduleId, templateId: template.id })
+  const hasExplicitWeights = topics.some((t) => typeof t.weight === 'number' && t.weight > 0)
+  if (!hasExplicitWeights) {
+    const topicWeight = (topic: ResolvedTopic) => topic.templates.reduce((s, tp) => s + w(tp.id), 0)
+    let pool = topics.slice()
+    const cover = Math.min(count, pool.length)
+    for (let i = 0; i < cover; i++) {
+      const { picked, rest } = takeOne(rng, pool, topicWeight)
+      pool = rest
+      const template = takeOne(rng, picked.templates, (tp) => w(tp.id)).picked
+      drafts.push({ topicId: picked.id, moduleId: picked.moduleId, templateId: template.id })
+    }
+
+    const all = topics.flatMap((topic) => topic.templates.map((template) => ({ topic, template })))
+    while (drafts.length < count) {
+      const { topic, template } = takeOne(rng, all, (item) => w(item.template.id)).picked
+      drafts.push({ topicId: topic.id, moduleId: topic.moduleId, templateId: template.id })
+    }
+  } else {
+    const groups = buildTopicGroups(topics)
+    const totalGroupWeight = groups.reduce((s, g) => s + g.weight, 0) || 1
+    let pool = groups.slice()
+    const cover = Math.min(count, pool.length)
+    for (let i = 0; i < cover; i++) {
+      const { picked, rest } = takeOne(rng, pool, (g) => g.weight)
+      pool = rest
+      const item = takeOne(rng, picked.items, (it) => it.baseWeight * w(it.templateId)).picked
+      drafts.push({ topicId: item.topic.id, moduleId: item.topic.moduleId, templateId: item.templateId })
+    }
+
+    const residualWeights = groups.map((g) => {
+      const share = g.weight / totalGroupWeight
+      return Math.max(0, count * share - 1)
+    })
+    const residualSum = residualWeights.reduce((s, r) => s + r, 0)
+    while (drafts.length < count) {
+      const groupIdx = pickIndex(
+        rng,
+        residualSum > 0 ? residualWeights : groups.map((g) => g.weight),
+      )
+      const group = groups[groupIdx]!
+      const item = takeOne(rng, group.items, (it) => it.baseWeight * w(it.templateId)).picked
+      drafts.push({ topicId: item.topic.id, moduleId: item.topic.moduleId, templateId: item.templateId })
+    }
   }
 
   const problems: ReviewProblem[] = rng.shuffle(drafts).map((draft, i) => ({

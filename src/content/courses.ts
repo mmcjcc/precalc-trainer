@@ -177,6 +177,41 @@ export const COURSES: readonly CourseDef[] = [
       },
     ],
   },
+  {
+    id: 'sat',
+    title: 'SAT Math Prep',
+    short: 'SAT',
+    units: [
+      {
+        id: 'sat-algebra',
+        label: 'Domain 1',
+        title: 'Algebra',
+        reviewId: 'sat-algebra',
+        moduleIds: [],
+      },
+      {
+        id: 'sat-advanced-math',
+        label: 'Domain 2',
+        title: 'Advanced Math',
+        reviewId: 'sat-advanced-math',
+        moduleIds: [],
+      },
+      {
+        id: 'sat-data-analysis',
+        label: 'Domain 3',
+        title: 'Problem-Solving and Data Analysis',
+        reviewId: 'sat-data-analysis',
+        moduleIds: [],
+      },
+      {
+        id: 'sat-geometry-trig',
+        label: 'Domain 4',
+        title: 'Geometry and Trigonometry',
+        reviewId: 'sat-geometry-trig',
+        moduleIds: [],
+      },
+    ],
+  },
 ]
 
 export function getCourse(id: string): CourseDef | undefined {

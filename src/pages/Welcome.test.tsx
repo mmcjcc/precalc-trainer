@@ -47,6 +47,22 @@ describe('the store app’s first run', () => {
     expect(screen.getByRole('button', { name: /Start a set/ })).toBeTruthy()
   })
 
+  it('offers SAT Math Prep in the Welcome picker and opens Home on the SAT tab when picked', { timeout: 120_000 }, () => {
+    renderHome()
+    expect(screen.getByRole('heading', { level: 1, name: 'Welcome to Math Trainer' })).toBeTruthy()
+    expect(screen.queryByRole('button', { name: /^Chemistry/ })).toBeNull()
+    const satBtn = screen.getByRole('button', { name: /^SAT Math Prep/ })
+    expect(satBtn.textContent).toMatch(/Algebra, Advanced Math/)
+    fireEvent.click(satBtn)
+
+    const settings = useStore.getState().settings
+    expect(settings.courseId).toBe('sat')
+    expect(settings.unitByCourse?.sat).toBe('sat-algebra')
+    expect(screen.queryByRole('heading', { name: 'Welcome to Math Trainer' })).toBeNull()
+    expect(screen.getByRole('tab', { name: 'SAT Math Prep', selected: true })).toBeTruthy()
+    expect(screen.getByRole('heading', { name: 'SAT practice set' })).toBeTruthy()
+  })
+
   it('Back returns to the classes; "Not sure?" starts at the first unit', { timeout: 120_000 }, () => {
     renderHome()
     fireEvent.click(screen.getByRole('button', { name: /^Precalculus/ }))
@@ -76,5 +92,7 @@ describe('the store app’s first run', () => {
   it('says what each class covers, from its units', () => {
     const blurb = courseBlurb(getCourse('precalc')!)
     expect(blurb.startsWith('Functions and their graphs, ')).toBe(true)
+    const satBlurb = courseBlurb(getCourse('sat')!)
+    expect(satBlurb).toBe('Algebra, Advanced Math, Problem-Solving and Data Analysis, Geometry and Trigonometry')
   })
 })

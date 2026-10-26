@@ -129,7 +129,8 @@ describe('Progress grouped by class', () => {
     expect(screen.getByText('1 of 1 right (100%)')).toBeTruthy()
   })
 
-  it('still says when no mistakes have been logged', () => {
+  it('still says when no mistakes have been logged, and skips classes whose units own no modules', () => {
+    useStore.getState().setSettings({ courseId: 'sat', rewards: true })
     // A page always has the router around it (Progress links to the drill and the Monsters tab).
     render(
       <MemoryRouter>
@@ -138,7 +139,11 @@ describe('Progress grouped by class', () => {
     )
     expect(screen.getByText(/No mistakes logged yet/)).toBeTruthy()
     expect(screen.queryByRole('heading', { name: 'Other' })).toBeNull()
-    expect(screen.getByRole('heading', { name: 'Honors Precalculus' })).toBeTruthy()
-    expect(screen.getByRole('heading', { name: 'Chemistry' })).toBeTruthy()
+    expect(screen.queryByRole('heading', { name: 'SAT Math Prep' })).toBeNull()
+    const rings = screen.getByRole('region', { name: 'Problem types' })
+    const ringHeadings = within(rings)
+      .getAllByRole('heading', { level: 3 })
+      .map((h) => h.textContent)
+    expect(ringHeadings).toEqual(['Honors Precalculus', 'Chemistry', 'Honors Geometry'])
   })
 })

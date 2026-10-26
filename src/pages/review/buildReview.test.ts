@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { getReview, getTemplate, resolveReview } from '@/content'
+import { domainTemplateIds, getReview, getTemplate, resolveReview, SAT_DOMAINS, type SatDomainId } from '@/content'
 import type { ModuleId } from '@/shared/types'
 import type { Ev } from '@/store/types'
 import { buildReviewSet, reviewTemplateWeights } from './buildReview'
@@ -81,5 +81,57 @@ describe('buildReviewSet', () => {
       calm += set.problems.filter((p) => p.templateId === 'dq.radical').length
     }
     expect(weak).toBeGreaterThan(calm * 5)
+  })
+
+  it('draws SAT practice sets across all four domains weighted 35/35/15/15 with at least one from each domain', () => {
+    const allowedByDomain = new Map<SatDomainId, Set<string>>(
+      SAT_DOMAINS.map((d) => [d.id, new Set(domainTemplateIds(d.id))]),
+    )
+    for (const count of [8, 12, 22]) {
+      for (let seed = 1; seed <= 30; seed++) {
+        const set = buildReviewSet('sat', { count, seed, events: [] })
+        expect(set.problems).toHaveLength(count)
+        const domainsSeen = new Set<SatDomainId>()
+        for (const p of set.problems) {
+          const domainId = p.topicId.split(':')[0] as SatDomainId
+          domainsSeen.add(domainId)
+          expect(allowedByDomain.get(domainId)?.has(p.templateId)).toBe(true)
+        }
+        expect(domainsSeen.size).toBe(4)
+      }
+    }
+
+    // Over many seeds for 22 problems, each domain's average count is within a few problems of its 35/35/15/15 target.
+    const seeds = 200
+    const totals: Record<SatDomainId, number> = {
+      algebra: 0,
+      'advanced-math': 0,
+      'data-analysis': 0,
+      'geometry-trig': 0,
+    }
+    for (let seed = 1; seed <= seeds; seed++) {
+      const set = buildReviewSet('sat', { count: 22, seed, events: [] })
+      for (const p of set.problems) {
+        const domainId = p.topicId.split(':')[0] as SatDomainId
+        totals[domainId] += 1
+      }
+    }
+    for (const domain of SAT_DOMAINS) {
+      const avg = totals[domain.id] / seeds
+      const target = 22 * domain.share
+      expect(Math.abs(avg - target)).toBeLessThan(1.5)
+    }
+  })
+
+  it('builds 8-problem per-domain SAT sets strictly from that domain’s mapped types', () => {
+    for (const domain of SAT_DOMAINS) {
+      const allowed = new Set(domainTemplateIds(domain.id))
+      const set = buildReviewSet(domain.reviewId, { seed: 19, events: [] })
+      expect(set.problems).toHaveLength(8)
+      for (const p of set.problems) {
+        expect(allowed.has(p.templateId)).toBe(true)
+        expect(getTemplate(p.moduleId as ModuleId, p.templateId).id).toBe(p.templateId)
+      }
+    }
   })
 })

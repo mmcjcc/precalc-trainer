@@ -17,6 +17,7 @@ import { buildSet } from '@/session/buildSet'
 import { emptyRewards, resetStoreForTests, useStore, type Ev } from '@/store'
 import { Home } from '@/pages/Home'
 import { PATH_STORAGE_KEY, readPathMemory } from './pathMemory'
+import { setStart, unitPath } from './pathModel'
 
 const PAGE_TIMEOUT = 120_000
 const DAY = 86_400_000
@@ -177,7 +178,13 @@ describe('the stops', () => {
           expect(screen.getByRole('button', { name: new RegExp(`^${unit.label} · `), pressed: true })).toBeTruthy()
           const types = modulesInUnit(unit).flatMap((m) => m.templates)
           if (modulesInUnit(unit).length === 0) {
-            expect(screen.getByText('Nothing to practise here yet: this unit is being built.')).toBeTruthy()
+            expect(unitPath(course, unit, new Map())).toEqual([])
+            if (course.id === 'sat') {
+              expect(setStart(course, [], emptyRewards(), Date.now(), unit.id)).toBeNull()
+              expect(screen.getByRole('heading', { name: 'SAT practice set' })).toBeTruthy()
+            } else {
+              expect(screen.getByText('Nothing to practise here yet: this unit is being built.')).toBeTruthy()
+            }
             expect(screen.queryByRole('list', { name: /^Path through / })).toBeNull()
           } else {
             expect(stops()).toHaveLength(types.length)

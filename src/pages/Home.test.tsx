@@ -76,14 +76,20 @@ function done(at: number, moduleId: string, skill: string): Ev {
 beforeEach(() => {
   resetStoreForTests()
   localStorage.removeItem('pct.review.unit1')
+  localStorage.removeItem('pct.review.sat')
 })
 
 describe('Home: classes and units', () => {
-  it('shows one tab per class that has modules, and the row does not wrap', () => {
+  it('shows one tab per ready class (including SAT Math Prep), and the row does not wrap', () => {
     renderHome()
     expect(screen.getByRole('heading', { level: 1, name: 'Math & Science Trainer' })).toBeTruthy()
     const tabs = screen.getAllByRole('tab')
-    expect(tabs.map((tab) => tab.textContent)).toEqual(['Honors Precalculus', 'Chemistry', 'Honors Geometry'])
+    expect(tabs.map((tab) => tab.textContent)).toEqual([
+      'Honors Precalculus',
+      'Chemistry',
+      'Honors Geometry',
+      'SAT Math Prep',
+    ])
     expect(screen.queryByRole('tab', { name: 'Geometry' })).toBeNull()
     const tablist = screen.getByRole('tablist', { name: 'Classes' })
     expect(tablist.className).toMatch(/flex-nowrap/)
@@ -110,7 +116,10 @@ describe('Home: classes and units', () => {
     expect(moduleTitles()).toEqual(unit7Titles)
 
     fireEvent.keyDown(tablist, { key: 'ArrowRight' })
-    expect(screen.getByRole('tab', { name: 'Honors Geometry', selected: true })).toBeTruthy()
+    expect(screen.getByRole('tab', { name: 'SAT Math Prep', selected: true })).toBeTruthy()
+
+    fireEvent.keyDown(tablist, { key: 'ArrowRight' })
+    expect(screen.getByRole('tab', { name: 'SAT Math Prep', selected: true })).toBeTruthy()
 
     fireEvent.keyDown(tablist, { key: 'Home' })
     expect(screen.getByRole('tab', { name: 'Honors Precalculus', selected: true })).toBeTruthy()
@@ -121,7 +130,7 @@ describe('Home: classes and units', () => {
     expect(screen.getByRole('tab', { name: 'Honors Precalculus', selected: true })).toBeTruthy()
 
     fireEvent.keyDown(tablist, { key: 'End' })
-    expect(screen.getByRole('tab', { name: 'Honors Geometry', selected: true })).toBeTruthy()
+    expect(screen.getByRole('tab', { name: 'SAT Math Prep', selected: true })).toBeTruthy()
     expect(screen.queryByRole('heading', { name: 'Unit 1 review' })).toBeNull()
   })
 
@@ -366,5 +375,81 @@ describe('Home: classes and units', () => {
     } finally {
       random.mockRestore()
     }
+  })
+
+  it('renders SAT Math Prep header, coverage, SAT practice set above the four domain cards, and skill statuses from event logs', () => {
+    useStore.setState({
+      events: [
+        done(10, 'inequalities', 'ineq.linear'),
+        done(20, 'rightTriangle', 'rt.side'),
+      ],
+    })
+    renderHome('/c/sat')
+    expect(screen.getByRole('tab', { name: 'SAT Math Prep', selected: true })).toBeTruthy()
+
+    const header = screen.getByRole('region', { name: 'About the SAT Math section' })
+    expect(header.textContent).toMatch(/Algebra \(about 35%\)/)
+    expect(header.textContent).toMatch(/Advanced Math \(about 35%\)/)
+    expect(header.textContent).toMatch(/Problem-Solving and Data Analysis \(about 15%\)/)
+    expect(header.textContent).toMatch(/Geometry and Trigonometry \(about 15%\)/)
+    expect(header.textContent).toMatch(/9 of 19 skills so far; more are coming/)
+    expect(header.textContent).not.toMatch(/predicted score|score prediction|200.*800/i)
+
+    const practiceSetHeading = screen.getByRole('heading', { name: 'SAT practice set' })
+    const algebraHeading = screen.getByRole('heading', { name: 'Algebra' })
+    // SAT practice set card appears above the domain cards.
+    expect(practiceSetHeading.compareDocumentPosition(algebraHeading) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Start SAT practice set' })).toBeTruthy()
+
+    // All four domain cards are rendered with their test shares and Practice <domain> buttons.
+    const algebraCard = screen.getByRole('region', { name: 'Algebra' })
+    expect(algebraCard.textContent).toMatch(/About 35% of the test/)
+    expect(within(algebraCard).getByRole('button', { name: 'Practice Algebra' })).toBeTruthy()
+
+    const advCard = screen.getByRole('region', { name: 'Advanced Math' })
+    expect(advCard.textContent).toMatch(/About 35% of the test/)
+    expect(within(advCard).getByRole('button', { name: 'Practice Advanced Math' })).toBeTruthy()
+
+    const dataCard = screen.getByRole('region', { name: 'Problem-Solving and Data Analysis' })
+    expect(dataCard.textContent).toMatch(/About 15% of the test/)
+    expect(within(dataCard).getByRole('button', { name: 'Practice Problem-Solving and Data Analysis' })).toBeTruthy()
+
+    const geoCard = screen.getByRole('region', { name: 'Geometry and Trigonometry' })
+    expect(geoCard.textContent).toMatch(/About 15% of the test/)
+    expect(within(geoCard).getByRole('button', { name: 'Practice Geometry and Trigonometry' })).toBeTruthy()
+
+    // In Algebra:
+    // - "Linear inequalities in one or two variables" has a problem_done event on ineq.linear -> "Practiced"
+    // - "Linear functions" has mapped types with no events -> "Not yet"
+    // - "Linear equations in one variable" has no mapped types -> "Coming"
+    const ineqItem = within(algebraCard).getByText('Linear inequalities in one or two variables').closest('li')!
+    expect(ineqItem.textContent).toMatch(/Practiced/)
+    const linearFnItem = within(algebraCard).getByText('Linear functions').closest('li')!
+    expect(linearFnItem.textContent).toMatch(/Not yet/)
+    const linearEq1Item = within(algebraCard).getByText('Linear equations in one variable').closest('li')!
+    expect(linearEq1Item.textContent).toMatch(/Coming/)
+
+    // In Geometry and Trigonometry:
+    // - "Right triangles and trigonometry" has a problem_done event on rt.side -> "Practiced"
+    // - "Area and volume" has no mapped types -> "Coming"
+    const rightTrigItem = within(geoCard).getByText('Right triangles and trigonometry').closest('li')!
+    expect(rightTrigItem.textContent).toMatch(/Practiced/)
+    const areaVolumeItem = within(geoCard).getByText('Area and volume').closest('li')!
+    expect(areaVolumeItem.textContent).toMatch(/Coming/)
+  })
+
+  it('remembers SAT Math Prep and its selected domain unit across visits, without showing Coming soon on domain tabs', () => {
+    const first = renderHome()
+    fireEvent.click(screen.getByRole('tab', { name: 'SAT Math Prep' }))
+    const unitGroup = screen.getByRole('group', { name: 'SAT Math Prep units' })
+    expect(unitGroup.textContent).not.toMatch(/Coming soon/)
+    fireEvent.click(within(unitGroup).getByRole('button', { name: /Domain 2/ }))
+    expect(useStore.getState().settings.courseId).toBe('sat')
+    expect(useStore.getState().settings.unitByCourse?.sat).toBe('sat-advanced-math')
+    first.unmount()
+
+    renderHome()
+    expect(screen.getByRole('tab', { name: 'SAT Math Prep', selected: true })).toBeTruthy()
+    expect(screen.getByRole('button', { name: /Domain 2/, pressed: true })).toBeTruthy()
   })
 })
