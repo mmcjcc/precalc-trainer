@@ -36,8 +36,8 @@ export interface CourseDef {
 
 /**
  * sigFigs never names a chapter in its module comments (atoms says ch. 4, electrons
- * says ch. 5, both matching the units below). Chapter 3 / Measurements is the
- * curriculum place for significant figures.
+ * and quantum numbers say ch. 5, both matching the units below). Chapter 3 / Measurements
+ * is the curriculum place for significant figures.
  */
 export const COURSES: readonly CourseDef[] = [
   {
@@ -112,7 +112,7 @@ export const COURSES: readonly CourseDef[] = [
         id: 'ch5',
         label: 'Chapter 5',
         title: 'Electrons in atoms',
-        moduleIds: ['electrons'],
+        moduleIds: ['electrons', 'quantumNumbers'],
       },
       {
         id: 'ch6',

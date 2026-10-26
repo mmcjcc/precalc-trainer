@@ -178,6 +178,7 @@ function flowFor(props: FlowProps): ReactNode {
       if (instance.answer.type === 'geometry') assertGeometryQuestion(instance.answer.question)
       return <GeometryFlow {...props} />
     case 'periodic':
+    case 'quantumNumbers':
       return <PeriodicFlow {...props} />
     case 'nomenclature':
       return <NomenclatureFlow {...props} />

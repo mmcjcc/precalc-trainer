@@ -8,8 +8,8 @@ import { ERROR_PATTERNS } from '@/engine'
 import { NOT_MONSTERS, RARE, SPECIES, isMonster, speciesForEdition, speciesOf, variantIndex } from './species'
 
 const CATALOG = Object.keys(ERROR_PATTERNS)
-/** The chemistry modules' mistakes: significant figures, atoms, light, configurations, the table, nomenclature. */
-const CHEMISTRY = /^(sf|at|lt|ec|pt|nm)_/
+/** The chemistry modules' mistakes: significant figures, atoms, light, configurations, quantum numbers, the table, nomenclature. */
+const CHEMISTRY = /^(sf|at|lt|ec|pt|nm|qn)_/
 
 describe('the species table', () => {
   it('places every catalog id in exactly one species, or lists it as not a mistake', () => {

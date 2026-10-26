@@ -1543,6 +1543,98 @@ export const ERROR_PATTERNS: Record<ErrorPatternId, ErrorPatternInfo> = {
     lesson: 'Opposite angles are the pair made by two crossing lines. The angles in this line sit next to each other and form a straight line, so their measures add to 180.',
     example: 'Angle 8 and the angle beside it on the straight line are called vertical ✗ → the two angles add to 180',
   },
+  // --- quantum numbers (content/modules/quantumNumbers; chemistry chapter 5). No digits: an example
+  // must not be an answer a template can generate, and must not reuse a seed's numbers.
+  qn_l_equals_n: {
+    id: 'qn_l_equals_n',
+    title: 'That sublevel is too high for the shell',
+    lesson: 'The shape number has to stay smaller than the shell. A letter that would make them equal is not a real sublevel, and a list of shape numbers stops before the shell.',
+    example: 'a letter that needs the shape number to equal the shell ✗ → that sublevel is not real',
+  },
+  qn_ml_out_of_range: {
+    id: 'qn_ml_out_of_range',
+    title: 'That orientation is past the end',
+    lesson: 'Orientations run from the negative of the shape number, through the middle, to the positive of it. One step past either end is not an orientation that sublevel has.',
+    example: 'one step past either end ✗ → stop at the negative end and the positive end',
+  },
+  qn_ms_integer: {
+    id: 'qn_ms_integer',
+    title: 'Spin is a half, not a whole number',
+    lesson: 'The two spins are opposite halves. Zero, and the whole numbers one either side of zero, are not spins.',
+    example: 'zero or a whole number ✗ → the two opposite halves',
+  },
+  qn_n_zero: {
+    id: 'qn_n_zero',
+    title: 'Shells begin with the first one',
+    lesson: 'The shell number is a positive whole number. The first shell is the smallest, and there is no shell numbered zero.',
+    example: 'a shell numbered zero ✗ → shells begin with the first one',
+  },
+  qn_shell_orbitals_as_electrons: {
+    id: 'qn_shell_orbitals_as_electrons',
+    title: 'That count is the electrons, not the orbitals',
+    lesson: 'A shell holds twice as many electrons as orbitals. The question asked for the orbitals, and the electron count is the bigger one.',
+    example: 'the electron count where the orbitals were asked ✗ → count the orbitals',
+  },
+  qn_shell_electrons_as_orbitals: {
+    id: 'qn_shell_electrons_as_orbitals',
+    title: 'That count is the orbitals, not the electrons',
+    lesson: 'A shell holds twice as many electrons as orbitals. The question asked for the electrons, and the orbital count is the smaller one.',
+    example: 'the orbital count where the electrons were asked ✗ → count the electrons',
+  },
+  qn_sublevel_electrons_as_orbitals: {
+    id: 'qn_sublevel_electrons_as_orbitals',
+    title: 'That count is the orbitals in the sublevel',
+    lesson: 'Each orbital holds two electrons, so a sublevel holds twice as many electrons as it has orbitals. The question asked for the electrons.',
+    example: 'the orbitals where the electrons were asked ✗ → double the orbitals',
+  },
+  qn_ml_missing_zero: {
+    id: 'qn_ml_missing_zero',
+    title: 'The list skips the middle',
+    lesson: 'Orientations run from the negative end to the positive end, and the middle value is one of them. A list that jumps from the negative side to the positive side is missing it.',
+    example: 'the negative end and the positive end, with the middle left out ✗ → include the middle',
+  },
+  qn_ml_nonnegative: {
+    id: 'qn_ml_nonnegative',
+    title: 'The negative orientations are missing',
+    lesson: 'Orientations are not only the middle and the positive side. They also take every negative value down to the negative of the shape number.',
+    example: 'only the middle and the positive side ✗ → include the negative orientations',
+  },
+  qn_ml_as_l: {
+    id: 'qn_ml_as_l',
+    title: 'That number names the shape',
+    lesson: 'The shape number picks the sublevel. The orientation is a list of values, not that one number.',
+    example: 'the shape number where the orientations were asked ✗ → list the orientations',
+  },
+  qn_ml_as_n: {
+    id: 'qn_ml_as_n',
+    title: 'That number names the shell',
+    lesson: 'The shell number picks the energy level and the size. The orientation is a list of values, not the shell number.',
+    example: 'the shell number where the orientations were asked ✗ → list the orientations',
+  },
+  qn_dxy_dx2y2_swapped: {
+    id: 'qn_dxy_dx2y2_swapped',
+    title: 'Between the axes is not along the axes',
+    lesson: 'One d orbital sits between the x and y axes, and a different one sits along the x and y axes. Swapping those two puts the lobes in the wrong place.',
+    example: 'between the axes where the lobes lie along them ✗ → follow where the lobes sit',
+  },
+  qn_p_axis_mixed: {
+    id: 'qn_p_axis_mixed',
+    title: 'That p orbital is on another axis',
+    lesson: 'The three p orbitals each lie along one axis. The name has to match the axis in the question or the picture.',
+    example: 'the orbital on a different axis ✗ → the axis the lobes follow',
+  },
+  qn_same_spin: {
+    id: 'qn_same_spin',
+    title: 'The second electron has the opposite spin',
+    lesson: 'The two electrons in one orbital share the shell, the sublevel, and the orientation. Their spins are opposite, so the second electron is not a copy of the first.',
+    example: 'the same spin for both electrons in one orbital ✗ → the spins are opposite',
+  },
+  qn_same_four: {
+    id: 'qn_same_four',
+    title: 'One set belongs to one electron',
+    lesson: 'The Pauli exclusion principle says no two electrons in an atom have the same four quantum numbers. One exact set describes one electron, not two.',
+    example: 'two electrons with one set ✗ → one electron for that set',
+  },
   // --- periodic table (content/modules/periodic; chemistry chapter 6). Examples use Fr, Ra, Po, At, Rn, ---
   // which the templates never ask about, and they never use a bare answer the templates can generate.
   pt_trend_reversed: {

@@ -305,7 +305,7 @@ describe('Home: classes and units', () => {
     const linked = renderHome('/c/chemistry/ch5')
     expect(screen.getByRole('tab', { name: 'Chemistry', selected: true })).toBeTruthy()
     expect(screen.getByRole('button', { name: /Chapter 5/, pressed: true })).toBeTruthy()
-    expect(moduleTitles()).toEqual(['Electrons and light'])
+    expect(moduleTitles()).toEqual(['Electrons and light', 'Quantum numbers and orbitals'])
     expect(screen.queryByRole('heading', { name: 'Unit 1 review' })).toBeNull()
     expect(useStore.getState().settings.courseId).toBe('chemistry')
     expect(useStore.getState().settings.unitByCourse?.chemistry).toBe('ch5')
