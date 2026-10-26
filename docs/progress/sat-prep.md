@@ -23,38 +23,38 @@ The Digital SAT Math section tests four College Board content domains across 19 
    - Optional timer on `'sat'` (35 minutes for 22 problems, 19 minutes for 12, 13 minutes for 8) that shows elapsed/target time in `role="timer"` and never stops her.
    - End-of-set domain breakdown on `'sat'` showing problems, first-try rate, and time per domain, naming the weakest domain with a button to practice it (`/review/sat-<domain>`).
 
-### Complete SAT Math Skill Map (19 skills across 4 domains)
+### Complete SAT Math Skill Map (19 skills across 4 domains; 10 mapped after review)
 
 | Domain (Share) | Skill ID | Skill Title | Mapped Types (`moduleId` / `templateId`s) or Coming |
 | --- | --- | --- | --- |
-| **Algebra (35%)** | `alg.linear-eq-1v` | Linear equations in one variable | *Coming* (`[]`) |
-| **Algebra (35%)** | `alg.linear-functions` | Linear functions | `piecewiseRate`: `arc.rate`; `inverses`: `inv.linear`; `diffQuotient`: `dq.linear` |
-| **Algebra (35%)** | `alg.linear-eq-2v` | Linear equations in two variables | *Coming* (`[]`) |
-| **Algebra (35%)** | `alg.systems-linear` | Systems of two linear equations in two variables | *Coming* (`[]`) |
-| **Algebra (35%)** | `alg.linear-inequalities` | Linear inequalities in one or two variables | `numberLine`: `nl.read`; `inequalities`: `ineq.linear`, `ineq.distribute`, `ineq.fraction`, `ineq.compound` |
-| **Advanced Math (35%)** | `adv.equivalent-expressions` | Equivalent expressions | `composition`: `comp.expr`, `comp.decompose`; `diffQuotient`: `dq.quadratic`, `dq.rational`, `dq.radical`; `quadratics`: `cs.form`; `polyDivision`: `sd.table`, `sd.value`, `sd.factor`; `logForms`: `lf.value`, `lf.convert`, `lf.decimal`; `logProperties`: `lp.expand`, `lp.condense` |
-| **Advanced Math (35%)** | `adv.nonlinear-equations` | Nonlinear equations in one variable and systems of equations in two variables | `inverses`: `inv.cbrt-shift`, `inv.frac-linear`, `inv.rational`, `inv.mobius`; `polyDivision`: `sd.factor`; `polyZeros`: `pz.zeros`, `pz.rational`; `signCharts`: `sc.poly`, `sc.rational`, `sc.chart`; `expLogEquations`: `ee.exponential`, `ee.logarithmic`, `ee.quadratic` |
-| **Advanced Math (35%)** | `adv.nonlinear-functions` | Nonlinear functions (quadratic, exponential, polynomial, rational, radical, absolute value) | `graphFeatures`: `gf.features`; `domainRange`: `dr.domain`, `dr.range`; `composition`: `comp.expr`, `comp.value`, `comp.domain`, `comp.decompose`; `functionOps`: `ops.table`, `ops.graph`, `ops.formula`; `transformations`: `tr.describe`, `tr.point`, `tr.equation`; `piecewiseRate`: `pw.evaluate`, `pw.graph`, `pw.domain`, `pw.continuous`, `pw.write`, `arc.rate`; `evenOdd`: `evenOdd.poly`, `evenOdd.special`; `inverses`: `inv.cbrt-shift`, `inv.frac-linear`, `inv.rational`, `inv.mobius`, `inv.quadratic-not`; `quadratics`: `cs.form`, `cs.vertex`; `optimization`: `opt.wall`, `opt.pens`, `opt.numbers`, `opt.revenue`; `polyDivision`: `sd.value`; `polyZeros`: `pz.zeros`, `pz.end`, `pz.build`, `pz.rational`; `rationalFns`: `rf.features`, `rf.asymptote`, `rf.equation`; `expLogGraphs`: `eg.features`, `eg.match`, `eg.inverse`; `expModels`: `em.interest`, `em.halflife`, `em.growth` |
-| **Problem-Solving and Data Analysis (15%)** | `psda.ratios-rates` | Ratios, rates, proportional relationships and units | `piecewiseRate`: `arc.rate`; `angleMeasure`: `am.convert`; `geoRatios`: `gr.proportion`, `gr.polygons` |
-| **Problem-Solving and Data Analysis (15%)** | `psda.percentages` | Percentages | *Coming* (`[]`) |
-| **Problem-Solving and Data Analysis (15%)** | `psda.one-var-data` | One-variable data (distributions, center and spread) | *Coming* (`[]`) |
-| **Problem-Solving and Data Analysis (15%)** | `psda.two-var-data` | Two-variable data (models and scatterplots) | *Coming* (`[]`) |
-| **Problem-Solving and Data Analysis (15%)** | `psda.probability` | Probability and conditional probability | *Coming* (`[]`) |
-| **Problem-Solving and Data Analysis (15%)** | `psda.inference` | Inference from sample statistics and margin of error | *Coming* (`[]`) |
-| **Problem-Solving and Data Analysis (15%)** | `psda.claims` | Evaluating statistical claims (observational studies and experiments) | *Coming* (`[]`) |
-| **Geometry and Trigonometry (15%)** | `geo.area-volume` | Area and volume | *Coming* (`[]`) |
-| **Geometry and Trigonometry (15%)** | `geo.lines-angles-triangles` | Lines, angles and triangles | `geoSegments`: `gs.addition`, `gs.midpoint`, `gs.coord`; `geoAngles`: `ga.addition`, `ga.bisector`, `ga.pairs`, `ga.words`; `geoParallel`: `gl3.pairs`, `gl3.solve`, `gl3.converse`, `gl3.slopes`; `geoPolygonAngles`: `gpa.triangle`, `gpa.polygon`; `geoCongruence`: `gc.parts`, `gc.which`, `gc.solve`; `geoIsosceles`: `gi.solve`; `geoParallelograms`: `gq.props`, `gq.prove`, `gq.coords`; `geoSpecialQuads`: `gs.props`, `gs.classify`; `geoTrapezoids`: `gz.midseg`, `gz.isosceles`; `geoRatios`: `gr.polygons`; `geoSimilarTriangles`: `gt.prove`, `gt.solve`; `geoProportionalParts`: `gp.splitter`, `gp.bisector` |
-| **Geometry and Trigonometry (15%)** | `geo.right-triangles-trig` | Right triangles and trigonometry | `rightTriangle`: `rt.ratios`, `rt.special`, `rt.side`, `rt.angle`; `unitCircle`: `uc.exact`, `uc.point`, `uc.given`, `uc.solve`; `inverseTrig`: `it.evaluate`, `it.compose`; `geoRightSimilar`: `rs.mean`, `rs.altitude`; `geoPythagorean`: `py.side`, `py.classify`, `py.apply`; `geoSpecialRight`: `sp.special` |
-| **Geometry and Trigonometry (15%)** | `geo.circles` | Circles | `angleMeasure`: `am.convert`, `am.coterminal`, `am.reference`, `am.arc`; `unitCircle`: `uc.exact`, `uc.point` |
+| **Algebra (35%)** | `alg.linear-eq-1v` | Linear equations in one variable | *Coming* |
+| **Algebra (35%)** | `alg.linear-functions` | Linear functions | `geoParallel`: `gl3.slopes` |
+| **Algebra (35%)** | `alg.linear-eq-2v` | Linear equations in two variables | `geoParallel`: `gl3.slopes` |
+| **Algebra (35%)** | `alg.systems-linear` | Systems of two linear equations in two variables | *Coming* |
+| **Algebra (35%)** | `alg.linear-inequalities` | Linear inequalities in one or two variables | `inequalities`: `ineq.linear`, `ineq.distribute`, `ineq.fraction`, `ineq.compound` |
+| **Advanced Math (35%)** | `adv.equivalent-expressions` | Equivalent expressions | `composition`: `comp.expr`; `quadratics`: `cs.form` |
+| **Advanced Math (35%)** | `adv.nonlinear-equations` | Nonlinear equations in one variable and systems of equations in two variables | `polyZeros`: `pz.zeros`; `rationalFns`: `rf.equation` |
+| **Advanced Math (35%)** | `adv.nonlinear-functions` | Nonlinear functions (quadratic, exponential, polynomial, rational, radical, absolute value) | `graphFeatures`: `gf.features`; `composition`: `comp.value`; `functionOps`: `ops.table`, `ops.graph`, `ops.formula`; `transformations`: `tr.describe`, `tr.point`, `tr.equation`; `quadratics`: `cs.vertex`; `optimization`: `opt.wall`, `opt.pens`, `opt.numbers`, `opt.revenue` |
+| **Problem-Solving and Data Analysis (15%)** | `psda.ratios-rates` | Ratios, rates, proportional relationships and units | `geoRatios`: `gr.proportion` |
+| **Problem-Solving and Data Analysis (15%)** | `psda.percentages` | Percentages | *Coming* |
+| **Problem-Solving and Data Analysis (15%)** | `psda.one-var-data` | One-variable data (distributions, center and spread) | *Coming* |
+| **Problem-Solving and Data Analysis (15%)** | `psda.two-var-data` | Two-variable data (models and scatterplots) | *Coming* |
+| **Problem-Solving and Data Analysis (15%)** | `psda.probability` | Probability and conditional probability | *Coming* |
+| **Problem-Solving and Data Analysis (15%)** | `psda.inference` | Inference from sample statistics and margin of error | *Coming* |
+| **Problem-Solving and Data Analysis (15%)** | `psda.claims` | Evaluating statistical claims (observational studies and experiments) | *Coming* |
+| **Geometry and Trigonometry (15%)** | `geo.area-volume` | Area and volume | *Coming* |
+| **Geometry and Trigonometry (15%)** | `geo.lines-angles-triangles` | Lines, angles and triangles | `geoSegments`: `gs.addition`, `gs.midpoint`, `gs.coord`; `geoAngles`: `ga.addition`, `ga.bisector`, `ga.pairs`, `ga.words`; `geoParallel`: `gl3.pairs`, `gl3.solve`; `geoPolygonAngles`: `gpa.triangle`, `gpa.polygon`; `geoCongruence`: `gc.solve`; `geoIsosceles`: `gi.solve`; `geoRatios`: `gr.polygons`; `geoSimilarTriangles`: `gt.solve`; `geoProportionalParts`: `gp.splitter`, `gp.bisector` |
+| **Geometry and Trigonometry (15%)** | `geo.right-triangles-trig` | Right triangles and trigonometry | `rightTriangle`: `rt.ratios`, `rt.special`, `rt.side`, `rt.angle`; `unitCircle`: `uc.exact`; `geoRightSimilar`: `rs.altitude`; `geoPythagorean`: `py.side`, `py.classify`, `py.apply`; `geoSpecialRight`: `sp.special` |
+| **Geometry and Trigonometry (15%)** | `geo.circles` | Circles | `angleMeasure`: `am.convert`, `am.arc` |
 
 ## Design decisions for review
 
-1. **Strict template mapping**:
-   - `alg.linear-eq-1v`, `alg.linear-eq-2v`, and `alg.systems-linear` remain `[]` (*Coming*) because we do not yet have standalone one-variable linear equation, standard-form two-variable linear equation, or $2 \times 2$ linear systems templates.
-   - All six data/statistics/probability skills (`psda.percentages`, `psda.one-var-data`, `psda.two-var-data`, `psda.probability`, `psda.inference`, `psda.claims`) and `geo.area-volume` are marked `[]` (*Coming*).
-   - `geo.circles` maps to `angleMeasure` (`am.convert`, `am.coterminal`, `am.reference`, `am.arc`) and `unitCircle` (`uc.exact`, `uc.point`) for radian measure, arc length, sector area, and unit-circle coordinates.
+1. **Strict template mapping** (tightened in review, see below):
+   - `alg.linear-eq-1v` and `alg.systems-linear` remain *Coming*: no template asks for a one-variable linear equation or a 2 × 2 linear system.
+   - All six data, statistics and probability skills past ratios, and `geo.area-volume`, are *Coming*.
+   - `geo.circles` maps only to `angleMeasure` `am.convert` and `am.arc` (radians, arc length and sector area); circle equations come later.
 2. **Weighted domain sampling (`src/pages/review/buildReview.ts`)**:
-   - When a review has weighted topics with `domainId`s (the mixed `'sat'` review), `buildReviewSet` first guarantees at least 1 problem from each domain that has mapped templates (4 domains), then allocates the remaining `count - 4` problems using residual weights `Math.max(0, count * share - 1)` so the expected total count per domain equals `count * share` (35% / 35% / 15% / 15%). Unweighted reviews (`'unit1'`) continue through the exact existing code path untouched.
+   - When a review's topics carry weights (the SAT reviews), each domain gets exactly its share of the count: at least 1, the rest by largest remainder (8 → 3 / 3 / 1 / 1, 12 → 4 / 4 / 2 / 2, 22 → 8 / 8 / 3 / 3). Inside a domain, types are drawn by weak spots without repeating a type until the domain's types are used up. Unweighted reviews (`'unit1'`) keep the existing code path untouched.
 3. **Weakest domain tie-breaking (`src/pages/review/session.ts`)**:
    - `weakestSatDomain` ranks attempted domains by lowest average `firstTryRate` first, breaking ties by highest average seconds per problem (`totalSecs / attempted`).
 4. **Unit switcher on SAT Math Prep**:
@@ -68,12 +68,21 @@ The Digital SAT Math section tests four College Board content domains across 19 
 - Updated `src/session/buildSet.ts`, `src/components/path/pathModel.ts`, `src/session/quests.ts`, `src/pages/Welcome.tsx`, and `src/pages/Home.tsx` to support classes whose units have `moduleIds: []` and render the SAT Math Prep experience on Home.
 - Added and updated colocated tests across `skills.test.ts`, `courses.test.ts`, `buildReview.test.ts`, `Review.test.tsx`, `buildSet.test.ts`, `quests.test.ts`, `UnitPath.test.tsx`, `Welcome.test.tsx`, `Progress.test.tsx`, `StoreEdition.test.tsx`, and `Home.test.tsx`.
 
+## Review 2026-10-25 (Claude)
+
+- **Skill map tightened (commit 7107ec1):** a type counts only when what it asks is what the SAT skill tests. Dropped from the first map: difference quotients, inverses, log forms and properties, sign charts, exponential and log equations, domain and range, piecewise, even and odd, end behaviour, exponential models, number-line reading, quadrilateral proofs, unit-circle points beyond exact values, inverse trig, and `arc.rate` / `am.convert` as ratios. 10 of 19 skills are mapped.
+- **Domain counts made exact:** on the phone an 8-problem set came out Algebra 2, Advanced Math 4, Data 1, Geometry 1, with "A pen against a wall" twice, because the extra slots were drawn at random around the target. Now the counts are fixed by largest remainder and a domain repeats a type only after using all of its types (test over 100 seeds for 8, 12 and 22).
+- **Copy:** the header's run-on sentence is split ("About three quarters of the questions are multiple choice and a quarter are typed answers. They cover four content domains: …"); the timer line no longer repeats itself ("35 minutes for 22 problems, as on the test." / "13 minutes for 8 problems, scaled from the test's 35 minutes for 22.").
+- **Phone check (store test build, Pixel emulator):** the SAT class on Home with the header, coverage line, practice-set card and four domain cards ("Practiced" / "Not yet" / "Coming"); an 8-problem timed set opens problem 1 with the timer ("0:02 / 13:00 … never stops you"); skipping through reaches "Results by domain" with problems, first-try rate, skipped, time, and "Weakest domain" with its practice button.
+- Kept as built: "Start SAT practice set" is outlined on a phone because a phone's Home has one filled action ("Start a set"); timed SAT sets stay out of the mastery bars, as the timed review always has.
+
 ## Not done
 
-- **10 of 19 SAT Math skills** are marked `"Coming"` (`[]`) and await dedicated math modules in future phases:
-  - Algebra: `Linear equations in one variable`, `Linear equations in two variables`, `Systems of two linear equations in two variables`
+- **9 of 19 SAT Math skills** are *Coming* and await new content in later phases:
+  - Algebra: `Linear equations in one variable`, `Systems of two linear equations in two variables`
   - Problem-Solving and Data Analysis: `Percentages`, `One-variable data`, `Two-variable data`, `Probability and conditional probability`, `Inference from sample statistics and margin of error`, `Evaluating statistical claims`
   - Geometry and Trigonometry: `Area and volume`
+- SAT-style multiple-choice and typed-answer items; for now every problem opens in its module's own step flow.
 - Adaptive two-module routing and score prediction are intentionally excluded.
 
 ## Verification

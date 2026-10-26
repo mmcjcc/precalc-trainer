@@ -379,8 +379,11 @@ function SatPracticeSetCard({ primary }: { primary: boolean }) {
             Optional timer
           </p>
           <p id={timedDescId} className="mt-0.5 text-sm text-navy/80">
-            {targetMins} minutes for {count} problems ({SAT_FULL_MODULE_MINUTES} minutes for {SAT_FULL_MODULE_COUNT}{' '}
-            problems, scaled for fewer). The timer only shows the time; it never stops you.
+            {targetMins} minutes for {count} problems
+            {count < SAT_FULL_MODULE_COUNT
+              ? `, scaled from the test's ${SAT_FULL_MODULE_MINUTES} minutes for ${SAT_FULL_MODULE_COUNT}`
+              : ', as on the test'}
+            . The timer only shows the time; it never stops you.
           </p>
         </div>
         <button
@@ -507,9 +510,10 @@ function SatPrepSection({ selectedUnitId, primary }: { selectedUnitId: string; p
         </h2>
         <p className="text-sm text-navy/80">
           The digital SAT&apos;s math section is 44 questions in 70 minutes, in two adaptive modules of 22 questions and
-          35 minutes each, with a Desmos calculator and a reference sheet throughout. About three quarters are multiple
-          choice and a quarter are typed answers across four content domains: Algebra (about 35%), Advanced Math (about
-          35%), Problem-Solving and Data Analysis (about 15%), and Geometry and Trigonometry (about 15%).
+          35 minutes each, with a Desmos calculator and a reference sheet throughout. About three quarters of the
+          questions are multiple choice and a quarter are typed answers. They cover four content domains: Algebra (about
+          35%), Advanced Math (about 35%), Problem-Solving and Data Analysis (about 15%), and Geometry and Trigonometry
+          (about 15%).
         </p>
         <p className="text-sm font-semibold text-navy" data-sat-coverage="">
           {coverageLine}.

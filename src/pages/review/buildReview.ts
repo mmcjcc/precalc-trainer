@@ -82,11 +82,51 @@ function buildTopicGroups(topics: readonly ResolvedTopic[]): TopicGroup[] {
 }
 
 /**
+ * How many problems each weighted group gets: its share of the count, at least one each, the rest by largest
+ * remainder (ties to the earlier group), so 8 problems at 35 / 35 / 15 / 15 are always 3 / 3 / 1 / 1 and 22 are
+ * 8 / 8 / 3 / 3. With fewer problems than groups, that many groups are drawn by weight, one problem each.
+ * Review 2026-10-25: drawing the counts at random gave an 8-problem SAT set 2 / 4 / 1 / 1.
+ */
+function groupQuotas(rng: Rng, groups: readonly TopicGroup[], count: number): number[] {
+  const quota = groups.map(() => 0)
+  if (count < groups.length) {
+    let pool = groups.map((g, i) => ({ g, i }))
+    for (let k = 0; k < count; k++) {
+      const { picked, rest } = takeOne(rng, pool, (x) => x.g.weight)
+      pool = rest
+      quota[picked.i] = 1
+    }
+    return quota
+  }
+  const total = groups.reduce((s, g) => s + g.weight, 0) || 1
+  const ideal = groups.map((g) => (count * g.weight) / total)
+  ideal.forEach((x, i) => (quota[i] = Math.max(1, Math.floor(x))))
+  let sum = quota.reduce((s, q) => s + q, 0)
+  const pick = (better: (a: number, b: number) => boolean, eligible: (i: number) => boolean) => {
+    let best = -1
+    for (let i = 0; i < quota.length; i++) {
+      if (eligible(i) && (best < 0 || better(ideal[i]! - quota[i]!, ideal[best]! - quota[best]!))) best = i
+    }
+    return best
+  }
+  while (sum < count) {
+    const i = pick((a, b) => a > b, () => true)
+    quota[i] = quota[i]! + 1
+    sum += 1
+  }
+  while (sum > count) {
+    const i = pick((a, b) => a < b, (j) => quota[j]! > 1)
+    quota[i] = quota[i]! - 1
+    sum -= 1
+  }
+  return quota
+}
+
+/**
  * Cover as many topics as the count allows (every topic, when it fits), one template each,
  * weighted inside the topic. Fill the remaining slots with replacement, weighted across templates.
- * When topics carry explicit weights (such as the SAT domain shares 35 / 35 / 15 / 15), cover each
- * weighted domain/topic group first, then draw the remaining slots so the expected count matches each
- * group's target share while favoring weak spots inside each group.
+ * When topics carry explicit weights (such as the SAT domain shares 35 / 35 / 15 / 15), each weighted
+ * domain/topic group gets its share of the count (groupQuotas), drawn inside the group by weak spots.
  * Then shuffle. Problem seeds come from the review seed and the final position.
  */
 export function buildReviewSet(reviewId: string, opts: { seed: number; events: Ev[]; count?: number }): BuiltReview {
@@ -121,31 +161,18 @@ export function buildReviewSet(reviewId: string, opts: { seed: number; events: E
       drafts.push({ topicId: topic.id, moduleId: topic.moduleId, templateId: template.id })
     }
   } else {
-    const groups = buildTopicGroups(topics)
-    const totalGroupWeight = groups.reduce((s, g) => s + g.weight, 0) || 1
-    let pool = groups.slice()
-    const cover = Math.min(count, pool.length)
-    for (let i = 0; i < cover; i++) {
-      const { picked, rest } = takeOne(rng, pool, (g) => g.weight)
-      pool = rest
-      const item = takeOne(rng, picked.items, (it) => it.baseWeight * w(it.templateId)).picked
-      drafts.push({ topicId: item.topic.id, moduleId: item.topic.moduleId, templateId: item.templateId })
-    }
-
-    const residualWeights = groups.map((g) => {
-      const share = g.weight / totalGroupWeight
-      return Math.max(0, count * share - 1)
+    const groups = buildTopicGroups(topics).filter((g) => g.items.length > 0)
+    const quota = groupQuotas(rng, groups, count)
+    groups.forEach((group, g) => {
+      // Within a group, no type twice until each of its types has had a turn.
+      let pool = group.items.slice()
+      for (let k = 0; k < quota[g]!; k++) {
+        if (pool.length === 0) pool = group.items.slice()
+        const { picked: item, rest } = takeOne(rng, pool, (it) => it.baseWeight * w(it.templateId))
+        pool = rest
+        drafts.push({ topicId: item.topic.id, moduleId: item.topic.moduleId, templateId: item.templateId })
+      }
     })
-    const residualSum = residualWeights.reduce((s, r) => s + r, 0)
-    while (drafts.length < count) {
-      const groupIdx = pickIndex(
-        rng,
-        residualSum > 0 ? residualWeights : groups.map((g) => g.weight),
-      )
-      const group = groups[groupIdx]!
-      const item = takeOne(rng, group.items, (it) => it.baseWeight * w(it.templateId)).picked
-      drafts.push({ topicId: item.topic.id, moduleId: item.topic.moduleId, templateId: item.templateId })
-    }
   }
 
   const problems: ReviewProblem[] = rng.shuffle(drafts).map((draft, i) => ({

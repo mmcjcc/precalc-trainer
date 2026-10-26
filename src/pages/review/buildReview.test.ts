@@ -101,25 +101,27 @@ describe('buildReviewSet', () => {
       }
     }
 
-    // Over many seeds for 22 problems, each domain's average count is within a few problems of its 35/35/15/15 target.
-    const seeds = 200
-    const totals: Record<SatDomainId, number> = {
-      algebra: 0,
-      'advanced-math': 0,
-      'data-analysis': 0,
-      'geometry-trig': 0,
+    // Every set has each domain's share exactly (largest remainder), whatever the seed: review 2026-10-25 saw an
+    // 8-problem set come out 2 / 4 / 1 / 1. Inside a domain no type comes twice while another of its types is unused.
+    const expected: Record<number, Record<SatDomainId, number>> = {
+      8: { algebra: 3, 'advanced-math': 3, 'data-analysis': 1, 'geometry-trig': 1 },
+      12: { algebra: 4, 'advanced-math': 4, 'data-analysis': 2, 'geometry-trig': 2 },
+      22: { algebra: 8, 'advanced-math': 8, 'data-analysis': 3, 'geometry-trig': 3 },
     }
-    for (let seed = 1; seed <= seeds; seed++) {
-      const set = buildReviewSet('sat', { count: 22, seed, events: [] })
-      for (const p of set.problems) {
-        const domainId = p.topicId.split(':')[0] as SatDomainId
-        totals[domainId] += 1
+    for (const count of [8, 12, 22]) {
+      for (let seed = 1; seed <= 100; seed++) {
+        const set = buildReviewSet('sat', { count, seed, events: [] })
+        const byDomain = new Map<SatDomainId, string[]>()
+        for (const p of set.problems) {
+          const domainId = p.topicId.split(':')[0] as SatDomainId
+          byDomain.set(domainId, [...(byDomain.get(domainId) ?? []), p.templateId])
+        }
+        for (const domain of SAT_DOMAINS) {
+          const ids = byDomain.get(domain.id) ?? []
+          expect(ids.length).toBe(expected[count]![domain.id])
+          expect(new Set(ids).size).toBe(Math.min(ids.length, allowedByDomain.get(domain.id)!.size))
+        }
       }
-    }
-    for (const domain of SAT_DOMAINS) {
-      const avg = totals[domain.id] / seeds
-      const target = 22 * domain.share
-      expect(Math.abs(avg - target)).toBeLessThan(1.5)
     }
   })
 
