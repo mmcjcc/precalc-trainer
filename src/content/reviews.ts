@@ -93,10 +93,13 @@ export function satReviews(): ReviewDef[] {
       defaultCount: SAT_DOMAIN_REVIEW_COUNT,
       satKind: 'sat-domain',
       domainId: domain.id,
+      // Weighted by its types, so the set takes the weighted path in buildReviewSet: every type of the domain once
+      // before any comes again (review 2026-10-25: the with-replacement fill gave one type 3 of 8 problems).
       topics: refs.map((ref) => ({
         id: ref.moduleId,
         moduleId: ref.moduleId as ModuleId,
         templateIds: ref.templateIds,
+        weight: ref.templateIds.length,
         domainId: domain.id,
       })),
     })

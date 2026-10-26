@@ -134,6 +134,11 @@ describe('buildReviewSet', () => {
         expect(allowed.has(p.templateId)).toBe(true)
         expect(getTemplate(p.moduleId as ModuleId, p.templateId).id).toBe(p.templateId)
       }
+      // Every type of the domain once before any type comes again.
+      for (let seed = 1; seed <= 50; seed++) {
+        const ids = buildReviewSet(domain.reviewId, { seed, events: [] }).problems.map((p) => p.templateId)
+        expect(new Set(ids).size).toBe(Math.min(8, allowed.size))
+      }
     }
   })
 })
