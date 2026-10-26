@@ -159,13 +159,13 @@ describe('SAT practice set review', () => {
     expect(screen.getByRole('radio', { name: '8' })).toBeTruthy()
     expect(screen.getByRole('radio', { name: '12' })).toBeTruthy()
     expect(screen.getByRole('radio', { name: '22', checked: true })).toBeTruthy()
-    expect(screen.getByText(/35 minutes for 22 problems/)).toBeTruthy()
+    expect(screen.getByText(/35 minutes for 22 problems, as on the test\. The timer only shows/)).toBeTruthy()
 
     fireEvent.click(screen.getByRole('radio', { name: '12' }))
     expect(screen.getByText(/19 minutes for 12 problems/)).toBeTruthy()
 
     fireEvent.click(screen.getByRole('radio', { name: '8' }))
-    expect(screen.getByText(/13 minutes for 8 problems/)).toBeTruthy()
+    expect(screen.getByText(/13 minutes for 8 problems, scaled from the test's 35 minutes for 22\. The timer/)).toBeTruthy()
     view.unmount()
 
     // Seed a timed 8-problem SAT session already past its 13-minute (780s) target, opening on numberLine.

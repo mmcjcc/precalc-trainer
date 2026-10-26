@@ -176,7 +176,7 @@ function StartScreen({ review, onStart }: { review: ReviewDef; onStart: (session
             </p>
             <p id="review-timed-desc" className="mt-0.5 text-sm text-navy/80">
               {isSat
-                ? `${targetMins} minutes for ${count} problems (${SAT_FULL_MODULE_MINUTES} minutes for ${SAT_FULL_MODULE_COUNT} problems, scaled for fewer). The timer only shows the time; it never stops you.`
+                ? `${targetMins} minutes for ${count} problems${count < SAT_FULL_MODULE_COUNT ? `, scaled from the test's ${SAT_FULL_MODULE_MINUTES} minutes for ${SAT_FULL_MODULE_COUNT}` : ', as on the test'}. The timer only shows the time; it never stops you.`
                 : 'Turns on test mode for these problems: a timer you can pause, and the set stays out of your mastery bars. Same switch as Settings.'}
             </p>
           </div>
