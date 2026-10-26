@@ -75,6 +75,12 @@ export const SAT_DOMAINS: readonly SatDomainDef[] = [
   },
 ]
 
+/**
+ * The College Board skills of the digital SAT Math section and the app's problem types that practise them. Review
+ * 2026-10-23: only what the SAT tests counts. Precalculus-only types are left out even where they touch a skill: logs
+ * and log models, inverse functions, the difference quotient, even and odd functions, sign charts, the rational root
+ * theorem, synthetic division, inverse trig and proofs. A skill no type covers is "Coming".
+ */
 export const SAT_SKILLS: readonly SatSkillDef[] = [
   // Algebra (~35%)
   {
@@ -87,17 +93,18 @@ export const SAT_SKILLS: readonly SatSkillDef[] = [
     id: 'alg.linear-functions',
     domainId: 'algebra',
     title: 'Linear functions',
+    // Slopes of parallel and perpendicular lines, equations of lines.
     types: [
-      { moduleId: 'piecewiseRate', templateIds: ['arc.rate'] },
-      { moduleId: 'inverses', templateIds: ['inv.linear'] },
-      { moduleId: 'diffQuotient', templateIds: ['dq.linear'] },
+      { moduleId: 'geoParallel', templateIds: ['gl3.slopes'] },
     ],
   },
   {
     id: 'alg.linear-eq-2v',
     domainId: 'algebra',
     title: 'Linear equations in two variables',
-    types: [],
+    types: [
+      { moduleId: 'geoParallel', templateIds: ['gl3.slopes'] },
+    ],
   },
   {
     id: 'alg.systems-linear',
@@ -110,11 +117,7 @@ export const SAT_SKILLS: readonly SatSkillDef[] = [
     domainId: 'algebra',
     title: 'Linear inequalities in one or two variables',
     types: [
-      { moduleId: 'numberLine', templateIds: ['nl.read'] },
-      {
-        moduleId: 'inequalities',
-        templateIds: ['ineq.linear', 'ineq.distribute', 'ineq.fraction', 'ineq.compound'],
-      },
+      { moduleId: 'inequalities', templateIds: ['ineq.linear', 'ineq.distribute', 'ineq.fraction', 'ineq.compound'] },
     ],
   },
 
@@ -124,12 +127,8 @@ export const SAT_SKILLS: readonly SatSkillDef[] = [
     domainId: 'advanced-math',
     title: 'Equivalent expressions',
     types: [
-      { moduleId: 'composition', templateIds: ['comp.expr', 'comp.decompose'] },
-      { moduleId: 'diffQuotient', templateIds: ['dq.quadratic', 'dq.rational', 'dq.radical'] },
+      { moduleId: 'composition', templateIds: ['comp.expr'] },
       { moduleId: 'quadratics', templateIds: ['cs.form'] },
-      { moduleId: 'polyDivision', templateIds: ['sd.table', 'sd.value', 'sd.factor'] },
-      { moduleId: 'logForms', templateIds: ['lf.value', 'lf.convert', 'lf.decimal'] },
-      { moduleId: 'logProperties', templateIds: ['lp.expand', 'lp.condense'] },
     ],
   },
   {
@@ -137,11 +136,8 @@ export const SAT_SKILLS: readonly SatSkillDef[] = [
     domainId: 'advanced-math',
     title: 'Nonlinear equations in one variable and systems of equations in two variables',
     types: [
-      { moduleId: 'inverses', templateIds: ['inv.cbrt-shift', 'inv.frac-linear', 'inv.rational', 'inv.mobius'] },
-      { moduleId: 'polyDivision', templateIds: ['sd.factor'] },
-      { moduleId: 'polyZeros', templateIds: ['pz.zeros', 'pz.rational'] },
-      { moduleId: 'signCharts', templateIds: ['sc.poly', 'sc.rational', 'sc.chart'] },
-      { moduleId: 'expLogEquations', templateIds: ['ee.exponential', 'ee.logarithmic', 'ee.quadratic'] },
+      { moduleId: 'polyZeros', templateIds: ['pz.zeros'] },
+      { moduleId: 'rationalFns', templateIds: ['rf.equation'] },
     ],
   },
   {
@@ -150,26 +146,11 @@ export const SAT_SKILLS: readonly SatSkillDef[] = [
     title: 'Nonlinear functions (quadratic, exponential, polynomial, rational, radical, absolute value)',
     types: [
       { moduleId: 'graphFeatures', templateIds: ['gf.features'] },
-      { moduleId: 'domainRange', templateIds: ['dr.domain', 'dr.range'] },
-      { moduleId: 'composition', templateIds: ['comp.expr', 'comp.value', 'comp.domain', 'comp.decompose'] },
+      { moduleId: 'composition', templateIds: ['comp.value'] },
       { moduleId: 'functionOps', templateIds: ['ops.table', 'ops.graph', 'ops.formula'] },
       { moduleId: 'transformations', templateIds: ['tr.describe', 'tr.point', 'tr.equation'] },
-      {
-        moduleId: 'piecewiseRate',
-        templateIds: ['pw.evaluate', 'pw.graph', 'pw.domain', 'pw.continuous', 'pw.write', 'arc.rate'],
-      },
-      { moduleId: 'evenOdd', templateIds: ['evenOdd.poly', 'evenOdd.special'] },
-      {
-        moduleId: 'inverses',
-        templateIds: ['inv.cbrt-shift', 'inv.frac-linear', 'inv.rational', 'inv.mobius', 'inv.quadratic-not'],
-      },
-      { moduleId: 'quadratics', templateIds: ['cs.form', 'cs.vertex'] },
+      { moduleId: 'quadratics', templateIds: ['cs.vertex'] },
       { moduleId: 'optimization', templateIds: ['opt.wall', 'opt.pens', 'opt.numbers', 'opt.revenue'] },
-      { moduleId: 'polyDivision', templateIds: ['sd.value'] },
-      { moduleId: 'polyZeros', templateIds: ['pz.zeros', 'pz.end', 'pz.build', 'pz.rational'] },
-      { moduleId: 'rationalFns', templateIds: ['rf.features', 'rf.asymptote', 'rf.equation'] },
-      { moduleId: 'expLogGraphs', templateIds: ['eg.features', 'eg.match', 'eg.inverse'] },
-      { moduleId: 'expModels', templateIds: ['em.interest', 'em.halflife', 'em.growth'] },
     ],
   },
 
@@ -179,9 +160,7 @@ export const SAT_SKILLS: readonly SatSkillDef[] = [
     domainId: 'data-analysis',
     title: 'Ratios, rates, proportional relationships and units',
     types: [
-      { moduleId: 'piecewiseRate', templateIds: ['arc.rate'] },
-      { moduleId: 'angleMeasure', templateIds: ['am.convert'] },
-      { moduleId: 'geoRatios', templateIds: ['gr.proportion', 'gr.polygons'] },
+      { moduleId: 'geoRatios', templateIds: ['gr.proportion'] },
     ],
   },
   {
@@ -235,15 +214,12 @@ export const SAT_SKILLS: readonly SatSkillDef[] = [
     types: [
       { moduleId: 'geoSegments', templateIds: ['gs.addition', 'gs.midpoint', 'gs.coord'] },
       { moduleId: 'geoAngles', templateIds: ['ga.addition', 'ga.bisector', 'ga.pairs', 'ga.words'] },
-      { moduleId: 'geoParallel', templateIds: ['gl3.pairs', 'gl3.solve', 'gl3.converse', 'gl3.slopes'] },
+      { moduleId: 'geoParallel', templateIds: ['gl3.pairs', 'gl3.solve'] },
       { moduleId: 'geoPolygonAngles', templateIds: ['gpa.triangle', 'gpa.polygon'] },
-      { moduleId: 'geoCongruence', templateIds: ['gc.parts', 'gc.which', 'gc.solve'] },
+      { moduleId: 'geoCongruence', templateIds: ['gc.solve'] },
       { moduleId: 'geoIsosceles', templateIds: ['gi.solve'] },
-      { moduleId: 'geoParallelograms', templateIds: ['gq.props', 'gq.prove', 'gq.coords'] },
-      { moduleId: 'geoSpecialQuads', templateIds: ['gs.props', 'gs.classify'] },
-      { moduleId: 'geoTrapezoids', templateIds: ['gz.midseg', 'gz.isosceles'] },
       { moduleId: 'geoRatios', templateIds: ['gr.polygons'] },
-      { moduleId: 'geoSimilarTriangles', templateIds: ['gt.prove', 'gt.solve'] },
+      { moduleId: 'geoSimilarTriangles', templateIds: ['gt.solve'] },
       { moduleId: 'geoProportionalParts', templateIds: ['gp.splitter', 'gp.bisector'] },
     ],
   },
@@ -253,9 +229,8 @@ export const SAT_SKILLS: readonly SatSkillDef[] = [
     title: 'Right triangles and trigonometry',
     types: [
       { moduleId: 'rightTriangle', templateIds: ['rt.ratios', 'rt.special', 'rt.side', 'rt.angle'] },
-      { moduleId: 'unitCircle', templateIds: ['uc.exact', 'uc.point', 'uc.given', 'uc.solve'] },
-      { moduleId: 'inverseTrig', templateIds: ['it.evaluate', 'it.compose'] },
-      { moduleId: 'geoRightSimilar', templateIds: ['rs.mean', 'rs.altitude'] },
+      { moduleId: 'unitCircle', templateIds: ['uc.exact'] },
+      { moduleId: 'geoRightSimilar', templateIds: ['rs.altitude'] },
       { moduleId: 'geoPythagorean', templateIds: ['py.side', 'py.classify', 'py.apply'] },
       { moduleId: 'geoSpecialRight', templateIds: ['sp.special'] },
     ],
@@ -264,9 +239,9 @@ export const SAT_SKILLS: readonly SatSkillDef[] = [
     id: 'geo.circles',
     domainId: 'geometry-trig',
     title: 'Circles',
+    // Radians and arc length; circle equations and sector area are still to come.
     types: [
-      { moduleId: 'angleMeasure', templateIds: ['am.convert', 'am.coterminal', 'am.reference', 'am.arc'] },
-      { moduleId: 'unitCircle', templateIds: ['uc.exact', 'uc.point'] },
+      { moduleId: 'angleMeasure', templateIds: ['am.convert', 'am.arc'] },
     ],
   },
 ]

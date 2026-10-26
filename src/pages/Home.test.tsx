@@ -392,7 +392,7 @@ describe('Home: classes and units', () => {
     expect(header.textContent).toMatch(/Advanced Math \(about 35%\)/)
     expect(header.textContent).toMatch(/Problem-Solving and Data Analysis \(about 15%\)/)
     expect(header.textContent).toMatch(/Geometry and Trigonometry \(about 15%\)/)
-    expect(header.textContent).toMatch(/9 of 19 skills so far; more are coming/)
+    expect(header.textContent).toMatch(/10 of 19 skills so far; more are coming/)
     expect(header.textContent).not.toMatch(/predicted score|score prediction|200.*800/i)
 
     const practiceSetHeading = screen.getByRole('heading', { name: 'SAT practice set' })

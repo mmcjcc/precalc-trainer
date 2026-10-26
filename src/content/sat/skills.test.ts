@@ -85,14 +85,14 @@ describe('SAT skill map', () => {
   it('counts coverage per domain and overall honestly', () => {
     const cov = satCoverage()
     expect(cov.total).toBe(19)
-    expect(cov.covered).toBe(9)
+    expect(cov.covered).toBe(10)
     expect(cov.byDomain).toEqual({
-      algebra: { covered: 2, total: 5 },
+      algebra: { covered: 3, total: 5 },
       'advanced-math': { covered: 3, total: 3 },
       'data-analysis': { covered: 1, total: 7 },
       'geometry-trig': { covered: 3, total: 4 },
     })
-    expect(satCoverageSummary()).toBe('9 of 19 skills so far; more are coming')
+    expect(satCoverageSummary()).toBe('10 of 19 skills so far; more are coming')
 
     for (const domain of SAT_DOMAINS) {
       expect(skillsInDomain(domain.id).length).toBe(cov.byDomain[domain.id].total)
