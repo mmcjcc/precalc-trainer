@@ -735,8 +735,8 @@ export function useMastery(skill: string) {
 
 export function useModuleMastery(skills: string[]) {
   const events = useEvents()
-  const key = skills.join(' ')
-  return useMemo(() => moduleMastery(events, key ? key.split(' ') : []), [events, key])
+  const key = skills.join('\0')
+  return useMemo(() => moduleMastery(events, key ? key.split('\0') : []), [events, key])
 }
 
 export function usePatternCounts(now?: number) {

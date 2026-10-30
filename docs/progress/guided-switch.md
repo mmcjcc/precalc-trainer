@@ -99,3 +99,15 @@ Changed: `src/engine/logs/lineSlips.ts` (+ `logRewriteSlips`), `src/engine/logs/
 InequalityFlow, QuadraticsFlow, InverseFlow, DiffQuotientFlow, EvenOddFlow, GuidedMode.test}.tsx`.
 Unchanged on purpose: `src/problem/lineCards.ts`, `src/pages/flows/ProblemFrame.tsx`,
 `src/components/PageLayout.tsx`, `src/pages/flows/TabletLayout.tsx`, `src/components/scratch/`.
+
+## Review 2026-10-30 (Claude)
+
+- Checked live in the browser (desktop 1900x1050 and phone 375): on 4x + 8 >= 24 the cards were the true next line
+  against the two named traps, and the reviewer picked both traps before the right card - each was rejected as
+  exactly its mistake (step_rejected via card), the right pick was accepted into her work (step_accepted via card),
+  and the next line's cards followed. Flipping Guide me off mid-problem brought the typing composer back with her
+  lines kept; the setting persisted across a viewport change.
+- GuidedMode.test and DesktopProblem.test flaked once under 3-worker load and passed alone and in the next full run;
+  nothing changed.
+- Shipped with the desktop-problem build; the file boundary between the two builds held (only store/types.ts was
+  touched by both, and it merged clean).

@@ -109,3 +109,17 @@ On a desktop window (`1900×1050`), the problem screen was constrained to a narr
 - `src/problem/workedExample.test.ts`
 - `src/store/types.ts`
 - `docs/progress/desk-problem.md`
+
+## Review 2026-10-30 (Claude)
+
+- Checked live: at 1900x1050 the problem page spreads with Scratch and Example docked beside her work; at 1280x800
+  and 375 nothing moved. The worked inequality example's math was verified by hand (-5x - 8 < -33 -> -5x < -25 ->
+  x > 5, flip on dividing by a negative), labelled "Similar problem - not your numbers", revealed line by line with
+  the module's own reasons, and it logged example_viewed without touching the attempt. On the phone it behaves like
+  the other tool sheets (one at a time).
+- Fixed in review: workedExample.test probed graphFeatures/gf.read, a template id that does not exist (gf.features
+  is the real one) - the only failure in the merged tree's full run (6464 tests).
+- Noted, accepted: the expLogEquations walk has no solved() gate; it instead requires walked lines plus the final
+  answer grading correct, and the per-type walk tests pin completion.
+- Unrelated cleanup in the same pass: the two raw NUL bytes in src/store/index.ts string literals became the
+  equivalent escape, so grep stops treating the store as a binary file.

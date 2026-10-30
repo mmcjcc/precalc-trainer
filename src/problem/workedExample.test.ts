@@ -91,7 +91,7 @@ describe('workedExample coverage and honesty rules', () => {
       ['inverses', 'inv.quadratic-not'],
       ['expLogGraphs', 'eg.match'],
       ['piecewiseRate', 'pw.domain'],
-      ['graphFeatures', 'gf.read'],
+      ['graphFeatures', 'gf.features'],
     ]
     for (const [moduleId, templateId] of uncovered) {
       const inst = generateProblem(moduleId, templateId, 17)
