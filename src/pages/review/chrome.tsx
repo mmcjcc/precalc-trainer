@@ -4,6 +4,8 @@ import { createContext, useContext, type ReactNode } from 'react'
 export interface ReviewChrome {
   onNext: () => void
   onSkip: () => void
+  timed?: boolean
+  sat?: boolean
 }
 
 const Ctx = createContext<ReviewChrome | null>(null)

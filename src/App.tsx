@@ -102,6 +102,7 @@ function UnlockedShell() {
   // reading pages (a problem, a review, Settings) keep the book-ish 6xl measure. Review 2026-10-26: at 1900 px
   // a third of the window was empty gutter while Home's class column was squeezed to 720 px.
   const home = pathname === '/' || pathname.startsWith('/c/')
+  const problem = fullScreenPage || isFullScreenPath(pathname)
   return (
     <>
       <ScrollToTopOnNavigate />
@@ -111,7 +112,7 @@ function UnlockedShell() {
         id="main"
         tabIndex={-1}
         data-layout={phone ? 'phone' : 'tablet'}
-        className={`mx-auto w-full flex-1 outline-none ${phone ? 'max-w-2xl px-4 pt-4' : home ? 'max-w-[88rem] px-6 pt-6' : 'max-w-6xl px-6 pt-6'} ${bottom}`}
+        className={`mx-auto w-full flex-1 outline-none ${phone ? 'max-w-2xl px-4 pt-4' : home || problem ? 'max-w-[88rem] px-6 pt-6' : 'max-w-6xl px-6 pt-6'} ${bottom}`}
       >
         <Suspense fallback={<Loading />}>
           <Routes>
