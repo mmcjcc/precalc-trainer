@@ -121,6 +121,8 @@ export function resetWindowSize(): void {
 
 /** The four windows the layouts are checked at. */
 export const WINDOWS = {
+  /** A desktop window where side panels dock beside the work column. */
+  desktop: [1900, 1050],
   /** A large tablet or a laptop, on its side. */
   wide: [1280, 800],
   /** A tablet on its side. */

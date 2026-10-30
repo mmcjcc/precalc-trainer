@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState, type ReactNode, type RefObject } from 'react'
 import { BottomSheet } from './BottomSheet'
 import { useKeypadStore } from './keypadStore'
-import { useLayout } from './useBreakpoint'
+import { useDesktopProblemLayout, useLayout } from './useBreakpoint'
 
 export interface RailPanel {
   id: string
@@ -38,9 +38,18 @@ type Props = {
   mobileToolbar?: 'top' | 'none'
   /**
    * The scratch pad, in the tablet layout: a second view of the left pane ("Scratch pad", beside "Tools"), never over
-   * her work. The phone layout takes it as one more panel of the rail (a sheet from the tools row).
+   * her work. On a desktop problem window (`>= 1440px`) it docks beside her work column. The phone layout takes it as
+   * one more panel of the rail (a sheet from the tools row).
    */
   scratch?: ReactNode
+  /**
+   * "Example — see one like it": a worked solution of a sibling problem. On a desktop problem window (`>= 1440px`) it
+   * docks beside her work column (next to the scratch pad; both can be open side by side). On a phone it is a bottom
+   * sheet in the rail.
+   */
+  example?: ReactNode
+  /** Fired each time she opens the Example panel on tablet or desktop. */
+  onOpenExample?: () => void
   /** Outside the column and the panes: the pinned problem, the sheets. */
   overlays?: ReactNode
 }
@@ -134,12 +143,28 @@ function PanelSection({ baseId, panel }: { baseId: string; panel: RailPanel }) {
  * The problem screen's layout. The components inside never read the screen size; this decides:
  * - the phone layout (below 840 px): one column, the problem, her work, then the composer docked at the bottom; the
  *   tools are bottom sheets from a toolbar (in the composer, or under the problem);
- * - the tablet layout (840 px and more): two panes that fill the window and scroll on their own. Left: the problem, its
- *   figure or graph, and its tools (Hints, Graph, Calculator, Rule cards...) stacked under it, with the scratch pad as a
- *   second view. Right: her work, the composer under it and the keypad docked at the bottom of the pane.
+ * - the tablet layout (840 px to 1439 px): two panes that fill the window and scroll on their own. Left: the problem,
+ *   its figure or graph, and its tools (Hints, Graph, Calculator, Rule cards...) stacked under it, with the scratch pad
+ *   as a second view. Right: her work, the composer under it and the keypad docked at the bottom of the pane;
+ * - the desktop problem layout (1440 px and more): statement and work column at a comfortable reading width, and the
+ *   side panels (Scratch pad and Example) docked beside the work column so both can stay open side by side.
  */
-export function PageLayout({ problem, children, composer, after, rail = [], openPanel, onOpenPanel, mobileToolbar = 'top', scratch, overlays }: Props) {
+export function PageLayout({
+  problem,
+  children,
+  composer,
+  after,
+  rail = [],
+  openPanel,
+  onOpenPanel,
+  mobileToolbar = 'top',
+  scratch,
+  example,
+  onOpenExample,
+  overlays,
+}: Props) {
   const tablet = useLayout() === 'tablet'
+  const desktop = useDesktopProblemLayout()
   const [internalOpen, setInternalOpen] = useState<string | null>(null)
   const baseId = useId()
   const open = openPanel !== undefined ? openPanel : internalOpen
@@ -154,9 +179,155 @@ export function PageLayout({ problem, children, composer, after, rail = [], open
   const slotRef = useKeypadSlot()
   // The left pane shows its tools or the scratch pad; asking for a tool (a shortcut, Stuck?) brings the tools back.
   const [view, setView] = useState<'tools' | 'scratch'>('tools')
+  const [scratchDocked, setScratchDocked] = useState(false)
+  const [exampleDocked, setExampleDocked] = useState(false)
+
   useEffect(() => {
     if (open) setView('tools')
   }, [open])
+
+  const toggleExample = () => {
+    setExampleDocked((prev) => {
+      const next = !prev
+      if (next) onOpenExample?.()
+      return next
+    })
+  }
+
+  if (tablet && desktop) {
+    const showScratch = Boolean(scratch) && scratchDocked
+    const showExample = Boolean(example) && exampleDocked
+    const dockedCount = (showScratch ? 1 : 0) + (showExample ? 1 : 0)
+    const gridCols =
+      dockedCount === 2
+        ? 'grid-cols-[minmax(0,7fr)_minmax(0,9fr)_minmax(0,6fr)_minmax(0,6fr)]'
+        : dockedCount === 1
+          ? 'grid-cols-[minmax(0,8fr)_minmax(0,10fr)_minmax(0,7fr)]'
+          : 'grid-cols-[minmax(0,9fr)_minmax(0,11fr)]'
+
+    const tools = (
+      <aside className="space-y-4" aria-label="Side panels">
+        {rail.map((p) => (
+          <PanelSection key={p.id} baseId={baseId} panel={p} />
+        ))}
+      </aside>
+    )
+
+    return (
+      <>
+        <div
+          ref={panesRef}
+          data-panes=""
+          data-desktop-problem=""
+          data-docked-count={dockedCount}
+          className={`grid ${gridCols} gap-5`}
+          style={{ height, marginBottom: pad ? -pad + 16 : undefined }}
+        >
+          <section
+            aria-label="Problem and tools"
+            data-pane="problem"
+            className="min-h-0 max-w-2xl space-y-4 overflow-y-auto overscroll-contain pb-4 pr-1"
+          >
+            {problem}
+            {(scratch || example) && (
+              <div
+                role="toolbar"
+                aria-label="Problem tools"
+                data-problem-toolbar=""
+                className="flex flex-wrap items-center gap-2"
+              >
+                {scratch && (
+                  <button
+                    type="button"
+                    aria-pressed={scratchDocked}
+                    data-toolbar-button="scratch"
+                    onClick={() => setScratchDocked((v) => !v)}
+                    className={`min-h-11 rounded-xl border px-3.5 text-sm font-semibold ${
+                      scratchDocked
+                        ? 'border-navy bg-navy text-white'
+                        : 'border-navy-100 bg-white text-navy hover:bg-navy-50'
+                    }`}
+                  >
+                    Scratch
+                  </button>
+                )}
+                {example && (
+                  <button
+                    type="button"
+                    aria-pressed={exampleDocked}
+                    data-toolbar-button="example"
+                    onClick={toggleExample}
+                    className={`min-h-11 rounded-xl border px-3.5 text-sm font-semibold ${
+                      exampleDocked
+                        ? 'border-navy bg-navy text-white'
+                        : 'border-navy-100 bg-white text-navy hover:bg-navy-50'
+                    }`}
+                  >
+                    Example
+                  </button>
+                )}
+              </div>
+            )}
+            {tools}
+          </section>
+
+          <section aria-label="Your working" data-pane="work" className="flex min-h-0 max-w-3xl flex-col">
+            <div ref={workRef} data-pane-scroll="" className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain pb-3 pr-1">
+              {children}
+              {after}
+            </div>
+            {composer && <div className="shrink-0 pt-3">{composer}</div>}
+            <div ref={slotRef} data-keypad-slot="" className="shrink-0 [&:not(:empty)]:pt-3" />
+          </section>
+
+          {showScratch && (
+            <section
+              aria-label="Scratch pad"
+              data-pane="scratch"
+              data-docked-panel="scratch"
+              className="flex min-h-0 flex-col overflow-y-auto overscroll-contain rounded-2xl border border-navy-100 bg-white p-4"
+            >
+              <div className="mb-2 flex items-center justify-between gap-2">
+                <h2 className="font-semibold text-navy">Scratch pad</h2>
+                <button
+                  type="button"
+                  onClick={() => setScratchDocked(false)}
+                  aria-label="Close scratch pad"
+                  className="min-h-9 rounded-lg border border-navy-100 px-2.5 text-xs font-semibold text-navy hover:bg-navy-50"
+                >
+                  Close
+                </button>
+              </div>
+              {scratch}
+            </section>
+          )}
+
+          {showExample && (
+            <section
+              aria-label="Example — see one like it"
+              data-pane="example"
+              data-docked-panel="example"
+              className="flex min-h-0 flex-col overflow-y-auto overscroll-contain rounded-2xl border border-navy-100 bg-white p-4"
+            >
+              <div className="mb-2 flex items-center justify-between gap-2">
+                <h2 className="font-semibold text-navy">Example — see one like it</h2>
+                <button
+                  type="button"
+                  onClick={() => setExampleDocked(false)}
+                  aria-label="Close example"
+                  className="min-h-9 rounded-lg border border-navy-100 px-2.5 text-xs font-semibold text-navy hover:bg-navy-50"
+                >
+                  Close
+                </button>
+              </div>
+              {example}
+            </section>
+          )}
+        </div>
+        {overlays}
+      </>
+    )
+  }
 
   if (tablet) {
     const tools = (
@@ -178,22 +349,59 @@ export function PageLayout({ problem, children, composer, after, rail = [], open
             {problem}
             {scratch ? (
               <>
-                <div role="tablist" aria-label="Problem tools" className="flex gap-1 rounded-xl bg-navy-50 p-1" data-pane-views="">
-                  {(['tools', 'scratch'] as const).map((v) => (
+                <div className="flex items-center gap-2">
+                  <div role="tablist" aria-label="Problem tools" className="flex flex-1 gap-1 rounded-xl bg-navy-50 p-1" data-pane-views="">
+                    {(['tools', 'scratch'] as const).map((v) => (
+                      <button
+                        key={v}
+                        type="button"
+                        role="tab"
+                        id={`${baseId}-view-${v}`}
+                        aria-selected={view === v}
+                        aria-controls={`${baseId}-viewpanel-${v}`}
+                        onClick={() => setView(v)}
+                        className={`min-h-11 flex-1 rounded-lg px-3 text-sm font-semibold ${view === v ? 'bg-white text-navy shadow-sm' : 'text-navy/70 hover:text-navy'}`}
+                      >
+                        {v === 'tools' ? 'Tools' : 'Scratch pad'}
+                      </button>
+                    ))}
+                  </div>
+                  {example && (
                     <button
-                      key={v}
                       type="button"
-                      role="tab"
-                      id={`${baseId}-view-${v}`}
-                      aria-selected={view === v}
-                      aria-controls={`${baseId}-viewpanel-${v}`}
-                      onClick={() => setView(v)}
-                      className={`min-h-11 flex-1 rounded-lg px-3 text-sm font-semibold ${view === v ? 'bg-white text-navy shadow-sm' : 'text-navy/70 hover:text-navy'}`}
+                      aria-pressed={exampleDocked}
+                      data-toolbar-button="example"
+                      onClick={toggleExample}
+                      className={`min-h-11 shrink-0 rounded-xl border px-3 text-sm font-semibold ${
+                        exampleDocked
+                          ? 'border-navy bg-navy text-white'
+                          : 'border-navy-100 bg-white text-navy hover:bg-navy-50'
+                      }`}
                     >
-                      {v === 'tools' ? 'Tools' : 'Scratch pad'}
+                      Example
                     </button>
-                  ))}
+                  )}
                 </div>
+                {example && exampleDocked && (
+                  <section
+                    aria-label="Example — see one like it"
+                    data-docked-panel="example"
+                    className="rounded-2xl border border-navy-100 bg-white p-4"
+                  >
+                    <div className="mb-2 flex items-center justify-between gap-2">
+                      <h2 className="font-semibold text-navy">Example — see one like it</h2>
+                      <button
+                        type="button"
+                        onClick={() => setExampleDocked(false)}
+                        aria-label="Close example"
+                        className="min-h-9 rounded-lg border border-navy-100 px-2.5 text-xs font-semibold text-navy hover:bg-navy-50"
+                      >
+                        Close
+                      </button>
+                    </div>
+                    {example}
+                  </section>
+                )}
                 <div role="tabpanel" id={`${baseId}-viewpanel-tools`} aria-labelledby={`${baseId}-view-tools`} hidden={view !== 'tools'}>
                   {tools}
                 </div>
@@ -202,7 +410,46 @@ export function PageLayout({ problem, children, composer, after, rail = [], open
                 </div>
               </>
             ) : (
-              tools
+              <>
+                {example && (
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      aria-pressed={exampleDocked}
+                      data-toolbar-button="example"
+                      onClick={toggleExample}
+                      className={`min-h-11 rounded-xl border px-3 text-sm font-semibold ${
+                        exampleDocked
+                          ? 'border-navy bg-navy text-white'
+                          : 'border-navy-100 bg-white text-navy hover:bg-navy-50'
+                      }`}
+                    >
+                      Example
+                    </button>
+                  </div>
+                )}
+                {example && exampleDocked && (
+                  <section
+                    aria-label="Example — see one like it"
+                    data-docked-panel="example"
+                    className="rounded-2xl border border-navy-100 bg-white p-4"
+                  >
+                    <div className="mb-2 flex items-center justify-between gap-2">
+                      <h2 className="font-semibold text-navy">Example — see one like it</h2>
+                      <button
+                        type="button"
+                        onClick={() => setExampleDocked(false)}
+                        aria-label="Close example"
+                        className="min-h-9 rounded-lg border border-navy-100 px-2.5 text-xs font-semibold text-navy hover:bg-navy-50"
+                      >
+                        Close
+                      </button>
+                    </div>
+                    {example}
+                  </section>
+                )}
+                {tools}
+              </>
             )}
           </section>
           <section aria-label="Your working" data-pane="work" className="flex min-h-0 flex-col">

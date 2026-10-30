@@ -343,7 +343,7 @@ function InProgress({
   const finished =
     session.status[index] === 'done' ||
     (attemptId != null && events.some((e) => e.t === 'problem_done' && e.attemptId === attemptId))
-  const chrome = { onNext: () => go('done'), onSkip: () => go('skipped') }
+  const chrome = { onNext: () => go('done'), onSkip: () => go('skipped'), timed: session.timed, sat: Boolean(review.satKind) }
 
   return (
     <div className="space-y-4">

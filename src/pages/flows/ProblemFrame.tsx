@@ -30,6 +30,7 @@ import { GraphPanel, RuleCardsPanel } from '@/components/GraphPanel'
 import { Katex } from '@/components/Katex'
 import { KeymapHelp } from '@/components/KeymapHelp'
 import { ScratchPad } from '@/components/scratch/ScratchPad'
+import { WorkedExample } from '@/components/WorkedExample'
 import { notePress, useKeypadStore } from '@/components/keypadStore'
 import { isNativeApp } from '@/components/nativeApp'
 import { PageLayout, RailToolbar, type RailPanel } from '@/components/PageLayout'
@@ -40,6 +41,7 @@ import { StepGuide } from '@/components/StepGuide'
 import { StuckProvider, type StuckApi } from '@/components/Stuck'
 import { useBreakpoint, useLayout } from '@/components/useBreakpoint'
 import { useKeymap } from '@/components/useKeymap'
+import { offersExample, recordExampleViewed } from '@/problem/workedExample'
 import { TutorAskPanel } from '@/tutor/TutorPanel'
 import { dropFinishedThreads, markThreadFinished } from '@/tutor/threadStorage'
 import { useTutorStatus } from '@/tutor/useTutorStatus'
@@ -144,16 +146,8 @@ function holdsFigure(card: HTMLElement | null): boolean {
 
 /**
  * Shared problem-page chrome: header, progress line, rail [Hints, Graph it, Calculator, Rule
- * cards], the scratch pad, the composer, keymap, idle nudge, completion card. The layout (components/PageLayout.tsx)
- * places them; the flow inside never knows the screen size.
- * - The phone layout (below 840 px, where the composer is docked and the rail is a row of sheets): the header is one
- *   compact row, the problem stays pinned at the top once its card scrolls away, the composer shows the verdict about
- *   her line (folded to one line while the keypad is up), and "Stuck?" opens the next hint. A phone shows a problem
- *   full screen: no tab bar (the app shell decides; see components/appChrome.ts).
- * - The tablet layout (840 px and more): two panes, the problem and its tools (and the scratch pad) on the left, her
- *   work, the composer and the keypad on the right; the finish sheet is a centred dialog.
- * In a set (pages/SetPage.tsx) the set's progress is in the phone's header and in the completion area in the tablet
- * layout, and the main button stays in the set: "Next in set", then "See results".
+ * cards], the scratch pad, the worked example, the composer, keymap, idle nudge, completion card. The layout
+ * (components/PageLayout.tsx) places them; the flow inside never knows the screen size.
  */
 export function ProblemFrame({ instance, attempt, flags, templateTitle, progress, hints, composer, completion, keymap, statement, graphCaption, nudgeText, tutorVerdict, graphFooter, lineVerdict, pickLine, children }: Props) {
   const navigate = useNavigate()
@@ -177,17 +171,10 @@ export function ProblemFrame({ instance, attempt, flags, templateTitle, progress
     else dropFinishedThreads(attempt.id)
   }, [attempt?.id, completion])
 
-  // "Graph it": the problem's own function in the grapher (only what the problem shows her; src/grapher/graphIt.ts),
-  // while she works on it. Its graph shows the answer (a vertex, the zeros, f(c)), so like the graph and the calculator
-  // steps it sits behind their reveal gates, never in the open (review: a button under the problem handed it over in one
-  // tap). A finished problem is not kept on its page, so Back would find it gone: not offered then.
   const graphIt = useMemo(() => (completion ? null : graphItFromStatement(instance)), [instance, completion])
 
   // Graph and calculator steps show the answer: student-invoked, open by themselves once finished.
   const [revealed, setRevealed] = useState<{ graph: boolean; calc: boolean }>({ graph: false, calc: false })
-  // A panel with nothing in it is left out entirely: no rail section, no toolbar button, no reveal
-  // gate, no shortcut, no cheat-sheet row. Significant figures have neither; the difference quotient
-  // has a graph but no calculator steps.
   const hasGraph = instance.graph.kind !== 'none'
   const hasCalc = instance.calc.ti84.length > 0 || instance.calc.nspire.length > 0
   const answerPanels: RailPanel[] = [
@@ -231,8 +218,6 @@ export function ProblemFrame({ instance, attempt, flags, templateTitle, progress
     },
   ]
   const tutorStatus = tutor.status?.configured ? tutor.status : null
-  // Guided mode: "Pick the next line" comes first in the hints. Taking it closes the sheet (the keypad stays down:
-  // the cards take the box's place) and shows the cards for this line.
   const offerPick = !completion && pickLine ? pickLine : null
   const takePick = useCallback(() => {
     keypadReturns.current = false
@@ -274,8 +259,6 @@ export function ProblemFrame({ instance, attempt, flags, templateTitle, progress
   const toggle = useCallback((id: string) => setOpenPanel((cur) => (cur === id ? null : id)), [])
 
   // ---- sheets opened from the phone's controls -----------------------------------------------------------------
-  // The chip, Why? and the pinned strip leave focus in her box. A sheet closes the keypad while it is up; when the
-  // sheet closes, focus goes back to the box and the keypad comes back with it (as after a key press).
   const keypadReturns = useRef(false)
   const rememberKeypad = useCallback(() => {
     keypadReturns.current = useKeypadStore.getState().target !== null
@@ -285,14 +268,17 @@ export function ProblemFrame({ instance, attempt, flags, templateTitle, progress
     keypadReturns.current = false
     notePress()
   }, [])
+  const noteExampleViewed = useCallback(() => {
+    recordExampleViewed(instance.skill, instance.moduleId)
+  }, [instance.skill, instance.moduleId])
   const onOpenPanel = useCallback(
     (id: string | null) => {
       if (id === null) bringKeypadBack()
+      if (id === 'example') noteExampleViewed()
       setOpenPanel(id)
     },
-    [bringKeypadBack],
+    [bringKeypadBack, noteExampleViewed],
   )
-  // The Why? sheet keeps the lesson it opened with until she closes it (an undo can change her line under it).
   const [sheet, setSheet] = useState<{ kind: 'problem' } | { kind: 'why'; why: VerdictWhy } | null>(null)
   const closeSheet = useCallback(() => {
     bringKeypadBack()
@@ -300,7 +286,6 @@ export function ProblemFrame({ instance, attempt, flags, templateTitle, progress
   }, [bringKeypadBack])
 
   // ---- Stuck? --------------------------------------------------------------------------------------------------
-  // Opens the hint sheet; the ladder in it takes the request as a press of its button (nudge and rule only).
   const stuckPending = useRef(false)
   const [stuckSeq, setStuckSeq] = useState(0)
   const takeStuck = useCallback(() => {
@@ -314,15 +299,11 @@ export function ProblemFrame({ instance, attempt, flags, templateTitle, progress
     setStuckSeq((n) => n + 1)
     setOpenPanel('hints')
   }, [rememberKeypad])
-  // A request no ladder took (one that does not take requests) must not fire the next time the sheet opens.
   useEffect(() => {
     if (openPanel !== 'hints') stuckPending.current = false
   }, [openPanel])
-  // Hints are open while the flow takes a hint (Ctrl+Shift+H): not once the problem is done, nor on the inequality's
-  // final-answer card, where the ladder is closed.
   const hintsOpen = !completion && Boolean(keymap?.onHint)
   const stuckApi = useMemo<StuckApi>(
-    // Under a wrong verdict only where there is no composer: the composer carries its own chip.
     () => ({ onStuck: phone && hintsOpen && !composerOpen ? stuck : null, seq: stuckSeq, take: takeStuck }),
     [phone, hintsOpen, composerOpen, stuck, stuckSeq, takeStuck],
   )
@@ -336,7 +317,6 @@ export function ProblemFrame({ instance, attempt, flags, templateTitle, progress
       },
       onHint: () => {
         keymap?.onHint?.()
-        // The tablet layout shows the hints beside the problem; a phone opens their sheet.
         if (phone) setOpenPanel('hints')
       },
       onGraph: hasGraph ? () => toggle('graph') : undefined,
@@ -349,7 +329,6 @@ export function ProblemFrame({ instance, attempt, flags, templateTitle, progress
   )
 
   const stepsToGo = progress ? Math.max(0, progress.total - progress.stage) : null
-  // Nudge only: the attempt's active seconds are counted by the Problem page (useActiveClock).
   useIdleNudge({
     active: Boolean(attempt) && !attempt?.nudged && !completion,
     onNudge: () => {
@@ -369,7 +348,6 @@ export function ProblemFrame({ instance, attempt, flags, templateTitle, progress
   const elapsed = useElapsed(attempt?.startedAt, Boolean(attempt) && !completion)
 
   // ---- the pinned problem (phone) ----------------------------------------------------------------------------
-  // The review set keeps its own sticky bar at the top of the screen, so it has no strip.
   const cardRef = useRef<HTMLDivElement>(null)
   const stripRef = useRef<HTMLDivElement>(null)
   const pinnedOn = phone && !review
@@ -381,7 +359,6 @@ export function ProblemFrame({ instance, attempt, flags, templateTitle, progress
   }, [scrolledPast])
   const showProblem = useCallback(() => {
     if (useKeypadStore.getState().target !== null) {
-      // The keypad is up: her place stays put and the card opens over it.
       rememberKeypad()
       setSheet({ kind: 'problem' })
       return
@@ -404,7 +381,6 @@ export function ProblemFrame({ instance, attempt, flags, templateTitle, progress
   }, [checks, phone])
 
   // ---- completion ------------------------------------------------------------------------------------------------
-  // The card is what says the problem is done (there is no toast while it is on the page), so it comes into view.
   const completionRef = useRef<HTMLElement>(null)
   useEffect(() => {
     if (!completion) return
@@ -412,12 +388,9 @@ export function ProblemFrame({ instance, attempt, flags, templateTitle, progress
     if (card && typeof card.scrollIntoView === 'function') card.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
   }, [completion])
   const native = isNativeApp()
-  // Rewards on: the finish sheet in the card's place (a phone: from the bottom; the tablet layout: a centred dialog),
-  // closing it leaves a small card. Rewards off: the card as it was.
   const rewardsOn = useRewardsOn()
   const stepGuideSeen = useStore((s) => s.settings.seenStepGuide === true)
   const finishData = useFinish(rewardsOn && completion ? attempt?.id : undefined, instance.skill)
-  // Rewards off: the monsters this problem squashed still show in the card (no XP; the collection works either way).
   const squashedHere = useSquashedBy(!rewardsOn && completion ? attempt?.id : undefined)
   const sheetFinish = finishData !== null
   const [sheetClosedFor, setSheetClosedFor] = useState<Completion | null>(null)
@@ -425,10 +398,8 @@ export function ProblemFrame({ instance, attempt, flags, templateTitle, progress
   const nextRef = useRef<HTMLButtonElement>(null)
   const closeFinish = useCallback(() => {
     setSheetClosedFor(completion)
-    // The sheet hands focus back to the box she was in, which is done now: the card's Next button takes it.
     setTimeout(() => nextRef.current?.focus({ preventScroll: false }), 0)
   }, [completion])
-  // A type newly mastered: confetti over the finish (rewards on or off; none under reduced motion).
   useEffect(() => {
     if (completion?.newlyMastered) burstConfetti({ count: 64 })
   }, [completion])
@@ -444,7 +415,6 @@ export function ProblemFrame({ instance, attempt, flags, templateTitle, progress
   }, [rewardsOn, completion, attempt, comboIds, comboSetIndex, events])
   const comboPill = combo >= COMBO_SHOWS_AT ? <ComboPill count={combo} /> : null
 
-  // Her own problem ("Check my own problem"): the header says so, and the way on is "Check another" (the builder).
   const own = instance.own !== undefined
   const route = own ? ownProblemPath(instance.moduleId, instance.templateId, instance.own!, flags) : problemPath(instance.moduleId, instance.templateId, instance.seed, flags)
 
@@ -471,11 +441,9 @@ export function ProblemFrame({ instance, attempt, flags, templateTitle, progress
       Your own problem
     </p>
   ) : null
-  // A set's slot she can still skip: the problem she is on, not finished yet.
   const skip = set && !completion && set.status[set.index] === 'pending' ? set.onSkip : undefined
   const statementNode = statement ?? <Katex tex={toLatex(instance.statementText)} display />
   const completionTitle = completion ? (completion.summary.finalCorrect ? 'Problem complete' : 'Problem finished') : ''
-  // With rewards on the streak is the goal streak (Home and the sheet show it), so the old day streak is left out.
   const completionLine = completion
     ? `${completion.summary.steps > 0 ? `${completion.summary.steps} steps · ${completion.summary.firstTry} first-try · ` : ''}${completion.summary.hints} ${completion.summary.hints === 1 ? 'hint' : 'hints'}${completion.summary.revealed > 0 ? ` · ${completion.summary.revealed} shown` : ''}${completion.summary.streak > 0 && !finishData ? ` · day streak ${completion.summary.streak}` : ''}`
     : ''
@@ -485,10 +453,19 @@ export function ProblemFrame({ instance, attempt, flags, templateTitle, progress
   const showStepGuide = !completion && isStepKind(instance.kind) && !stepGuideSeen
 
   // The scratch pad (components/scratch): one per attempt, kept on this device. The phone layout opens it as a sheet
-  // from the tools row; the tablet layout as a view of the left pane, beside the tools.
+  // from the tools row; the tablet layout as a view of the left pane, beside the tools; the desktop problem layout
+  // docks it beside her work column next to Example.
   const scratchKey = attempt?.id ?? null
   const scratch = scratchKey ? <ScratchPad attemptId={scratchKey} size={phone ? 'sheet' : 'pane'} /> : null
-  const tools: RailPanel[] = phone && scratch ? [...rail, { id: 'scratch', title: 'Scratch pad', short: 'Scratch', content: scratch }] : rail
+  const testMode = useStore((s) => s.settings.testMode)
+  const timedRunning = Boolean(review?.timed) || attempt?.mode === 'timed' || testMode
+  const canShowExample = !timedRunning && offersExample(instance)
+  const example = canShowExample ? <WorkedExample key={instance.id} instance={instance} /> : null
+  const tools: RailPanel[] = [
+    ...rail,
+    ...(phone && scratch ? [{ id: 'scratch', title: 'Scratch pad', short: 'Scratch', content: scratch }] : []),
+    ...(phone && example ? [{ id: 'example', title: 'Example — see one like it', short: 'Example', content: example }] : []),
+  ]
 
   const nudgeBanner = nudge && (
     <div role="status" className="mb-2 flex items-center justify-between gap-2 rounded-xl bg-gold-100 px-3 py-2 text-sm text-navy">
@@ -519,7 +496,7 @@ export function ProblemFrame({ instance, attempt, flags, templateTitle, progress
       {!composerOpen && (
         <div className="flex flex-wrap gap-2">
           <div className="flex flex-wrap gap-2" role="group" aria-label="Side panels">
-            <RailToolbar rail={tools} onOpen={setOpenPanel} />
+            <RailToolbar rail={tools} onOpen={onOpenPanel} />
           </div>
         </div>
       )}
@@ -568,16 +545,16 @@ export function ProblemFrame({ instance, attempt, flags, templateTitle, progress
         onOpenPanel={onOpenPanel}
         mobileToolbar={phone || composerOpen ? 'none' : 'top'}
         scratch={phone ? undefined : (scratch ?? undefined)}
+        example={phone ? undefined : (example ?? undefined)}
+        onOpenExample={noteExampleViewed}
         problem={problem}
         composer={
           composerOpen && (
             <Composer
-              toolbar={phone ? <RailToolbar rail={tools} onOpen={setOpenPanel} /> : undefined}
+              toolbar={phone ? <RailToolbar rail={tools} onOpen={onOpenPanel} /> : undefined}
               banner={nudgeBanner}
               status={
                 <>
-                  {/* The combo pill: right above the verdict line on a phone, at the top of the box under the work
-                      list in the tablet layout. Folded away with the keypad up (the folded line keeps its count). */}
                   {comboPill && (
                     <ComposerExtra>
                       <div className="mb-1.5 flex justify-end" data-combo-row="">
@@ -628,12 +605,10 @@ export function ProblemFrame({ instance, attempt, flags, templateTitle, progress
           </>
         }
       >
-        {/* A step-by-step problem opens with how it works, until she closes the guide once. */}
         {showStepGuide && <StepGuide pick={pickModule(instance.moduleId)} />}
 
         {children}
 
-        {/* Without a composer, the combo pill waits at the bottom of the screen, above the keypad. */}
         {!composerOpen && comboPill && (
           <div className="combo-dock" data-combo-row="">
             {comboPill}
@@ -651,7 +626,6 @@ export function ProblemFrame({ instance, attempt, flags, templateTitle, progress
               {completionLine}
               {completion.newlyMastered && <span className="font-semibold"> · {templateTitle} newly mastered</span>}
             </p>
-            {/* With rewards on, the rewards say it beside the ring. */}
             {!finishData && completion.summary.picked > 0 && (
               <p className="text-sm text-navy/80" data-picked-note="">
                 {completion.summary.picked === 1 ? 'You picked a line from cards' : `You picked ${completion.summary.picked} lines from cards`}, so this
@@ -664,7 +638,6 @@ export function ProblemFrame({ instance, attempt, flags, templateTitle, progress
               </p>
             )}
             {!finishData && <SquashMoment patterns={squashedHere} />}
-            {/* The tablet layout shows the set's progress here; a phone has it in its header. */}
             {set && !phone && <SetDots index={set.index} total={set.total} status={set.status} prefix="Your set ·" />}
             <div className="flex flex-wrap items-center gap-2">
               <button ref={nextRef} type="button" onClick={goNext} className="btn-chunky min-h-11 rounded-xl bg-navy px-4 font-semibold text-white hover:bg-navy-600">
@@ -679,13 +652,11 @@ export function ProblemFrame({ instance, attempt, flags, templateTitle, progress
                   See what you earned
                 </button>
               )}
-              {/* Inside the phone app a link to one of its pages opens nowhere else, so it is not offered there. */}
               {!native && (
                 <button type="button" onClick={() => void copyLink()} className="min-h-11 rounded-xl border border-navy-100 bg-white px-4 font-semibold text-navy hover:bg-navy-50">
                   Copy link
                 </button>
               )}
-              {/* In a set the way on is the set's button; leaving for the module page would leave the set. */}
               {!set && (
                 <Link to={`/m/${instance.moduleId}`} className="min-h-11 rounded-xl px-3 py-2.5 font-semibold text-navy underline">
                   Back to {mod.title}
@@ -716,8 +687,6 @@ export function ProblemFrame({ instance, attempt, flags, templateTitle, progress
             inSet={Boolean(set)}
           />
         )}
-        {/* Says "Problem complete" to a screen reader in the toast's words, as the toast did before the card took its
-            place. A plain live region (no status role), always on the page so the words are announced when they arrive. */}
         <p aria-live="polite" aria-atomic="true" className="sr-only" data-completion-announcer="">
           {announcement}
         </p>

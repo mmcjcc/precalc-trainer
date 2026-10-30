@@ -321,6 +321,15 @@ export type Ev =
   | (EvBase & { t: 'drill_answer'; skill: string; correct: boolean; kind: 'property' | 'legal' })
   | (EvBase & {
       /**
+       * She opened "Example — see one like it" on a problem (components/WorkedExample.tsx). Honest by design:
+       * viewing a sibling example never breaks first-try and counts nothing as revealed on her own problem.
+       */
+      t: 'example_viewed'
+      skill: string
+      moduleId: string
+    })
+  | (EvBase & {
+      /**
        * A set ended: she saw its results (pages/SetPage.tsx, after the set's one break). The daily quests read it
        * ("Finish a set with no hints", "A perfect set": session/quests.ts). No skill and no XP of its own; the
        * compaction drops it with the rest of its 60-day-old events.

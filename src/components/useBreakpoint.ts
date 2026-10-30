@@ -59,6 +59,33 @@ export function useLayout(): Layout {
   return layoutOf(useBreakpoint())
 }
 
+/** The narrowest window where the problem screen docks side panels (Scratch, Example) beside the work column. */
+export const DESKTOP_PROBLEM_MIN = 1440
+const DESKTOP_PROBLEM = `(min-width: ${DESKTOP_PROBLEM_MIN}px) and (min-height: ${TABLET_LAYOUT_MIN_HEIGHT}px)`
+
+function readDesktopProblem(): boolean {
+  if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return false
+  return window.matchMedia(DESKTOP_PROBLEM).matches
+}
+
+/**
+ * True when the window is wide enough (`>= 1440px` and `>= 480px` tall) for the desktop problem screen
+ * to spread across the window and dock the scratch pad and worked example beside the work column.
+ * Returns `false` at `WINDOWS.wide` (1280x800), `WINDOWS.landscape` (1024x768), and when `matchMedia` is absent.
+ */
+export function useDesktopProblemLayout(): boolean {
+  const [wide, setWide] = useState<boolean>(readDesktopProblem)
+  useEffect(() => {
+    if (typeof window.matchMedia !== 'function') return
+    const mq = window.matchMedia(DESKTOP_PROBLEM)
+    const update = () => setWide(readDesktopProblem())
+    update()
+    mq.addEventListener('change', update)
+    return () => mq.removeEventListener('change', update)
+  }, [])
+  return wide
+}
+
 /** Standalone (installed) PWA? */
 export function isStandalone(): boolean {
   if (typeof window === 'undefined') return false
