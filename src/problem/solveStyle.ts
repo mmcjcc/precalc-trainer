@@ -30,7 +30,15 @@ export const STEP_MODULES: ReadonlySet<string> = new Set([
 ])
 
 /** Modules that also offer Pick: choosing each next line from three cards (src/problem/cardSources.ts). */
-export const PICK_MODULES: ReadonlySet<string> = new Set(['expLogEquations'])
+export const PICK_MODULES: ReadonlySet<string> = new Set([
+  'expLogEquations',
+  'inequalities',
+  'quadratics',
+  'inverses',
+  'logProperties',
+  'diffQuotient',
+  'evenOdd',
+])
 
 export function isStepKind(kind: string): boolean {
   return STEP_KINDS.has(kind)

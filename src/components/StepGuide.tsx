@@ -21,7 +21,7 @@ export function StepGuide({ pick }: { pick: boolean }) {
       </ol>
       {pick && (
         <p>
-          Not sure what comes next? Switch to <b>Pick</b> to choose each step from three.
+          Not sure what comes next? Turn on <b>Guide me</b> to choose each step from three.
         </p>
       )}
       <button

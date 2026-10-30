@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { KEPT, patternVerdict, type LineVerdict } from '@/components/ComposerVerdict'
 import { GraphPanel } from '@/components/GraphPanel'
+import { GuidedStep } from '@/components/LineCards'
 import { Katex } from '@/components/Katex'
 import { MathInput } from '@/components/MathInput'
 import { SigFigExplanation } from '@/components/SigFigFeedback'
@@ -12,6 +13,8 @@ import { getModule } from '@/content/registry'
 import type { RuleCard } from '@/content/types'
 import { checkSquareLine, gradeAxisOfSymmetry, gradeVertex, normalizeInput, type PolyGrade, type SquareLineGrade } from '@/engine'
 import { liveParseError, safeLatex, type ProgressLine } from '@/problem/stepEngine'
+import { useGuidedCards } from '@/problem/useGuidedCards'
+import type { LineCard } from '@/problem/lineCards'
 import { verdictFromPoly } from '@/problem/tutorContext'
 import type { ModuleId, VarName } from '@/shared/types'
 import { useStore } from '@/store'
@@ -80,7 +83,7 @@ export function QuadraticsFlow(props: FlowProps) {
 // cs.form: line by line
 // ---------------------------------------------------------------------------
 
-type LineFeedback = { kind: 'grade'; grade: SquareLineGrade; text: string } | { kind: 'same'; text: string }
+type LineFeedback = { kind: 'grade'; grade: SquareLineGrade; text: string; picked?: boolean } | { kind: 'same'; text: string }
 
 function FormBody({ instance, attempt, flags, templateTitle, completion, finish, answer }: BodyProps) {
   const done = Boolean(completion)
@@ -105,11 +108,21 @@ function FormBody({ instance, attempt, flags, templateTitle, completion, finish,
   // Finished when her last kept line is vertex form. Closed in an effect, after the line is on screen, so the
   // finished attempt that stays on the page includes it (and a reload between the two still finishes).
   const lastText = steps.length ? steps[steps.length - 1]!.text : null
+  const previous = lastText ?? answer.f
   const solved = useMemo(() => {
     if (lastText === null) return false
     const g = checkSquareLine(answer.f, lastText)
     return g.verdict === 'correct' && g.done
   }, [answer.f, lastText])
+  const nextText = useMemo(() => {
+    const path = answer.path.map((p) => p.text)
+    const idx = path.findIndex((t) => squash(t) === squash(previous))
+    if (idx >= 0) return path[idx + 1] ?? null
+    if (squash(previous) === squash(answer.f)) return path[1] ?? null
+    return null
+  }, [answer.path, answer.f, previous])
+  const live = !done && !solved && attempt !== null
+  const guided = useGuidedCards({ instance, attempt, previous, live, nextText })
   const finishing = useRef(false)
   useEffect(() => {
     if (!solved || done || !attempt || finishing.current) return
@@ -132,18 +145,21 @@ function FormBody({ instance, attempt, flags, templateTitle, completion, finish,
     return liveParseError(t, LINE_VARS, 'relation') ? asExpression : null
   }, [])
 
-  function submit() {
+  function submitText(typed: string, via?: 'card') {
     if (done || solved || !attempt) return
-    const typed = draft.trim()
     const grade = checkSquareLine(answer.f, typed)
     if (grade.verdict === 'invalid' || grade.verdict === 'unsupported') {
-      // Unreadable: not an attempt. Nothing is recorded.
       setFeedback({ kind: 'grade', grade, text: typed })
-      inputRef.current?.focus({ preventScroll: true })
+      if (!via) inputRef.current?.focus({ preventScroll: true })
       return
     }
     const s = useStore.getState()
     if (grade.verdict !== 'correct') {
+      if (via) {
+        s.rejectCard({ pattern: grade.verdict === 'mistake' ? POLY_PATTERN[grade.mistake] : undefined, text: typed, key: guided.lineKey })
+        setFeedback({ kind: 'grade', grade, text: typed, picked: true })
+        return
+      }
       const sig = `${attempt.id} ${steps.length} ${squash(typed)}`
       if (lastRejected.current !== sig) {
         lastRejected.current = sig
@@ -155,18 +171,30 @@ function FormBody({ instance, attempt, flags, templateTitle, completion, finish,
       return
     }
     const text = normalizeInput(typed)
-    const previous = steps.length ? steps[steps.length - 1]!.text : answer.f
     if (!grade.done && squash(text) === squash(previous)) {
-      // The line above, typed again: legal, but not a step.
       setFeedback({ kind: 'same', text: typed })
       return
     }
     lastRejected.current = null
-    // Once the worked explanation has been opened, every later line was written with the answer in view.
-    s.acceptStep({ text, latex: safeLatex(text), revealed: s.attempt?.final?.revealed === true })
+    s.acceptStep({
+      text,
+      latex: safeLatex(text),
+      revealed: s.attempt?.final?.revealed === true,
+      ...(via ? { via } : {}),
+      ...(guided.stepType ? { rule: guided.stepType } : {}),
+    })
     setFeedback({ kind: 'grade', grade, text: typed })
     setDraftState('')
-    if (!grade.done) inputRef.current?.focus({ preventScroll: true })
+    if (!grade.done && !via) inputRef.current?.focus({ preventScroll: true })
+  }
+
+  function submit() {
+    submitText(draft.trim())
+  }
+
+  function pickCard(card: LineCard) {
+    if (!live) return
+    submitText(card.text, 'card')
   }
 
   const canUndo = !done && !solved && steps.length > 0
@@ -213,24 +241,46 @@ function FormBody({ instance, attempt, flags, templateTitle, completion, finish,
       completion={completion}
       tutorVerdict={grade ? verdictFromPoly([grade], feedback?.text) : undefined}
       lineVerdict={composerVerdict}
-      nudgeText="Still here? Type the next line of your work below. The hint button is right there."
+      pickLine={guided.pickOffer}
+      nudgeText={
+        guided.showingCards
+          ? 'Still here? Pick the next line from the cards. The hint button is right there.'
+          : 'Still here? Type the next line of your work below. The hint button is right there.'
+      }
       keymap={{ onHint: hint.advance, onUndo: undo }}
       statement={<Statement answer={answer} />}
       hints={<HintLadder rung={hint.rung} nudge={answer.nudge} card={card} related={related} explanation={answer.reveal} onAdvance={hint.advance} disabled={done} />}
       composer={
-        <MathInput
-          value={draft}
-          onChange={setDraft}
-          onSubmit={submit}
-          validate={validate}
-          inputRef={inputRef}
-          autoFocus
-          label="Next line"
-          submitLabel="Check this line"
-          placeholder={`Step ${steps.length + 1}: your next line`}
-          stripKeys={FUNCTION_KEYS}
-          toTex={safeLatex}
-        />
+        !solved ? (
+          <GuidedStep
+            offers={guided.offers}
+            guidedOn={guided.guidedOn}
+            onGuideChange={guided.chooseGuide}
+            showingCards={guided.showingCards}
+            lineKey={guided.lineKey}
+            cards={guided.cardsLeft}
+            onPick={pickCard}
+            onType={guided.typeInstead}
+            showBack={Boolean(attempt?.picks?.[String(guided.lineKey)]?.typing && guided.cards.length > 0)}
+            onBack={guided.backToCards}
+            typedNote={guided.typedNote}
+            inputRef={inputRef}
+          >
+            <MathInput
+              value={draft}
+              onChange={setDraft}
+              onSubmit={submit}
+              validate={validate}
+              inputRef={inputRef}
+              autoFocus
+              label="Next line"
+              submitLabel="Check this line"
+              placeholder={`Step ${steps.length + 1}: your next line`}
+              stripKeys={FUNCTION_KEYS}
+              toTex={safeLatex}
+            />
+          </GuidedStep>
+        ) : undefined
       }
     >
       <section aria-labelledby="qd-work-title" className="space-y-2 rounded-2xl border border-navy-100 bg-white p-3">
@@ -240,6 +290,12 @@ function FormBody({ instance, attempt, flags, templateTitle, completion, finish,
         <p className="text-xs text-navy/70">One line at a time. A line is kept when it is still equal to f(x).</p>
         <WorkedColumn start={answer.f} steps={steps} onUndo={undo} canUndo={canUndo} startLabel="f(x)" />
         {feedback?.kind === 'same' && <NotAnAttemptNotice messages={['That is the line above, written again. Change one thing, then check the new line.']} />}
+        {feedback?.kind === 'grade' && feedback.picked && (
+          <p className="flex flex-wrap items-center gap-2 text-sm text-navy" data-picked-line="">
+            <span>You picked</span>
+            <Katex tex={safeLatex(feedback.text)} ariaLabel={feedback.text} />
+          </p>
+        )}
         {grade && (grade.verdict === 'invalid' || grade.verdict === 'unsupported' || grade.verdict === 'mistake' || grade.verdict === 'wrong') && <PolyGradeCard grade={grade} />}
         {grade?.verdict === 'correct' && !grade.done && !done && (
           <p role="status" className="text-sm text-navy">

@@ -4,8 +4,10 @@
  * next to the right line (Guided mode's cards). Additive: nothing here grades, and the checker is unchanged.
  */
 import type { VarName } from '@/shared/types'
-import { parseStatement, singleRelation } from '../parse'
+import { parseExpression, parseStatement, singleRelation } from '../parse'
 import { relationSlips } from './relslips'
+import { expressionSlips } from './slips'
+import { appText } from './text'
 import type { LogMistakeId } from './types'
 
 export interface LogLineSlip {
@@ -29,6 +31,24 @@ export function logLineSlips(line: string, vars: readonly VarName[] = ['x']): Lo
   const seen = new Set<string>()
   for (const slip of relationSlips(r)) {
     const text = slip.stmt.source
+    if (!text || seen.has(text)) continue
+    seen.add(text)
+    out.push({ id: slip.id, text })
+  }
+  return out
+}
+
+/**
+ * Every slip of an expand/condense expression, in the checker's priority order, each line once. A line
+ * that does not parse as an expression has none. Additive: nothing here grades.
+ */
+export function logRewriteSlips(line: string, vars: readonly VarName[] = ['x', 'y']): LogLineSlip[] {
+  const parsed = parseExpression(line, vars)
+  if (!parsed.ok) return []
+  const out: LogLineSlip[] = []
+  const seen = new Set<string>()
+  for (const slip of expressionSlips(parsed.node)) {
+    const text = appText(slip.node)
     if (!text || seen.has(text)) continue
     seen.add(text)
     out.push({ id: slip.id, text })

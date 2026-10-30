@@ -37,8 +37,7 @@ describe('the step-by-step guide', () => {
     const first = renderAt('/p/inequalities/ineq.linear/7')
     const guide = screen.getByRole('region', { name: 'Solve it step by step' })
     expect(within(guide).getByText('Write your next line, then check it.')).toBeTruthy()
-    // Pick is not offered on inequalities, so the guide does not mention it.
-    expect(within(guide).queryByText(/Switch to/)).toBeNull()
+    expect(within(guide).getByText(/Guide me/)).toBeTruthy()
     fireEvent.click(within(guide).getByRole('button', { name: 'Got it' }))
     expect(screen.queryByRole('region', { name: 'Solve it step by step' })).toBeNull()
     expect(useStore.getState().settings.seenStepGuide).toBe(true)
@@ -48,9 +47,9 @@ describe('the step-by-step guide', () => {
     expect(screen.queryByRole('region', { name: 'Solve it step by step' })).toBeNull()
   })
 
-  it('mentions Pick where the problem offers it; an answer-only problem has no guide', SLOW, () => {
+  it('mentions Guide me where the problem offers cards; an answer-only problem has no guide', SLOW, () => {
     const a = renderAt('/p/expLogEquations/ee.exponential/2')
-    expect(within(screen.getByRole('region', { name: 'Solve it step by step' })).getByText(/Switch to/)).toBeTruthy()
+    expect(within(screen.getByRole('region', { name: 'Solve it step by step' })).getByText(/Guide me/)).toBeTruthy()
     a.unmount()
     resetStoreForTests()
     renderAt('/p/logForms/lf.value/2')
@@ -93,6 +92,6 @@ describe('where step-by-step problems are', () => {
     expect(screen.queryByRole('button', { name: 'Or solve one problem step by step' })).toBeNull()
     home.unmount()
     renderAt('/m/inequalities')
-    expect(document.querySelector('[data-step-badge]')!.textContent).toBe('Step by step')
+    expect(document.querySelector('[data-step-badge]')!.textContent).toBe('Step by step · pick or type')
   })
 })

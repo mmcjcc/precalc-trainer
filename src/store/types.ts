@@ -57,8 +57,8 @@ export interface Settings {
    */
   sounds?: boolean
   /**
-   * Guided mode, on problem types that offer cards (exponential and log equations): 'pick' is "Pick: choose each
-   * next line from three (counts less)". Absent means 'type'. Belongs to the device, like the keypad: an import never
+   * Guided mode, on problem types that offer cards: 'pick' is Guide me ON (choose each next line from three,
+   * counts less). Absent means 'type' (Guide me OFF). Belongs to the device, like the keypad: an import never
    * changes it.
    */
   lineEntry?: LineEntry

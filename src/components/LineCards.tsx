@@ -1,6 +1,8 @@
-import { useEffect, useId, useRef, type KeyboardEvent } from 'react'
+import { useEffect, useId, useRef, type KeyboardEvent, type ReactNode, type RefObject } from 'react'
 import type { LineCard } from '@/problem/lineCards'
 import type { LineEntry } from '@/store'
+import { ComposerExtra } from './Composer'
+import { notePress } from './keypadStore'
 import { Katex } from './Katex'
 
 /**
@@ -57,6 +59,122 @@ export function LineEntrySwitch({ value, onChange }: { value: LineEntry; onChang
         Pick: choose each next line from three (counts less)
       </p>
     </div>
+  )
+}
+
+/**
+ * "Guide me" on the composer: ON shows the cards for every line; OFF she types, and the cards stay in Hints.
+ * Remembered as settings.lineEntry. Only rendered by GuidedStep on types that have a card source.
+ */
+export function GuideSwitch({ on, onChange }: { on: boolean; onChange: (on: boolean) => void }) {
+  const captionId = useId()
+  const labelId = useId()
+  return (
+    <div className="mb-2 flex flex-wrap items-center gap-x-3 gap-y-1" data-guide-switch="" data-line-entry="">
+      <button
+        type="button"
+        role="switch"
+        aria-checked={on}
+        aria-labelledby={labelId}
+        aria-describedby={captionId}
+        onClick={() => onChange(!on)}
+        className="inline-flex min-h-11 items-center gap-2 rounded-xl px-1 font-semibold text-navy hover:bg-navy-50"
+      >
+        <span
+          className={`relative inline-flex h-7 w-12 shrink-0 items-center rounded-full border-2 ${on ? 'border-navy bg-navy' : 'border-navy-100 bg-navy-50'}`}
+          aria-hidden
+        >
+          <span className={`inline-block h-5 w-5 rounded-full bg-white ${on ? 'translate-x-5' : 'translate-x-0.5'}`} />
+        </span>
+        <span id={labelId}>Guide me</span>
+      </button>
+      <p id={captionId} className="text-xs text-navy/70">
+        {on ? 'On: pick each next line from three (counts less)' : 'Off: type your lines. Cards stay in Hints.'}
+      </p>
+    </div>
+  )
+}
+
+/**
+ * The composer/step area for a type that offers cards: the Guide me switch, then either the cards or the
+ * typing children. Lives in the composer (not ProblemFrame) so another builder can redesign the desktop
+ * problem screen without moving the switch.
+ */
+export function GuidedStep({
+  offers,
+  guidedOn,
+  onGuideChange,
+  showingCards,
+  lineKey,
+  cards,
+  onPick,
+  onType,
+  showBack,
+  onBack,
+  typedNote,
+  noteExtra,
+  inputRef,
+  children,
+}: {
+  offers: boolean
+  guidedOn: boolean
+  onGuideChange: (on: boolean) => void
+  showingCards: boolean
+  lineKey: number
+  cards: readonly LineCard[]
+  onPick: (card: LineCard) => void
+  onType: () => void
+  showBack: boolean
+  onBack: () => void
+  typedNote: string | null
+  noteExtra?: ReactNode
+  inputRef?: RefObject<HTMLInputElement | null>
+  children: ReactNode
+}) {
+  const focusBoxNext = useRef(false)
+  function typeInstead() {
+    focusBoxNext.current = true
+    onType()
+  }
+  useEffect(() => {
+    if (!focusBoxNext.current || showingCards) return
+    focusBoxNext.current = false
+    const box = inputRef?.current
+    if (!box) return
+    notePress()
+    if (document.activeElement === box) box.blur()
+    box.focus({ preventScroll: true })
+  }, [showingCards, inputRef])
+  return (
+    <>
+      {offers && (
+        <ComposerExtra>
+          <GuideSwitch on={guidedOn} onChange={onGuideChange} />
+        </ComposerExtra>
+      )}
+      {showingCards ? (
+        <LineCards key={lineKey} cards={cards} onPick={onPick} onType={typeInstead} />
+      ) : (
+        <>
+          {typedNote && (
+            <ComposerExtra>
+              <p className="mb-2 text-sm text-navy/80" data-typed-note="">
+                {typedNote}
+                {noteExtra}
+              </p>
+            </ComposerExtra>
+          )}
+          {children}
+          {showBack && (
+            <ComposerExtra>
+              <button type="button" onClick={onBack} className="mt-2 min-h-11 rounded-lg px-2 text-sm font-semibold text-navy underline hover:bg-navy-50">
+                Back to the cards
+              </button>
+            </ComposerExtra>
+          )}
+        </>
+      )}
+    </>
   )
 }
 

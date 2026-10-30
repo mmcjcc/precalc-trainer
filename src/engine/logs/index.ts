@@ -23,7 +23,7 @@ export { LOG_MISTAKE_IDS } from './types'
 export { checkLogStep, decimalTolerance, sameLogLine } from './step'
 export { checkLogRewrite, condenseLog, expandLog, isExpandedLog, isSingleLog } from './rewrite'
 // What each named mistake turns a line into (the checker's own slips), for lines shown as choices (Guided mode).
-export { logLineSlips, type LogLineSlip } from './lineSlips'
+export { logLineSlips, logRewriteSlips, type LogLineSlip } from './lineSlips'
 
 // Final answers.
 export { gradeLogValue, logValue, logValueMistakes, type LogValue } from './value'

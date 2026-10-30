@@ -1,6 +1,6 @@
-import { useCallback, useMemo, useState, type RefObject } from 'react'
+import { useCallback, useEffect, useMemo, useState, type RefObject } from 'react'
 import { getModule } from '@/content/registry'
-import type { StepContext } from '@/shared/types'
+import type { StepContext, StepResult } from '@/shared/types'
 import { useStore, type AttemptStep } from '@/store'
 import {
   decodeSlotStep,
@@ -18,6 +18,9 @@ import { liveParseError, safeLatex, type HintView, type ProgressLine, type Submi
 import { verdictFromStep, verdictFromYesNo } from '@/problem/tutorContext'
 import type { TutorVerdict } from '@/shared/tutor'
 import { useStepEngine, type StepEngine } from '@/problem/useStepEngine'
+import { useGuidedCards } from '@/problem/useGuidedCards'
+import type { LineCard } from '@/problem/lineCards'
+import { GuidedStep } from '@/components/LineCards'
 import { HintPanel } from '@/components/HintPanel'
 import { Katex } from '@/components/Katex'
 import { MathInput } from '@/components/MathInput'
@@ -48,7 +51,7 @@ export function EvenOddFlow(props: FlowProps) {
   return <EvenOddBody {...props} answer={answer} />
 }
 
-function useSlotEngine(slot: Slot, lines: string[], props: FlowProps & { answer: ParityAnswer }, ctx: StepContext, cards: HintView['card'][]): { engine: StepEngine; view: HintView } {
+function useSlotEngine(slot: Slot, lines: string[], props: FlowProps & { answer: ParityAnswer }, ctx: StepContext, cards: HintView['card'][]): { engine: StepEngine; view: HintView; guided: ReturnType<typeof useGuidedCards>; pickCard: (card: LineCard) => void; picked: { result: StepResult; text: string } | null; rejection: StepResult | null } {
   const { instance, attempt, completion, answer } = props
   const slotView = useMemo(() => slotHintView(slot, answer, lines, cards.filter((c): c is NonNullable<typeof c> => c !== null)), [slot, answer, lines, cards])
   const hint = useMemo<HintView>(() => ({ next: null, nudge: slotView.nudge, card: slotView.card, reveal: slotView.reveal }), [slotView])
@@ -80,7 +83,40 @@ function useSlotEngine(slot: Slot, lines: string[], props: FlowProps & { answer:
   const view: HintView = engine.lastPattern
     ? { ...hint, card: { id: engine.lastPattern.id, title: engine.lastPattern.title, body: engine.lastPattern.lesson, example: engine.lastPattern.example } }
     : hint
-  return { engine, view }
+  const previous = slot === 'B' ? `B:${lines[lines.length - 1] ?? ''}` : (lines[lines.length - 1] ?? instance.start ?? answer.f)
+  const nextText =
+    slot === 'A'
+      ? getModule(instance.moduleId).nextStep(instance, lines.length ? `y = ${lines[lines.length - 1]}` : instance.start, false)?.text ?? null
+      : answer.negF[lines.length] ?? null
+  const live = !completion && attempt !== null
+  const hintKey = (slot === 'B' ? 1000 : 0) + lines.length
+  const guided = useGuidedCards({ instance, attempt, previous, live, nextText: nextText ? stripY(nextText) : null, lineKey: hintKey })
+  const [picked, setPicked] = useState<{ result: StepResult; text: string } | null>(null)
+  useEffect(() => {
+    setPicked(null)
+  }, [lines.length])
+  function pickCard(card: LineCard) {
+    const outcome = classify(card.text)
+    if (outcome.kind === 'parse') return
+    if (outcome.kind === 'rejected') {
+      useStore.getState().rejectCard({ pattern: outcome.result.pattern?.id, text: card.text, key: guided.lineKey })
+      setPicked({ result: outcome.result, text: card.text })
+      return
+    }
+    setPicked(null)
+    useStore.getState().acceptStep({
+      text: encode(outcome.text),
+      latex: safeLatex(outcome.text),
+      via: 'card',
+      ...(guided.stepType ? { rule: guided.stepType } : {}),
+    })
+  }
+  const rejection = guided.showingCards ? (picked?.result ?? engine.rejection) : engine.rejection
+  return { engine, view, guided, pickCard, picked, rejection }
+}
+
+function stripY(text: string): string {
+  return text.replace(/^\s*y\s*=\s*/, '')
 }
 
 function EvenOddBody(props: FlowProps & { answer: ParityAnswer }) {
@@ -103,8 +139,6 @@ function EvenOddBody(props: FlowProps & { answer: ParityAnswer }) {
   const undoEngine = a.engine.canUndo ? a.engine : b.engine.canUndo ? b.engine : null
   const validate = useCallback((t: string) => liveParseError(t, instance.vars, 'expression'), [instance.vars])
   const bothWritten = lines.A.length > 0 && lines.B.length > 0
-  const rejected = activeSlot.engine.rejection ? activeSlot.engine : a.engine.rejection ? a.engine : b.engine.rejection ? b.engine : null
-  const tutorVerdict = rejected?.rejection ? verdictFromStep(rejected.rejection, rejected.draft) : parityVerdict
 
   const progress: ProgressLine = {
     stage: (lines.A.length > 0 ? 1 : 0) + (lines.B.length > 0 ? 1 : 0) + (done ? 1 : 0),
@@ -144,7 +178,8 @@ function EvenOddBody(props: FlowProps & { answer: ParityAnswer }) {
           />
         </div>
       }
-      tutorVerdict={tutorVerdict}
+      tutorVerdict={activeSlot.rejection ? verdictFromStep(activeSlot.rejection, activeSlot.picked?.text ?? activeSlot.engine.draft) : parityVerdict}
+      pickLine={activeSlot.guided.pickOffer}
       keymap={{
         onHint: activeSlot.engine.advanceHint,
         onUndo: undoEngine?.undo,
@@ -166,6 +201,10 @@ function EvenOddBody(props: FlowProps & { answer: ParityAnswer }) {
                 steps={steps}
                 lineCount={lines[slot].length}
                 engine={s.engine}
+                guided={s.guided}
+                pickCard={s.pickCard}
+                picked={s.picked}
+                rejection={s.rejection}
                 validate={validate}
                 done={done}
                 onFocus={() => setActive(slot)}
@@ -198,13 +237,17 @@ type SlotColumnProps = {
   steps: AttemptStep[]
   lineCount: number
   engine: StepEngine
+  guided: ReturnType<typeof useGuidedCards>
+  pickCard: (card: LineCard) => void
+  picked: { result: StepResult; text: string } | null
+  rejection: StepResult | null
   validate: (t: string) => { message: string; position?: number } | null
   done: boolean
   onFocus: () => void
   inputRef: RefObject<HTMLInputElement | null>
 }
 
-function SlotColumn({ slot, f, steps, lineCount, engine, validate, done, onFocus, inputRef }: SlotColumnProps) {
+function SlotColumn({ slot, f, steps, lineCount, engine, guided, pickCard, picked, rejection, validate, done, onFocus, inputRef }: SlotColumnProps) {
   const own = steps
     .map((s) => ({ s, d: decodeSlotStep(s.text) }))
     .filter((x): x is { s: AttemptStep; d: { slot: Slot; expr: string } } => x.d?.slot === slot)
@@ -229,26 +272,47 @@ function SlotColumn({ slot, f, steps, lineCount, engine, validate, done, onFocus
         {slot === 'A' ? `Replace every x in ${f} with (−x), then simplify.` : `Negate the whole function −(${f}), then distribute.`}
       </p>
       <WorkedColumn start={null} steps={own} onUndo={engine.undo} canUndo={engine.canUndo} afterLast={chipUi} />
-      {engine.rejection && (
+      {picked && (
+        <p className="flex flex-wrap items-center gap-2 text-sm text-navy" data-picked-line="">
+          <span>You picked</span>
+          <Katex tex={safeLatex(picked.text)} ariaLabel={picked.text} />
+        </p>
+      )}
+      {rejection && (
         <>
-          <RejectionCard result={engine.rejection} />
-          {!engine.rejection.pattern && <p className="text-sm text-navy">{slotHelp(slot, f, lineCount === 0)}</p>}
+          <RejectionCard result={rejection} />
+          {!rejection.pattern && <p className="text-sm text-navy">{slotHelp(slot, f, lineCount === 0)}</p>}
         </>
       )}
       {!done && (
-        <MathInput
-          value={engine.draft}
-          onChange={engine.setDraft}
-          onSubmit={() => void engine.submit()}
-          validate={validate}
-          error={engine.parseError}
+        <GuidedStep
+          offers={guided.offers}
+          guidedOn={guided.guidedOn}
+          onGuideChange={guided.chooseGuide}
+          showingCards={guided.showingCards}
+          lineKey={guided.lineKey}
+          cards={guided.cardsLeft}
+          onPick={pickCard}
+          onType={guided.typeInstead}
+          showBack={guided.typing && guided.cards.length > 0}
+          onBack={guided.backToCards}
+          typedNote={guided.typedNote}
           inputRef={inputRef}
-          autoFocus={slot === 'A'}
-          label={`${label} line`}
-          submitLabel={`Check ${label}`}
-          placeholder={slot === 'A' ? '5(-x)^3 - 3(-x)' : '-(5x^3 - 3x)'}
-          hideStrip={slot === 'B'}
-        />
+        >
+          <MathInput
+            value={engine.draft}
+            onChange={engine.setDraft}
+            onSubmit={() => void engine.submit()}
+            validate={validate}
+            error={engine.parseError}
+            inputRef={inputRef}
+            autoFocus={slot === 'A'}
+            label={`${label} line`}
+            submitLabel={`Check ${label}`}
+            placeholder={slot === 'A' ? '5(-x)^3 - 3(-x)' : '-(5x^3 - 3x)'}
+            hideStrip={slot === 'B'}
+          />
+        </GuidedStep>
       )}
       {lineCount > 0 && !done && <p className="text-xs text-navy/60">Add another line to simplify, or move on when this column is clean.</p>}
     </section>

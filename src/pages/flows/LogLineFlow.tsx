@@ -1,9 +1,8 @@
-import { ComposerExtra } from '@/components/Composer'
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { KEPT, stepVerdict, type LineVerdict } from '@/components/ComposerVerdict'
 import { Katex } from '@/components/Katex'
 import { notePress, useKeypadStore } from '@/components/keypadStore'
-import { LineCards, LineEntrySwitch } from '@/components/LineCards'
+import { GuidedStep } from '@/components/LineCards'
 import { MathInput } from '@/components/MathInput'
 import { SigFigCorrect, SigFigExplanation, SigFigRejection } from '@/components/SigFigFeedback'
 import { LOG_KEYS } from '@/components/symbolStrip'
@@ -15,12 +14,13 @@ import { anyShows, safeExample, safeLesson, safeWitness } from '@/content/module
 import { getModule } from '@/content/registry'
 import type { ProblemInstance } from '@/content/types'
 import { checkLogRewrite, checkLogStep, gradeLogEquation, patternHit, ERROR_PATTERNS, type LogGrade, type LogStepResult } from '@/engine'
-import { expLogStepContext, lineCardsFor, offersLineCards, stepTypeOf } from '@/problem/cardSources'
+import { expLogStepContext } from '@/problem/cardSources'
+import { useGuidedCards } from '@/problem/useGuidedCards'
 import type { LineCard } from '@/problem/lineCards'
 import { counterexampleLines, hintView, liveParseError, safeLatex, type HintView, type ProgressLine } from '@/problem/stepEngine'
 import { verdictFromLog, verdictFromStep } from '@/problem/tutorContext'
 import type { Counterexample, PatternHit } from '@/shared/types'
-import { typeThisTime, useStore, type LineEntry } from '@/store'
+import { useStore } from '@/store'
 import { NotAnAttemptNotice, useHintLadder } from './hintLadder'
 import { PolyTextBox, savePolyEntries } from './polyUi'
 import { recordLogGrade } from './record'
@@ -152,29 +152,11 @@ function Body({ instance, attempt, flags, templateTitle, completion, finish, mod
   const rawView = useMemo(() => hintView(instance, lastText ?? start, false, null, solved), [instance, lastText, start, solved])
   const view = useMemo(() => visibleHint(rawView, forms), [rawView, forms])
 
-  // ---- Guided mode: the next line picked from cards ------------------------------------------------------------
-  const offers = equation !== null && offersLineCards(instance)
-  const lineEntry: LineEntry = useStore((s) => s.settings.lineEntry) === 'pick' ? 'pick' : 'type'
-  const picking = offers && lineEntry === 'pick'
   const live = !done && !solved && attempt !== null
-  // The line she is writing (the hint and rejection key) and its cards' state on the attempt.
-  const lineKey = steps.length
-  const picks = attempt?.picks?.[String(lineKey)]
-  // The step type: what the path's next step does ("power_rule+take_log", cardSources.ts stepTypeOf). It keys the
-  // two-right-picks rule across problems; logged on every line.
   const nextText = rawView.next?.text ?? null
-  const stepType = useMemo(() => (offers && nextText !== null ? stepTypeOf(instance, previous, nextText) : null), [offers, nextText, previous, instance])
-  const events = useStore((s) => s.events)
-  const mustType = useMemo(() => offers && typeThisTime(events, stepType), [offers, events, stepType])
-  const wantCards = offers && live && rawView.next !== null && (picks !== undefined || !mustType)
-  const cards = useMemo(() => (wantCards ? lineCardsFor(instance, previous, lineKey) : []), [wantCards, instance, previous, lineKey])
-  const cardsLeft = useMemo(() => cards.filter((c) => c.right || !(picks?.wrong ?? []).includes(c.text)), [cards, picks])
-  // Cards on the screen: this line's cards were shown (and she did not switch to typing it), or Pick is on.
-  const showingCards = cards.length > 0 && (picks ? !picks.typing : picking && !mustType)
-  // Once the cards are on the screen the line counts as picked, however she enters it.
-  useEffect(() => {
-    if (showingCards && !picks) useStore.getState().showCards(lineKey)
-  }, [showingCards, picks, lineKey])
+  const guided = useGuidedCards({ instance, attempt, previous, live, nextText })
+  const { offers, showingCards, cards, cardsLeft, lineKey, stepType, pickOffer, typedNote: guidedNote } = guided
+  const picks = attempt?.picks?.[String(lineKey)]
 
   const restoredFor = useRef<string | null>(null)
   useEffect(() => {
@@ -316,46 +298,10 @@ function Body({ instance, attempt, flags, templateTitle, completion, finish, mod
     submitText(card.text, 'card')
   }
 
-  /** "Type it yourself instead": this line goes on the keypad (it comes up with the box, as after a key press). */
-  const focusBoxNext = useRef(false)
-  function typeInstead() {
-    focusBoxNext.current = true
-    useStore.getState().typeCardLine(true, lineKey)
-  }
-  useEffect(() => {
-    if (!focusBoxNext.current || showingCards) return
-    focusBoxNext.current = false
-    const box = inputRef.current
-    if (!box) return
-    // After the box is mounted (autofocus comes before the keypad knows the box): focus that follows a press opens it.
-    notePress()
-    if (document.activeElement === box) box.blur()
-    box.focus({ preventScroll: true })
-  }, [showingCards])
-
-  /** Type / Pick, remembered for next time. A line whose cards are out follows the switch. */
-  function chooseEntry(next: LineEntry) {
-    const s = useStore.getState()
-    s.setSettings({ lineEntry: next })
-    if (picks) s.typeCardLine(next === 'type', lineKey)
-  }
-
-  // While she types, the hints (and so Stuck?) offer the cards for this one line first.
-  const pickOffer = !picking && live && cards.length > 0 && !picks ? () => useStore.getState().showCards(lineKey) : null
-  // Her last line went into the answer box and is still there as it was: the composer offers the check.
   const filledBox = feedback?.kind === 'kept' ? feedback.toBox : undefined
   const answerReady = live && filledBox !== undefined && squash(box) === squash(filledBox)
-  // Why a line is typed where she might expect cards; at the end of the path, the way to the answer box.
-  let typedNote: string | null = null
-  let toAnswer = false
-  if (offers && live && !showingCards && !answerReady) {
-    if (picks) typedNote = 'You saw the cards for this line, so it counts as a picked line.'
-    else if (picking && mustType) typedNote = 'You picked this one right twice: type it this time.'
-    else if (picking && rawView.next === null) {
-      typedNote = 'That was the last line of the path: write the solution in the answer box.'
-      toAnswer = true
-    } else if (picking) typedNote = 'No cards for this line: type it.'
-  }
+  const typedNote = answerReady ? null : guidedNote
+  const toAnswer = guided.endOfPath && !answerReady
 
   /**
    * "Go to the answer box": the box takes the focus as after a tap, so on a phone the keypad opens on it and brings it
@@ -487,64 +433,56 @@ function Body({ instance, attempt, flags, templateTitle, completion, finish, mod
       }
       composer={
         !done && !solved ? (
-          showingCards ? (
-            <LineCards key={lineKey} cards={cardsLeft} onPick={pickCard} onType={typeInstead} />
-          ) : (
-            <>
-              {answerReady && (
-                <div className="mb-2 space-y-2 rounded-xl border border-navy-100 bg-navy-50 px-3 py-2" data-answer-ready="">
-                  <p className="text-sm text-navy">Your last line is in the answer box.</p>
-                  <button
-                    type="button"
-                    onClick={checkAnswer}
-                    className="btn-chunky min-h-12 w-full rounded-xl bg-navy px-4 font-semibold text-white hover:bg-navy-600"
-                  >
-                    Check my answer
+          <GuidedStep
+            offers={offers}
+            guidedOn={guided.guidedOn}
+            onGuideChange={guided.chooseGuide}
+            showingCards={showingCards}
+            lineKey={lineKey}
+            cards={cardsLeft}
+            onPick={pickCard}
+            onType={guided.typeInstead}
+            showBack={Boolean(picks?.typing && cards.length > 0)}
+            onBack={guided.backToCards}
+            typedNote={typedNote}
+            noteExtra={
+              toAnswer && equation && steps.length > 0 ? (
+                <>
+                  {' '}
+                  <button type="button" onClick={goToAnswer} className="min-h-11 rounded-lg px-1 font-semibold text-navy underline hover:bg-navy-50">
+                    Go to the answer box
                   </button>
-                </div>
-              )}
-              {/* A note folds into the composer's one line while the keypad is up on a phone (components/Composer.tsx). */}
-              {typedNote && (
-                <ComposerExtra>
-                  <p className="mb-2 text-sm text-navy/80" data-typed-note="">
-                    {typedNote}
-                    {toAnswer && answerOpen && (
-                      <>
-                        {' '}
-                        <button type="button" onClick={goToAnswer} className="min-h-11 rounded-lg px-1 font-semibold text-navy underline hover:bg-navy-50">
-                          Go to the answer box
-                        </button>
-                      </>
-                    )}
-                  </p>
-                </ComposerExtra>
-              )}
-              <MathInput
-                value={draft}
-                onChange={setDraft}
-                onSubmit={submitLine}
-                validate={validate}
-                inputRef={inputRef}
-                autoFocus
-                label="Next line"
-                submitLabel="Check this line"
-                placeholder={`Step ${steps.length + 1}: your next line`}
-                stripKeys={LOG_KEYS}
-                toTex={safeLatex}
-              />
-              {picks?.typing && cards.length > 0 && (
-                <ComposerExtra>
-                  <button
-                    type="button"
-                    onClick={() => useStore.getState().typeCardLine(false, lineKey)}
-                    className="mt-2 min-h-11 rounded-lg px-2 text-sm font-semibold text-navy underline hover:bg-navy-50"
-                  >
-                    Back to the cards
-                  </button>
-                </ComposerExtra>
-              )}
-            </>
-          )
+                </>
+              ) : undefined
+            }
+            inputRef={inputRef}
+          >
+            {answerReady && (
+              <div className="mb-2 space-y-2 rounded-xl border border-navy-100 bg-navy-50 px-3 py-2" data-answer-ready="">
+                <p className="text-sm text-navy">Your last line is in the answer box.</p>
+                <button
+                  type="button"
+                  onClick={checkAnswer}
+                  className="btn-chunky min-h-12 w-full rounded-xl bg-navy px-4 font-semibold text-white hover:bg-navy-600"
+                >
+                  Check my answer
+                </button>
+              </div>
+            )}
+            <MathInput
+              value={draft}
+              onChange={setDraft}
+              onSubmit={submitLine}
+              validate={validate}
+              inputRef={inputRef}
+              autoFocus
+              label="Next line"
+              submitLabel="Check this line"
+              placeholder={`Step ${steps.length + 1}: your next line`}
+              stripKeys={LOG_KEYS}
+              toTex={safeLatex}
+            />
+          </GuidedStep>
         ) : undefined
       }
     >
@@ -552,7 +490,6 @@ function Body({ instance, attempt, flags, templateTitle, completion, finish, mod
         <h2 id="log-work-title" className="font-semibold text-navy">
           Your work
         </h2>
-        {offers && !done && <LineEntrySwitch value={lineEntry} onChange={chooseEntry} />}
         <p className="text-xs text-navy/70">
           {mode === 'properties'
             ? 'One line at a time. A line is kept when it is still equal to the original, and the variables stay positive.'

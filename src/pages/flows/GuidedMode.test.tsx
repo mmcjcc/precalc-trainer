@@ -17,7 +17,7 @@ import { MathKeypad } from '@/components/MathKeypad'
 import { lineCardsFor, stepTypeOf } from '@/problem/cardSources'
 import type { LineCard } from '@/problem/lineCards'
 import { problemPath } from '@/problem/url'
-import { emptyRewards, mastery, resetStoreForTests, useStore, xpAwards, type Ev } from '@/store'
+import { emptyRewards, mastery, resetStoreForTests, STORAGE_KEYS, useStore, xpAwards, type Ev } from '@/store'
 import ProblemPage from '../Problem'
 
 const FLOW_TIMEOUT = 120_000
@@ -82,33 +82,32 @@ describe('Guided mode on a wide screen', () => {
     () => {
       const { seed } = problemWith('ee.exponential', '3^x = 13')
       const view = renderAt(problemPath('expLogEquations', 'ee.exponential', seed))
-      const type = screen.getByRole('radio', { name: 'Type' })
-      const pickMode = screen.getByRole('radio', { name: 'Pick' })
-      expect(type.getAttribute('aria-checked')).toBe('true')
-      expect(pickMode.getAttribute('aria-checked')).toBe('false')
-      expect(screen.getByRole('radiogroup', { name: 'How you write each line' })).toBeTruthy()
-      expect(screen.getByText('Pick: choose each next line from three (counts less)')).toBeTruthy()
+      const guide = screen.getByRole('switch', { name: 'Guide me' })
+      expect(guide.getAttribute('aria-checked')).toBe('false')
+      expect(screen.getByText('Off: type your lines. Cards stay in Hints.')).toBeTruthy()
       expect(lineBox()).toBeTruthy()
       expect(shownCards()).toEqual([])
-      fireEvent.click(pickMode)
+      fireEvent.click(guide)
       expect(useStore.getState().settings.lineEntry).toBe('pick')
+      expect(JSON.parse(localStorage.getItem(STORAGE_KEYS.settings)!)).toMatchObject({ lineEntry: 'pick' })
+      expect(guide.getAttribute('aria-checked')).toBe('true')
       expect(shownCards()).toHaveLength(3)
       expect(lineBox()).toBeNull()
-      // Back to Type on the same line: the box, and a word on why this line still counts as picked.
-      fireEvent.click(screen.getByRole('radio', { name: 'Type' }))
+      // Back to typing on the same line: the box, and a word on why this line still counts as picked.
+      fireEvent.click(screen.getByRole('switch', { name: 'Guide me' }))
       expect(lineBox()).toBeTruthy()
       expect(document.querySelector('[data-typed-note]')!.textContent).toBe('You saw the cards for this line, so it counts as a picked line.')
-      fireEvent.click(screen.getByRole('radio', { name: 'Pick' }))
+      fireEvent.click(screen.getByRole('switch', { name: 'Guide me' }))
       expect(shownCards()).toHaveLength(3)
       view.unmount()
       const again = renderAt(problemPath('expLogEquations', 'ee.exponential', seed))
-      expect(screen.getByRole('radio', { name: 'Pick' }).getAttribute('aria-checked')).toBe('true')
+      expect(screen.getByRole('switch', { name: 'Guide me' }).getAttribute('aria-checked')).toBe('true')
       expect(shownCards()).toHaveLength(3)
-      // Expanding logs has no cards and no switch.
+      // A type with no card source has no switch.
       again.unmount()
       resetStoreForTests()
-      renderAt(problemPath('logProperties', 'lp.expand', 1))
-      expect(screen.queryByRole('radiogroup', { name: 'How you write each line' })).toBeNull()
+      renderAt(problemPath('numberLine', 'nl.read', 1))
+      expect(screen.queryByRole('switch', { name: 'Guide me' })).toBeNull()
     },
     FLOW_TIMEOUT,
   )
@@ -394,6 +393,55 @@ describe('Guided mode on a phone', () => {
       fireEvent.click(within(composer).getByRole('button', { name: 'Go to the answer box' }))
       expect(document.activeElement).toBe(screen.getByRole('textbox', { name: 'Answer' }))
       expect(queryKeypad()).toBeTruthy()
+    },
+    FLOW_TIMEOUT,
+  )
+})
+
+describe('Guide me on an inequality', () => {
+  it(
+    'the switch shows; ON renders cards and a pick is logged like a typed line; flipping mid-problem keeps her work',
+    () => {
+      const p = generateProblem('inequalities', 'ineq.linear', 12345)
+      useStore.getState().setSettings({ lineEntry: 'pick' })
+      renderAt(problemPath('inequalities', 'ineq.linear', 12345))
+      expect(screen.getByRole('switch', { name: 'Guide me' }).getAttribute('aria-checked')).toBe('true')
+      const cards = lineCardsFor(p, p.start!, 0)
+      expect(cards.length).toBeGreaterThan(0)
+      expect(shownCards()).toEqual(cards.map((c) => c.text))
+      const right = cards.find((c) => c.right)!
+      fireEvent.click(screen.getByRole('button', { name: right.text }))
+      expect(ofType('step_accepted')).toMatchObject([{ stepIdx: 0, via: 'card' }])
+      const kept = useStore.getState().attempt?.steps[0]?.text
+      expect(kept).toBeTruthy()
+      fireEvent.click(screen.getByRole('switch', { name: 'Guide me' }))
+      expect(useStore.getState().settings.lineEntry).toBe('type')
+      expect(useStore.getState().attempt?.steps[0]?.text).toBe(kept)
+      expect(lineBox()).toBeTruthy()
+    },
+    FLOW_TIMEOUT,
+  )
+
+  it(
+    'the switch shows on types with a source and not on types without',
+    () => {
+      const withSource = [
+        problemPath('logProperties', 'lp.expand', 1),
+        problemPath('quadratics', 'cs.form', 1),
+        problemPath('diffQuotient', 'dq.linear', 1),
+        problemPath('evenOdd', 'evenOdd.poly', 1),
+      ]
+      for (const path of withSource) {
+        const view = renderAt(path)
+        expect(screen.getAllByRole('switch', { name: 'Guide me' }).length, path).toBeGreaterThan(0)
+        view.unmount()
+      }
+      const vertex = renderAt(problemPath('quadratics', 'cs.vertex', 1))
+      expect(screen.queryByRole('switch', { name: 'Guide me' })).toBeNull()
+      vertex.unmount()
+      const none = renderAt(problemPath('numberLine', 'nl.read', 1))
+      expect(screen.queryByRole('switch', { name: 'Guide me' })).toBeNull()
+      none.unmount()
     },
     FLOW_TIMEOUT,
   )

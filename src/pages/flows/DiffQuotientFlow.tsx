@@ -1,11 +1,17 @@
-import { useCallback, useEffect, useMemo, useRef } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { LEFT_TO_DO, stripFxhLabel, type DqLineResult } from '@/engine'
 import { dqStart, gradeDqStep, gradeFxh, type DqAnswer } from '@/content/modules/diffQuotient/grade'
 import type { AttemptStep } from '@/store'
 import { hintView, liveParseError, progressLine, safeLatex, type SubmitOutcome } from '@/problem/stepEngine'
 import { verdictFromStep } from '@/problem/tutorContext'
 import { useStepEngine } from '@/problem/useStepEngine'
-import { engineVerdict } from '@/components/ComposerVerdict'
+import { useGuidedCards } from '@/problem/useGuidedCards'
+import type { LineCard } from '@/problem/lineCards'
+import { getModule } from '@/content/registry'
+import type { StepResult } from '@/shared/types'
+import { useStore } from '@/store'
+import { engineVerdict, KEPT, stepVerdict } from '@/components/ComposerVerdict'
+import { GuidedStep } from '@/components/LineCards'
 import { HintPanel } from '@/components/HintPanel'
 import { Katex } from '@/components/Katex'
 import { MathInput } from '@/components/MathInput'
@@ -68,10 +74,40 @@ function DqBody({ instance, attempt, flags, templateTitle, completion, finish, a
   )
   const engine = useStepEngine({ instance, attempt, currentLine: lastLine, classify, hint: baseHint, disabled: done })
   const displayHint = engine.lastPattern ? hintView(instance, lastLine, false, engine.lastPattern, solved) : baseHint
-  const lineVerdict = useMemo(
-    () => engineVerdict({ rejection: engine.rejection, kept: engine.kept, caveat: engine.caveat }),
-    [engine.rejection, engine.kept, engine.caveat],
-  )
+  const live = !done && !solved && attempt !== null
+  const previousForCards = part === 1 ? '' : (current ?? '')
+  const nextText = getModule(instance.moduleId).nextStep(instance, lastLine, false)?.text ?? null
+  const guided = useGuidedCards({ instance, attempt, previous: previousForCards, live, nextText })
+  const [picked, setPicked] = useState<{ result: StepResult; text: string } | null>(null)
+  const [pickedKept, setPickedKept] = useState(false)
+  useEffect(() => {
+    setPicked(null)
+    setPickedKept(false)
+  }, [steps.length])
+  function pickCard(card: LineCard) {
+    const outcome = classify(card.text)
+    if (outcome.kind === 'parse') return
+    if (outcome.kind === 'rejected') {
+      useStore.getState().rejectCard({ pattern: outcome.result.pattern?.id, text: card.text, key: guided.lineKey })
+      setPicked({ result: outcome.result, text: card.text })
+      setPickedKept(false)
+      return
+    }
+    setPicked(null)
+    setPickedKept(true)
+    useStore.getState().acceptStep({
+      text: outcome.text,
+      latex: outcome.latex,
+      via: 'card',
+      ...(guided.stepType ? { rule: guided.stepType } : {}),
+    })
+  }
+  const rejection = guided.showingCards ? (picked?.result ?? engine.rejection) : engine.rejection
+  const lineVerdict = useMemo(() => {
+    if (picked) return stepVerdict(picked.result)
+    if (pickedKept) return KEPT
+    return engineVerdict({ rejection: engine.rejection, kept: engine.kept, caveat: engine.caveat })
+  }, [picked, pickedKept, engine.rejection, engine.kept, engine.caveat])
 
   // Finished: close the attempt once the simplified line's chip question (if any) is answered or skipped.
   const finishing = useRef(false)
@@ -124,7 +160,6 @@ function DqBody({ instance, attempt, flags, templateTitle, completion, finish, a
         </div>
       }
       graphCaption={`f(x) = ${f} with one secant line`}
-      nudgeText={solved ? 'Still here? Name the property for your last line, or skip it, to finish.' : undefined}
       hints={
         <HintPanel
           rung={engine.hintRung}
@@ -135,8 +170,16 @@ function DqBody({ instance, attempt, flags, templateTitle, completion, finish, a
           disabled={solved || done}
         />
       }
-      tutorVerdict={engine.rejection ? verdictFromStep(engine.rejection, engine.draft) : undefined}
+      tutorVerdict={rejection ? verdictFromStep(rejection, picked?.text ?? engine.draft) : undefined}
       lineVerdict={lineVerdict}
+      pickLine={guided.pickOffer}
+      nudgeText={
+        guided.showingCards
+          ? 'Still here? Pick the next line from the cards. The hint button is right there.'
+          : solved
+            ? 'Still here? Name the property for your last line, or skip it, to finish.'
+            : undefined
+      }
       keymap={{
         onHint: solved ? undefined : engine.advanceHint,
         onUndo: engine.undo,
@@ -146,20 +189,35 @@ function DqBody({ instance, attempt, flags, templateTitle, completion, finish, a
       }}
       composer={
         !solved && (
-          <MathInput
-            key={part}
-            value={engine.draft}
-            onChange={engine.setDraft}
-            onSubmit={() => void engine.submit()}
-            validate={validate}
-            error={engine.parseError}
+          <GuidedStep
+            offers={guided.offers}
+            guidedOn={guided.guidedOn}
+            onGuideChange={guided.chooseGuide}
+            showingCards={guided.showingCards}
+            lineKey={guided.lineKey}
+            cards={guided.cardsLeft}
+            onPick={pickCard}
+            onType={guided.typeInstead}
+            showBack={Boolean(attempt?.picks?.[String(guided.lineKey)]?.typing && guided.cards.length > 0)}
+            onBack={guided.backToCards}
+            typedNote={guided.typedNote}
             inputRef={engine.inputRef}
-            autoFocus
-            label={part === 1 ? 'f(x + h) line' : 'Next line'}
-            submitLabel={part === 1 ? 'Check f(x + h)' : 'Check this step'}
-            placeholder={part === 1 ? 'every x becomes (x + h)' : 'next line of the difference quotient'}
-            stripKeys={DIFF_QUOTIENT_KEYS}
-          />
+          >
+            <MathInput
+              key={part}
+              value={engine.draft}
+              onChange={engine.setDraft}
+              onSubmit={() => void engine.submit()}
+              validate={validate}
+              error={engine.parseError}
+              inputRef={engine.inputRef}
+              autoFocus
+              label={part === 1 ? 'f(x + h) line' : 'Next line'}
+              submitLabel={part === 1 ? 'Check f(x + h)' : 'Check this step'}
+              placeholder={part === 1 ? 'every x becomes (x + h)' : 'next line of the difference quotient'}
+              stripKeys={DIFF_QUOTIENT_KEYS}
+            />
+          </GuidedStep>
         )
       }
     >
@@ -171,10 +229,16 @@ function DqBody({ instance, attempt, flags, templateTitle, completion, finish, a
           Replace every x in <Katex tex={safeLatex(f)} /> with (x + h). You may leave it unexpanded.
         </p>
         {fxhStep && <WorkedColumn start={null} steps={fxhRow} onUndo={engine.undo} canUndo={engine.canUndo && lastIsFxh} />}
-        {part === 1 && engine.rejection && (
+        {part === 1 && picked && (
+          <p className="flex flex-wrap items-center gap-2 text-sm text-navy" data-picked-line="">
+            <span>You picked</span>
+            <Katex tex={safeLatex(picked.text)} ariaLabel={picked.text} />
+          </p>
+        )}
+        {part === 1 && rejection && (
           <>
-            <RejectionCard result={engine.rejection} />
-            {!engine.rejection.pattern && (
+            <RejectionCard result={rejection} />
+            {!rejection.pattern && (
               <p className="text-sm text-navy">
                 That is not f(x + h). Put (x + h), in parentheses, in place of EVERY x in {f}.
               </p>
@@ -193,7 +257,13 @@ function DqBody({ instance, attempt, flags, templateTitle, completion, finish, a
             Your f(x + h) is dropped in, and f(x) sits in parentheses so the minus reaches all of it. One move per line.
           </p>
           <WorkedColumn start={start} steps={dqSteps} onUndo={engine.undo} canUndo={engine.canUndo && !lastIsFxh} afterLast={chipUi} />
-          {engine.rejection && part === 2 && <RejectionCard result={engine.rejection} />}
+          {part === 2 && picked && (
+            <p className="flex flex-wrap items-center gap-2 text-sm text-navy" data-picked-line="">
+              <span>You picked</span>
+              <Katex tex={safeLatex(picked.text)} ariaLabel={picked.text} />
+            </p>
+          )}
+          {engine.rejection && part === 2 && <RejectionCard result={rejection ?? engine.rejection} />}
           {!engine.rejection && dqSteps.length > 0 && !solved && (
             <p role="status" className="text-sm text-navy">
               <span aria-hidden>✓ </span>
