@@ -179,7 +179,7 @@ export const COURSES: readonly CourseDef[] = [
         id: 'g7',
         label: 'Unit 7',
         title: 'Right triangles',
-        moduleIds: ['geoRightSimilar', 'geoPythagorean', 'geoSpecialRight'],
+        moduleIds: ['geoRightSimilar', 'geoPythagorean', 'geoSpecialRight', 'geoTrigRatios', 'geoElevDepress'],
       },
     ],
   },

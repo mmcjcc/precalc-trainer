@@ -2675,6 +2675,12 @@ export const ERROR_PATTERNS: Record<ErrorPatternId, ErrorPatternInfo> = {
     lesson: 'The altitude to the base of an isosceles triangle cuts the base in half, the diagonals of a rhombus cut each other in half, and an altitude of an equilateral triangle cuts a side in half. The right triangle inside the figure has the half as a leg, not the whole length.',
     example: 'base j: a leg of j ✗ → a leg of half of j',
   },
+  geo_distances_combined: {
+    id: 'geo_distances_combined',
+    title: 'The two distances combine the other way',
+    lesson: 'When both observations are on the same side of the tower, the farther distance is the closer one plus the space between the two points, so the tangents are subtracted. When the observers stand on opposite sides, the two distances add up to the space between them, so the tangents are added. Adding where the picture subtracts, or subtracting where it adds, builds the other kind of picture.',
+    example: 'the two distances added ✗ → the farther one is the closer one plus the space between',
+  },
   // --- precalculus Unit 4, trigonometric functions (engine/trig; content/modules/angleMeasure, unitCircle). Answers
   // there are angles, π-multiples and the special values, so examples use letters (d, k, θ, x, y, r) and numbers are
   // written as words: no example or lesson can show a generated answer.

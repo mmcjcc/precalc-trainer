@@ -443,7 +443,8 @@ export interface TrigTriangleSpec {
  * Which geometry screen this problem is. Unit 2 adds logic and proof; Unit 3 adds parallels and polygons; Unit 4 adds
  * congruent triangles; Unit 5 adds quadrilaterals; Unit 6 adds similarity (proportions, similar polygons, similar
  * triangles, proportional parts); Unit 7 adds right triangles (the geometric mean, the altitude to the hypotenuse, the
- * Pythagorean Theorem and its converse, word problems rounded as asked, the special right triangles).
+ * Pythagorean Theorem and its converse, word problems rounded as asked, the special right triangles). The second half
+ * adds the tangent, sine and cosine ratios and angles of elevation and depression.
  */
 export type GeometryQuestion =
   | 'addition'
@@ -489,6 +490,11 @@ export type GeometryQuestion =
   | 'pythagoreanConverse'
   | 'pythagoreanWords'
   | 'specialRight'
+  | 'trigRatio'
+  | 'trigSide'
+  | 'trigAngle'
+  | 'elevationStory'
+  | 'elevationTwo'
 
 /**
  * One checked part of a geometry problem. `x` and `result` are the Unit 1 boxes.
@@ -1496,6 +1502,12 @@ export type AnswerSpec =
          * rounding, in the reader's syntax ("sqrt(130)"). Off unless set: every other part is exact.
          */
         round?: 0 | 1 | 2
+        /**
+         * An exact fraction that must be in lowest terms (the tangent, sine and cosine ratios). 6/10 is the same
+         * value as 3/5 but is a note, not a correct answer and not a mistake. Off unless set, so earlier units
+         * still accept a fraction the reader has reduced.
+         */
+        lowest?: boolean
         exact?: string
         /** Box label, e.g. "x", "AB", "Reason for line 2". */
         label: string

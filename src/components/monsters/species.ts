@@ -653,7 +653,7 @@ export const SPECIES: readonly Species[] = [
     id: 'mismeasure',
     name: 'The Mismeasurer',
     personality: 'Measures twice and gets it wrong both times.',
-    family: 'Measure slips: parts and wholes, midpoints, halves and doubles, x in place of the measure, angle sums of polygons, fences and areas counted wrong, proportions set up or cross-multiplied wrong, the means and ratios of similar figures, the geometric means of a right triangle paired with the wrong lengths, a whole length where the right triangle inside a figure has half of it, and a wave’s height measured from the wrong place.',
+    family: 'Measure slips: parts and wholes, midpoints, halves and doubles, x in place of the measure, angle sums of polygons, fences and areas counted wrong, proportions set up or cross-multiplied wrong, the means and ratios of similar figures, the geometric means of a right triangle paired with the wrong lengths, a whole length where the right triangle inside a figure has half of it, two ground distances added where they should be subtracted or the reverse, and a wave’s height measured from the wrong place.',
     subject: 'math',
     look: { body: 'box', hue: 50, sat: 86, light: 56, accent: 4, top: 'antennae', eyes: 'round', mouth: 'grin', feet: 'stubs', arms: 'stubs', mark: 'ruler' },
     variants: [
@@ -696,6 +696,7 @@ export const SPECIES: readonly Species[] = [
       'geo_leg_far_segment',
       'geo_altitude_leg_mixed',
       'geo_half_not_taken',
+      'geo_distances_combined',
     ],
   },
   {

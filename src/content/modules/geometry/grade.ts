@@ -139,10 +139,15 @@ export const GEO_UNIT7_MISTAKE_IDS = [
   'geo_half_not_taken',
 ] as const
 
+/** Unit 7, second half: the two ground distances of a two-observation problem combined the wrong way. */
+export const GEO_UNIT7B_MISTAKE_IDS = ['geo_distances_combined'] as const
+
 /**
  * Mistakes of the precalculus right-triangle core (engine/trig) that Unit 7 names too: the special triangles' factors
  * swapped or used the wrong way, the squares added where one side is the hypotenuse (or subtracted for two legs), the
- * square root not taken. Their catalog entries and monsters are the trig ones; geometry grades them like its own.
+ * square root not taken, and (second half) a ratio upside down, sine and cosine swapped, the hypotenuse used as a
+ * leg, the calculator left in RADIAN mode, the ratio given as the angle, and an angle of depression measured from
+ * the vertical. Their catalog entries and monsters are the trig ones; geometry grades them like its own.
  */
 export const GEO_BORROWED_TRIG_IDS = [
   'trig_pythag_added',
@@ -152,6 +157,12 @@ export const GEO_BORROWED_TRIG_IDS = [
   'trig_special_45_two',
   'trig_special_wrong_way',
   'trig_special_legs_swapped',
+  'trig_opposite_adjacent_swapped',
+  'trig_sin_cos_swapped',
+  'trig_hypotenuse_as_leg',
+  'trig_radian_mode',
+  'trig_ratio_for_angle',
+  'trig_depression_from_vertical',
 ] as const
 
 export const GEO_UNIT1_MISTAKE_IDS = GEO_MISTAKE_IDS
@@ -164,6 +175,7 @@ export type GeoMistakeId =
   | (typeof GEO_UNIT5_MISTAKE_IDS)[number]
   | (typeof GEO_UNIT6_MISTAKE_IDS)[number]
   | (typeof GEO_UNIT7_MISTAKE_IDS)[number]
+  | (typeof GEO_UNIT7B_MISTAKE_IDS)[number]
   | (typeof GEO_BORROWED_TRIG_IDS)[number]
 
 export type GeoGrade =
@@ -210,8 +222,21 @@ export function gradeGeoStage(answer: GeometryAnswer, stageId: GeometryStageId, 
   if (!read.simplest) {
     return { verdict: 'invalid', message: read.note ?? 'Write that in simplest radical form.' }
   }
+  // A plain fraction left unreduced (6/10 for 3/5) is a note, not a correct answer and not the upside-down mistake.
+  // The reader reduces it before we see it, so this looks at the typed text. The note must not say the reduced value.
+  if (stage.lowest && read.value.kind === 'qty' && read.value.q.rad === 1) {
+    const bare = unitless.text.trim().replace(/^[A-Za-z]\s*=\s*/, '').replace(/\s+/g, '')
+    const frac = /^(-?\d+)\/(-?\d+)$/.exec(bare)
+    if (frac && frac[2] !== '0' && gcdAbs(Number(frac[1]), Number(frac[2])) > 1) {
+      return { verdict: 'invalid', message: `${bare} is not in lowest terms. Divide the top and the bottom by the same number.` }
+    }
+  }
   const right = readGeoAnswer(stage.answerText, opts)
   if (!right.ok || !right.simplest) return { verdict: 'invalid', message: 'This problem has no answer to check.' }
+  // A lowest-terms ratio is a fraction. 0.6 is the same value as 3/5, and still not the form this part asks for.
+  if (stage.lowest && read.decimal && sameGeoValue(read.value, right.value)) {
+    return { verdict: 'invalid', message: 'That looks like a calculator decimal. Give the exact value, as an integer or a fraction.' }
+  }
   if (sameGeoValue(read.value, right.value)) return { verdict: 'correct', message: `Correct: ${stage.answerText}.` }
   for (const trap of stage.traps) {
     const got = readGeoAnswer(trap.text, opts)
@@ -301,6 +326,19 @@ function withoutLengthUnit(text: string, unit: LengthUnit): { ok: true; text: st
 
 const PLACE_WORDS: Record<0 | 1 | 2, string> = { 0: 'whole number', 1: 'tenth', 2: 'hundredth' }
 
+/** How to name the place she was asked to round to. An angle says "degree", not "whole number". */
+function placePhrase(unit: 'deg' | undefined, places: 0 | 1 | 2): string {
+  if (unit === 'deg') return places === 0 ? 'degree' : places === 1 ? 'tenth of a degree' : 'hundredth of a degree'
+  return PLACE_WORDS[places]
+}
+
+function gcdAbs(a: number, b: number): number {
+  let x = Math.abs(a)
+  let y = Math.abs(b)
+  while (y) [x, y] = [y, x % y]
+  return x || 1
+}
+
 /** A rational n/d rounded to `places` decimal places, halves away from zero (as textbooks and the TI-84 do), exactly. */
 export function roundRational(n: number, d: number, places: number): number {
   const f = 10 ** places
@@ -323,18 +361,19 @@ const nearly = (a: number, b: number) => Math.abs(a - b) < 1e-9
  */
 function gradeRounded(stage: GeometryAnswer['stages'][number], text: string): GeoGrade {
   const places = stage.round ?? 1
-  const place = PLACE_WORDS[places]
+  const place = placePhrase(stage.unit, places)
   const unitless = stage.lengthUnit ? withoutLengthUnit(text, stage.lengthUnit) : { ok: true as const, text: text.trim() }
   if (!unitless.ok) return { verdict: 'invalid', message: unitless.message }
   const read = readGeoAnswer(unitless.text)
   if (!read.ok) return { verdict: 'invalid', message: read.message }
-  if (read.value.kind !== 'qty') return { verdict: 'invalid', message: 'This part asks for one length, not a point.' }
-  if (read.degrees) return { verdict: 'invalid', message: 'This part is not an angle measure, so leave off the degree sign.' }
+  if (read.value.kind !== 'qty') return { verdict: 'invalid', message: stage.unit === 'deg' ? 'This part asks for one number, not a point.' : 'This part asks for one length, not a point.' }
+  // A degree sign belongs on an angle and nowhere else. RADIAN mode can print a negative, so that match happens
+  // before a negative number is turned away.
+  if (read.degrees && stage.unit !== 'deg') return { verdict: 'invalid', message: 'This part is not an angle measure, so leave off the degree sign.' }
   const q = read.value.q
   if (q.rad > 1) {
     return { verdict: 'invalid', message: `This problem asks for a decimal rounded to the nearest ${place}. Use a calculator for the square root, then round.` }
   }
-  if (q.n <= 0) return { verdict: 'wrong', message: 'A length is always more than zero.' }
   const target = Number(stage.answerText)
   const typed = placesTyped(unitless.text)
   const v = q.n / q.d
@@ -343,18 +382,33 @@ function gradeRounded(stage: GeometryAnswer['stages'][number], text: string): Ge
   // More places are right when they round to the answer, or when they are the true length correctly rounded at her
   // own place (29.950 for 29.94997, which rounds to 29.9 at the tenth).
   const ownPlaceRight = exactValue !== null && typed > places && Math.abs(v - exactValue) <= 0.5 * 10 ** -typed + 1e-12
-  if (nearly(v, target) || (typed > places && nearly(roundRational(q.n, q.d, places), target)) || ownPlaceRight) {
-    return { verdict: 'correct', message: `Correct: ${stage.answerText}.` }
+  const matches = (want: number) => nearly(v, want) || (typed > places && nearly(roundRational(q.n, q.d, places), want))
+  const namedTrap = (): GeoGrade | null => {
+    for (const trap of stage.traps) {
+      const t = Number(trap.text)
+      if (!Number.isFinite(t) || !isGeoMistake(trap.id)) continue
+      if (matches(t)) return { verdict: 'mistake', mistake: trap.id, witness: trap.witness }
+    }
+    return null
   }
-  for (const trap of stage.traps) {
-    const t = Number(trap.text)
-    if (!Number.isFinite(t) || !isGeoMistake(trap.id)) continue
-    if (nearly(v, t) || (typed > places && nearly(roundRational(q.n, q.d, places), t))) return { verdict: 'mistake', mistake: trap.id, witness: trap.witness }
-  }
-  if (typed < places && exactValue !== null) {
+  // Fewer places is a note even when that shorter rounding equals the asked number (7.0 for 7.00). The exact
+  // whole number, typed as itself, is still right. A slip still wins.
+  if (typed < places && exactValue !== null && q.n > 0 && !nearly(v, exactValue)) {
     const f = 10 ** typed
     const shorter = Math.round(exactValue * f) / f
-    if (nearly(v, shorter)) return { verdict: 'invalid', message: `That is rounded too far. Round to the nearest ${place}.` }
+    if (nearly(v, shorter)) {
+      const named = namedTrap()
+      if (named) return named
+      return { verdict: 'invalid', message: `That is rounded too far. Round to the nearest ${place}.` }
+    }
+  }
+  if (q.n > 0 && (matches(target) || ownPlaceRight)) {
+    return { verdict: 'correct', message: `Correct: ${stage.answerText}.` }
+  }
+  const named = namedTrap()
+  if (named) return named
+  if (q.n <= 0) {
+    return { verdict: 'wrong', message: stage.unit === 'deg' ? 'An angle here is more than zero.' : 'A length is always more than zero.' }
   }
   return { verdict: 'wrong', message: `That is not ${stage.label}.` }
 }
@@ -381,6 +435,7 @@ export function isGeoMistake(id: ErrorPatternId): id is GeoMistakeId {
     (GEO_UNIT5_MISTAKE_IDS as readonly string[]).includes(id) ||
     (GEO_UNIT6_MISTAKE_IDS as readonly string[]).includes(id) ||
     (GEO_UNIT7_MISTAKE_IDS as readonly string[]).includes(id) ||
+    (GEO_UNIT7B_MISTAKE_IDS as readonly string[]).includes(id) ||
     (GEO_BORROWED_TRIG_IDS as readonly string[]).includes(id)
   )
 }
@@ -602,7 +657,7 @@ function visibleBlob(answer: GeometryAnswer): string {
 }
 
 /** The Unit 7 question kinds, whose generators hold every text to `exposedExact`. */
-const UNIT7_QUESTIONS: ReadonlySet<string> = new Set(['geometricMean', 'rightAltitude', 'pythagorean', 'pythagoreanConverse', 'pythagoreanWords', 'specialRight'])
+const UNIT7_QUESTIONS: ReadonlySet<string> = new Set(['geometricMean', 'rightAltitude', 'pythagorean', 'pythagoreanConverse', 'pythagoreanWords', 'specialRight', 'trigRatio', 'trigSide', 'trigAngle', 'elevationStory', 'elevationTwo'])
 
 /**
  * Like `exposed`, with a radical bound to the number it touches: in "6√2" neither 6 nor √2 is shown on its own, and a
