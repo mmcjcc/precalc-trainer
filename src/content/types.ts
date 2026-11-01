@@ -17,7 +17,7 @@ import type {
   VarName,
 } from '@/shared/types'
 
-export type ProblemKind = 'inequality' | 'numberLine' | 'evenOdd' | 'inverse' | 'drill' | 'sigFigs' | 'atoms' | 'diffQuotient' | 'graphFeatures' | 'domainRange' | 'composition' | 'functionOps' | 'transformations' | 'piecewiseRate' | 'electrons' | 'quantumNumbers' | 'periodic' | 'quadratics' | 'optimization' | 'polyDivision' | 'polyZeros' | 'rationalFns' | 'signCharts' | 'complexNums' | 'logForms' | 'logProperties' | 'expLogEquations' | 'expLogGraphs' | 'expModels' | 'angleMeasure' | 'rightTriangle' | 'unitCircle' | 'sinusoids' | 'otherTrigGraphs' | 'inverseTrig' | 'geometry' | 'nomenclature'
+export type ProblemKind = 'inequality' | 'numberLine' | 'evenOdd' | 'inverse' | 'drill' | 'sigFigs' | 'atoms' | 'diffQuotient' | 'graphFeatures' | 'domainRange' | 'composition' | 'functionOps' | 'transformations' | 'piecewiseRate' | 'electrons' | 'quantumNumbers' | 'periodic' | 'quadratics' | 'optimization' | 'polyDivision' | 'polyZeros' | 'rationalFns' | 'signCharts' | 'complexNums' | 'logForms' | 'logProperties' | 'expLogEquations' | 'expLogGraphs' | 'expModels' | 'angleMeasure' | 'rightTriangle' | 'unitCircle' | 'sinusoids' | 'otherTrigGraphs' | 'inverseTrig' | 'trigIdentities' | 'geometry' | 'nomenclature'
 
 /** Precalculus Unit 2, optimization with quadratics: a pen against a wall, pens in a row, two numbers, price and sales. */
 export type OptimizationQuestion = 'wall' | 'pens' | 'numbers' | 'revenue'
@@ -248,6 +248,9 @@ export type OtherTrigGraphsQuestion = 'features' | 'match'
 
 /** Precalculus Unit 5. Exact and calculator values of arcsin, arccos and arctan; compositions. */
 export type InverseTrigQuestion = 'evaluate' | 'compose'
+
+/** Precalculus Unit 6, Part 1: fundamental trig identities (express in terms of another, simplify, verify). */
+export type TrigIdentitiesQuestion = 'express' | 'simplify' | 'verify'
 
 /**
  * How one part of a trig problem is answered and read (engine/trig's reader and grader):
@@ -1938,6 +1941,30 @@ export type AnswerSpec =
       type: 'inverseTrig'
       question: InverseTrigQuestion
     } & TrigAnswerFields)
+  | ({
+      /**
+       * Fundamental trig identities (precalculus Unit 6, Part 1): writing one trig function in terms of another in a
+       * given quadrant (parts), simplifying a trig expression to a single trig function or constant (step by step),
+       * and verifying an identity by transforming the left side into the right side (step by step).
+       */
+      type: 'trigIdentities'
+      question: TrigIdentitiesQuestion
+      expr: string
+      target?: string
+      path: string[]
+      answerText: string
+      answerLatex: string
+      formatHint: string
+      expressSpec?: {
+        targetFn: 'sin' | 'cos' | 'tan' | 'csc' | 'sec' | 'cot'
+        givenFn: 'sin' | 'cos' | 'tan' | 'csc' | 'sec' | 'cot'
+        quadrant: 1 | 2 | 3 | 4
+        identityText: string
+        signText: '+' | '−'
+        answerText: string
+        answerLatex: string
+      }
+    } & TrigAnswerFields)
   | {
       type: 'drill'
       question: 'which_property' | 'legal_or_illegal'
@@ -1986,6 +2013,7 @@ export type UnitCircleAnswer = Extract<AnswerSpec, { type: 'unitCircle' }>
 export type SinusoidsAnswer = Extract<AnswerSpec, { type: 'sinusoids' }>
 export type OtherTrigGraphsAnswer = Extract<AnswerSpec, { type: 'otherTrigGraphs' }>
 export type InverseTrigAnswer = Extract<AnswerSpec, { type: 'inverseTrig' }>
+export type TrigIdentitiesAnswer = Extract<AnswerSpec, { type: 'trigIdentities' }>
 export type TrigAnswer = AngleMeasureAnswer | RightTriangleAnswer | UnitCircleAnswer | SinusoidsAnswer | OtherTrigGraphsAnswer | InverseTrigAnswer
 
 /** The optimization arm of `AnswerSpec`, named so the flow and the generators share it. */

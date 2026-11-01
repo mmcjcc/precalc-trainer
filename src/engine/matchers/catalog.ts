@@ -3111,6 +3111,57 @@ export const ERROR_PATTERNS: Record<ErrorPatternId, ErrorPatternInfo> = {
     lesson: 'arcsin and arctan are odd: a negative input gives the negative of the angle for the positive input. arccos of a negative input is a half turn minus the angle for the positive input, in Quadrant II.',
     example: 'arcsin(−s) = arcsin(s) ✗ → −arcsin(s)',
   },
+  // --- precalculus Unit 6, analytic trigonometry: fundamental identities (engine/trig: identity; content/modules/
+  // trigIdentities). Examples use α, u, v and the word one, so no example or lesson can show a generated expression
+  // in x or θ or any ASCII digit. ---
+  trig_pythag_sign: {
+    id: 'trig_pythag_sign',
+    title: 'Pythagorean identity with the wrong sign',
+    lesson: 'The main Pythagorean identity adds the squares, sin²α + cos²α = one, so subtracting one square from one gives the other square with a plus sign. With tangent and secant, one + tan²α = sec²α and sec²α − tan²α = one.',
+    example: 'one − cos²α = −sin²α ✗ → one − cos²α = sin²α',
+  },
+  trig_pythag_no_square: {
+    id: 'trig_pythag_no_square',
+    title: 'Pythagorean identities need squares',
+    lesson: 'The Pythagorean identity links the squares of sine and cosine: sin²α + cos²α = one, not the first powers. Without the squares, sin α + cos α does not simplify to one, and one − cos α is not sin α.',
+    example: 'sin α + cos α = one ✗ → sin²α + cos²α = one',
+  },
+  trig_reciprocal_wrong_pair: {
+    id: 'trig_reciprocal_wrong_pair',
+    title: 'sec goes with cos, csc goes with sin',
+    lesson: 'Each reciprocal pair has one "co" in it: sec α is one over cos α, and csc α is one over sin α. Pairing sec with sin or csc with cos swaps the two reciprocals.',
+    example: 'sec α = one/sin α ✗ → sec α = one/cos α',
+  },
+  trig_quotient_inverted: {
+    id: 'trig_quotient_inverted',
+    title: 'tan is sin over cos; cot is cos over sin',
+    lesson: 'The quotient identities put sine on top for tangent, tan α = sin α / cos α, and cosine on top for cotangent, cot α = cos α / sin α. Flipping the fraction turns tangent into cotangent.',
+    example: 'tan α = cos α / sin α ✗ → tan α = sin α / cos α',
+  },
+  trig_cancel_across_sum: {
+    id: 'trig_cancel_across_sum',
+    title: 'Only common factors cancel, not terms in a sum',
+    lesson: 'A denominator divides the whole numerator, so you can cancel a factor only when it multiplies every term on top. Canceling across a plus or minus sign leaves the other term undivided.',
+    example: '(sin α + cos α)/sin α = one + cos α ✗ → one + cot α',
+  },
+  trig_square_dropped: {
+    id: 'trig_square_dropped',
+    title: 'Keep the square on the trig function',
+    lesson: 'A squared trig function like sin²α means (sin α)², the product of two copies of sin α. Dropping the exponent changes the power and gives a different function.',
+    example: 'sin²α → sin α ✗ → keep sin²α',
+  },
+  trig_identity_sign_lost: {
+    id: 'trig_identity_sign_lost',
+    title: 'Mind the sign when rearranging or taking a root',
+    lesson: 'Reversing a subtraction flips the sign, so cos²α − one is −sin²α and one − sec²α is −tan²α. When taking a square root for an angle in a given quadrant, choose the plus or minus sign that matches the function in that quadrant.',
+    example: 'cos²α − one = sin²α ✗ → cos²α − one = −sin²α',
+  },
+  trig_split_denominator: {
+    id: 'trig_split_denominator',
+    title: 'A sum in the denominator does not split',
+    lesson: 'A sum on top of a fraction splits over a single denominator, (u + v)/w = u/w + v/w, but a sum on the bottom stays together. Replacing one/(u + v) with one/u + one/v is not an equal fraction.',
+    example: 'one/(sin α + cos α) = one/sin α + one/cos α ✗ → keep the denominator together',
+  },
   // --- precalculus Unit 2, optimization with quadratics (engine/optim). Examples use l and w, letters no problem
   // uses, so no example can be a generated answer. ---
   opt_wall_fenced: {

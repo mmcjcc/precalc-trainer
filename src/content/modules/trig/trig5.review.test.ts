@@ -69,7 +69,7 @@ function tryValue(text: string): number | null {
 // The catalog, the cards, the hints
 // ---------------------------------------------------------------------------
 
-const UNIT5_IDS = TRIG_MISTAKE_IDS.slice(TRIG_MISTAKE_IDS.indexOf('trig_amplitude_negative'))
+const UNIT5_IDS = TRIG_MISTAKE_IDS.slice(TRIG_MISTAKE_IDS.indexOf('trig_amplitude_negative'), TRIG_MISTAKE_IDS.indexOf('trig_pythag_sign'))
 
 describe('Unit 5’s catalog entries and cards', () => {
   it('31 new trig_ ids, each with a wrong → right example and no special value', () => {

@@ -80,6 +80,15 @@ export const TRIG_MISTAKE_IDS = [
   'trig_inverse_cancel_outside',
   'trig_inverse_outside_domain',
   'trig_inverse_sign_dropped',
+  // Unit 6: fundamental trig identities (reciprocal, quotient, Pythagorean) and algebraic rewrites.
+  'trig_pythag_sign',
+  'trig_pythag_no_square',
+  'trig_reciprocal_wrong_pair',
+  'trig_quotient_inverted',
+  'trig_cancel_across_sum',
+  'trig_square_dropped',
+  'trig_identity_sign_lost',
+  'trig_split_denominator',
 ] as const satisfies readonly ErrorPatternId[]
 
 export type TrigMistakeId = (typeof TRIG_MISTAKE_IDS)[number]

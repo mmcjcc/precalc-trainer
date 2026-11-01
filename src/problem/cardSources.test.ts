@@ -5,10 +5,11 @@ import { logSame } from '@/content/modules/explog/anchor'
 import { gradeDqStep, gradeFxh } from '@/content/modules/diffQuotient/grade'
 import { POLY_PATTERN } from '@/content/modules/polynomials/patterns'
 import { checkLogRewrite, checkLogStep, checkSquareLine, ERROR_PATTERNS, LOG_MISTAKE_IDS, verifyStep } from '@/engine'
+import { verifyTrigStep } from '@/engine/trig'
 import type { ErrorPatternId } from '@/shared/types'
 import { gradeSlotLine } from './evenOdd'
 import { buildStepContext } from './stepEngine'
-import { clearLineCardsCache, expLogStepContext, lineCardsFor, offersLineCards } from './cardSources'
+import { clearLineCardsCache, expLogStepContext, lineCardsFor, offersLineCards, stepTypeOf, trigIdentitiesStepContext } from './cardSources'
 
 const SLOW = 120_000
 const SEEDS = Array.from({ length: 40 }, (_, i) => i + 1)
@@ -26,6 +27,9 @@ describe('which problem types offer cards', () => {
     expect(offersLineCards(generateProblem('diffQuotient', 'dq.linear', 1))).toBe(true)
     expect(offersLineCards(generateProblem('evenOdd', 'evenOdd.poly', 1))).toBe(true)
     expect(offersLineCards(generateProblem('numberLine', 'nl.read', 1))).toBe(false)
+    expect(offersLineCards(generateProblem('trigIdentities', 'ti.simplify', 1))).toBe(true)
+    expect(offersLineCards(generateProblem('trigIdentities', 'ti.verify', 1))).toBe(true)
+    expect(offersLineCards(generateProblem('trigIdentities', 'ti.express', 1))).toBe(false)
   }, SLOW)
 })
 
@@ -299,3 +303,51 @@ assertPathCards(
   },
   { minShare: 0.15, needThree: false },
 )
+
+assertPathCards(
+  'ti.simplify',
+  'trigIdentities',
+  'ti.simplify',
+  (p) => {
+    const rows: { current: string; right: string }[] = []
+    let current = p.start ?? ''
+    for (const step of p.canonical) {
+      rows.push({ current, right: step.text })
+      current = step.text
+    }
+    return rows
+  },
+  (p, prev, next) => {
+    const ctx = trigIdentitiesStepContext(p)!
+    const r = verifyTrigStep(prev, next, ctx)
+    return { ok: r.ok, pattern: r.pattern?.id }
+  },
+)
+
+assertPathCards(
+  'ti.verify',
+  'trigIdentities',
+  'ti.verify',
+  (p) => {
+    const rows: { current: string; right: string }[] = []
+    let current = p.start ?? ''
+    for (const step of p.canonical) {
+      rows.push({ current, right: step.text })
+      current = step.text
+    }
+    return rows
+  },
+  (p, prev, next) => {
+    const ctx = trigIdentitiesStepContext(p)!
+    const r = verifyTrigStep(prev, next, ctx)
+    return { ok: r.ok, pattern: r.pattern?.id }
+  },
+)
+
+describe('trigIdentities stepTypeOf', () => {
+  it('returns the identity family tag for ti.simplify and ti.verify steps', () => {
+    const p = generateProblem('trigIdentities', 'ti.simplify', 1)
+    const tag = stepTypeOf(p, p.start!, p.canonical[0]!.text)
+    expect(['pythagorean', 'reciprocal', 'quotient', 'algebra']).toContain(tag)
+  })
+})

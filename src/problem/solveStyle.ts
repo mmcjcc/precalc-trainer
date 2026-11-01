@@ -38,6 +38,7 @@ export const PICK_MODULES: ReadonlySet<string> = new Set([
   'logProperties',
   'diffQuotient',
   'evenOdd',
+  'trigIdentities',
 ])
 
 export function isStepKind(kind: string): boolean {

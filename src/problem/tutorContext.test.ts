@@ -19,6 +19,8 @@ import { gradeUcPart } from '@/content/modules/unitCircle'
 import { gradeSgPart } from '@/content/modules/sinusoids'
 import { gradeOgPart } from '@/content/modules/otherTrigGraphs'
 import { gradeItPart } from '@/content/modules/inverseTrig'
+import { gradeTiPart } from '@/content/modules/trigIdentities'
+import { verifyTrigStep } from '@/engine/trig'
 import { trigEntries } from '@/content/modules/trig/parts'
 import { gradeNmStage, NM_KEYS, nmWork } from '@/content/modules/nomenclature'
 import { reasonLabel } from '@/content/modules/geometry/reasons'
@@ -48,6 +50,7 @@ import {
   verdictFromExpLogPart,
   verdictFromNm,
   verdictFromTrigPart,
+  verdictFromTrigStep,
   verdictFromOptPart,
 } from '@/problem/tutorContext'
 import { gradeOptPart, optEntries, stagesFor } from '@/content/modules/optimization'
@@ -1503,6 +1506,30 @@ describe('buildTutorContext', () => {
     expect(typed.work).toEqual([`${story.answer.stages[0]!.label}: 222 ft`])
     expect(story.answer.stages[0]!.round).toBe(0)
   }, 120_000)
+
+  it('describes Unit 6 Fundamental trig identities problems (ti.express, ti.simplify, ti.verify)', () => {
+    const express = generateProblem('trigIdentities', 'ti.express', 1)
+    if (express.answer.type !== 'trigIdentities') throw new Error('ti.express')
+    const ea = express.answer
+    const eCtx = buildTutorContext(express, attempt('ti-express', { moduleId: 'trigIdentities', final: { polyEntries: trigEntries(ea.stages) } }), null, true)
+    expect(eCtx.kind).toBe('trigIdentities')
+    expect(eCtx.subject).toBe('precalculus')
+    expect(eCtx.answer).toBe(ea.expectedDisplay)
+    const eSlip = gradeTiPart(ea, ea.trapStage!, ea.trapAnswer!)
+    expect(verdictFromTrigPart(eSlip)?.mistake?.id).toBe(ea.trap)
+
+    for (const templateId of ['ti.simplify', 'ti.verify'] as const) {
+      const inst = generateProblem('trigIdentities', templateId, 1)
+      if (inst.answer.type !== 'trigIdentities') throw new Error(templateId)
+      const sa = inst.answer
+      const sCtx = buildTutorContext(inst, attempt(`ti-${templateId}`, { moduleId: 'trigIdentities', steps: [step(inst.canonical[0]!.text)] }), null, false)
+      expect(sCtx.kind).toBe('trigIdentities')
+      expect(sCtx.work).toEqual([inst.canonical[0]!.text])
+      expect(sCtx.answer).toBe(sa.expectedDisplay)
+      const badRes = verifyTrigStep(inst.start!, sa.trapAnswer!, { kind: sa.question === 'verify' ? 'verify' : 'simplify', variable: 'x', start: inst.start!, ...(sa.target ? { target: sa.target } : {}) })
+      expect(verdictFromTrigStep(badRes, sa.trapAnswer!).mistake?.id).toBe(sa.trap)
+    }
+  })
 
   it('never adds a name, email, or account field', () => {
     const instance = generateProblem('inequalities', 'ineq.linear', 4)

@@ -33,6 +33,7 @@ import { finalRoute } from '@/engine/optim'
 import { ERROR_PATTERNS } from '@/engine'
 import type { OpsGrade } from '@/content/modules/functionOps/ops'
 import type { DescriptionGrade, EconfigGrade, FunctionGrade, LogGrade, NmGrade, PolyGrade, SquareLineGrade, TransformGrade } from '@/engine'
+import type { TrigStepResult } from '@/engine/trig'
 import { getModule, hasModule } from '@/content/registry'
 import type { FinalAnswerGrade } from '@/problem/inequality'
 import { decodeSlotStep } from '@/problem/evenOdd'
@@ -390,6 +391,14 @@ export function verdictFromExpLogPart(grade: PartGrade, herText?: string): Tutor
  * Unreadable input, and an answer in a form that is not asked for (not simplest radical form, a calculator decimal,
  * the wrong unit), is a parse error: nothing was graded.
  */
+export function verdictFromTrigStep(result: TrigStepResult, herText: string): TutorVerdict {
+  if (result.ok) {
+    return withMessage('accepted', result.message, result.normalizedText ?? herText)
+  }
+  const status = result.verdict === 'parse_error' ? 'parse_error' : 'rejected'
+  return withMessage(status, result.message, herText, result.pattern ? mistakeOf(result.pattern) : undefined)
+}
+
 export function verdictFromTrigPart(grade: TrigPartGrade, herText?: string): TutorVerdict | null {
   const line = herText?.trim() ? herText.trim() : undefined
   if (grade.verdict === 'correct') return withMessage('correct', grade.message, line)
@@ -542,6 +551,16 @@ function workOf(instance: ProblemInstance, attempt: Attempt | null): string[] {
       .slice(0, TUTOR_LIMITS.lines)
       .map((line) => clip(line, TUTOR_LIMITS.line))
   }
+  if (instance.answer.type === 'trigIdentities') {
+    if (instance.answer.question === 'express') {
+      return trigWork(instance.answer.stages, attempt.final?.polyEntries)
+        .slice(0, TUTOR_LIMITS.lines)
+        .map((line) => clip(line, TUTOR_LIMITS.line))
+    }
+    return attempt.steps
+      .slice(0, TUTOR_LIMITS.lines)
+      .map((step) => clip(step.text, TUTOR_LIMITS.line))
+  }
   if (instance.answer.type === 'geometry') {
     return geoWork(instance.answer, attempt.final?.polyEntries)
       .slice(0, TUTOR_LIMITS.lines)
@@ -684,13 +703,14 @@ function statementOf(instance: ProblemInstance): string {
     text = answer.matchMode === 'equation' ? `${answer.prompt}${candidates}` : `${answer.fnName}(x) = ${answer.f}. ${answer.prompt}${candidates}`
   } else if (answer.type === 'expModels') {
     text = answer.prompt
-  } else if (answer.type === 'angleMeasure' || answer.type === 'rightTriangle' || answer.type === 'unitCircle' || answer.type === 'sinusoids' || answer.type === 'otherTrigGraphs' || answer.type === 'inverseTrig') {
+  } else if (answer.type === 'angleMeasure' || answer.type === 'rightTriangle' || answer.type === 'unitCircle' || answer.type === 'sinusoids' || answer.type === 'otherTrigGraphs' || answer.type === 'inverseTrig' || answer.type === 'trigIdentities') {
     // The prompt as words (its KaTeX read back), the given equation (Unit 5), and the figure, which the tutor cannot
     // see; four graphs to match are said by their formulas, as expLogGraphs' candidates are.
     const display = answer.display ? ` ${trigPlain(answer.display)}` : ''
     const figure = answer.figure.ariaLabel.trim() ? ` Figure: ${answer.figure.ariaLabel}` : ''
     const graphs = answer.figure.graphs?.length ? ` Graphs: ${answer.figure.graphs.map((g) => `${g.letter}: ${g.formula ?? 'a graph'}`).join('; ')}.` : ''
-    text = `${trigPlain(answer.prompt)}${display}${figure}${graphs}`
+    const stepStmt = answer.type === 'trigIdentities' && answer.question !== 'express' ? `${instance.statementText}. ` : ''
+    text = `${stepStmt}${trigPlain(answer.prompt)}${display}${figure}${graphs}`
   } else if (answer.type === 'optimization') {
     // The prompt as words, and the pens' figure when the problem has one.
     text = `${optPlain(answer.prompt)}${answer.figure ? ` Figure: ${answer.figure.ariaLabel}` : ''}`
@@ -740,7 +760,7 @@ function canonicalOf(instance: ProblemInstance): string[] {
     answer.type === 'quantum'
   ) {
     lines = answer.reveal
-  } else if (answer.type === 'angleMeasure' || answer.type === 'rightTriangle' || answer.type === 'unitCircle' || answer.type === 'sinusoids' || answer.type === 'otherTrigGraphs' || answer.type === 'inverseTrig') {
+  } else if (answer.type === 'angleMeasure' || answer.type === 'rightTriangle' || answer.type === 'unitCircle' || answer.type === 'sinusoids' || answer.type === 'otherTrigGraphs' || answer.type === 'inverseTrig' || answer.type === 'trigIdentities') {
     lines = answer.reveal.map(trigPlain)
   } else if (answer.type === 'optimization') {
     lines = answer.reveal.map(optPlain)
@@ -784,6 +804,7 @@ function answerOf(instance: ProblemInstance): string | undefined {
     case 'sinusoids':
     case 'otherTrigGraphs':
     case 'inverseTrig':
+    case 'trigIdentities':
     case 'optimization':
     case 'geometry':
     case 'periodic':

@@ -89,6 +89,12 @@ export const COURSES: readonly CourseDef[] = [
         title: 'Graphs of the trigonometric functions',
         moduleIds: ['sinusoids', 'otherTrigGraphs', 'inverseTrig'],
       },
+      {
+        id: 'unit6',
+        label: 'Unit 6',
+        title: 'Analytic trigonometry',
+        moduleIds: ['trigIdentities'],
+      },
     ],
   },
   {

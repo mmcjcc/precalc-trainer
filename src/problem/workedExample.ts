@@ -5,7 +5,10 @@ import { canonicalEntries as rationalFnsCanonicalEntries, RF_KEYS } from '@/cont
 import { canonicalEntries as signChartsCanonicalEntries, SC_KEYS } from '@/content/modules/signCharts'
 import type { AnswerSpec, ProblemInstance, RuleCard } from '@/content/types'
 import { checkLogRewrite, checkLogStep, gradeLogEquation } from '@/engine'
-import { expLogStepContext } from '@/problem/cardSources'
+import { verifyTrigStep } from '@/engine/trig'
+import { expLogStepContext, trigIdentitiesStepContext } from '@/problem/cardSources'
+import { plain as trigPlain } from '@/content/modules/trig/text'
+
 import { detectInverseCompletion } from '@/problem/inverse'
 import { buildStepContext, classifyStep } from '@/problem/stepEngine'
 import { useStore } from '@/store'
@@ -33,6 +36,8 @@ export const COVERED_STEP_TEMPLATES = [
   'ee.exponential',
   'ee.logarithmic',
   'ee.quadratic',
+  'ti.simplify',
+  'ti.verify',
 ] as const
 
 /**
@@ -86,6 +91,7 @@ export const COVERED_PARTS_TEMPLATES = [
   'nm.acid',
   'nm.hydrate',
   'nm.classify',
+  'ti.express',
 ] as const
 
 const STEP_SET = new Set<string>(COVERED_STEP_TEMPLATES)
@@ -350,6 +356,44 @@ function buildStepsExample(sibling: ProblemInstance): WorkedStepsExample | null 
       conclusion: {
         label: sibling.answer.question === 'expand' ? 'Expanded form' : 'Single logarithm',
         items: [{ label: 'Result', value: sibling.answer.answerText }],
+      },
+      everyLineChecked: lines.every((l) => l.checked),
+    }
+  }
+
+  if (sibling.moduleId === 'trigIdentities' && sibling.answer.type === 'trigIdentities' && sibling.answer.question !== 'express') {
+    const start = sibling.start ?? sibling.answer.expr
+    const ctx = trigIdentitiesStepContext(sibling)
+    if (!ctx) return null
+    const lines: WorkedStepLine[] = []
+    let currentLine = start
+    for (let guard = 0; guard < 16; guard++) {
+      if (mod.solved?.(sibling, currentLine)) break
+      const next = mod.nextStep(sibling, currentLine, false)
+      if (!next) break
+      const check = verifyTrigStep(currentLine, next.text, ctx)
+      if (!check.ok) return null
+      const rule = findRule(cards, next.ruleCard)
+      lines.push({
+        index: lines.length + 1,
+        text: next.text,
+        displayText: next.text,
+        stage: next.stage,
+        nudge: next.nudge,
+        ...(rule ? { ruleTitle: rule.title, ruleBody: rule.body } : {}),
+        checked: true,
+      })
+      currentLine = next.text
+    }
+    if (!mod.solved?.(sibling, currentLine) || lines.length === 0) return null
+    return {
+      kind: 'steps',
+      sibling,
+      startLine: start,
+      lines,
+      conclusion: {
+        label: sibling.answer.question === 'verify' ? 'Verified identity' : 'Simplified expression',
+        items: [{ label: sibling.answer.question === 'verify' ? 'Right-hand side' : 'Result', value: sibling.answer.answerText }],
       },
       everyLineChecked: lines.every((l) => l.checked),
     }
@@ -781,6 +825,29 @@ function buildPartsForAnswer(sibling: ProblemInstance, ans: AnswerSpec, cards: r
             why: stage.nudge,
             ...(rule ? { ruleTitle: rule.title, ruleBody: rule.body } : {}),
             details: stage.reveal,
+          }
+        }),
+      }
+    }
+
+    case 'trigIdentities': {
+      if (ans.question !== 'express') return null
+      return {
+        kind: 'parts',
+        sibling,
+        prompt: trigPlain(ans.prompt),
+        parts: ans.stages.map((stage) => {
+          const rule = findRule(cards, stage.ruleCard)
+          const choiceText =
+            stage.kind === 'choice' ? stage.choices?.find((c) => c.value === stage.answerText)?.label : undefined
+          return {
+            id: stage.id,
+            label: trigPlain(stage.label),
+            ask: trigPlain(stage.ask),
+            answer: trigPlain(choiceText ?? stage.answerText),
+            why: trigPlain(stage.nudge),
+            ...(rule ? { ruleTitle: rule.title, ruleBody: rule.body } : {}),
+            details: stage.reveal.map(trigPlain),
           }
         }),
       }

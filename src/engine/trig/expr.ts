@@ -798,3 +798,113 @@ export const EXPR_ZERO: TrigExact = EXACT_ZERO
 export function exactAt(c: Q, pi = 0): TrigExact {
   return tx(c, 1, pi)
 }
+
+
+// ---------------------------------------------------------------------------
+// Canonical structural form (commutativity/associativity of + and *, sign pull,
+// sin²x vs (sin(x))^2, sqrt vs ^(1/2)) without collapsing distinct steps.
+// ---------------------------------------------------------------------------
+
+function stripOuterNeg(key: string): { neg: boolean; body: string } {
+  if (key.startsWith('-(') && key.endsWith(')')) {
+    return { neg: true, body: key.slice(2, -1) }
+  }
+  return { neg: false, body: key }
+}
+
+function wrapNegKey(body: string): string {
+  if (body === '0') return '0'
+  const s = stripOuterNeg(body)
+  return s.neg ? s.body : `-(${body})`
+}
+
+function collectAddTerms(node: ExprNode, sign: 1 | -1, out: string[]): void {
+  if (node.t === 'add') {
+    collectAddTerms(node.l, sign, out)
+    collectAddTerms(node.r, node.op === '+' ? sign : (sign === 1 ? -1 : 1), out)
+    return
+  }
+  if (node.t === 'neg') {
+    collectAddTerms(node.arg, sign === 1 ? -1 : 1, out)
+    return
+  }
+  const k = canonicalExprKey(node)
+  out.push(sign === 1 ? k : wrapNegKey(k))
+}
+
+function collectMulFactors(node: ExprNode, out: string[]): number {
+  if (node.t === 'mul' && node.op !== '/') {
+    const sl = collectMulFactors(node.l, out)
+    const sr = collectMulFactors(node.r, out)
+    return sl * sr
+  }
+  if (node.t === 'neg') {
+    return -collectMulFactors(node.arg, out)
+  }
+  const k = canonicalExprKey(node)
+  const s = stripOuterNeg(k)
+  out.push(s.body)
+  return s.neg ? -1 : 1
+}
+
+/** Canonical structural key for an ExprNode, used to check whether two lines are the same expression. */
+export function canonicalExprKey(node: ExprNode): string {
+  switch (node.t) {
+    case 'num':
+      if (node.v.n === 0) return '0'
+      {
+        const mag = node.v.d === 1 ? String(Math.abs(node.v.n)) : `${Math.abs(node.v.n)}/${node.v.d}`
+        return node.v.n < 0 ? `-(${mag})` : mag
+      }
+    case 'pi':
+      return 'pi'
+    case 'var':
+      return node.name
+    case 'neg':
+      return wrapNegKey(canonicalExprKey(node.arg))
+    case 'add': {
+      const terms: string[] = []
+      collectAddTerms(node, 1, terms)
+      terms.sort()
+      return `add(${terms.join(',')})`
+    }
+    case 'mul': {
+      if (node.op === '/') {
+        const l = stripOuterNeg(canonicalExprKey(node.l))
+        const r = stripOuterNeg(canonicalExprKey(node.r))
+        const body = `div(${l.body},${r.body})`
+        return l.neg !== r.neg ? wrapNegKey(body) : body
+      }
+      const factors: string[] = []
+      const sign = collectMulFactors(node, factors)
+      factors.sort()
+      const body = factors.length === 1 ? factors[0]! : `mul(${factors.join(',')})`
+      return sign < 0 ? wrapNegKey(body) : body
+    }
+    case 'pow': {
+      if (
+        node.exp.t === 'mul' &&
+        node.exp.op === '/' &&
+        node.exp.l.t === 'num' &&
+        node.exp.l.v.d === 1 && node.exp.l.v.n === 1 &&
+        node.exp.r.t === 'num' &&
+        node.exp.r.v.d === 1 && node.exp.r.v.n === 2
+      ) {
+        return `sqrt(${canonicalExprKey(node.base)})`
+      }
+      const b = stripOuterNeg(canonicalExprKey(node.base))
+      const e = canonicalExprKey(node.exp)
+      if (e === '1') return b.neg ? wrapNegKey(b.body) : b.body
+      const evenInt = node.exp.t === 'num' && node.exp.v.d === 1 && node.exp.v.n > 0 && node.exp.v.n % 2 === 0
+      const baseKey = evenInt ? b.body : b.neg ? wrapNegKey(b.body) : b.body
+      return `pow(${baseKey},${e})`
+    }
+    case 'fn':
+      return `${node.name}(${canonicalExprKey(node.arg)})`
+  }
+}
+
+/** True when two ExprNodes represent the same algebraic/trig expression up to commutative/associative/power notation. */
+export function sameExprForm(a: ExprNode, b: ExprNode): boolean {
+  return canonicalExprKey(a) === canonicalExprKey(b)
+}

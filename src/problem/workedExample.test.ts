@@ -24,6 +24,8 @@ describe('workedExample coverage and honesty rules', () => {
 
   describe('line-by-line templates walk nextStep to completion and pass the module checker', () => {
     for (const templateId of COVERED_STEP_TEMPLATES) {
+      // ee.exponential's 25 seeds take about 40s on this machine; the 20s default kills a passing walk.
+      const timeout = templateId === 'ee.exponential' ? 120_000 : undefined
       it(`${templateId}: walks to completion and checks every line across 25 seeds`, () => {
         const moduleId = findModuleForTemplate(templateId)
         for (let seed = 1; seed <= 25; seed++) {
@@ -42,7 +44,7 @@ describe('workedExample coverage and honesty rules', () => {
             expect(line.nudge.trim().length).toBeGreaterThan(0)
           }
         }
-      })
+      }, timeout)
     }
   })
 

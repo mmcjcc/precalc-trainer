@@ -173,3 +173,32 @@ export {
   outsideDomainWitness,
   principalValue,
 } from './principal'
+
+// Unit 6 (docs/progress/trig-identities.md): fundamental trig identities (reciprocal, quotient, Pythagorean).
+export { canonicalExprKey, sameExprForm } from './expr'
+export type {
+  ExpressPairSpec,
+  ExpressPartGrade,
+  TrigEvalResult,
+  TrigIdentityRead,
+  TrigSlipCandidate,
+  TrigStepContext,
+  TrigStepFamily,
+  TrigStepResult,
+} from './identity'
+export {
+  detectTrigStepFamily,
+  evalTrigSafe,
+  gradeTiExpressExpr,
+  isSimplifiedTrig,
+  readTrigIdentityExpr,
+  sameTrigExpr,
+  trigExprEquivalent,
+  trigExprOpposite,
+  trigIdentityNodeToLatex,
+  trigIdentitySlips,
+  trigIdentityText,
+  trigIdentityToLatex,
+  trigSampleAngles,
+  verifyTrigStep,
+} from './identity'

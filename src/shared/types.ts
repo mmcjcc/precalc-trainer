@@ -15,7 +15,7 @@
 export type RelOp = '=' | '<' | '<=' | '>' | '>='
 /** `h` is the difference-quotient step; the parser accepts it only when the problem owns it (ctx.vars). */
 export type VarName = 'x' | 'y' | 'n' | 'h'
-export type ModuleId = 'numberLine' | 'inequalities' | 'evenOdd' | 'inverses' | 'propertiesDrill' | 'sigFigs' | 'atoms' | 'diffQuotient' | 'graphFeatures' | 'domainRange' | 'composition' | 'functionOps' | 'transformations' | 'piecewiseRate' | 'electrons' | 'quantumNumbers' | 'periodic' | 'quadratics' | 'optimization' | 'polyDivision' | 'polyZeros' | 'rationalFns' | 'signCharts' | 'complexNums' | 'logForms' | 'logProperties' | 'expLogEquations' | 'expLogGraphs' | 'expModels' | 'angleMeasure' | 'rightTriangle' | 'unitCircle' | 'sinusoids' | 'otherTrigGraphs' | 'inverseTrig' | 'geoSegments' | 'geoAngles' | 'geoLogic' | 'geoProof' | 'geoParallel' | 'geoPolygonAngles' | 'geoCongruence' | 'geoIsosceles' | 'geoTriangleProofs' | 'geoParallelograms' | 'geoSpecialQuads' | 'geoTrapezoids' | 'geoRatios' | 'geoSimilarTriangles' | 'geoProportionalParts' | 'geoRightSimilar' | 'geoPythagorean' | 'geoSpecialRight' | 'ionicNames' | 'molecularAcids'
+export type ModuleId = 'numberLine' | 'inequalities' | 'evenOdd' | 'inverses' | 'propertiesDrill' | 'sigFigs' | 'atoms' | 'diffQuotient' | 'graphFeatures' | 'domainRange' | 'composition' | 'functionOps' | 'transformations' | 'piecewiseRate' | 'electrons' | 'quantumNumbers' | 'periodic' | 'quadratics' | 'optimization' | 'polyDivision' | 'polyZeros' | 'rationalFns' | 'signCharts' | 'complexNums' | 'logForms' | 'logProperties' | 'expLogEquations' | 'expLogGraphs' | 'expModels' | 'angleMeasure' | 'rightTriangle' | 'unitCircle' | 'sinusoids' | 'otherTrigGraphs' | 'inverseTrig' | 'trigIdentities' | 'geoSegments' | 'geoAngles' | 'geoLogic' | 'geoProof' | 'geoParallel' | 'geoPolygonAngles' | 'geoCongruence' | 'geoIsosceles' | 'geoTriangleProofs' | 'geoParallelograms' | 'geoSpecialQuads' | 'geoTrapezoids' | 'geoRatios' | 'geoSimilarTriangles' | 'geoProportionalParts' | 'geoRightSimilar' | 'geoPythagorean' | 'geoSpecialRight' | 'ionicNames' | 'molecularAcids'
 export type CalcId = 'ti84' | 'nspire'
 
 /** Fine-grained property tags. Canonical steps carry one; the engine's move detector reports one. */
@@ -706,6 +706,15 @@ export type ErrorPatternId =
   | 'trig_inverse_cancel_outside'
   | 'trig_inverse_outside_domain'
   | 'trig_inverse_sign_dropped'
+  // precalculus Unit 6, analytic trigonometry (engine/trig: identity; content/modules/trigIdentities).
+  | 'trig_pythag_sign'
+  | 'trig_pythag_no_square'
+  | 'trig_reciprocal_wrong_pair'
+  | 'trig_quotient_inverted'
+  | 'trig_cancel_across_sum'
+  | 'trig_square_dropped'
+  | 'trig_identity_sign_lost'
+  | 'trig_split_denominator'
   // precalculus Unit 2, optimization with quadratics (engine/optim; content/modules/optimization). Each id is the
   // equation or number that slip gives on THIS problem, computed by the template; never a right answer.
   | 'opt_wall_fenced'

@@ -29,8 +29,18 @@ import {
   substituteX,
   verifyRewrite,
   verifyStep,
+
   type LogStepContext,
 } from '@/engine'
+import {
+  detectTrigStepFamily,
+  sameTrigExpr,
+  trigIdentitySlips,
+  trigIdentityToLatex,
+  verifyTrigStep,
+  type TrigStepContext,
+} from '@/engine/trig'
+
 import { gradeSlotLine, slotStart, type Slot } from './evenOdd'
 import { buildStepContext, safeLatex } from './stepEngine'
 import { buildLineCards, type CardCandidate, type LineCard } from './lineCards'
@@ -328,7 +338,47 @@ function evenOddSlips(slot: Slot, f: string, target: string): CardCandidate[] {
   return out
 }
 
+/** How a trig-identities step-by-step problem's lines are checked. */
+export function trigIdentitiesStepContext(instance: ProblemInstance): TrigStepContext | null {
+  const a = instance.answer
+  if (a.type !== 'trigIdentities' || a.question === 'express') return null
+  return {
+    kind: a.question,
+    variable: 'x',
+    start: instance.start ?? a.expr,
+    ...(a.target ? { target: a.target } : {}),
+    seed: instance.seed,
+  }
+}
+
+function trigIdentitiesCards(instance: ProblemInstance, current: string, line: number): LineCard[] {
+  const ctx = trigIdentitiesStepContext(instance)
+  if (!ctx) return []
+  const info = getModule(instance.moduleId).progress(instance, current, false)
+  if (info.path === 'none') return []
+  const next = getModule(instance.moduleId).nextStep(instance, current, false)
+  if (!next) return []
+  const candidates: CardCandidate[] = trigIdentitySlips(current, ctx).map((s) => ({
+    id: s.mistake,
+    text: s.text,
+  }))
+  return buildLineCards({
+    current,
+    right: next.text,
+    candidates,
+    check: (prev, text) => {
+      const r = verifyTrigStep(prev, text, ctx)
+      return { ok: r.ok, pattern: r.pattern?.id }
+    },
+    same: (a, b) => sameTrigExpr(a, b, 'x'),
+    toLatex: (text) => trigIdentityToLatex(text, 'x'),
+    seed: instance.seed,
+    line,
+  })
+}
+
 const SOURCES: Partial<Record<ProblemKind, CardSource>> = {
+  trigIdentities: trigIdentitiesCards,
   expLogEquations: expLogCards,
   inequality: inequalityCards,
   quadratics: quadraticCards,
@@ -343,6 +393,7 @@ export function offersLineCards(instance: ProblemInstance): boolean {
   if (!SOURCES[instance.kind]) return false
   if (instance.kind === 'quadratics') return instance.answer.type === 'quadratics' && instance.answer.question === 'form'
   if (instance.kind === 'inverse') return instance.answer.type === 'inverse' && instance.answer.oneToOne
+  if (instance.kind === 'trigIdentities') return instance.answer.type === 'trigIdentities' && instance.answer.question !== 'express'
   return true
 }
 
@@ -371,6 +422,9 @@ export function stepTypeOf(instance: ProblemInstance, current: string, next: str
   if (instance.kind === 'diffQuotient' || instance.kind === 'evenOdd') {
     const r = verifyRewrite(current || next, next, buildStepContext(instance, false))
     return r.detected?.tag ?? (r.ok ? 'rewrite' : null)
+  }
+  if (instance.kind === 'trigIdentities') {
+    return detectTrigStepFamily(current, next, 'x')
   }
   const move = verifyStep(current, next, buildStepContext(instance, false)).detected
   return move?.tag ?? null
