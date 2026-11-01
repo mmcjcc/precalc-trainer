@@ -1466,6 +1466,11 @@ describe('buildTutorContext', () => {
       ['geoPythagorean', 'py.classify', 'pythagoreanConverse'],
       ['geoPythagorean', 'py.apply', 'pythagoreanWords'],
       ['geoSpecialRight', 'sp.special', 'specialRight'],
+      ['geoTrigRatios', 'tr.ratio', 'trigRatio'],
+      ['geoTrigRatios', 'tr.side', 'trigSide'],
+      ['geoTrigRatios', 'tr.angle', 'trigAngle'],
+      ['geoElevDepress', 'el.story', 'elevationStory'],
+      ['geoElevDepress', 'el.two', 'elevationTwo'],
     ] as const
     for (const [moduleId, templateId, question] of cases) {
       const instance = generateProblem(moduleId, templateId, 1)

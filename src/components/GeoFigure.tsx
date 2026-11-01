@@ -103,8 +103,8 @@ export function GeoFigure({ spec }: { spec: GeoFigureSpec }) {
           const a = at(seg.from)
           const b = at(seg.to)
           return (
-            <g key={`seg-${i}`} data-geo="segment">
-              <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke={NAVY} strokeWidth={2.5} strokeLinecap="round" />
+            <g key={`seg-${i}`} data-geo="segment" {...(seg.dashed ? { 'data-dashed': 'true' } : {})}>
+              <line x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke={NAVY} strokeWidth={2.5} strokeLinecap="round" strokeDasharray={seg.dashed ? '6 4' : undefined} />
               {seg.ticks ? <Ticks x1={a.x} y1={a.y} x2={b.x} y2={b.y} count={seg.ticks} /> : null}
               {seg.label ? <SegLabel x1={a.x} y1={a.y} x2={b.x} y2={b.y} text={seg.label} side={seg.labelSide ?? 'above'} /> : null}
             </g>

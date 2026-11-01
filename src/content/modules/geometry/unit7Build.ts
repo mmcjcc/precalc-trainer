@@ -312,7 +312,11 @@ function retries(stage: Stage7): string[] {
     out.push(v.toFixed(2), v.toFixed(3))
     // The same value with a perfect square left under the radical: the simplest-form note.
     if (q.n / q.d > 1 && q.d === 1) out.push(`sqrt(${q.n * q.n * q.rad})`)
-  } else if (q.d > 1) out.push((v + 0.0004).toFixed(3))
+  } else if (q.d > 1) {
+    out.push((v + 0.0004).toFixed(3))
+    // 6/10 for 3/5: the lowest-terms note must not show the reduced answer.
+    if (stage.lowest && q.rad === 1) out.push(`${q.n * 2}/${q.d * 2}`)
+  }
   return out
 }
 
@@ -608,10 +612,12 @@ function pluralIssues(text: string): string[] {
 
 /**
  * The trig core writes "In a 45°-45°-90° triangle"; Jurgensen's course (and the English check) say "the" before a
- * number. Only that article changes; the sentence is the core's.
+ * number. A later sentence of a ratio slip starts with the name of the ratio ("sin θ", "cos 68°"); the English check
+ * wants a capital there. A sentence that already starts with a capital is unchanged, so Unit 7's first half reads the same.
  */
 export function coreWords(text: string): string {
-  return text.replace(/\b([Aa]) (\d)/g, (_m, a: string, d: string) => `${a === 'A' ? 'The' : 'the'} ${d}`)
+  const articles = text.replace(/\b([Aa]) (\d)/g, (_m, a: string, d: string) => `${a === 'A' ? 'The' : 'the'} ${d}`)
+  return articles.replace(/(^|[.?!]\s+)([a-z])/g, (_m, lead: string, ch: string) => `${lead}${ch.toUpperCase()}`)
 }
 
 function refuse(why: string, spec?: GeoFigureSpec, issues?: string[]): null {

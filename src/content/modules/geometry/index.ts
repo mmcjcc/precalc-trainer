@@ -42,6 +42,9 @@ import { drawAltitude, drawGeoMean } from './unit7Mean'
 import { drawApply, drawClassify7, drawPythSide } from './unit7Pyth'
 import { PYTHAGOREAN_RULES, RIGHT_SIMILAR_RULES, SPECIAL_RIGHT_RULES } from './unit7Rules'
 import { drawSpecial } from './unit7Special'
+import { drawTrigAngle, drawTrigRatio, drawTrigSide } from './unit7bRatios'
+import { drawElevStory, drawElevTwo } from './unit7bElev'
+import { ELEVATION_RULES, TRIG_RATIO_RULES } from './unit7bRules'
 
 export { readGeoAnswer, formatPoint, formatQty, formatValue, geoQty, sameGeoValue, sameQty, simplifyRadical } from './answer'
 export type { GeoQty, GeoRead, GeoReadOptions, GeoValue } from './answer'
@@ -610,6 +613,77 @@ export const geoSpecialRightModule: ModuleDef = {
   nextStep: () => null,
 }
 
+/**
+ * The tangent, sine and cosine ratios (honors geometry Unit 7, Jurgensen 8-5 and 8-6). A ratio in lowest terms, a side
+ * from a non-special angle, or an acute angle from two sides. The calculator stays in DEGREE mode.
+ */
+export const geoTrigRatiosModule: ModuleDef = {
+  id: 'geoTrigRatios',
+  subject: 'Geometry',
+  title: 'The tangent, sine and cosine ratios',
+  blurb: 'Write a tangent, sine, or cosine ratio in lowest terms, find a side from an acute angle, and find an acute angle from two sides.',
+  order: 27,
+  templates: [
+    geoTemplate(
+      'geoTrigRatios',
+      'tr.ratio',
+      'Writing a ratio',
+      'From a labeled right triangle, write one ratio of an acute angle in lowest terms, or name which ratio uses two sides.',
+      drawTrigRatio,
+    ),
+    geoTemplate(
+      'geoTrigRatios',
+      'tr.side',
+      'Finding a side',
+      'An acute angle that is not 30°, 45°, or 60°, and one side. Find another side, rounded as asked.',
+      drawTrigSide,
+    ),
+    geoTemplate(
+      'geoTrigRatios',
+      'tr.angle',
+      'Finding an angle',
+      'Two sides of a right triangle. Find an acute angle to the nearest degree or tenth of a degree.',
+      drawTrigAngle,
+    ),
+  ],
+  ruleCards: TRIG_RATIO_RULES,
+  progress: PROGRESS,
+  nextStep: () => null,
+}
+
+/**
+ * Angles of elevation and depression (honors geometry Unit 7, Jurgensen 8-7). One right triangle in a story, or two
+ * observations of the same height. Both angles are measured from the horizontal.
+ */
+export const geoElevDepressModule: ModuleDef = {
+  id: 'geoElevDepress',
+  subject: 'Geometry',
+  title: 'Angles of elevation and depression',
+  blurb: 'Use an angle of elevation or depression to find a height, a distance, or the angle, including two observations of the same top.',
+  order: 28,
+  templates: [
+    geoTemplate(
+      'geoElevDepress',
+      'el.story',
+      'An angle of elevation or depression',
+      'A tree, a cliff, a ladder, a kite, a ramp, a guy wire, or a plane: one right triangle, rounded as asked.',
+      drawElevStory,
+    ),
+    geoTemplate(
+      'geoElevDepress',
+      'el.two',
+      'Two angles of elevation',
+      'Two angles of elevation to the same top, from points on the same side or on opposite sides. Find the height or a distance.',
+      drawElevTwo,
+    ),
+  ],
+  ruleCards: ELEVATION_RULES,
+  progress: PROGRESS,
+  nextStep: () => null,
+}
+
 registerModule(geoRightSimilarModule)
 registerModule(geoPythagoreanModule)
 registerModule(geoSpecialRightModule)
+registerModule(geoTrigRatiosModule)
+registerModule(geoElevDepressModule)

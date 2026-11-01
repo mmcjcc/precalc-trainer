@@ -54,7 +54,13 @@ const unit4Titles = modulesInUnit(precalc.units[3]!).map((module) => module.titl
 const precalcUnit5Titles = modulesInUnit(precalc.units[4]!).map((module) => module.title)
 const unit5Titles = ['Parallelograms', 'Rectangles, rhombuses, and squares', 'Trapezoids, kites, and midsegments']
 const unit6Titles = ['Ratio, proportion and similar polygons', 'Similar triangles', 'Proportional parts']
-const unit7Titles = ['Similarity in right triangles', 'The Pythagorean Theorem and its converse', 'Special right triangles']
+const unit7Titles = [
+  'Similarity in right triangles',
+  'The Pythagorean Theorem and its converse',
+  'Special right triangles',
+  'The tangent, sine and cosine ratios',
+  'Angles of elevation and depression',
+]
 
 function done(at: number, moduleId: string, skill: string): Ev {
   return {

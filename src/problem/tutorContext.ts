@@ -633,6 +633,11 @@ export function assertGeometryQuestion(question: GeometryQuestion): void {
     case 'pythagoreanConverse':
     case 'pythagoreanWords':
     case 'specialRight':
+    case 'trigRatio':
+    case 'trigSide':
+    case 'trigAngle':
+    case 'elevationStory':
+    case 'elevationTwo':
       return
     default: {
       const unexpected: never = question
