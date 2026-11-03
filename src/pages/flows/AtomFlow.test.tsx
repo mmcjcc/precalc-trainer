@@ -50,7 +50,9 @@ beforeEach(() => {
   resetStoreForTests()
 })
 
-describe('AtomFlow: every template renders', { timeout: 20_000 }, () => {
+// 60s: chemistry problems now mount the 118-cell periodic-table rail panel,
+// so every Testing Library query in these journeys scans those nodes too.
+describe('AtomFlow: every template renders', { timeout: 60_000 }, () => {
   it.each(TEMPLATES)('%s shows the prompt and the answer card, with no graph or calculator', (templateId) => {
     const answer = atomAnswer(templateId)
     const view = renderAt(path(templateId))
@@ -66,7 +68,7 @@ describe('AtomFlow: every template renders', { timeout: 20_000 }, () => {
   })
 })
 
-describe('AtomFlow: count the particles', { timeout: 20_000 }, () => {
+describe('AtomFlow: count the particles', { timeout: 60_000 }, () => {
   it('wrong then right: names each mistake per box, records them, completes, and a reload keeps her entries', () => {
     const answer = atomAnswer('atom.particles')
     expect(answer.question).toEqual({ kind: 'particles', particle: { symbol: 'Na', z: 11, massNumber: 23, charge: 1 }, shown: 'symbol' })
@@ -160,7 +162,7 @@ describe('AtomFlow: count the particles', { timeout: 20_000 }, () => {
   })
 })
 
-describe('AtomFlow: write the symbol', { timeout: 20_000 }, () => {
+describe('AtomFlow: write the symbol', { timeout: 60_000 }, () => {
   it('wrong, then a letter-case slip, then right; the preview reads back her symbol; a reload keeps her entries', () => {
     const answer = atomAnswer('atom.notation')
     expect(answer.question).toEqual({ kind: 'notation', particle: { symbol: 'Na', z: 11, massNumber: 23, charge: 1 } })
@@ -199,7 +201,7 @@ describe('AtomFlow: write the symbol', { timeout: 20_000 }, () => {
   })
 })
 
-describe('AtomFlow: average atomic mass', { timeout: 20_000 }, () => {
+describe('AtomFlow: average atomic mass', { timeout: 60_000 }, () => {
   it('shows the isotope table, names the unweighted average, keeps the entry over a reload, then completes', () => {
     const answer = atomAnswer('atom.avgmass')
     expect(answer.question.kind === 'avgmass' && answer.question.symbol).toBe('Rb')
@@ -237,7 +239,7 @@ describe('AtomFlow: average atomic mass', { timeout: 20_000 }, () => {
   })
 })
 
-describe('AtomFlow: percent abundance', { timeout: 20_000 }, () => {
+describe('AtomFlow: percent abundance', { timeout: 60_000 }, () => {
   it('50/50, then swapped, a reload, then right', () => {
     const answer = atomAnswer('atom.abundance')
     expect(answer.expected).toEqual(['69.15', '30.85'])

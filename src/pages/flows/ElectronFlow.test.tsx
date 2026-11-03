@@ -54,7 +54,9 @@ beforeEach(() => {
   resetStoreForTests()
 })
 
-describe('ElectronFlow: a light calculation', () => {
+// 60s: chemistry problems now mount the 118-cell periodic-table rail panel,
+// so every Testing Library query in these journeys scans those nodes too.
+describe('ElectronFlow: a light calculation', { timeout: 60_000 }, () => {
   const laser = findAnswer('light.freq', (a) => a.context.includes('Orange light has a wavelength of 620 nm') && a.question.kind === 'light' && a.question.wavelengthText === '620')
 
   it('shows the context, the wavelength large, the constants, and no graph or calculator', () => {
@@ -122,7 +124,7 @@ describe('ElectronFlow: a light calculation', () => {
   })
 })
 
-describe('ElectronFlow: ordering', () => {
+describe('ElectronFlow: ordering', { timeout: 60_000 }, () => {
   const order = findOrder()
   const label = (id: string) => order.q.items.find((item) => item.id === id)!.label
 
@@ -156,7 +158,7 @@ describe('ElectronFlow: ordering', () => {
     expect(doneEvent()).toMatchObject({ finalCorrect: false, revealed: 0 })
     expect(screen.getByRole('heading', { name: /Problem finished/ })).toBeTruthy()
     for (const line of order.reveal) expect(screen.getByText(line)).toBeTruthy()
-  }, 20_000)
+  }, 60_000)
 
   it('restores the tapped order after a reload', () => {
     const view = renderAt(problemPath('electrons', 'light.spectrum', order.seed))

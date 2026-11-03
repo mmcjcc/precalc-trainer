@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { CALC_FOOTER } from '@/content/calc'
+import { courseOfModule } from '@/content/courses'
 import { getModule } from '@/content/registry'
 import { randomSeed } from '@/content/rng'
 import type { ProblemInstance } from '@/content/types'
@@ -30,6 +31,7 @@ import { GraphPanel, RuleCardsPanel } from '@/components/GraphPanel'
 import { Katex } from '@/components/Katex'
 import { KeymapHelp } from '@/components/KeymapHelp'
 import { ScratchPad } from '@/components/scratch/ScratchPad'
+import { PeriodicTablePanel } from '@/components/ptable/PeriodicTablePanel'
 import { WorkedExample } from '@/components/WorkedExample'
 import { notePress, useKeypadStore } from '@/components/keypadStore'
 import { isNativeApp } from '@/components/nativeApp'
@@ -461,8 +463,10 @@ export function ProblemFrame({ instance, attempt, flags, templateTitle, progress
   const timedRunning = Boolean(review?.timed) || attempt?.mode === 'timed' || testMode
   const canShowExample = !timedRunning && offersExample(instance)
   const example = canShowExample ? <WorkedExample key={instance.id} instance={instance} /> : null
+  const chem = courseOfModule(instance.moduleId)?.course.id === 'chemistry'
   const tools: RailPanel[] = [
     ...rail,
+    ...(chem ? [{ id: 'ptable', title: 'Periodic table', short: 'Elements', content: <PeriodicTablePanel /> }] : []),
     ...(phone && scratch ? [{ id: 'scratch', title: 'Scratch pad', short: 'Scratch', content: scratch }] : []),
     ...(phone && example ? [{ id: 'example', title: 'Example — see one like it', short: 'Example', content: example }] : []),
   ]
