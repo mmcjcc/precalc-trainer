@@ -1,8 +1,36 @@
-import { useMemo, useState } from 'react'
-import type { ProblemInstance } from '@/content/types'
+import { useMemo, useState, type ReactNode } from 'react'
+import type { AnswerSpec, ProblemInstance } from '@/content/types'
 import { toLatex } from '@/notation'
 import { buildWorkedExample, type WorkedExample as WorkedExampleData } from '@/problem/workedExample'
+import { GeoFigure } from './GeoFigure'
 import { Katex } from './Katex'
+import { OptFigure } from './OptFigure'
+import { OrbitalFigure } from './OrbitalFigure'
+import { TrigFigure } from './TrigFigure'
+
+/** The sibling's figure as the problem first shows it: nothing revealed. */
+function exampleFigure(answer: AnswerSpec): ReactNode {
+  if (answer.type === 'geometry') {
+    return answer.figure.points.length > 0 ? <GeoFigure spec={answer.figure} /> : null
+  }
+  if (
+    answer.type === 'angleMeasure' ||
+    answer.type === 'rightTriangle' ||
+    answer.type === 'unitCircle' ||
+    answer.type === 'sinusoids' ||
+    answer.type === 'otherTrigGraphs' ||
+    answer.type === 'inverseTrig' ||
+    answer.type === 'trigIdentities'
+  ) {
+    if (answer.figure.kind === 'none') return null
+    // A drawn angle would give away the quadrant, so the problem hides it until that part is answered.
+    const showAngle = !answer.stages.some((stage) => stage.id === 'quadrant')
+    return <TrigFigure spec={answer.figure} answered={[]} showAngle={showAngle} />
+  }
+  if (answer.type === 'optimization') return answer.figure ? <OptFigure spec={answer.figure} /> : null
+  if (answer.type === 'quantum') return answer.figure ? <OrbitalFigure orbital={answer.figure.orbital} /> : null
+  return null
+}
 
 function safeTex(text: string): string {
   try {
@@ -55,6 +83,8 @@ export function WorkedExample({ instance }: Props) {
     setOffset((n) => n + 1)
   }
 
+  const figure = exampleFigure(sibling.answer)
+
   return (
     <div data-worked-example="" data-example-kind={example.kind} className="space-y-3 text-navy">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -93,7 +123,23 @@ export function WorkedExample({ instance }: Props) {
           example.prompt.trim() !== sibling.statementText.trim() && (
             <p className="mt-1 text-xs text-navy/80">{example.prompt}</p>
           )}
+        {figure && (
+          <div data-example-figure="" className="mt-2">
+            {figure}
+          </div>
+        )}
       </div>
+
+      {example.kind === 'parts' && example.given && example.given.lines.length > 0 && (
+        <div data-example-given="" className="rounded-lg bg-navy-50 px-2.5 py-1.5 text-xs text-navy/90">
+          <p className="font-semibold text-navy">{example.given.label}</p>
+          <ol className="mt-1 list-decimal space-y-0.5 pl-5">
+            {example.given.lines.map((line, index) => (
+              <li key={`${index}-${line}`}>{line}</li>
+            ))}
+          </ol>
+        </div>
+      )}
 
       {example.kind === 'steps' ? (
         <div className="space-y-3">

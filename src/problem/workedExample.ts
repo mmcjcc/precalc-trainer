@@ -3,10 +3,12 @@ import { dqSolved, dqStart, gradeDqStep, gradeFxh } from '@/content/modules/diff
 import { canonicalEntries as polyZerosCanonicalEntries, PZ_KEYS } from '@/content/modules/polyZeros'
 import { canonicalEntries as rationalFnsCanonicalEntries, RF_KEYS } from '@/content/modules/rationalFns'
 import { canonicalEntries as signChartsCanonicalEntries, SC_KEYS } from '@/content/modules/signCharts'
-import type { AnswerSpec, ProblemInstance, RuleCard } from '@/content/types'
+import type { AnswerSpec, ProblemInstance, RuleCard, TrigAnswerFields } from '@/content/types'
 import { checkLogRewrite, checkLogStep, gradeLogEquation } from '@/engine'
 import { verifyTrigStep } from '@/engine/trig'
 import { expLogStepContext, trigIdentitiesStepContext } from '@/problem/cardSources'
+import { stageDisplay } from '@/content/modules/geometry/grade'
+import { plain as optPlain } from '@/content/modules/optimization/text'
 import { plain as trigPlain } from '@/content/modules/trig/text'
 
 import { detectInverseCompletion } from '@/problem/inverse'
@@ -92,6 +94,99 @@ export const COVERED_PARTS_TEMPLATES = [
   'nm.hydrate',
   'nm.classify',
   'ti.express',
+  // Geometry. ga.words, gl3.pairs and gc.which are left off: see docs/progress/examples-parity.md.
+  'gs.addition',
+  'gs.midpoint',
+  'gs.coord',
+  'ga.addition',
+  'ga.bisector',
+  'ga.pairs',
+  'gl.related',
+  'gl.truth',
+  'gl.laws',
+  'gp.reason',
+  'gp.algebraic',
+  'gp.twocolumn',
+  'gl3.solve',
+  'gl3.converse',
+  'gl3.slopes',
+  'gpa.triangle',
+  'gpa.polygon',
+  'gc.parts',
+  'gc.solve',
+  'gi.solve',
+  'gt.twocolumn',
+  'gq.props',
+  'gq.prove',
+  'gq.coords',
+  'gs.props',
+  'gs.classify',
+  'gz.midseg',
+  'gz.isosceles',
+  'gr.proportion',
+  'gr.polygons',
+  'gt.prove',
+  'gt.solve',
+  'gp.splitter',
+  'gp.bisector',
+  'rs.mean',
+  'rs.altitude',
+  'py.side',
+  'py.classify',
+  'py.apply',
+  'sp.special',
+  'tr.ratio',
+  'tr.side',
+  'tr.angle',
+  'el.story',
+  'el.two',
+  // Precalc trig, Units 4–5.
+  'am.convert',
+  'am.coterminal',
+  'am.reference',
+  'am.arc',
+  'rt.ratios',
+  'rt.special',
+  'rt.side',
+  'rt.angle',
+  'uc.exact',
+  'uc.point',
+  'uc.given',
+  'uc.solve',
+  'sg.features',
+  'sg.equation',
+  'sg.model',
+  'og.features',
+  'og.match',
+  'it.evaluate',
+  'it.compose',
+  // Chemistry chapters 3–5.
+  'sf.count',
+  'sf.round',
+  'sf.muldiv',
+  'sf.addsub',
+  'sf.mixed',
+  'sf.sci',
+  'atom.particles',
+  'atom.notation',
+  'atom.avgmass',
+  'atom.abundance',
+  'light.freq',
+  'light.wavelength',
+  'light.energy',
+  'light.spectrum',
+  'ec.full',
+  'ec.shorthand',
+  'ec.ion',
+  'ec.identify',
+  'ec.valence',
+  'ec.diagram',
+  'qn.meaning',
+  'qn.allowed',
+  'qn.count',
+  'qn.name',
+  'qn.shapes',
+  'qn.pauli',
 ] as const
 
 const STEP_SET = new Set<string>(COVERED_STEP_TEMPLATES)
@@ -146,6 +241,11 @@ export interface WorkedPartsExample {
   kind: 'parts'
   sibling: ProblemInstance
   prompt?: string
+  /**
+   * Algebra lines printed above the parts. The lines are given; the reasons are the answers.
+   * Shown only when the sibling's answer carries a non-empty `lines` list.
+   */
+  given?: { label: string; lines: string[] }
   parts: WorkedPartItem[]
 }
 
@@ -173,6 +273,70 @@ export function recordExampleViewed(skill: string, moduleId: string, now = Date.
 function findRule(cards: readonly RuleCard[], id: string | undefined): RuleCard | undefined {
   if (!id) return undefined
   return cards.find((c) => c.id === id)
+}
+
+/** Optimization math strings as words, then drop a leftover currency mark so the panel stays plain text. */
+function optText(text: string): string {
+  return optPlain(text).replaceAll('$', '')
+}
+
+function withoutDollars(text: string): string {
+  return text.replaceAll('$', '')
+}
+
+function withUnit(display: string, unit: string): string {
+  const trimmed = display.trim()
+  if (!unit || trimmed.includes(unit)) return trimmed
+  return `${trimmed} ${unit}`
+}
+
+/**
+ * The figure the example would draw. An empty geometry diagram and a trig figure of kind `none`
+ * are not drawn, so they are not her numbers and do not count.
+ */
+function carriedFigure(ans: AnswerSpec): unknown {
+  if (ans.type === 'geometry') return ans.figure.points.length > 0 ? ans.figure : undefined
+  if (
+    ans.type === 'angleMeasure' ||
+    ans.type === 'rightTriangle' ||
+    ans.type === 'unitCircle' ||
+    ans.type === 'sinusoids' ||
+    ans.type === 'otherTrigGraphs' ||
+    ans.type === 'inverseTrig' ||
+    ans.type === 'trigIdentities'
+  ) {
+    return ans.figure.kind === 'none' ? undefined : ans.figure
+  }
+  if (ans.type === 'optimization' || ans.type === 'quantum') return ans.figure
+  return undefined
+}
+
+function sameFigure(a: AnswerSpec, b: AnswerSpec): boolean {
+  const fa = carriedFigure(a)
+  const fb = carriedFigure(b)
+  if (fa == null || fb == null) return false
+  return JSON.stringify(fa) === JSON.stringify(fb)
+}
+
+function trigParts(sibling: ProblemInstance, ans: TrigAnswerFields, cards: readonly RuleCard[]): WorkedPartsExample {
+  return {
+    kind: 'parts',
+    sibling,
+    parts: ans.stages.map((stage) => {
+      const rule = findRule(cards, stage.ruleCard)
+      const choice = stage.kind === 'choice' ? stage.choices?.find((c) => c.value === stage.answerText)?.label : undefined
+      const ask = trigPlain(stage.ask).trim()
+      return {
+        id: stage.id,
+        label: trigPlain(stage.label),
+        ...(ask ? { ask } : {}),
+        answer: trigPlain(choice ?? stage.answerText),
+        why: trigPlain(stage.nudge),
+        ...(rule ? { ruleTitle: rule.title, ruleBody: rule.body } : {}),
+        details: stage.reveal.map(trigPlain),
+      }
+    }),
+  }
 }
 
 function candidateSeed(baseSeed: number, step: number): number {
@@ -492,17 +656,18 @@ function buildPartsForAnswer(sibling: ProblemInstance, ans: AnswerSpec, cards: r
       return {
         kind: 'parts',
         sibling,
-        prompt: ans.prompt,
+        prompt: optPlain(ans.prompt),
         parts: ans.stages.map((stage) => {
           const rule = findRule(cards, stage.ruleCard)
+          const ask = optText(stage.ask).trim()
           return {
             id: stage.id,
             label: stage.label,
-            ask: stage.ask,
-            answer: stage.answerText,
-            why: stage.nudge,
+            ...(ask ? { ask } : {}),
+            answer: optText(stage.answerText),
+            why: optText(stage.nudge),
             ...(rule ? { ruleTitle: rule.title, ruleBody: rule.body } : {}),
-            details: stage.reveal,
+            details: stage.reveal.map(optText),
           }
         }),
       }
@@ -750,17 +915,17 @@ function buildPartsForAnswer(sibling: ProblemInstance, ans: AnswerSpec, cards: r
         prompt: ans.prompt,
         parts: ans.stages.map((stage) => {
           const rule = findRule(cards, stage.ruleCard)
-          const prefix = stage.money && !stage.answerText.startsWith('$') ? '$' : ''
           const unit = stage.units?.[0]
           const suffix = unit && !stage.answerText.endsWith(unit) ? ` ${unit}` : ''
+          const ask = withoutDollars(stage.ask).trim()
           return {
             id: stage.id,
             label: stage.label,
-            ask: stage.ask,
-            answer: `${prefix}${stage.answerText}${suffix}`,
-            why: stage.nudge,
+            ...(ask ? { ask } : {}),
+            answer: withoutDollars(`${stage.answerText}${suffix}`),
+            why: withoutDollars(stage.nudge),
             ...(rule ? { ruleTitle: rule.title, ruleBody: rule.body } : {}),
-            details: stage.reveal,
+            details: stage.reveal.map(withoutDollars),
           }
         }),
       }
@@ -872,6 +1037,168 @@ function buildPartsForAnswer(sibling: ProblemInstance, ans: AnswerSpec, cards: r
       }
     }
 
+    case 'geometry': {
+      const given = ans.lines && ans.lines.length > 0 ? { label: 'Given work', lines: ans.lines } : undefined
+      return {
+        kind: 'parts',
+        sibling,
+        prompt: ans.prompt,
+        ...(given ? { given } : {}),
+        parts: ans.stages.map((stage) => {
+          const rule = findRule(cards, stage.ruleCard)
+          const ask = stage.hint.trim()
+          return {
+            id: stage.id,
+            label: stage.label,
+            ...(ask ? { ask } : {}),
+            answer: stageDisplay(stage),
+            why: stage.nudge,
+            ...(rule ? { ruleTitle: rule.title, ruleBody: rule.body } : {}),
+            details: stage.reveal,
+          }
+        }),
+      }
+    }
+
+    case 'angleMeasure':
+    case 'rightTriangle':
+    case 'unitCircle':
+    case 'sinusoids':
+    case 'otherTrigGraphs':
+    case 'inverseTrig':
+      return trigParts(sibling, ans, cards)
+
+    case 'sigFigs': {
+      const rule = findRule(cards, ans.ruleCard)
+      const label =
+        ans.task.kind === 'count'
+          ? 'Significant figures'
+          : ans.task.kind === 'round'
+            ? 'Rounded value'
+            : ans.task.kind === 'convert'
+              ? ans.task.to === 'scientific'
+                ? 'Scientific notation'
+                : 'Standard notation'
+              : 'Result'
+      const context = ans.context.trim()
+      const prompt = context && context !== ans.prompt.trim() ? context : undefined
+      return {
+        kind: 'parts',
+        sibling,
+        ...(prompt ? { prompt } : {}),
+        parts: [
+          {
+            id: 'answer',
+            label,
+            answer: withUnit(ans.expectedDisplay, ans.unit),
+            why: ans.nudge,
+            ...(rule ? { ruleTitle: rule.title, ruleBody: rule.body } : {}),
+            details: ans.reveal,
+          },
+        ],
+      }
+    }
+
+    case 'atoms': {
+      const rule = findRule(cards, ans.ruleCard)
+      const q = ans.question
+      const label =
+        q.kind === 'particles'
+          ? 'Protons, neutrons, and electrons'
+          : q.kind === 'notation'
+            ? 'Nuclear symbol'
+            : q.kind === 'avgmass'
+              ? 'Average atomic mass'
+              : 'Percent abundance'
+      // The isotope table is the problem. The statement only names the element, so the givens go on the prompt line.
+      const prompt =
+        q.kind === 'avgmass'
+          ? q.isotopes.map((iso) => `${iso.label}: ${iso.mass} u, ${iso.abundance}%`).join('; ')
+          : q.kind === 'abundance'
+            ? q.isotopes.map((iso) => `${iso.label}: ${iso.mass} u`).join('; ')
+            : ans.context.trim() || undefined
+      return {
+        kind: 'parts',
+        sibling,
+        ...(prompt ? { prompt } : {}),
+        parts: [
+          {
+            id: q.kind,
+            label,
+            answer: withUnit(ans.expectedDisplay, ans.unit),
+            why: ans.nudge,
+            ...(rule ? { ruleTitle: rule.title, ruleBody: rule.body } : {}),
+            details: ans.reveal,
+          },
+        ],
+      }
+    }
+
+    case 'electrons': {
+      const rule = findRule(cards, ans.ruleCard)
+      const q = ans.question
+      let label = 'Answer'
+      let answer = ans.expectedDisplay
+      const extra: string[] = []
+      if (ans.context.trim()) extra.push(ans.context.trim())
+      if (q.kind === 'light') {
+        label = q.formula === 'freq' ? 'Frequency' : q.formula === 'wavelength' ? 'Wavelength' : 'Photon energy'
+        answer = withUnit(ans.expectedDisplay, q.unit)
+      } else if (q.kind === 'order') {
+        label = 'Order'
+        extra.push(q.items.map((item) => item.label).join(', '))
+      } else {
+        const byAsk = {
+          full: 'Full configuration',
+          shorthand: 'Noble-gas shorthand',
+          ion: 'Ion configuration',
+          identify: 'Element',
+          valence: 'Valence electrons',
+          diagram: 'Orbital diagram',
+        } as const
+        label = byAsk[q.ask]
+        if (q.ask === 'identify') extra.push(q.display)
+      }
+      const prompt = extra.join(' ').trim()
+      return {
+        kind: 'parts',
+        sibling,
+        ...(prompt ? { prompt } : {}),
+        parts: [
+          {
+            id: q.kind === 'econfig' ? q.ask : q.kind,
+            label,
+            answer,
+            why: ans.nudge,
+            ...(rule ? { ruleTitle: rule.title, ruleBody: rule.body } : {}),
+            details: ans.reveal,
+          },
+        ],
+      }
+    }
+
+    case 'quantum': {
+      return {
+        kind: 'parts',
+        sibling,
+        prompt: ans.prompt,
+        parts: ans.stages.map((stage) => {
+          const rule = findRule(cards, stage.ruleCard)
+          const choiceText = stage.kind === 'choice' ? stage.choices?.find((c) => c.id === stage.answerText)?.text : undefined
+          const ask = stage.hint.trim()
+          return {
+            id: stage.id,
+            label: stage.label,
+            ...(ask ? { ask } : {}),
+            answer: choiceText ?? stage.answerText,
+            why: stage.nudge,
+            ...(rule ? { ruleTitle: rule.title, ruleBody: rule.body } : {}),
+            details: stage.reveal,
+          }
+        }),
+      }
+    }
+
     default:
       return null
   }
@@ -888,7 +1215,7 @@ function buildPartsExample(sibling: ProblemInstance): WorkedPartsExample | null 
 /**
  * Generate a worked example for a sibling seed of the same module and template.
  * Never uses `instance.seed`, and always steps to the next seed if a candidate produces the same
- * `statementText` (or if a candidate's step walk does not complete cleanly).
+ * `statementText`, the same drawn figure, or a step walk that does not complete cleanly.
  */
 export function buildWorkedExample(instance: ProblemInstance, offset = 1): WorkedExample | null {
   if (!offersExample(instance)) return null
@@ -908,6 +1235,7 @@ export function buildWorkedExample(instance: ProblemInstance, offset = 1): Worke
     if ((sibling.seed >>> 0) === (instance.seed >>> 0)) continue
     if (sibling.id === instance.id) continue
     if (sibling.statementText.trim() === herStatement) continue
+    if (sameFigure(instance.answer, sibling.answer)) continue
 
     const example = isStep ? buildStepsExample(sibling) : buildPartsExample(sibling)
     if (!example) continue

@@ -17,6 +17,13 @@ function findModuleForTemplate(templateId: string): ModuleId {
   throw new Error(`No module found for template ${templateId}`)
 }
 
+/** A worked-example string still holding TeX: a backslash command, or a dollar sign. */
+function expectPlain(text: string | undefined) {
+  if (!text) return
+  expect(text, text).not.toMatch(/\\[a-zA-Z]/)
+  expect(text.includes('$'), text).toBe(false)
+}
+
 describe('workedExample coverage and honesty rules', () => {
   beforeEach(() => {
     useStore.setState(defaultPersisted(1_700_000_000_000))
@@ -24,8 +31,15 @@ describe('workedExample coverage and honesty rules', () => {
 
   describe('line-by-line templates walk nextStep to completion and pass the module checker', () => {
     for (const templateId of COVERED_STEP_TEMPLATES) {
-      // ee.exponential's 25 seeds take about 40s on this machine; the 20s default kills a passing walk.
-      const timeout = templateId === 'ee.exponential' ? 120_000 : undefined
+      // These 25-seed walks blow the 20s default when the suite is loaded.
+      // ee.exponential's 25 seeds took 24s with four workers and about 65s on a loaded default run.
+      const timeout =
+        templateId === 'ee.exponential' ||
+        templateId === 'ee.logarithmic' ||
+        templateId === 'inv.rational' ||
+        templateId === 'inv.mobius'
+          ? 180_000
+          : undefined
       it(`${templateId}: walks to completion and checks every line across 25 seeds`, () => {
         const moduleId = findModuleForTemplate(templateId)
         for (let seed = 1; seed <= 25; seed++) {
@@ -42,6 +56,15 @@ describe('workedExample coverage and honesty rules', () => {
             expect(line.checked).toBe(true)
             expect(line.text.trim().length).toBeGreaterThan(0)
             expect(line.nudge.trim().length).toBeGreaterThan(0)
+            expectPlain(line.text)
+            expectPlain(line.displayText)
+            expectPlain(line.nudge)
+            expectPlain(line.ruleTitle)
+            expectPlain(line.ruleBody)
+          }
+          for (const item of ex.conclusion?.items ?? []) {
+            expectPlain(item.label)
+            expectPlain(item.value)
           }
         }
       }, timeout)
@@ -65,6 +88,11 @@ describe('workedExample coverage and honesty rules', () => {
             expect(part.label.trim().length).toBeGreaterThan(0)
             expect(part.answer.trim().length).toBeGreaterThan(0)
             expect(part.why.trim().length).toBeGreaterThan(0)
+            expectPlain(part.label)
+            expectPlain(part.ask)
+            expectPlain(part.answer)
+            expectPlain(part.why)
+            for (const detail of part.details ?? []) expectPlain(detail)
           }
         }
       })
@@ -83,6 +111,26 @@ describe('workedExample coverage and honesty rules', () => {
     expect(steppedEx).not.toBeNull()
     expect(steppedEx!.sibling.statementText.trim()).not.toBe(colliding.statementText.trim())
     expect(steppedEx!.sibling.seed).not.toBe(colliding.seed)
+  })
+
+  it('steps to the next candidate seed when a candidate carries the same figure', () => {
+    const base = generateProblem('geoSegments', 'gs.addition', 42)
+    const firstEx = buildWorkedExample(base, 1)
+    expect(firstEx).not.toBeNull()
+    if (!firstEx || base.answer.type !== 'geometry' || firstEx.sibling.answer.type !== 'geometry') {
+      throw new Error('expected a geometry example')
+    }
+    const colliding = {
+      ...base,
+      answer: { ...base.answer, figure: firstEx.sibling.answer.figure },
+    }
+    const steppedEx = buildWorkedExample(colliding, 1)
+    expect(steppedEx).not.toBeNull()
+    if (!steppedEx || steppedEx.sibling.answer.type !== 'geometry') throw new Error('expected a geometry sibling')
+    expect(JSON.stringify(steppedEx.sibling.answer.figure)).not.toBe(JSON.stringify(colliding.answer.figure))
+    expect(steppedEx.sibling.seed).not.toBe(firstEx.sibling.seed)
+    expect(steppedEx.sibling.seed).not.toBe(colliding.seed)
+    expect(steppedEx.sibling.statementText.trim()).not.toBe(colliding.statementText.trim())
   })
 
   it('excludes uncovered templates and own-problem instances', () => {
