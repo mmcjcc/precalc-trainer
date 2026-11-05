@@ -3168,6 +3168,80 @@ export const ERROR_PATTERNS: Record<ErrorPatternId, ErrorPatternInfo> = {
     lesson: 'A sum on top of a fraction splits over a single denominator, (u + v)/w = u/w + v/w, but a sum on the bottom stays together. Replacing one/(u + v) with one/u + one/v is not an equal fraction.',
     example: 'one/(sin α + cos α) = one/sin α + one/cos α ✗ → keep the denominator together',
   },
+  // --- precalculus Unit 6 part 2: formulas and equations (content/modules/trigFormulas, trigEquations).
+  // Examples use A, B and the word one. No example is a generated angle or a generated fraction. ---
+  ta_formula_mix: {
+    id: 'ta_formula_mix',
+    title: 'That is the other function’s formula',
+    lesson: 'Sine of a sum adds the crossed products, sin A cos B + cos A sin B. Cosine multiplies matching functions, cos A cos B − sin A sin B. Using the sine line for a cosine value mixes the two formulas.',
+    example: 'cos(A + B) expanded as the sine formula ✗ → cos A cos B − sin A sin B',
+  },
+  ta_cos_sign: {
+    id: 'ta_cos_sign',
+    title: 'The sign in the middle of cosine goes the other way',
+    lesson: 'Cosine of a sum puts a minus between the products, and cosine of a difference puts a plus. The sign is the opposite of the sign in the angle itself.',
+    example: 'cos(A + B) = cos A cos B + sin A sin B ✗ → cos A cos B − sin A sin B',
+  },
+  ta_bad_split: {
+    id: 'ta_bad_split',
+    title: 'Split into unit-circle angles',
+    lesson: 'A sum or difference formula only helps when both angles are ones you already know exactly: the angles on the unit circle. An angle that is not on that circle has no memorized sine or cosine to plug in.',
+    example: 'an angle split into pieces off the unit circle ✗ → two unit-circle angles',
+  },
+  ta_quadrant_sign: {
+    id: 'ta_quadrant_sign',
+    title: 'The missing ratio has its own sign',
+    lesson: 'The quadrant fixes the sign of sine and the sign of cosine separately. The ratio you were given can be positive while the one you are finding is negative, or the other way around.',
+    example: 'cosine given the sine’s sign ✗ → the sign cosine has in that quadrant',
+  },
+  ta_double_linear: {
+    id: 'ta_double_linear',
+    title: 'Sine of a double angle is not twice the sine',
+    lesson: 'Sine of twice the angle is twice the product of sine and cosine. Doubling the sine alone leaves the cosine out.',
+    example: 'sin of twice the angle = twice sin ✗ → twice sin times cos',
+  },
+  ta_double_mix: {
+    id: 'ta_double_mix',
+    title: 'The squares in cosine of a double angle go cosine minus sine',
+    lesson: 'Cosine of twice the angle is the square of cosine minus the square of sine. Swapping those squares, or dropping a square, is a different formula.',
+    example: 'cos of twice the angle = sin² − cos² ✗ → cos² − sin²',
+  },
+  ta_half_sign: {
+    id: 'ta_half_sign',
+    title: 'The sign belongs to the half angle',
+    lesson: 'The half-angle formulas give a size, and the sign comes from the quadrant the half angle lands in. That quadrant is not the quadrant of the original angle, so copying its sign is the wrong one.',
+    example: 'the sign of the original angle ✗ → the sign in the half angle’s quadrant',
+  },
+  ta_half_swap: {
+    id: 'ta_half_swap',
+    title: 'Sine of a half angle subtracts cosine',
+    lesson: 'Under the root, sine of a half angle uses one minus cosine, and cosine of a half angle uses one plus cosine. Tangent of a half angle puts one minus cosine over one plus cosine. Swapping those is the other function.',
+    example: 'sin of half the angle with one plus cosine ✗ → one minus cosine',
+  },
+  te_one_quadrant: {
+    id: 'te_one_quadrant',
+    title: 'One quadrant is not the whole list',
+    lesson: 'On one full turn a sine, cosine or tangent value usually happens in two quadrants. Listing the angle from only one of them leaves the other solution out.',
+    example: 'only the first matching angle ✗ → every match in one full turn',
+  },
+  te_deg_rad: {
+    id: 'te_deg_rad',
+    title: 'That number is in degrees',
+    lesson: 'A reference angle written for a radian problem is a fraction times pi, not the degree number. The degree number and the radian measure are different answers.',
+    example: 'the degree number where a radian was asked ✗ → a fraction times pi',
+  },
+  te_lost_solution: {
+    id: 'te_lost_solution',
+    title: 'Dividing by the function throws solutions away',
+    lesson: 'If you divide both sides by sine or cosine, you throw away the angles where that factor is zero. Factor the function out and set each factor equal to zero, so those angles stay in the list.',
+    example: 'divide both sides by the function ✗ → factor it out and keep its zeros',
+  },
+  te_no_solution: {
+    id: 'te_no_solution',
+    title: 'Sine and cosine never go past one',
+    lesson: 'Sine and cosine only take values from minus one to one. A factor that asks for a number past that has no angle, and it adds nothing to the solution list. Tangent can be any number.',
+    example: 'sin x = a number past one, listed as an angle ✗ → no solution for that factor',
+  },
   // --- precalculus Unit 2, optimization with quadratics (engine/optim). Examples use l and w, letters no problem
   // uses, so no example can be a generated answer. ---
   opt_wall_fenced: {

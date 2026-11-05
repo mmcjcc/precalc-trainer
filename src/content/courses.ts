@@ -93,7 +93,7 @@ export const COURSES: readonly CourseDef[] = [
         id: 'unit6',
         label: 'Unit 6',
         title: 'Analytic trigonometry',
-        moduleIds: ['trigIdentities'],
+        moduleIds: ['trigIdentities', 'trigFormulas', 'trigEquations'],
       },
     ],
   },
