@@ -8,7 +8,7 @@ export const EDITION: 'family' | 'store' = import.meta.env.VITE_EDITION === 'sto
 export const STORE = EDITION === 'store'
 
 /** Module subjects the store app leaves out (its classes are math only). */
-export const STORE_SKIPS_SUBJECTS: readonly string[] = ['Chemistry']
+export const STORE_SKIPS_SUBJECTS: readonly string[] = ['Chemistry', 'English']
 
 /** Does this build include a module of this subject? */
 export function includesSubject(subject: string | undefined): boolean {

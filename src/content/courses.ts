@@ -218,6 +218,37 @@ export const COURSES: readonly CourseDef[] = [
       },
     ],
   },
+  {
+    id: 'satrw',
+    title: 'SAT Reading & Writing',
+    short: 'SAT R&W',
+    units: [
+      {
+        id: 'satrw-info',
+        label: 'Domain 1',
+        title: 'Information and Ideas',
+        moduleIds: [],
+      },
+      {
+        id: 'satrw-craft',
+        label: 'Domain 2',
+        title: 'Craft and Structure',
+        moduleIds: [],
+      },
+      {
+        id: 'satrw-expression',
+        label: 'Domain 3',
+        title: 'Expression of Ideas',
+        moduleIds: ['rwTransitions'],
+      },
+      {
+        id: 'satrw-conventions',
+        label: 'Domain 4',
+        title: 'Standard English Conventions',
+        moduleIds: ['rwBoundaries', 'rwFormSense'],
+      },
+    ],
+  },
 ]
 
 export function getCourse(id: string): CourseDef | undefined {

@@ -65,7 +65,7 @@ describe('Progress grouped by class', () => {
     const skillHeadings = within(skills)
       .getAllByRole('heading', { level: 3 })
       .map((heading) => heading.textContent)
-    expect(skillHeadings).toEqual(['Honors Precalculus', 'Chemistry', 'Honors Geometry', 'Other'])
+    expect(skillHeadings).toEqual(['Honors Precalculus', 'Chemistry', 'Honors Geometry', 'SAT Reading & Writing', 'Other'])
 
     const precalcSkills = within(skills).getByRole('heading', { name: 'Honors Precalculus' }).closest('section')!
     expect(within(precalcSkills).getByRole('rowheader', { name: 'Linear inequality' })).toBeTruthy()
@@ -144,6 +144,6 @@ describe('Progress grouped by class', () => {
     const ringHeadings = within(rings)
       .getAllByRole('heading', { level: 3 })
       .map((h) => h.textContent)
-    expect(ringHeadings).toEqual(['Honors Precalculus', 'Chemistry', 'Honors Geometry'])
+    expect(ringHeadings).toEqual(['Honors Precalculus', 'Chemistry', 'Honors Geometry', 'SAT Reading & Writing'])
   })
 })

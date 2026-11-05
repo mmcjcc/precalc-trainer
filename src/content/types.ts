@@ -17,7 +17,7 @@ import type {
   VarName,
 } from '@/shared/types'
 
-export type ProblemKind = 'inequality' | 'numberLine' | 'evenOdd' | 'inverse' | 'drill' | 'sigFigs' | 'atoms' | 'diffQuotient' | 'graphFeatures' | 'domainRange' | 'composition' | 'functionOps' | 'transformations' | 'piecewiseRate' | 'electrons' | 'quantumNumbers' | 'periodic' | 'quadratics' | 'optimization' | 'polyDivision' | 'polyZeros' | 'rationalFns' | 'signCharts' | 'complexNums' | 'logForms' | 'logProperties' | 'expLogEquations' | 'expLogGraphs' | 'expModels' | 'angleMeasure' | 'rightTriangle' | 'unitCircle' | 'sinusoids' | 'otherTrigGraphs' | 'inverseTrig' | 'trigIdentities' | 'geometry' | 'nomenclature'
+export type ProblemKind = 'inequality' | 'numberLine' | 'evenOdd' | 'inverse' | 'drill' | 'sigFigs' | 'atoms' | 'diffQuotient' | 'graphFeatures' | 'domainRange' | 'composition' | 'functionOps' | 'transformations' | 'piecewiseRate' | 'electrons' | 'quantumNumbers' | 'periodic' | 'quadratics' | 'optimization' | 'polyDivision' | 'polyZeros' | 'rationalFns' | 'signCharts' | 'complexNums' | 'logForms' | 'logProperties' | 'expLogEquations' | 'expLogGraphs' | 'expModels' | 'angleMeasure' | 'rightTriangle' | 'unitCircle' | 'sinusoids' | 'otherTrigGraphs' | 'inverseTrig' | 'trigIdentities' | 'geometry' | 'nomenclature' | 'satrw'
 
 /** Precalculus Unit 2, optimization with quadratics: a pen against a wall, pens in a row, two numbers, price and sales. */
 export type OptimizationQuestion = 'wall' | 'pens' | 'numbers' | 'revenue'
@@ -1985,6 +1985,35 @@ export type AnswerSpec =
       patternId?: ErrorPatternId
       lesson: string
     }
+  | {
+      /**
+       * SAT Reading & Writing single-stage choice item (rwBoundaries, rwFormSense, rwTransitions):
+       * prompt sentence(s) + four labeled options + per-option named mistakes + reveal lines + a rule card id.
+       */
+      type: 'satrw'
+      prompt: string
+      options: readonly SatRwOption[]
+      correctId: 'A' | 'B' | 'C' | 'D'
+      correctText: string
+      nudge: string
+      ruleCard: RuleCardId
+      ruleCards: RuleCardId[]
+      reveal: string[]
+      correctMessage: string
+    }
+
+/** One of the four choices (A–D) in a single-stage SAT Reading & Writing item. */
+export interface SatRwOption {
+  id: 'A' | 'B' | 'C' | 'D'
+  text: string
+  /** For the three wrong choices: the named rw_ mistake id. Absent on the right choice. */
+  mistake?: ErrorPatternId
+  /** Student-words explanation naming the error when this wrong choice is picked. */
+  nudge?: string
+}
+
+/** The SAT Reading & Writing arm of `AnswerSpec`, named so the flow and the generators share it. */
+export type SatRwAnswer = Extract<AnswerSpec, { type: 'satrw' }>
 
 /** What both trig arms of `AnswerSpec` carry. */
 export interface TrigAnswerFields {

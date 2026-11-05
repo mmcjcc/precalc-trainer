@@ -13,8 +13,8 @@ import { SettingsPage } from '@/pages/Settings'
 vi.mock('@/edition', () => ({
   EDITION: 'store',
   STORE: true,
-  STORE_SKIPS_SUBJECTS: ['Chemistry'],
-  includesSubject: (subject: string | undefined) => subject !== 'Chemistry',
+  STORE_SKIPS_SUBJECTS: ['Chemistry', 'English'],
+  includesSubject: (subject: string | undefined) => subject !== 'Chemistry' && subject !== 'English',
 }))
 
 beforeEach(() => {

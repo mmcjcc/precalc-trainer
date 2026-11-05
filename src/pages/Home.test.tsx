@@ -96,6 +96,7 @@ describe('Home: classes and units', () => {
       'Chemistry',
       'Honors Geometry',
       'SAT Math Prep',
+      'SAT Reading & Writing',
     ])
     expect(screen.queryByRole('tab', { name: 'Geometry' })).toBeNull()
     // The rows sit in a container: they scroll sideways on a phone's or tablet's column and wrap from @4xl (a
@@ -129,7 +130,10 @@ describe('Home: classes and units', () => {
     expect(screen.getByRole('tab', { name: 'SAT Math Prep', selected: true })).toBeTruthy()
 
     fireEvent.keyDown(tablist, { key: 'ArrowRight' })
-    expect(screen.getByRole('tab', { name: 'SAT Math Prep', selected: true })).toBeTruthy()
+    expect(screen.getByRole('tab', { name: 'SAT Reading & Writing', selected: true })).toBeTruthy()
+
+    fireEvent.keyDown(tablist, { key: 'ArrowRight' })
+    expect(screen.getByRole('tab', { name: 'SAT Reading & Writing', selected: true })).toBeTruthy()
 
     fireEvent.keyDown(tablist, { key: 'Home' })
     expect(screen.getByRole('tab', { name: 'Honors Precalculus', selected: true })).toBeTruthy()
@@ -140,7 +144,7 @@ describe('Home: classes and units', () => {
     expect(screen.getByRole('tab', { name: 'Honors Precalculus', selected: true })).toBeTruthy()
 
     fireEvent.keyDown(tablist, { key: 'End' })
-    expect(screen.getByRole('tab', { name: 'SAT Math Prep', selected: true })).toBeTruthy()
+    expect(screen.getByRole('tab', { name: 'SAT Reading & Writing', selected: true })).toBeTruthy()
     expect(screen.queryByRole('heading', { name: 'Unit 1 review' })).toBeNull()
   })
 

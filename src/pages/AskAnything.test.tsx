@@ -72,6 +72,7 @@ describe('Ask about any problem', () => {
       'Honors Precalculus',
       'Chemistry',
       'Honors Geometry',
+      'SAT Reading & Writing',
       'Other math or science',
     ])
     expect((screen.getByRole('button', { name: 'Start' }) as HTMLButtonElement).disabled).toBe(true)

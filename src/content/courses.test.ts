@@ -58,6 +58,10 @@ describe('course registry', () => {
     for (const unit of sat!.units) {
       expect(modulesInUnit(unit)).toEqual([])
     }
+    const satrw = getCourse('satrw')
+    expect(satrw?.title).toBe('SAT Reading & Writing')
+    expect(satrw?.short).toBe('SAT R&W')
+    expect(unitsWithModules(satrw!).map((u) => u.id)).toEqual(['satrw-expression', 'satrw-conventions'])
   })
 
   it('sorts a unit by module order and skips units that have no modules', () => {

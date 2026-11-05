@@ -1041,6 +1041,29 @@ export const SPECIES: readonly Species[] = [
       'nm_class_acid_ignored',
     ],
   },
+  {
+    id: 'clause',
+    name: 'The Clause Splicer',
+    personality: 'Stitches two sentences together with a lone comma and points every verb at the nearest noun.',
+    family: 'Grammar and transition slips: comma splices and run-ons, unpaired or stray commas inside a clause, verbs that agree with a nearby noun instead of the subject, mismatched or ambiguous pronouns, and transitions from the wrong logical family.',
+    subject: 'math',
+    look: { body: 'bean', hue: 218, sat: 44, light: 48, accent: 42, top: 'ears', eyes: 'round', mouth: 'smirk', feet: 'stubs', arms: 'stubs', mark: 'stitches', face: 'high' },
+    variants: [
+      'rw_comma_splice',
+      'rw_run_on',
+      'rw_half_pair',
+      'rw_restrictive_commas',
+      'rw_subject_verb_comma',
+      'rw_nearest_noun',
+      'rw_pronoun_number',
+      'rw_pronoun_ambiguous',
+      'rw_transition_contrast',
+      'rw_transition_cause',
+      'rw_transition_example',
+      'rw_transition_addition',
+      'rw_transition_sequence',
+    ],
+  },
 ]
 
 const SPECIES_BY_ID = new Map<string, Species>(SPECIES.map((s) => [s.id, s]))
@@ -1075,3 +1098,5 @@ export function isRare(patternId: string): boolean {
 export function speciesForEdition(store: boolean): Species[] {
   return SPECIES.filter((s) => !store || s.subject === 'math')
 }
+
+import '@/content/modules/satrw/mistakes'
