@@ -1041,6 +1041,27 @@ export const SPECIES: readonly Species[] = [
       'nm_class_acid_ignored',
     ],
   },
+  {
+    id: 'bonding',
+    name: 'The Electron Hoarder',
+    personality: 'Hangs on to electrons that were supposed to move, then flips the charge when they finally do.',
+    family: 'Ionic and metallic bonding slips: valence counts, the direction of the transfer, dot symbols, electrons per formula unit, and what holds a crystal or a metal together.',
+    subject: 'chemistry',
+    look: { body: 'bean', hue: 186, sat: 58, light: 54, accent: 36, top: 'sprout', eyes: 'wide', mouth: 'o', feet: 'stubs', arms: 'stubs', mark: 'rings' },
+    variants: [
+      'ib_valence_dblock',
+      'ib_gain_lose',
+      'ib_charge_sign',
+      'ib_dots_neutral',
+      'ib_dots_all',
+      'ib_transfer_count',
+      'ib_props_electrons',
+      'ib_props_molecules',
+      'ib_props_weak',
+      'mb_fixed_electrons',
+      'mb_ionic_confusion',
+    ],
+  },
 ]
 
 const SPECIES_BY_ID = new Map<string, Species>(SPECIES.map((s) => [s.id, s]))

@@ -28,6 +28,7 @@ import { GeometryFlow } from './flows/GeometryFlow'
 import { assertGeometryQuestion } from '@/problem/tutorContext'
 import { PeriodicFlow } from './flows/PeriodicFlow'
 import { NomenclatureFlow } from './flows/NomenclatureFlow'
+import { IonicBondingFlow } from './flows/IonicBondingFlow'
 import { QuadraticsFlow } from './flows/QuadraticsFlow'
 import { TransformationFlow } from './flows/TransformationFlow'
 import { GraphFeaturesFlow } from './flows/GraphFeaturesFlow'
@@ -185,6 +186,8 @@ function flowFor(props: FlowProps): ReactNode {
       return <PeriodicFlow {...props} />
     case 'nomenclature':
       return <NomenclatureFlow {...props} />
+    case 'ionicBonding':
+      return <IonicBondingFlow {...props} />
     default:
       return <Navigate to="/" replace />
   }

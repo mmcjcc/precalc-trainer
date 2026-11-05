@@ -17,7 +17,7 @@ import type {
   VarName,
 } from '@/shared/types'
 
-export type ProblemKind = 'inequality' | 'numberLine' | 'evenOdd' | 'inverse' | 'drill' | 'sigFigs' | 'atoms' | 'diffQuotient' | 'graphFeatures' | 'domainRange' | 'composition' | 'functionOps' | 'transformations' | 'piecewiseRate' | 'electrons' | 'quantumNumbers' | 'periodic' | 'quadratics' | 'optimization' | 'polyDivision' | 'polyZeros' | 'rationalFns' | 'signCharts' | 'complexNums' | 'logForms' | 'logProperties' | 'expLogEquations' | 'expLogGraphs' | 'expModels' | 'angleMeasure' | 'rightTriangle' | 'unitCircle' | 'sinusoids' | 'otherTrigGraphs' | 'inverseTrig' | 'trigIdentities' | 'geometry' | 'nomenclature'
+export type ProblemKind = 'inequality' | 'numberLine' | 'evenOdd' | 'inverse' | 'drill' | 'sigFigs' | 'atoms' | 'diffQuotient' | 'graphFeatures' | 'domainRange' | 'composition' | 'functionOps' | 'transformations' | 'piecewiseRate' | 'electrons' | 'quantumNumbers' | 'periodic' | 'quadratics' | 'optimization' | 'polyDivision' | 'polyZeros' | 'rationalFns' | 'signCharts' | 'complexNums' | 'logForms' | 'logProperties' | 'expLogEquations' | 'expLogGraphs' | 'expModels' | 'angleMeasure' | 'rightTriangle' | 'unitCircle' | 'sinusoids' | 'otherTrigGraphs' | 'inverseTrig' | 'trigIdentities' | 'geometry' | 'nomenclature' | 'ionicBonding'
 
 /** Precalculus Unit 2, optimization with quadratics: a pen against a wall, pens in a row, two numbers, price and sales. */
 export type OptimizationQuestion = 'wall' | 'pens' | 'numbers' | 'revenue'
@@ -587,6 +587,46 @@ export type PtCheck =
   /** Isoelectronic ions. `ions` is the set; radius order follows nuclear charge. */
   | { kind: 'iso'; direction: PtDirection; ions: { z: number; charge: number }[] }
   | { kind: 'why'; reason: PtWhyReason }
+
+/** One checked part of an ionic/metallic-bonding problem (chemistry chapter 8). */
+export type IbStageId = 'a' | 'b' | 'c' | 'd' | 'e'
+
+/** Which behaviour of an ionic compound a props question explains. */
+export type IbScenario = 'melt' | 'brittle' | 'conduct' | 'dissolve'
+
+/** Which behaviour of a metal an electron-sea question explains. */
+export type MbAsk = 'conduct' | 'bend' | 'alloy' | 'contrast'
+
+/**
+ * How to recompute one ionic-bonding part from the element table and the chem engines.
+ * The grader uses this. The crosscheck test does not: it reads the prompt and works the part
+ * out on its own from ELEMENTS data.
+ */
+export type IbCheck =
+  /** Valence electrons of a main-group atom. */
+  | { kind: 'valence'; z: number }
+  /** Does this atom lose or gain electrons to reach a noble-gas configuration? */
+  | { kind: 'gain-lose'; z: number }
+  /** How many electrons move when this atom forms its taught ion. */
+  | { kind: 'move-count'; z: number }
+  /** The ion this atom forms, typed with its charge ('Na^+', 'O^2-'). */
+  | { kind: 'ion'; z: number }
+  /** The noble-gas shorthand configuration of the ION this atom forms (econfig engine text). */
+  | { kind: 'ion-config'; z: number }
+  /** Dots on the electron-dot symbol of an atom (charge 0) or of its simple ion. */
+  | { kind: 'dots'; z: number; charge: number }
+  /** What the dots of an electron-dot symbol stand for (choice). */
+  | { kind: 'dots-stand'; z: number; charge: number }
+  /** Ions per formula unit, cations first, in lowest terms ('2:3'). */
+  | { kind: 'ratio'; cationZ: number; anionZ: number }
+  /** The formula unit of the metal + nonmetal pair, graded by the nomenclature engine. */
+  | { kind: 'formula'; cationZ: number; anionZ: number }
+  /** Electrons transferred per formula unit. */
+  | { kind: 'transfer-count'; cationZ: number; anionZ: number }
+  /** Why an ionic compound behaves the way the scenario says (choice). */
+  | { kind: 'props'; scenario: IbScenario }
+  /** The electron-sea explanation of a metal's behaviour (choice). */
+  | { kind: 'sea'; ask: MbAsk }
 
 /** Which complex-number screen this problem is. */
 export type ComplexNumsQuestion = 'arith' | 'divide' | 'powers' | 'quadratic' | 'zeros'
@@ -1696,6 +1736,46 @@ export type AnswerSpec =
     }
   | {
       /**
+       * Ionic and metallic bonding (chemistry, CK-12 chapter 8). Parts are checked one at a time.
+       * Grade a part with `gradeIbStage`. Named mistakes are the `ib_`/`mb_` ids, plus the reused
+       * `nm_` crisscross ids (the formula and ratio parts) and `ec_` ids (the ion-configuration part).
+       */
+      type: 'ionicBonding'
+      question: 'valence' | 'dots' | 'transfer' | 'props' | 'sea'
+      /** What the problem is. No method and no trap. */
+      prompt: string
+      stages: {
+        id: IbStageId
+        kind: 'text' | 'choice'
+        /** Box or choice legend, e.g. "The ion", "Formula unit". */
+        label: string
+        /** Line under the box or the choices. Never this part's answer. */
+        hint: string
+        /** What a correct answer looks like (app text). Choice parts use the choice id. */
+        answerText: string
+        /** Other spellings that grade correct. */
+        accept?: string[]
+        /** Choice parts only. `trap` is set when that pick is a named mistake. */
+        choices?: { id: string; text: string; trap?: ErrorPatternId; witness?: string }[]
+        nudge: string
+        ruleCard: RuleCardId
+        /** Hint rung 3. May state this part's answer. */
+        reveal: string[]
+        /** Slips on this part, in detection order. `text` is the typed value or the choice id. */
+        traps: { id: ErrorPatternId; text: string; witness: string }[]
+        check: IbCheck
+      }[]
+      expectedDisplay: string
+      reveal: string[]
+      ruleCards: RuleCardId[]
+      /** The named mistake this seed promises, when one is possible. */
+      trap?: ErrorPatternId
+      trapStage?: IbStageId
+      /** What that slip produces. Never the right answer. */
+      trapAnswer?: string
+    }
+  | {
+      /**
        * Logarithms and exponential form (precalculus Unit 3). One number, or one rewritten equation.
        * Grade with `gradeLogValue` or `gradeConvertForm`. Named mistakes are the `log_` ids.
        */
@@ -2047,6 +2127,9 @@ export type ExpLogGraphsAnswer = Extract<AnswerSpec, { type: 'expLogGraphs' }>
 export type ExpModelsAnswer = Extract<AnswerSpec, { type: 'expModels' }>
 /** The chemical-nomenclature arm of `AnswerSpec` (chapter 7), named so the flow and the generators share it. */
 export type NomenclatureAnswer = Extract<AnswerSpec, { type: 'nomenclature' }>
+
+/** The ionic/metallic-bonding arm of `AnswerSpec` (chapter 8), named so the flow and the generators share it. */
+export type IonicBondingAnswer = Extract<AnswerSpec, { type: 'ionicBonding' }>
 
 /** One part of a nomenclature problem. */
 export type NmStage = NomenclatureAnswer['stages'][number]
