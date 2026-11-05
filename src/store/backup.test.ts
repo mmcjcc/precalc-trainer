@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { BACKUP_APP_ID, LEGACY_BACKUP_APP_ID, buildBackup, importBackup, parseBackup, settingsAfterImport } from './backup'
+import type { StudySet } from './studySets'
 import { DEFAULT_SETTINGS, emptyRewards, type Ev, type RewardsState, type Settings } from './types'
 
 const oldFile = JSON.stringify({
@@ -229,5 +230,69 @@ describe('Guided mode in a backup', () => {
     const junk = parseBackup(JSON.stringify({ ...JSON.parse(oldFile), settings: { lineEntry: 'swipe' } }))
     if (!junk.ok) throw new Error(junk.error)
     expect('lineEntry' in junk.backup.settings).toBe(false)
+  })
+})
+
+describe('study sets in a backup', () => {
+  const cell: StudySet = {
+    id: 'cells',
+    title: 'Cells',
+    cards: [{ id: 'c1', term: 'cell', definition: 'smallest unit' }],
+    createdAt: 1,
+    updatedAt: 10,
+    source: 'made',
+    bestMatchMs: 4200,
+  }
+  const newer: StudySet = { ...cell, title: 'Biology', updatedAt: 30 }
+  const shared: StudySet = { id: 'shared', title: 'Shared', cards: [], createdAt: 2, updatedAt: 4, source: 'imported' }
+  const base = { events: [] as Ev[], weekly: {}, streak: { lastDay: '', count: 0 } }
+
+  function file(sets: StudySet[]) {
+    return JSON.stringify(buildBackup({ settings: DEFAULT_SETTINGS, events: [], weekly: {}, streak: { lastDay: '', count: 0 }, studySets: sets }))
+  }
+
+  it('round-trips the sets, including a best match time', () => {
+    const parsed = parseBackup(file([cell, shared]))
+    if (!parsed.ok) throw new Error(parsed.error)
+    expect(parsed.backup.studySets).toEqual([cell, shared])
+    const replaced = importBackup({ ...base, studySets: [] }, file([cell, shared]), 'replace')
+    if (!replaced.ok) throw new Error(replaced.error)
+    expect(replaced.studySets).toEqual([cell, shared])
+  })
+
+  it('a file from before study sets leaves this device’s sets alone', () => {
+    const parsed = parseBackup(oldFile)
+    if (!parsed.ok) throw new Error(parsed.error)
+    expect(parsed.backup.studySets).toBeUndefined()
+    const merged = importBackup({ ...base, studySets: [cell] }, oldFile, 'merge')
+    if (!merged.ok) throw new Error(merged.error)
+    expect(merged.studySets).toEqual([cell])
+    const replaced = importBackup({ ...base, studySets: [cell] }, oldFile, 'replace')
+    if (!replaced.ok) throw new Error(replaced.error)
+    expect(replaced.studySets).toEqual([cell])
+  })
+
+  it('merge keeps the newer updatedAt per id and adds the rest; a tie keeps this device', () => {
+    const merged = importBackup({ ...base, studySets: [cell] }, file([newer, shared]), 'merge')
+    if (!merged.ok) throw new Error(merged.error)
+    expect(merged.studySets).toEqual([newer, shared])
+    const tie: StudySet = { ...cell, title: 'Incoming' }
+    const kept = importBackup({ ...base, studySets: [cell] }, file([tie]), 'merge')
+    if (!kept.ok) throw new Error(kept.error)
+    expect(kept.studySets).toEqual([cell])
+    const older = importBackup({ ...base, studySets: [newer] }, file([cell]), 'merge')
+    if (!older.ok) throw new Error(older.error)
+    expect(older.studySets).toEqual([newer])
+  })
+
+  it('replace takes the file, including an empty list, and drops a set that cannot be read', () => {
+    const cleared = importBackup({ ...base, studySets: [cell] }, file([]), 'replace')
+    if (!cleared.ok) throw new Error(cleared.error)
+    expect(cleared.studySets).toEqual([])
+    const raw = JSON.parse(file([cell])) as { studySets: unknown[] }
+    raw.studySets.push({ id: 'nope' })
+    const parsed = parseBackup(JSON.stringify(raw))
+    if (!parsed.ok) throw new Error(parsed.error)
+    expect(parsed.backup.studySets).toEqual([cell])
   })
 })

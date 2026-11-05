@@ -78,7 +78,7 @@ describe('the Graph tab', () => {
     )
     expect(await screen.findByRole('heading', { level: 1, name: 'Graph' }, LAZY)).toBeTruthy()
     const bar = document.querySelector<HTMLElement>('[data-tab-bar]')!
-    expect(within(bar).getAllByRole('link').map((a) => a.textContent)).toEqual(['Home', 'Monsters', 'Graph', 'Progress', 'Settings'])
+    expect(within(bar).getAllByRole('link').map((a) => a.textContent)).toEqual(['Home', 'Study', 'Monsters', 'Graph', 'Progress', 'Settings'])
     expect(within(bar).getByRole('link', { name: 'Graph' }).getAttribute('aria-current')).toBe('page')
   })
 })

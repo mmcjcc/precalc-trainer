@@ -3,6 +3,7 @@
  * ("localStorage schema (key prefix pct.)"). Types only.
  */
 import type { CalcId, ChipId } from '@/shared/types'
+import type { StudySet } from './studySets'
 
 export const SCHEMA_VERSION = 1
 
@@ -354,6 +355,21 @@ export type Ev =
       day: string
       reward: ChestReward
     })
+  | (EvBase & {
+      /**
+       * A study-set card answered right for the first time in one study session. Pays study XP, which counts toward
+       * the daily goal and the streak. It does not count for mastery, a ring, a problem set, a quest, or a monster.
+       */
+      t: 'study_learned'
+      setId: string
+      cardId: string
+    })
+  | (EvBase & {
+      /** She finished one study pass: a flash pass, a learn round, every match board, or a submitted test. */
+      t: 'study_round'
+      setId: string
+      mode: 'flash' | 'learn' | 'match' | 'test'
+    })
 
 /** What a daily chest gave her (store/chest.ts). */
 export type ChestReward =
@@ -462,6 +478,8 @@ export interface PersistedState {
   weekly: Weekly
   streak: Streak
   rewards: RewardsState
+  /** Her study sets. A save from before this slice has none. */
+  studySets: StudySet[]
 }
 
 export type PersistedSlice = keyof PersistedState
@@ -501,5 +519,6 @@ export function defaultPersisted(now = Date.now()): PersistedState {
     weekly: {},
     streak: { ...EMPTY_STREAK },
     rewards: emptyRewards(),
+    studySets: [],
   }
 }

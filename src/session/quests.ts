@@ -24,7 +24,7 @@
  * |                                                    |        | week), when her class has "Check my own problem" |
  *
  * WHAT COUNTS (progress is read from the log of that day; nothing is stored):
- * - XP: the day's XP from her work (`RewardsView.awards`), not a chest's bonus;
+ * - XP: the day's XP from her work (`RewardsView.awards`), not a chest's bonus and not study-set XP;
  * - lines or parts right first try: the rewards' own awards (a line or part right on the first try, a card picked
  *   right on the first pick); an undone line paid nothing and counts nothing;
  * - problems: every finished problem (`problem_done`), her own included;
@@ -35,6 +35,7 @@
  *   a type not mastered when the day began / of the stop's type;
  * - her homework: a finished problem of her own ("Check my own problem").
  * Her own problems count where their XP counts: XP, lines and parts, problems; never a squash, mastery or path quest.
+ * A study set counts for none of these: its XP is not the XP quest, and its events are not finished problems.
  * Nothing here ever asks for a mistake, a timed problem or anything paid.
  */
 import { COURSES, allTemplates, mulberry32, unitsWithModules, type CourseDef } from '@/content'
@@ -328,7 +329,7 @@ export function questCount(spec: QuestSpec, day: string, input: Pick<QuestInput,
   switch (spec.kind) {
     case 'xp':
       return dayAwards()
-        .filter((a) => a.kind !== 'chest')
+        .filter((a) => a.kind !== 'chest' && a.kind !== 'study')
         .reduce((s, a) => s + a.xp, 0)
     case 'firstTry':
       return dayAwards().filter((a) => FIRST_TRY_KINDS.has(a.kind)).length

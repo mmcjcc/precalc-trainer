@@ -46,15 +46,15 @@ afterEach(() => {
 
 describe('the tablet layout: the rail', () => {
   it.each([WINDOWS.wide, WINDOWS.landscape])(
-    '%i x %i: the five destinations in the tab bar’s order (then the Sandbox), icons and labels, the current one marked',
+    '%i x %i: Home, Study, then the other destinations (then the Sandbox), icons and labels, the current one marked',
     (width, height) => {
       setWindowSize(width, height)
       renderAt('/progress')
       expect(tabBar()).toBeNull()
       const nav = within(rail()!).getByRole('navigation', { name: 'Main' })
       const links = within(nav).getAllByRole('link')
-      expect(links.map((a) => a.textContent)).toEqual(['Home', 'Monsters', 'Graph', 'Progress', 'Settings', 'Sandbox'])
-      expect(links.map((a) => a.getAttribute('href'))).toEqual(['/', '/monsters', '/graph', '/progress', '/settings', '/sandbox'])
+      expect(links.map((a) => a.textContent)).toEqual(['Home', 'Study', 'Monsters', 'Graph', 'Progress', 'Settings', 'Sandbox'])
+      expect(links.map((a) => a.getAttribute('href'))).toEqual(['/', '/study', '/monsters', '/graph', '/progress', '/settings', '/sandbox'])
       for (const a of links) {
         expect(a.className).toContain('min-h-14')
         expect(a.querySelector('svg')).toBeTruthy()
@@ -126,7 +126,7 @@ describe('the phone layout: the tab bar', () => {
     expect(rail()).toBeNull()
     expect(railWidth()).toBe('')
     const bar = tabBar()!
-    expect(within(bar).getAllByRole('link').map((a) => a.textContent)).toEqual(['Home', 'Monsters', 'Graph', 'Progress', 'Settings'])
+    expect(within(bar).getAllByRole('link').map((a) => a.textContent)).toEqual(['Home', 'Study', 'Monsters', 'Graph', 'Progress', 'Settings'])
     expect(within(bar).getByRole('link', { name: 'Progress' }).getAttribute('aria-current')).toBe('page')
     expect(main().getAttribute('data-layout')).toBe('phone')
   }, PAGE_TIMEOUT)

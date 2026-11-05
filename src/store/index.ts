@@ -1,7 +1,7 @@
 /**
  * App store: Zustand + persist, fanned out into `pct.*` localStorage keys (see ./storage.ts).
  *
- * Persisted: meta, settings, auth, attempt (current), events (append-only), weekly, streak, rewards.
+ * Persisted: meta, settings, auth, attempt (current), events (append-only), weekly, streak, rewards, studySets.
  * Transient: toasts, hydrated, storageOk.
  *
  * Selectors are pure functions in ./selectors.ts and ./rewards.ts; the hooks at the bottom memoize them.
@@ -30,6 +30,16 @@ import {
   propertyAccuracy,
 } from './selectors'
 import { createFanOutStorage, PERSIST_NAME } from './storage'
+import {
+  createStudySetIn,
+  normalizeStudySets,
+  recordMatchIn,
+  renameStudySetIn,
+  saveStudySetIn,
+  type StudyDraftCard,
+  type StudySet,
+  type StudyWriteResult,
+} from './studySets'
 import { SIXTY_DAYS_MS, dayKey } from './time'
 import { attemptTouched } from './touched'
 import {
@@ -192,6 +202,15 @@ interface Actions {
    * that chest was opened already or the day is neither today nor yesterday.
    */
   openChest: (day: string, now?: number) => ChestReward | null
+  // study sets (src/store/studySets.ts)
+  createStudySet: (input: { title: string; cards?: readonly StudyDraftCard[]; source?: StudySet['source']; now?: number }) => StudyWriteResult
+  renameStudySet: (id: string, title: string, now?: number) => StudyWriteResult
+  saveStudySet: (id: string, input: { title: string; cards: readonly StudyDraftCard[]; now?: number }) => StudyWriteResult
+  deleteStudySet: (id: string) => void
+  /** Store `ms` only when it is faster than the set's best match. */
+  recordStudyMatch: (id: string, ms: number, now?: number) => void
+  noteStudyLearned: (setId: string, cardId: string, now?: number) => void
+  noteStudyRound: (setId: string, mode: 'flash' | 'learn' | 'match' | 'test', now?: number) => void
   // maintenance
   resetProgress: () => void
   exportJson: () => string
@@ -243,6 +262,7 @@ function mergePersisted(persisted: unknown, current: StoreState): StoreState {
     weekly,
     streak,
     rewards: normalizeRewards(p.rewards),
+    studySets: normalizeStudySets(p.studySets),
   }
 }
 
@@ -623,6 +643,43 @@ export const useStore = create<StoreState>()(
         return reward
       },
 
+      // --- study sets -------------------------------------------------------
+      createStudySet: (input) => {
+        let result: StudyWriteResult = { ok: false, error: 'Give the set a title.' }
+        set((s) => {
+          const built = createStudySetIn(s.studySets, input)
+          result = built.result
+          return built.result.ok ? { studySets: built.sets } : {}
+        })
+        return result
+      },
+      renameStudySet: (id, title, now) => {
+        let result: StudyWriteResult = { ok: false, error: 'That study set is not on this device.' }
+        set((s) => {
+          const built = renameStudySetIn(s.studySets, id, title, now)
+          result = built.result
+          return built.result.ok ? { studySets: built.sets } : {}
+        })
+        return result
+      },
+      saveStudySet: (id, input) => {
+        let result: StudyWriteResult = { ok: false, error: 'That study set is not on this device.' }
+        set((s) => {
+          const built = saveStudySetIn(s.studySets, id, input)
+          result = built.result
+          return built.result.ok ? { studySets: built.sets } : {}
+        })
+        return result
+      },
+      deleteStudySet: (id) => set((s) => ({ studySets: s.studySets.filter((set) => set.id !== id) })),
+      recordStudyMatch: (id, ms, now) =>
+        set((s) => {
+          const studySets = recordMatchIn(s.studySets, id, ms, now)
+          return studySets === s.studySets ? {} : { studySets: [...studySets] }
+        }),
+      noteStudyLearned: (setId, cardId, now = Date.now()) => set((s) => ({ events: [...s.events, { t: 'study_learned', setId, cardId, at: now }] })),
+      noteStudyRound: (setId, mode, now = Date.now()) => set((s) => ({ events: [...s.events, { t: 'study_round', setId, mode, at: now }] })),
+
       // --- maintenance ------------------------------------------------------
       resetProgress: () => {
         if (draftTimer) clearTimeout(draftTimer)
@@ -645,7 +702,7 @@ export const useStore = create<StoreState>()(
         const settings = settingsAfterImport(s.settings, r.settings, mode)
         // The imported log is read again from where the slice stopped settling (a merge goes back to the earlier one).
         const rewards = settled({ rewards: r.rewards, events: r.events, settings }, Date.now())
-        set({ events: r.events, weekly: r.weekly, streak: r.streak, settings, rewards })
+        set({ events: r.events, weekly: r.weekly, streak: r.streak, settings, rewards, studySets: r.studySets })
         return { ok: true, added: r.added }
       },
 
@@ -691,6 +748,7 @@ export const useStore = create<StoreState>()(
         weekly: s.weekly,
         streak: s.streak,
         rewards: s.rewards,
+        studySets: s.studySets,
       }),
       merge: (persisted, current) => mergePersisted(persisted, current),
       migrate: (persisted) => persisted as PersistedState, // v1 is the first schema; add steps here.

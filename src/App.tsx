@@ -13,6 +13,13 @@ import { TabBar } from '@/components/TabBar'
 import { Toasts } from '@/components/Toast'
 import { useLayout } from '@/components/useBreakpoint'
 import { Home } from '@/pages/Home'
+import { StudyPage } from '@/pages/Study'
+import { StudyFlashPage } from '@/pages/StudyFlash'
+import { StudyImportPage } from '@/pages/StudyImport'
+import { StudyLearnPage } from '@/pages/StudyLearn'
+import { StudyMatchPage } from '@/pages/StudyMatch'
+import { StudySetPage } from '@/pages/StudySet'
+import { StudyTestPage } from '@/pages/StudyTest'
 import { ModulePage } from '@/pages/Module'
 import { PinPage } from '@/pages/Pin'
 import { ProgressPage } from '@/pages/Progress'
@@ -126,6 +133,13 @@ function UnlockedShell() {
             <Route path="/own/:moduleId/:templateId/:statement" element={<OwnProblemPage />} />
             <Route path="/review/:reviewId" element={<ReviewPage />} />
             <Route path="/set" element={<SetPage />} />
+            <Route path="/study" element={<StudyPage />} />
+            <Route path="/study/import" element={<StudyImportPage />} />
+            <Route path="/study/:setId" element={<StudySetPage />} />
+            <Route path="/study/:setId/flash" element={<StudyFlashPage />} />
+            <Route path="/study/:setId/learn" element={<StudyLearnPage />} />
+            <Route path="/study/:setId/match" element={<StudyMatchPage />} />
+            <Route path="/study/:setId/test" element={<StudyTestPage />} />
             <Route path="/drill" element={<DrillPage />} />
             <Route path="/monsters" element={<MonstersPage />} />
             <Route path="/graph" element={<GrapherPage />} />

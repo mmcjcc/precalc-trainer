@@ -1,5 +1,6 @@
 /** Export/import of progress as JSON (she uses a phone AND a desktop). Pure. */
 import { isDailyGoal, mergeRewards, normalizeRewards } from './rewards'
+import { mergeStudySets, normalizeStudySets, type StudySet } from './studySets'
 import { isThemeId } from './themes'
 import {
   DEFAULT_SETTINGS,
@@ -30,10 +31,15 @@ export interface BackupFile {
   streak: Streak
   /** The rewards' slice (days met, folded mistake cards and masteries). Absent in a file from before the rewards. */
   rewards: RewardsState
+  /**
+   * Her study sets. Absent in a file from before study sets: an import then leaves this device's sets alone.
+   * Present (even empty): replace takes the file's, merge keeps the newer `updatedAt` per set id.
+   */
+  studySets?: StudySet[]
 }
 
 export function buildBackup(
-  state: Pick<PersistedState, 'settings' | 'events' | 'weekly' | 'streak'> & { rewards?: RewardsState },
+  state: Pick<PersistedState, 'settings' | 'events' | 'weekly' | 'streak'> & { rewards?: RewardsState; studySets?: readonly StudySet[] },
   now = Date.now(),
 ): BackupFile {
   return {
@@ -45,13 +51,14 @@ export function buildBackup(
     weekly: state.weekly,
     streak: state.streak,
     rewards: state.rewards ?? emptyRewards(),
+    studySets: state.studySets ? [...state.studySets] : [],
   }
 }
 
 export type ImportMode = 'merge' | 'replace'
 
 export type ImportResult =
-  | { ok: true; events: Ev[]; weekly: Weekly; streak: Streak; rewards: RewardsState; settings: Settings; added: number }
+  | { ok: true; events: Ev[]; weekly: Weekly; streak: Streak; rewards: RewardsState; settings: Settings; studySets: StudySet[]; added: number }
   | { ok: false; error: string }
 
 /**
@@ -194,6 +201,7 @@ export function parseBackup(text: string): { ok: true; backup: BackupFile } | { 
       weekly,
       streak,
       rewards: normalizeRewards(raw.rewards),
+      ...(Object.prototype.hasOwnProperty.call(raw, 'studySets') ? { studySets: normalizeStudySets(raw.studySets) } : {}),
     },
   }
 }
@@ -203,8 +211,19 @@ export function parseBackup(text: string): { ok: true; backup: BackupFile } | { 
  * and merges the weekly counters, the streak and the rewards' slice (the caller settles the rewards' days again
  * over the merged log).
  */
+function studySetsAfter(
+  current: readonly StudySet[] | undefined,
+  imported: StudySet[] | undefined,
+  mode: ImportMode,
+): StudySet[] {
+  const mine = current ?? []
+  if (imported === undefined) return [...mine]
+  if (mode === 'replace') return imported
+  return mergeStudySets(mine, imported)
+}
+
 export function importBackup(
-  current: Pick<PersistedState, 'events' | 'weekly' | 'streak'> & { rewards?: RewardsState },
+  current: Pick<PersistedState, 'events' | 'weekly' | 'streak'> & { rewards?: RewardsState; studySets?: readonly StudySet[] },
   text: string,
   mode: ImportMode,
 ): ImportResult {
@@ -219,6 +238,7 @@ export function importBackup(
       streak: b.streak,
       rewards: b.rewards,
       settings: b.settings,
+      studySets: studySetsAfter(current.studySets, b.studySets, 'replace'),
       added: b.events.length,
     }
   }
@@ -235,5 +255,14 @@ export function importBackup(
   events.sort((x, y) => x.at - y.at)
   const streak = b.streak.lastDay > current.streak.lastDay ? b.streak : current.streak
   const rewards = mergeRewards(current.rewards ?? emptyRewards(), b.rewards)
-  return { ok: true, events, weekly: mergeWeekly(current.weekly, b.weekly), streak, rewards, settings: b.settings, added }
+  return {
+    ok: true,
+    events,
+    weekly: mergeWeekly(current.weekly, b.weekly),
+    streak,
+    rewards,
+    settings: b.settings,
+    studySets: studySetsAfter(current.studySets, b.studySets, 'merge'),
+    added,
+  }
 }

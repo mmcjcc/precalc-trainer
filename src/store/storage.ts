@@ -14,6 +14,7 @@ export const STORAGE_KEYS: Record<PersistedSlice, string> = {
   weekly: 'pct.weekly',
   streak: 'pct.streak',
   rewards: 'pct.rewards',
+  studySets: 'pct.studySets',
 }
 
 export const SLICES = Object.keys(STORAGE_KEYS) as PersistedSlice[]

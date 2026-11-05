@@ -2,7 +2,7 @@
 /**
  * Navigation by window size: in the phone layout the menu screens get the bottom tab bar, and a problem screen or a
  * running set gets none; the tablet layout (840 px and more) has the navigation rail everywhere. The tab bar is Home,
- * Monsters, Graph, Progress, Settings on every screen; the rail shows the same five first, then Ask (tutor configured)
+ * Study, Monsters, Graph, Progress, Settings on every screen; the rail shows the same six first, then Ask (tutor configured)
  * and the Sandbox (family app) (docs/progress/phone-monsters.md, docs/progress/app-grapher.md, docs/progress/app-tablet.md).
  */
 import { render, screen, within } from '@testing-library/react'
@@ -15,7 +15,8 @@ import { newActiveSet, saveActiveSet } from '@/session/activeSet'
 import { buildSet } from '@/session/buildSet'
 import { getCourse } from '@/content'
 import { emptyRewards, resetStoreForTests } from '@/store'
-import { isNavActive, navItems, tabItems, tabOf } from './navItems'
+import { withStudy } from '@/study/nav'
+import { isNavActive, navItems, railOf, tabItems, tabOf } from './navItems'
 
 vi.mock('@/components/Graph', () => ({ Graph: () => <div data-testid="graph-stub" /> }))
 
@@ -52,15 +53,15 @@ afterEach(() => {
 })
 
 describe('a phone: the bottom tab bar on menu screens', () => {
-  it('Home: Home, Monsters, Graph, Progress, Settings, icons and labels, 48 px tall, Home marked; no top navigation', { timeout: PAGE_TIMEOUT }, () => {
+  it('Home: Home, Study, Monsters, Graph, Progress, Settings, icons and labels, 48 px tall, Home marked; no top navigation', { timeout: PAGE_TIMEOUT }, () => {
     installPointer(true)
     renderAt('/')
     const bar = tabBar()!
     expect(bar).toBeTruthy()
     expect(bar.getAttribute('aria-label')).toBe('Main')
     const links = within(bar).getAllByRole('link')
-    expect(links.map((a) => a.textContent)).toEqual(['Home', 'Monsters', 'Graph', 'Progress', 'Settings'])
-    expect(links.map((a) => a.getAttribute('href'))).toEqual(['/', '/monsters', '/graph', '/progress', '/settings'])
+    expect(links.map((a) => a.textContent)).toEqual(['Home', 'Study', 'Monsters', 'Graph', 'Progress', 'Settings'])
+    expect(links.map((a) => a.getAttribute('href'))).toEqual(['/', '/study', '/monsters', '/graph', '/progress', '/settings'])
     for (const a of links) {
       expect(a.className).toContain('min-h-12')
       expect(a.querySelector('svg')).toBeTruthy()
@@ -143,7 +144,7 @@ describe('the tablet layout (jsdom’s own window) has the navigation rail', () 
     expect(brand()).toBeTruthy()
     const nav = screen.getByRole('navigation', { name: 'Main' })
     expect(nav.closest('[data-nav-rail]')).toBeTruthy()
-    expect(within(nav).getAllByRole('link').map((a) => a.textContent)).toEqual(['Home', 'Monsters', 'Graph', 'Progress', 'Settings', 'Sandbox'])
+    expect(within(nav).getAllByRole('link').map((a) => a.textContent)).toEqual(['Home', 'Study', 'Monsters', 'Graph', 'Progress', 'Settings', 'Sandbox'])
     expect(within(nav).getByRole('link', { name: 'Home' }).getAttribute('aria-current')).toBe('page')
   })
 
@@ -156,10 +157,10 @@ describe('the tablet layout (jsdom’s own window) has the navigation rail', () 
   })
 })
 
-describe('five tabs on a phone', () => {
-  it('fit a 360 px screen: about 70 px a tab, and the longest label (8 letters at 12 px) is about 55 px', () => {
-    const items = tabItems()
-    expect(items).toHaveLength(5)
+describe('six tabs on a phone', () => {
+  it('fit a 360 px screen: Study is one of them, and the longest label still fits a tab', () => {
+    const items = withStudy(tabItems())
+    expect(items.map((t) => t.label)).toEqual(['Home', 'Study', 'Monsters', 'Graph', 'Progress', 'Settings'])
     // The bar's side padding is 4 px each side; each tab is flex-1 with 2 px of padding each side.
     const tabWidth = (360 - 8) / items.length
     // Inter at 12 px, overestimated on purpose: 8 px a capital, 9.5 px an m or w, 6.6 px any other letter.
@@ -189,6 +190,12 @@ describe('which item is current', () => {
     expect(tabOf('/drill', items)).toBe('/')
     expect(tabOf('/sandbox', items)).toBe('/')
     expect(tabOf('/tutor-log', items)).toBe('/settings')
+    // Study is added by the bar and the rail, after Home. A study page marks Study.
+    const shown = withStudy(items)
+    expect(shown.map((i) => i.label)).toEqual(['Home', 'Study', 'Monsters', 'Graph', 'Progress', 'Settings'])
+    expect(tabOf('/study', shown)).toBe('/study')
+    expect(tabOf('/study/abc/learn', shown)).toBe('/study')
+    expect(railOf('/study/abc/match', withStudy(navItems(false)))).toBe('/study')
     expect(tabOf('/nowhere', items)).toBeNull()
     // The top navigation: unchanged (a module page marks nothing there).
     expect(isNavActive('/m/inequalities', '/', true)).toBe(false)

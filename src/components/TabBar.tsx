@@ -1,5 +1,6 @@
 import { useLayoutEffect } from 'react'
 import { Link, useLocation } from 'react-router-dom'
+import { StudyIcon, withStudy } from '@/study/nav'
 import { NavIconSvg, tabOf, type NavItem } from './navItems'
 
 /**
@@ -15,7 +16,8 @@ export const TABBAR_HEIGHT = 'calc(3.5rem + env(safe-area-inset-bottom, 0px))'
  */
 export function TabBar({ items }: { items: readonly NavItem[] }) {
   const { pathname } = useLocation()
-  const current = tabOf(pathname, items)
+  const shown = withStudy(items)
+  const current = tabOf(pathname, shown)
 
   useLayoutEffect(() => {
     const root = document.documentElement
@@ -28,7 +30,7 @@ export function TabBar({ items }: { items: readonly NavItem[] }) {
   return (
     <nav aria-label="Main" className="tab-bar" data-tab-bar="">
       <ul className="mx-auto flex h-14 max-w-xl items-stretch">
-        {items.map((item) => {
+        {shown.map((item) => {
           const active = item.to === current
           return (
             <li key={item.to} className="flex min-w-0 flex-1">
@@ -42,7 +44,7 @@ export function TabBar({ items }: { items: readonly NavItem[] }) {
                   data-tab-marker={active ? '' : undefined}
                   className={`flex h-7 w-14 max-w-full items-center justify-center rounded-full ${active ? 'bg-navy-100 text-navy' : 'text-navy/80'}`}
                 >
-                  <NavIconSvg icon={item.icon} />
+                  {item.to === '/study' ? <StudyIcon /> : <NavIconSvg icon={item.icon} />}
                 </span>
                 <span className={`max-w-full truncate text-xs leading-tight ${active ? 'font-bold text-navy' : 'font-medium text-navy/80'}`}>{item.label}</span>
               </Link>

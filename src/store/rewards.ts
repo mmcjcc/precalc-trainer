@@ -27,6 +27,10 @@
  *
  * The daily chest (store/chest.ts, docs/progress/phone-quests.md): a chest opened with bonus XP pays it on the day she
  * opens it (`chest`, no problem type), and a chest's rest day is banked on the day she opens it, like the weekly one.
+ *
+ * A study set (src/study): +1 the first time a card is answered right in a session (`study_learned`), +5 when she
+ * finishes a pass (`study_round`), up to STUDY_XP_CAP of that XP per day. It counts toward the daily goal and the
+ * streak. It is not a line, a part, a finish, a drill, a squash, or a mastery, so it never moves a ring or a quest.
  */
 import { STORE } from '@/edition'
 import { chestRestByDay, countedChestIndices, restChestThisWeek } from './chest'
@@ -49,7 +53,14 @@ export const XP = {
   drill: 2,
   squash: 50,
   mastered: 100,
+  /** A study-set card answered right for the first time in a session. */
+  studyLearned: 1,
+  /** A finished flash pass, learn round, match, or test. */
+  studyRound: 5,
 } as const
+
+/** Study-set XP that counts on one local day. Further study events that day pay nothing. */
+export const STUDY_XP_CAP = 30
 
 export const DAILY_GOALS: readonly DailyGoal[] = [30, 60, 100]
 export const DEFAULT_DAILY_GOAL: DailyGoal = 60
@@ -111,6 +122,8 @@ export type AwardKind =
   | 'drill'
   /** Bonus XP from a daily chest (store/chest.ts), on the day she opened it. */
   | 'chest'
+  /** Study-set XP (a card learned, or a finished pass). Capped per day. Not a quest. */
+  | 'study'
 
 export interface XpAward {
   kind: AwardKind
@@ -189,6 +202,8 @@ function run(events: readonly Ev[], start: Pick<RewardsState, 'cards' | 'mastere
   const skills = new Map<string, SkillTrack>()
   const attempts = new Map<string, AttemptTrack>()
   const awards: XpAward[] = []
+  /** Study XP already paid on each local day (the cap is only this kind of XP). */
+  const studyPaid = new Map<string, number>()
 
   function skillOf(skill: string): SkillTrack {
     let t = skills.get(skill)
@@ -368,6 +383,17 @@ function run(events: readonly Ev[], start: Pick<RewardsState, 'cards' | 'mastere
       case 'step_undone':
       case 'set_done':
         break
+      case 'study_learned':
+      case 'study_round': {
+        const base = e.t === 'study_learned' ? XP.studyLearned : XP.studyRound
+        const day = dayKey(e.at)
+        const xp = Math.min(base, Math.max(0, STUDY_XP_CAP - (studyPaid.get(day) ?? 0)))
+        if (xp > 0) {
+          studyPaid.set(day, (studyPaid.get(day) ?? 0) + xp)
+          awards.push({ kind: 'study', xp, at: e.at, day, skill: '' })
+        }
+        break
+      }
     }
   })
   return { awards, cards, mastered }
