@@ -2327,6 +2327,75 @@ export const ERROR_PATTERNS: Record<ErrorPatternId, ErrorPatternInfo> = {
     lesson: 'A formula that starts with H and is dissolved in water, written (aq), is an acid: it releases H⁺ ions. Oxyacids such as H₂SO₄ and HNO₃ are acids too, even without (aq).',
     example: 'HI(aq): molecular ✗ → acid',
   },
+  // --- ionic and metallic bonding (content/modules/ionicBonding; chemistry chapter 8). Counts are written
+  // in words, and worked species are gallium, francium and radium, which the chapter 8 templates never draw.
+  // The lattice and sea entries may name NaCl and copper: those parts answer in sentences, never formulas. ---
+  ib_valence_dblock: {
+    id: 'ib_valence_dblock',
+    title: 'A full d subshell is not the outer shell',
+    lesson: 'Valence electrons live in the highest shell only. A filled d subshell sits one shell further in, so it is left out of the count, however recently it filled.',
+    example: 'Ga: the full d subshell counted as outer ✗ → only the highest shell',
+  },
+  ib_gain_lose: {
+    id: 'ib_gain_lose',
+    title: 'Metals give electrons away; nonmetals take them in',
+    lesson: 'A metal on the left has a few outer electrons and sheds them to uncover the full shell underneath. A nonmetal on the right is close to a full shell and pulls electrons in to finish it. Swapping those directions turns the ion inside out.',
+    example: 'Fr pictured taking an electron in ✗ → it gives its one outer electron away',
+  },
+  ib_charge_sign: {
+    id: 'ib_charge_sign',
+    title: 'The sign follows the electrons',
+    lesson: 'Electrons are negative. An atom that sheds them ends up positive, and an atom that takes them in ends up negative. The count of moved electrons sets the size of the charge; the direction sets its sign.',
+    example: 'Fr⁻ written for the francium ion ✗ → Fr⁺',
+  },
+  ib_dots_neutral: {
+    id: 'ib_dots_neutral',
+    title: 'Dot symbols show the ion as it is now',
+    lesson: 'After electrons have moved, the dot symbol shows what is left. A simple metal cation has emptied its outer shell, so its symbol carries no dots at all; an anion has finished its octet, so its symbol shows the complete set of eight.',
+    example: 'Fr⁺ drawn with one dot ✗ → no dots left',
+  },
+  ib_dots_all: {
+    id: 'ib_dots_all',
+    title: 'Dots are the outer shell only',
+    lesson: 'An electron-dot symbol puts just the outermost shell around the symbol; the symbol itself stands in for the nucleus and every inner electron. Drawing every electron the atom owns buries the shell that does the chemistry.',
+    example: 'Fr ringed by dozens of dots ✗ → a single outer dot',
+  },
+  ib_transfer_count: {
+    id: 'ib_transfer_count',
+    title: 'Count the whole formula unit',
+    lesson: 'The question asks for the electrons moved per formula unit, so every cation in the unit gives its share and every anion takes one. Counting a single atom’s loss sells the unit short.',
+    example: 'Ra with two halide ions: one atom’s loss counted ✗ → add up the whole unit',
+  },
+  ib_props_electrons: {
+    id: 'ib_props_electrons',
+    title: 'No electron sea in an ionic solid',
+    lesson: 'In an ionic crystal the transferred electrons sit on the anions and stay there. Nothing drifts through the solid, which is exactly why it carries no current until the ions themselves are freed to move.',
+    example: 'solid NaCl conducting by free electrons ✗ → no current until it melts or dissolves',
+  },
+  ib_props_molecules: {
+    id: 'ib_props_molecules',
+    title: 'A crystal, not molecules',
+    lesson: 'An ionic compound is one continuous lattice of alternating ions; the formula only gives the ratio. There is no separate little molecule to point at, which is part of why the melting points run so high.',
+    example: 'NaCl pictured as pairs floating free ✗ → one endless lattice',
+  },
+  ib_props_weak: {
+    id: 'ib_props_weak',
+    title: 'Brittle is not the same as weak',
+    lesson: 'The attractions in an ionic crystal are strong in every direction — that is why melting one takes a furnace. It shatters because a shifted layer brings like charges face to face, not because the attractions are feeble.',
+    example: 'shattering blamed on weak attractions ✗ → like charges pushed together',
+  },
+  mb_fixed_electrons: {
+    id: 'mb_fixed_electrons',
+    title: 'The sea belongs to the whole metal',
+    lesson: 'In a metal the outer electrons leave home: the whole piece shares them, and they drift freely between the positive centers. Pinning each electron to its own atom would leave nothing to carry a current or to hold a bent sheet together.',
+    example: 'copper with every electron kept at home ✗ → a shared electron sea',
+  },
+  mb_ionic_confusion: {
+    id: 'mb_ionic_confusion',
+    title: 'A metal has no anions',
+    lesson: 'A metal is positive centers in a sea of shared electrons, one kind of atom throughout. It is not an ionic lattice: no negative ions sit in it, and its current is electrons on the move, not ions breaking loose.',
+    example: 'copper described as plus and minus ions ✗ → cations in an electron sea',
+  },
   // --- honors geometry Unit 4. Examples use 11, 23, and 41.
   // No template generates those as an answer. A lesson may name a method only together with the
   // one it is confused with, and never with the words a correct button would show for that slip.

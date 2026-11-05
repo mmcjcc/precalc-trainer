@@ -132,6 +132,12 @@ export const COURSES: readonly CourseDef[] = [
         title: 'Chemical nomenclature',
         moduleIds: ['ionicNames', 'molecularAcids'],
       },
+      {
+        id: 'ch8',
+        label: 'Chapter 8',
+        title: 'Ionic and metallic bonding',
+        moduleIds: ['ionicBonding'],
+      },
     ],
   },
   {

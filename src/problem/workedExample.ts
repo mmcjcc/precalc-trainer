@@ -193,6 +193,12 @@ export const COVERED_PARTS_TEMPLATES = [
   'ta.half',
   'te.linear',
   'te.factor',
+  // Chemistry chapter 8 (ionic and metallic bonding).
+  'ib.valence',
+  'ib.dots',
+  'ib.transfer',
+  'ib.props',
+  'mb.sea',
 ] as const
 
 const STEP_SET = new Set<string>(COVERED_STEP_TEMPLATES)
@@ -983,6 +989,27 @@ function buildPartsForAnswer(sibling: ProblemInstance, ans: AnswerSpec, cards: r
     }
 
     case 'periodic': {
+      return {
+        kind: 'parts',
+        sibling,
+        prompt: ans.prompt,
+        parts: ans.stages.map((stage) => {
+          const rule = findRule(cards, stage.ruleCard)
+          const choiceText =
+            stage.kind === 'choice' ? stage.choices?.find((c) => c.id === stage.answerText)?.text : undefined
+          return {
+            id: stage.id,
+            label: stage.label,
+            answer: choiceText ?? stage.answerText,
+            why: stage.nudge,
+            ...(rule ? { ruleTitle: rule.title, ruleBody: rule.body } : {}),
+            details: stage.reveal,
+          }
+        }),
+      }
+    }
+
+    case 'ionicBonding': {
       return {
         kind: 'parts',
         sibling,
