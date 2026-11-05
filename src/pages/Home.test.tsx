@@ -196,7 +196,7 @@ describe('Home: classes and units', () => {
     renderHome()
     // A first visit lands on the last unit that has modules (Unit 5). Unit 1 is one press away.
     expect(moduleTitles()).toEqual(precalcUnit6Titles)
-    expect(moduleTitles()).toEqual(['Fundamental trig identities'])
+    expect(moduleTitles()).toEqual(['Fundamental trig identities', 'Sum, difference, double and half angles', 'Solving trigonometric equations'])
     expect(signposts()).toEqual(precalcUnit6Titles)
     expect(screen.getByRole('button', { name: /Unit 6/, pressed: true }).textContent).toMatch(/Analytic trigonometry/)
     fireEvent.click(screen.getByRole('button', { name: /Unit 5/ }))

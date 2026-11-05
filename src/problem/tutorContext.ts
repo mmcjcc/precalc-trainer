@@ -546,7 +546,7 @@ function workOf(instance: ProblemInstance, attempt: Attempt | null): string[] {
       .map((line) => clip(line, TUTOR_LIMITS.line))
   }
   // Angles, right triangles and the unit circle: her boxes, part by part (a quadrant by its name).
-  if (instance.answer.type === 'angleMeasure' || instance.answer.type === 'rightTriangle' || instance.answer.type === 'unitCircle' || instance.answer.type === 'sinusoids' || instance.answer.type === 'otherTrigGraphs' || instance.answer.type === 'inverseTrig') {
+  if (instance.answer.type === 'angleMeasure' || instance.answer.type === 'rightTriangle' || instance.answer.type === 'unitCircle' || instance.answer.type === 'sinusoids' || instance.answer.type === 'otherTrigGraphs' || instance.answer.type === 'inverseTrig' || instance.answer.type === 'trigFormulas' || instance.answer.type === 'trigEquations') {
     return trigWork(instance.answer.stages, attempt.final?.polyEntries)
       .slice(0, TUTOR_LIMITS.lines)
       .map((line) => clip(line, TUTOR_LIMITS.line))
@@ -708,7 +708,7 @@ function statementOf(instance: ProblemInstance): string {
     text = answer.matchMode === 'equation' ? `${answer.prompt}${candidates}` : `${answer.fnName}(x) = ${answer.f}. ${answer.prompt}${candidates}`
   } else if (answer.type === 'expModels') {
     text = answer.prompt
-  } else if (answer.type === 'angleMeasure' || answer.type === 'rightTriangle' || answer.type === 'unitCircle' || answer.type === 'sinusoids' || answer.type === 'otherTrigGraphs' || answer.type === 'inverseTrig' || answer.type === 'trigIdentities') {
+  } else if (answer.type === 'angleMeasure' || answer.type === 'rightTriangle' || answer.type === 'unitCircle' || answer.type === 'sinusoids' || answer.type === 'otherTrigGraphs' || answer.type === 'inverseTrig' || answer.type === 'trigIdentities' || answer.type === 'trigFormulas' || answer.type === 'trigEquations') {
     // The prompt as words (its KaTeX read back), the given equation (Unit 5), and the figure, which the tutor cannot
     // see; four graphs to match are said by their formulas, as expLogGraphs' candidates are.
     const display = answer.display ? ` ${trigPlain(answer.display)}` : ''
@@ -765,7 +765,7 @@ function canonicalOf(instance: ProblemInstance): string[] {
     answer.type === 'quantum'
   ) {
     lines = answer.reveal
-  } else if (answer.type === 'angleMeasure' || answer.type === 'rightTriangle' || answer.type === 'unitCircle' || answer.type === 'sinusoids' || answer.type === 'otherTrigGraphs' || answer.type === 'inverseTrig' || answer.type === 'trigIdentities') {
+  } else if (answer.type === 'angleMeasure' || answer.type === 'rightTriangle' || answer.type === 'unitCircle' || answer.type === 'sinusoids' || answer.type === 'otherTrigGraphs' || answer.type === 'inverseTrig' || answer.type === 'trigIdentities' || answer.type === 'trigFormulas' || answer.type === 'trigEquations') {
     lines = answer.reveal.map(trigPlain)
   } else if (answer.type === 'optimization') {
     lines = answer.reveal.map(optPlain)
@@ -810,6 +810,8 @@ function answerOf(instance: ProblemInstance): string | undefined {
     case 'otherTrigGraphs':
     case 'inverseTrig':
     case 'trigIdentities':
+    case 'trigFormulas':
+    case 'trigEquations':
     case 'optimization':
     case 'geometry':
     case 'periodic':

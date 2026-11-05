@@ -17,7 +17,7 @@ import type {
   VarName,
 } from '@/shared/types'
 
-export type ProblemKind = 'inequality' | 'numberLine' | 'evenOdd' | 'inverse' | 'drill' | 'sigFigs' | 'atoms' | 'diffQuotient' | 'graphFeatures' | 'domainRange' | 'composition' | 'functionOps' | 'transformations' | 'piecewiseRate' | 'electrons' | 'quantumNumbers' | 'periodic' | 'quadratics' | 'optimization' | 'polyDivision' | 'polyZeros' | 'rationalFns' | 'signCharts' | 'complexNums' | 'logForms' | 'logProperties' | 'expLogEquations' | 'expLogGraphs' | 'expModels' | 'angleMeasure' | 'rightTriangle' | 'unitCircle' | 'sinusoids' | 'otherTrigGraphs' | 'inverseTrig' | 'trigIdentities' | 'geometry' | 'nomenclature' | 'satrw'
+export type ProblemKind = 'inequality' | 'numberLine' | 'evenOdd' | 'inverse' | 'drill' | 'sigFigs' | 'atoms' | 'diffQuotient' | 'graphFeatures' | 'domainRange' | 'composition' | 'functionOps' | 'transformations' | 'piecewiseRate' | 'electrons' | 'quantumNumbers' | 'periodic' | 'quadratics' | 'optimization' | 'polyDivision' | 'polyZeros' | 'rationalFns' | 'signCharts' | 'complexNums' | 'logForms' | 'logProperties' | 'expLogEquations' | 'expLogGraphs' | 'expModels' | 'angleMeasure' | 'rightTriangle' | 'unitCircle' | 'sinusoids' | 'otherTrigGraphs' | 'inverseTrig' | 'trigIdentities' | 'trigFormulas' | 'trigEquations' | 'geometry' | 'nomenclature' | 'satrw'
 
 /** Precalculus Unit 2, optimization with quadratics: a pen against a wall, pens in a row, two numbers, price and sales. */
 export type OptimizationQuestion = 'wall' | 'pens' | 'numbers' | 'revenue'
@@ -251,6 +251,12 @@ export type InverseTrigQuestion = 'evaluate' | 'compose'
 
 /** Precalculus Unit 6, Part 1: fundamental trig identities (express in terms of another, simplify, verify). */
 export type TrigIdentitiesQuestion = 'express' | 'simplify' | 'verify'
+
+/** Sum and difference, double-angle, and half-angle formulas (precalculus Unit 6, part 2). */
+export type TrigFormulasQuestion = 'sumdiff' | 'double' | 'half'
+
+/** Trig equations on one full turn (precalculus Unit 6, part 2). */
+export type TrigEquationsQuestion = 'linear' | 'factor'
 
 /**
  * How one part of a trig problem is answered and read (engine/trig's reader and grader):
@@ -1977,6 +1983,24 @@ export type AnswerSpec =
         answerLatex: string
       }
     } & TrigAnswerFields)
+  | ({
+      /**
+       * Sum, difference, double-angle and half-angle formulas (precalculus Unit 6, part 2). Exact values, typed with
+       * the unit-circle grammar where the value is one term, and graded numerically when it is a sum of radicals.
+       * Grade a part with the module's `gradeTfPart`.
+       */
+      type: 'trigFormulas'
+      question: TrigFormulasQuestion
+    } & TrigAnswerFields)
+  | ({
+      /**
+       * Trig equations on one full turn (precalculus Unit 6, part 2): one function solved linearly, or a quadratic
+       * in one function, factored and solved. Solution lists use the unit-circle list grammar. Grade a part with
+       * the module's `gradeTePart`.
+       */
+      type: 'trigEquations'
+      question: TrigEquationsQuestion
+    } & TrigAnswerFields)
   | {
       type: 'drill'
       question: 'which_property' | 'legal_or_illegal'
@@ -2055,7 +2079,9 @@ export type SinusoidsAnswer = Extract<AnswerSpec, { type: 'sinusoids' }>
 export type OtherTrigGraphsAnswer = Extract<AnswerSpec, { type: 'otherTrigGraphs' }>
 export type InverseTrigAnswer = Extract<AnswerSpec, { type: 'inverseTrig' }>
 export type TrigIdentitiesAnswer = Extract<AnswerSpec, { type: 'trigIdentities' }>
-export type TrigAnswer = AngleMeasureAnswer | RightTriangleAnswer | UnitCircleAnswer | SinusoidsAnswer | OtherTrigGraphsAnswer | InverseTrigAnswer
+export type TrigFormulasAnswer = Extract<AnswerSpec, { type: 'trigFormulas' }>
+export type TrigEquationsAnswer = Extract<AnswerSpec, { type: 'trigEquations' }>
+export type TrigAnswer = AngleMeasureAnswer | RightTriangleAnswer | UnitCircleAnswer | SinusoidsAnswer | OtherTrigGraphsAnswer | InverseTrigAnswer | TrigFormulasAnswer | TrigEquationsAnswer
 
 /** The optimization arm of `AnswerSpec`, named so the flow and the generators share it. */
 export type OptimizationAnswer = Extract<AnswerSpec, { type: 'optimization' }>

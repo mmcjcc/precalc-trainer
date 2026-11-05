@@ -14,6 +14,8 @@ import { gradeOgPart } from '@/content/modules/otherTrigGraphs'
 import { gradeRtPart } from '@/content/modules/rightTriangle'
 import { gradeSgPart } from '@/content/modules/sinusoids'
 import { gradeUcPart } from '@/content/modules/unitCircle'
+import { gradeTfPart } from '@/content/modules/trigFormulas'
+import { gradeTePart } from '@/content/modules/trigEquations'
 import type { TrigPartGrade } from '@/content/modules/trig/parts'
 import { NO_VALUE_TEXT, isUnit5Part, unit5PreviewTex } from '@/content/modules/trig/parts5'
 import { pieces, plain } from '@/content/modules/trig/text'
@@ -71,6 +73,18 @@ const DOING: Record<string, string> = {
   zeros: 'find the x-intercepts',
   match: 'pick the graph',
   expression: 'write the expression',
+  split: 'pick the split',
+  formula: 'expand the formula',
+  sin2: 'find sin of twice the angle',
+  cos2: 'find cos of twice the angle',
+  tan2: 'find tan of twice the angle',
+  sign: 'choose the sign',
+  isolate: 'isolate the function',
+  factor: 'factor the equation',
+  equations: 'write the two equations',
+  first: 'solve the first factor',
+  second: 'solve the second factor',
+  all: 'list every solution',
 }
 
 /** The keys for these answers: π, √, °, the word for no value, and the six functions. */
@@ -282,6 +296,20 @@ export function OtherTrigGraphsFlow(props: FlowProps) {
   const answer = props.instance.answer
   if (answer.type !== 'otherTrigGraphs') return <p className="text-navy">This problem has no tangent or secant graph to work with — pick another from the module page.</p>
   return <TrigPartsBody {...props} answer={answer} grade={(id, text) => gradeOgPart(answer, id, text)} />
+}
+
+/** Sum, difference, double-angle and half-angle formulas (Unit 6). The parts renderer is the unit-circle one. */
+export function TrigFormulasFlow(props: FlowProps) {
+  const answer = props.instance.answer
+  if (answer.type !== 'trigFormulas') return <p className="text-navy">This problem has no formula to work with — pick another from the module page.</p>
+  return <TrigPartsBody {...props} answer={answer} grade={(id, text) => gradeTfPart(answer, id, text)} />
+}
+
+/** Trig equations on one full turn (Unit 6). The parts renderer is the unit-circle one. */
+export function TrigEquationsFlow(props: FlowProps) {
+  const answer = props.instance.answer
+  if (answer.type !== 'trigEquations') return <p className="text-navy">This problem has no trig equation to work with — pick another from the module page.</p>
+  return <TrigPartsBody {...props} answer={answer} grade={(id, text) => gradeTePart(answer, id, text)} />
 }
 
 /** Inverse trig functions (Unit 5): values, and compositions. */

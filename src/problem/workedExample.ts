@@ -187,6 +187,12 @@ export const COVERED_PARTS_TEMPLATES = [
   'qn.name',
   'qn.shapes',
   'qn.pauli',
+  // Precalc trig, Unit 6 part 2.
+  'ta.sumdiff',
+  'ta.double',
+  'ta.half',
+  'te.linear',
+  'te.factor',
 ] as const
 
 const STEP_SET = new Set<string>(COVERED_STEP_TEMPLATES)
@@ -303,7 +309,9 @@ function carriedFigure(ans: AnswerSpec): unknown {
     ans.type === 'sinusoids' ||
     ans.type === 'otherTrigGraphs' ||
     ans.type === 'inverseTrig' ||
-    ans.type === 'trigIdentities'
+    ans.type === 'trigIdentities' ||
+    ans.type === 'trigFormulas' ||
+    ans.type === 'trigEquations'
   ) {
     return ans.figure.kind === 'none' ? undefined : ans.figure
   }
@@ -1066,6 +1074,8 @@ function buildPartsForAnswer(sibling: ProblemInstance, ans: AnswerSpec, cards: r
     case 'sinusoids':
     case 'otherTrigGraphs':
     case 'inverseTrig':
+    case 'trigFormulas':
+    case 'trigEquations':
       return trigParts(sibling, ans, cards)
 
     case 'sigFigs': {
