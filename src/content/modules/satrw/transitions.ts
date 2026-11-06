@@ -73,6 +73,11 @@ const RELATIONS: readonly RelationSpec[] = [
   },
 ]
 
+/** The word bank, for the starter study deck (src/study/starterDecks.ts): every taught word with what it signals. */
+export function transitionGlossary(): readonly { relation: TransitionRelation; label: string; words: readonly string[]; signals: string }[] {
+  return RELATIONS.map((r) => ({ relation: r.id, label: r.label, words: r.words, signals: r.whatItSignals }))
+}
+
 interface SentencePair {
   s1: string
   s2: string

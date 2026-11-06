@@ -7,6 +7,7 @@ import { getCourse, getModule, getReview, resolveReview, SAT_SKILLS } from '@/co
 import type { ModuleId } from '@/shared/types'
 import { classTypes } from '@/session/buildSet'
 import { resetStoreForTests, useStore } from '@/store'
+import { allStarterDecks, starterDecks } from '@/study/starterDecks'
 import { Home } from '@/pages/Home'
 import { SettingsPage } from '@/pages/Settings'
 
@@ -22,6 +23,18 @@ beforeEach(() => {
 })
 
 describe('the store app', () => {
+  it('starter decks keep the math-only scope', () => {
+    const decks = starterDecks()
+    expect(decks.length).toBeLessThan(allStarterDecks().length)
+    expect(decks.every((deck) => deck.subject === undefined)).toBe(true)
+    const ids = decks.map((deck) => deck.id)
+    expect(ids).toContain('unit-circle')
+    expect(ids).toContain('geometry-theorems')
+    expect(ids).not.toContain('polyatomic-ions')
+    expect(ids).not.toContain('sat-transitions')
+  })
+
+
   it('shows the rewards on Home by default, and the Settings switch can turn them off', { timeout: 120_000 }, () => {
     // A class chosen (a brand-new user first sees the class picker, pages/Welcome.tsx).
     useStore.getState().setSettings({ courseId: 'precalc' })
