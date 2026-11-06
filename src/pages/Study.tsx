@@ -1,16 +1,26 @@
 import { useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import { ImportPanel } from '@/study/ImportPanel'
-import { btnPrimary, fieldClass } from '@/study/ui'
+import { starterDecks } from '@/study/starterDecks'
+import { btnPrimary, btnSecondary, fieldClass } from '@/study/ui'
 import { useStore } from '@/store'
 
-/** Her decks: make one, open it, or bring in a classmate's code. */
+/** Her decks: make one, open it, start from a ready-made deck, or bring in a classmate's code. */
 export function StudyPage() {
   const sets = useStore((s) => s.studySets)
   const createStudySet = useStore((s) => s.createStudySet)
   const [title, setTitle] = useState('')
   const [error, setError] = useState<string | null>(null)
+  const [starterError, setStarterError] = useState<string | null>(null)
   const ordered = sets.slice().sort((a, b) => b.updatedAt - a.updatedAt || a.title.localeCompare(b.title))
+  const titles = new Set(sets.map((set) => set.title))
+
+  function onAddStarter(deckId: string) {
+    const deck = starterDecks().find((d) => d.id === deckId)
+    if (!deck) return
+    const result = createStudySet({ title: deck.title, cards: deck.cards })
+    setStarterError(result.ok ? null : result.error)
+  }
 
   function onCreate(e: FormEvent) {
     e.preventDefault()
@@ -63,6 +73,36 @@ export function StudyPage() {
           ))}
         </ul>
       )}
+      <section className="flex flex-col gap-3" aria-labelledby="starter-heading">
+        <h2 id="starter-heading" className="text-xl font-semibold text-navy">
+          Starter sets
+        </h2>
+        <p className="text-sm text-navy/70">Ready-made decks from your classes. Adding one makes your own editable copy.</p>
+        {starterError && (
+          <p role="alert" className="text-sm font-semibold text-bad">
+            {starterError}
+          </p>
+        )}
+        <ul className="flex flex-col gap-2">
+          {starterDecks().map((deck) => (
+            <li key={deck.id} className="flex flex-col gap-2 rounded-2xl border border-navy-100 bg-white px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex min-w-0 flex-col">
+                <span className="font-semibold text-navy">{deck.title}</span>
+                <span className="text-sm text-navy/70">
+                  {deck.cards.length} cards · {deck.blurb}
+                </span>
+              </div>
+              {titles.has(deck.title) ? (
+                <span className="text-sm font-semibold text-navy/70 sm:shrink-0">In your sets</span>
+              ) : (
+                <button type="button" onClick={() => onAddStarter(deck.id)} className={`${btnSecondary} sm:shrink-0`} aria-label={`Add ${deck.title}`}>
+                  Add
+                </button>
+              )}
+            </li>
+          ))}
+        </ul>
+      </section>
       <section className="flex flex-col gap-3" aria-labelledby="import-heading">
         <h2 id="import-heading" className="text-xl font-semibold text-navy">
           Import a set

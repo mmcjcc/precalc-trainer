@@ -107,3 +107,29 @@ Edited:
 - `src/session/quests.ts` — quest XP ignores kind `'study'`
 
 Not edited: `src/store/compaction.ts`, `src/session/breaks.ts`, problem flows, `ProblemFrame`, engines, content modules, `workedExample.*`, `session/buildSet`, ads, and `src/components/ptable/`.
+
+## Starter sets (2026-11-06)
+
+Eight ready-made decks on `/study`, under "Starter sets". Adding one copies it into her own sets
+(`source: 'made'`, fully editable); a deck whose exact title is already among her sets shows
+"In your sets" instead of the button. The store build keeps its math-only scope: a deck's
+`subject` runs through `includesSubject`, so the chemistry and SAT decks exist only in the
+family app.
+
+Decks (`src/study/starterDecks.ts`):
+
+- **Unit circle** (33) — sin/cos/tan at the special and quadrantal angles, degree→radian
+  conversions, quadrant signs. The table is exported and the test re-checks every value with `Math`.
+- **Trig identities & formulas** (28), **Logarithm & exponent rules** (20),
+  **Geometry theorems & postulates** (31) — hand-written tables, reviewed by hand.
+- **Polyatomic ions** (38) — derived from the nomenclature engine (`nmIons()`, `ionDisplay`);
+  the test pins the deck to the engine, card for card.
+- **Chemistry vocabulary: bonding & compounds** (24) — chapter 7–8 terms in our own words
+  (facts, never CK-12's wording).
+- **Element symbols** (37) — H through Ca plus the common heavier elements, derived from `ELEMENTS`.
+- **SAT transition words** (30) — derived from the transitions module's word bank via the new
+  `transitionGlossary()` export; every taught word plus one summary card per relation.
+
+Edited: `src/pages/Study.tsx` (the section), `Study.test.tsx`, `src/content/modules/satrw/transitions.ts`
+(the one exported accessor), `src/components/rewards/StoreEdition.test.tsx` (store scope test).
+New: `src/study/starterDecks.ts`, `starterDecks.test.ts`.

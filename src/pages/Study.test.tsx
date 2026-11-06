@@ -259,6 +259,29 @@ describe('study sets', () => {
     expect(screen.queryByRole('button', { name: 'Add to my sets' })).toBeNull()
   })
 
+  it('adds a starter deck as an editable copy, once', () => {
+    renderStudy('/study')
+    expect(screen.getByRole('heading', { name: 'Starter sets' })).toBeTruthy()
+    expect(screen.getByText('Polyatomic ions')).toBeTruthy()
+    expect(screen.getByText('SAT transition words')).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: 'Add Unit circle' }))
+    const sets = useStore.getState().studySets
+    expect(sets.map((set) => ({ title: set.title, source: set.source }))).toEqual([{ title: 'Unit circle', source: 'made' }])
+    expect(sets[0]!.cards.length).toBeGreaterThanOrEqual(30)
+    expect(sets[0]!.cards.some((card) => card.term === 'sin 30° (π/6)' && card.definition === '1/2')).toBe(true)
+    expect(screen.queryByRole('button', { name: 'Add Unit circle' })).toBeNull()
+    expect(screen.getByText('In your sets')).toBeTruthy()
+    expect(screen.getByRole('link', { name: /Unit circle/ })).toBeTruthy()
+  })
+
+  it('a starter deck that cannot be added says why', () => {
+    for (let i = 0; i < 100; i++) makeSet(`Filler ${i}`, [])
+    renderStudy('/study')
+    fireEvent.click(screen.getByRole('button', { name: 'Add Polyatomic ions' }))
+    expect(screen.getByRole('alert').textContent).toContain('up to 100 study sets')
+    expect(useStore.getState().studySets).toHaveLength(100)
+  })
+
   it('renders card text as text', () => {
     const set = makeSet('Markup', [{ term: '<b>bold</b>', definition: '<img src=x>' }])
     renderStudy(`/study/${set.id}/flash`)
