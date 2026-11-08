@@ -1050,10 +1050,20 @@ export interface GeoFigureSpec {
   lines?: GeoLine[]
   rays?: GeoRay[]
   angles?: GeoAngleMark[]
+  /** Full circles, drawn under the segments. The center's dot and letter come from its point. */
+  circles?: GeoCircleSpec[]
   /** Integer lattice and axes. Omit on a figure that is not on the coordinate plane. */
   grid?: GeoGrid
   /** Words for role="img" and for the tutor. Describes the picture, not the method. */
   ariaLabel: string
+}
+
+export interface GeoCircleSpec {
+  /** Point id of the center. */
+  center: string
+  /** Radius in math units (the figure's own coordinates, not pixels). */
+  r: number
+  dashed?: boolean
 }
 
 export interface GeoPoint {

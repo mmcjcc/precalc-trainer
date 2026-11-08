@@ -264,3 +264,46 @@ describe('Unit 4 triangle figures', () => {
     expect(problems.slice(0, 12)).toEqual([])
   }, HEAVY)
 })
+
+describe('circles', () => {
+  const O = { id: 'O', x: 0, y: 0, label: 'O' }
+
+  it('draws a circle centered on its point, inside the view, under the segments', () => {
+    const spec: GeoFigureSpec = {
+      points: [O, { id: 'A', x: 3, y: 0, label: 'A' }],
+      segments: [{ from: 'O', to: 'A' }],
+      circles: [{ center: 'O', r: 3 }],
+      ariaLabel: 'Circle O with radius OA.',
+    }
+    const { container } = render(<GeoFigure spec={spec} />)
+    const circle = container.querySelector('[data-geo="circle"]')!
+    expect(circle).not.toBeNull()
+    expect(circle.getAttribute('fill')).toBe('none')
+    const cx = Number(circle.getAttribute('cx'))
+    const cy = Number(circle.getAttribute('cy'))
+    const r = Number(circle.getAttribute('r'))
+    expect(r).toBeGreaterThan(40)
+    // The whole circle stays inside the drawing, so layoutOf counted the radius, not only the points.
+    const { width, height } = geoFigureLayout(spec)
+    expect(cx - r).toBeGreaterThanOrEqual(0)
+    expect(cx + r).toBeLessThanOrEqual(width)
+    expect(cy - r).toBeGreaterThanOrEqual(0)
+    expect(cy + r).toBeLessThanOrEqual(height)
+    // The radius segment OA ends on the rim: its screen length equals r.
+    const seg = container.querySelector('[data-geo="segment"] line')!
+    const len = Math.hypot(Number(seg.getAttribute('x2')) - Number(seg.getAttribute('x1')), Number(seg.getAttribute('y2')) - Number(seg.getAttribute('y1')))
+    expect(Math.abs(len - r)).toBeLessThan(0.5)
+  })
+
+  it('draws a dashed circle dashed, and labels keep off the rim', () => {
+    const spec: GeoFigureSpec = {
+      points: [O, { id: 'P', x: 2, y: 2.1, label: 'P' }],
+      circles: [{ center: 'O', r: 3, dashed: true }],
+      ariaLabel: 'A dashed circle around O, P inside it near the rim.',
+    }
+    const { container } = render(<GeoFigure spec={spec} />)
+    const circle = container.querySelector('[data-geo="circle"]')!
+    expect(circle.getAttribute('stroke-dasharray')).toBe('6 4')
+    expect(layoutProblems(spec)).toEqual([])
+  })
+})

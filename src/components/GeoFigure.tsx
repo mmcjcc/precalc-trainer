@@ -39,6 +39,24 @@ export function GeoFigure({ spec }: { spec: GeoFigureSpec }) {
           </marker>
         </defs>
         {spec.grid && <Grid spec={spec} sx={sx} sy={sy} />}
+        {spec.circles?.map((c, i) => {
+          const p = spec.points.find((pt) => pt.id === c.center)
+          if (!p) return null
+          return (
+            <circle
+              key={`circle-${i}`}
+              data-geo="circle"
+              {...(c.dashed ? { 'data-dashed': 'true' } : {})}
+              cx={sx(p.x)}
+              cy={sy(p.y)}
+              r={sx(p.x + c.r) - sx(p.x)}
+              fill="none"
+              stroke={NAVY}
+              strokeWidth={2.5}
+              strokeDasharray={c.dashed ? '6 4' : undefined}
+            />
+          )
+        })}
         {spec.lines?.map((line, i) => {
           const a = at(line.through[0])
           const b = at(line.through[1])
@@ -357,7 +375,7 @@ function placePointLabels(
   sy: (y: number) => number,
   h: number,
 ): Map<string, Side> {
-  const strokes = drawnStrokes(spec, at, h)
+  const strokes = drawnStrokes(spec, at, h, sx)
   const dots: Box[] = spec.points.map((p) => ({ l: sx(p.x) - 6, t: sy(p.y) - 6, r: sx(p.x) + 6, b: sy(p.y) + 6 }))
   const taken: Box[] = []
   const sides = new Map<string, Side>()
@@ -397,7 +415,7 @@ function placeLabels(spec: GeoFigureSpec) {
     taken.push(pointLabelBox(p, pointSides.get(p.id) ?? p.labelSide ?? 'above', sx, sy))
   }
   taken.push(...parallelMarkBoxes(spec, at, h))
-  const strokes = drawnStrokes(spec, at, h)
+  const strokes = drawnStrokes(spec, at, h, sx)
   // What later labels keep off: the drawn lines plus each leader line as it is placed.
   const avoid = [...strokes]
   const anglePlaces = placeAngleLabels(spec, at, h, taken, avoid)
@@ -607,8 +625,20 @@ function parallelMarkBoxes(spec: GeoFigureSpec, at: (id: string) => { x: number;
 export type Stroke = [number, number, number, number]
 
 /** Every line the figure draws (rays and lines clipped as drawn), for labels to keep off. */
-function drawnStrokes(spec: GeoFigureSpec, at: (id: string) => { x: number; y: number }, h: number): Stroke[] {
+function drawnStrokes(spec: GeoFigureSpec, at: (id: string) => { x: number; y: number }, h: number, sx: (x: number) => number): Stroke[] {
   const out: Stroke[] = []
+  // A circle as 36 short chords, so the label code (which thinks in segments) keeps off its rim.
+  for (const c of spec.circles ?? []) {
+    const p = spec.points.find((pt) => pt.id === c.center)
+    if (!p) continue
+    const ctr = at(c.center)
+    const r = sx(p.x + c.r) - sx(p.x)
+    for (let i = 0; i < 36; i++) {
+      const a0 = (i / 36) * 2 * Math.PI
+      const a1 = ((i + 1) / 36) * 2 * Math.PI
+      out.push([ctr.x + Math.cos(a0) * r, ctr.y + Math.sin(a0) * r, ctr.x + Math.cos(a1) * r, ctr.y + Math.sin(a1) * r])
+    }
+  }
   for (const line of spec.lines ?? []) {
     const a = at(line.through[0])
     const b = at(line.through[1])
@@ -755,6 +785,12 @@ function layoutOf(spec: GeoFigureSpec): { sx: (x: number) => number; sy: (y: num
     take(spec.grid.xMax, spec.grid.yMax)
   } else {
     for (const p of spec.points) take(p.x, p.y)
+    for (const c of spec.circles ?? []) {
+      const p = spec.points.find((pt) => pt.id === c.center)
+      if (!p) continue
+      take(p.x - c.r, p.y - c.r)
+      take(p.x + c.r, p.y + c.r)
+    }
   }
   if (!Number.isFinite(minX)) {
     minX = 0
