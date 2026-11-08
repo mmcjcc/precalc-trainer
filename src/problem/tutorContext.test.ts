@@ -1474,6 +1474,14 @@ describe('buildTutorContext', () => {
       ['geoTrigRatios', 'tr.angle', 'trigAngle'],
       ['geoElevDepress', 'el.story', 'elevationStory'],
       ['geoElevDepress', 'el.two', 'elevationTwo'],
+      ['geoTangentChords', 'tc.tangent', 'tangent'],
+      ['geoTangentChords', 'tc.arcs', 'circleArcs'],
+      ['geoTangentChords', 'tc.chords', 'chords'],
+      ['geoCircleAngles', 'ia.inscribed', 'inscribed'],
+      ['geoCircleAngles', 'ia.inside', 'insideAngle'],
+      ['geoCircleAngles', 'ia.outside', 'outsideAngle'],
+      ['geoCircleMeasures', 'cm.lengths', 'segmentLengths'],
+      ['geoCircleMeasures', 'cm.equation', 'circleEquation'],
     ] as const
     for (const [moduleId, templateId, question] of cases) {
       const instance = generateProblem(moduleId, templateId, 1)

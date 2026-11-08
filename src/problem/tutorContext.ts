@@ -657,6 +657,14 @@ export function assertGeometryQuestion(question: GeometryQuestion): void {
     case 'trigAngle':
     case 'elevationStory':
     case 'elevationTwo':
+    case 'tangent':
+    case 'circleArcs':
+    case 'chords':
+    case 'inscribed':
+    case 'insideAngle':
+    case 'outsideAngle':
+    case 'segmentLengths':
+    case 'circleEquation':
       return
     default: {
       const unexpected: never = question

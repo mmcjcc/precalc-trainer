@@ -142,6 +142,26 @@ export const GEO_UNIT7_MISTAKE_IDS = [
 /** Unit 7, second half: the two ground distances of a two-observation problem combined the wrong way. */
 export const GEO_UNIT7B_MISTAKE_IDS = ['geo_distances_combined'] as const
 
+/** Unit 8 mistakes (circles). A number, point, or pick is named only when it is exactly what that slip produces here. */
+export const GEO_UNIT8_MISTAKE_IDS = [
+  'geo_inscribed_not_halved',
+  'geo_arc_not_doubled',
+  'geo_half_sum_difference_swapped',
+  'geo_major_minor_swapped',
+  'geo_arcs_not_from_full',
+  'geo_cyclic_not_supplementary',
+  'geo_semicircle_right_missed',
+  'geo_semicircle_as_quarter',
+  'geo_tangent_right_vertex',
+  'geo_tangent_not_squared',
+  'geo_secant_part_not_whole',
+  'geo_chord_parts_crossed',
+  'geo_diameter_for_radius',
+  'geo_radius_unsquared',
+  'geo_center_signs_flipped',
+  'geo_circumscribed_adjacent',
+] as const
+
 /**
  * Mistakes of the precalculus right-triangle core (engine/trig) that Unit 7 names too: the special triangles' factors
  * swapped or used the wrong way, the squares added where one side is the hypotenuse (or subtracted for two legs), the
@@ -176,6 +196,7 @@ export type GeoMistakeId =
   | (typeof GEO_UNIT6_MISTAKE_IDS)[number]
   | (typeof GEO_UNIT7_MISTAKE_IDS)[number]
   | (typeof GEO_UNIT7B_MISTAKE_IDS)[number]
+  | (typeof GEO_UNIT8_MISTAKE_IDS)[number]
   | (typeof GEO_BORROWED_TRIG_IDS)[number]
 
 export type GeoGrade =
@@ -436,6 +457,7 @@ export function isGeoMistake(id: ErrorPatternId): id is GeoMistakeId {
     (GEO_UNIT6_MISTAKE_IDS as readonly string[]).includes(id) ||
     (GEO_UNIT7_MISTAKE_IDS as readonly string[]).includes(id) ||
     (GEO_UNIT7B_MISTAKE_IDS as readonly string[]).includes(id) ||
+    (GEO_UNIT8_MISTAKE_IDS as readonly string[]).includes(id) ||
     (GEO_BORROWED_TRIG_IDS as readonly string[]).includes(id)
   )
 }
@@ -464,7 +486,7 @@ export function assertGeoAnswer(where: string, answer: GeometryAnswer): void {
   }
   const blob = visibleBlob(answer)
   // Unit 7 gives sides like 6√2: the 6 there is a coefficient, not a length of 6, so a radical binds its number.
-  const shownIn = UNIT7_QUESTIONS.has(answer.question) ? exposedExact : exposed
+  const shownIn = EXACT_BOUND_QUESTIONS.has(answer.question) ? exposedExact : exposed
   for (const stage of answer.stages) {
     const g = gradeGeoStage(answer, stage.id, stage.answerText)
     if (g.verdict !== 'correct') throw new Error(`${where}: ${stage.id} answer ${stage.answerText} graded ${g.verdict}`)
@@ -656,8 +678,19 @@ function visibleBlob(answer: GeometryAnswer): string {
   return bits.join(' \n ')
 }
 
-/** The Unit 7 question kinds, whose generators hold every text to `exposedExact`. */
+/** The Unit 7 question kinds, whose generators hold every text to `exposedExact`. Unit 8 reuses the same bound. */
 const UNIT7_QUESTIONS: ReadonlySet<string> = new Set(['geometricMean', 'rightAltitude', 'pythagorean', 'pythagoreanConverse', 'pythagoreanWords', 'specialRight', 'trigRatio', 'trigSide', 'trigAngle', 'elevationStory', 'elevationTwo'])
+const EXACT_BOUND_QUESTIONS: ReadonlySet<string> = new Set([
+  ...UNIT7_QUESTIONS,
+  'tangent',
+  'circleArcs',
+  'chords',
+  'inscribed',
+  'insideAngle',
+  'outsideAngle',
+  'segmentLengths',
+  'circleEquation',
+])
 
 /**
  * Like `exposed`, with a radical bound to the number it touches: in "6√2" neither 6 nor √2 is shown on its own, and a

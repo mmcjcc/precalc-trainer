@@ -451,6 +451,7 @@ export interface TrigTriangleSpec {
  * triangles, proportional parts); Unit 7 adds right triangles (the geometric mean, the altitude to the hypotenuse, the
  * Pythagorean Theorem and its converse, word problems rounded as asked, the special right triangles). The second half
  * adds the tangent, sine and cosine ratios and angles of elevation and depression.
+ * Unit 8 adds circles: tangents, arcs, chords, inscribed and other angles, segment lengths, and the equation of a circle.
  */
 export type GeometryQuestion =
   | 'addition'
@@ -501,6 +502,14 @@ export type GeometryQuestion =
   | 'trigAngle'
   | 'elevationStory'
   | 'elevationTwo'
+  | 'tangent'
+  | 'circleArcs'
+  | 'chords'
+  | 'inscribed'
+  | 'insideAngle'
+  | 'outsideAngle'
+  | 'segmentLengths'
+  | 'circleEquation'
 
 /**
  * One checked part of a geometry problem. `x` and `result` are the Unit 1 boxes.

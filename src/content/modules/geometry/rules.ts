@@ -7,6 +7,7 @@ import { UNIT5_RULE_FOR } from './unit5Rules'
 import { UNIT6_RULE_FOR } from './unit6Rules'
 import { UNIT7_RULE_FOR } from './unit7Rules'
 import { UNIT7B_RULE_FOR } from './unit7bRules'
+import { UNIT8_RULE_FOR } from './unit8Rules'
 
 export const GEO_RULE_IDS = {
   segment: 'geo-segment-add',
@@ -44,6 +45,7 @@ export const GEO_RULE_FOR: Partial<Record<GeoMistakeId, string>> = {
   ...UNIT6_RULE_FOR,
   ...UNIT7_RULE_FOR,
   ...UNIT7B_RULE_FOR,
+  ...UNIT8_RULE_FOR,
 }
 
 export const SEGMENT_RULES: RuleCard[] = [

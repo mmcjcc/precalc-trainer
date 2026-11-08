@@ -2750,6 +2750,103 @@ export const ERROR_PATTERNS: Record<ErrorPatternId, ErrorPatternInfo> = {
     lesson: 'When both observations are on the same side of the tower, the farther distance is the closer one plus the space between the two points, so the tangents are subtracted. When the observers stand on opposite sides, the two distances add up to the space between them, so the tangents are added. Adding where the picture subtracts, or subtracting where it adds, builds the other kind of picture.',
     example: 'the two distances added ✗ → the farther one is the closer one plus the space between',
   },
+  // --- honors geometry Unit 8 (circles). Examples use letters only, no digit, so none can show a generated answer.
+  geo_inscribed_not_halved: {
+    id: 'geo_inscribed_not_halved',
+    title: 'An inscribed angle is half the arc',
+    lesson: 'An inscribed angle, and the angle a tangent and a chord make at the point of tangency, is half the intercepted arc. Giving the whole arc leaves the angle twice as large as it is.',
+    example: 'intercepted arc m: the angle is m ✗ → the angle is half of m',
+  },
+  geo_arc_not_doubled: {
+    id: 'geo_arc_not_doubled',
+    title: 'The arc is twice the angle',
+    lesson: 'An inscribed angle is half the arc it intercepts, so the arc is twice the angle. Giving the angle itself cuts the arc in half.',
+    example: 'inscribed angle m: the arc is m ✗ → the arc is twice m',
+  },
+  geo_half_sum_difference_swapped: {
+    id: 'geo_half_sum_difference_swapped',
+    title: 'Sum and difference are different places',
+    lesson: 'Two chords crossing inside the circle make an angle of half the sum of the intercepted arcs. Two secants, a secant and a tangent, or two tangents from a point outside make an angle of half the difference. Using the sum outside, or the difference inside, measures the angle for the other place.',
+    example: 'arcs j and k, outside the circle: half of j + k ✗ → half of the difference',
+  },
+  geo_major_minor_swapped: {
+    id: 'geo_major_minor_swapped',
+    title: 'That is the other arc',
+    lesson: 'A central angle has the same measure as its minor arc, the shorter way around. The major arc is the long way, the rest of the circle, and its name uses three letters. Naming the short arc, or giving its measure, answers the other one.',
+    example: 'minor arc AB: the major arc is arc AB ✗ → the major arc is arc ACB',
+  },
+  geo_arcs_not_from_full: {
+    id: 'geo_arcs_not_from_full',
+    title: 'The arcs go all the way around',
+    lesson: 'Adjacent arcs around a circle add up to one full turn. The missing arc is that full turn minus the arcs you were given, not the sum of those arcs.',
+    example: 'the given arcs add to s: the missing arc is s ✗ → the missing arc is a full turn minus s',
+  },
+  geo_cyclic_not_supplementary: {
+    id: 'geo_cyclic_not_supplementary',
+    title: 'Opposite angles of an inscribed quadrilateral add to a straight angle',
+    lesson: 'When a quadrilateral is inscribed in a circle, each pair of opposite angles adds to a straight angle. Setting them equal, or treating them as complements, pairs angles that are not those partners.',
+    example: 'angle j opposite the given angle: angle j equals the given angle ✗ → the two add to a straight angle',
+  },
+  geo_semicircle_right_missed: {
+    id: 'geo_semicircle_right_missed',
+    title: 'An angle inscribed in a semicircle is a right angle',
+    lesson: 'A triangle inscribed in a semicircle, with one side a diameter, has a right angle at the point on the circle. The other two angles add to a right angle. Subtracting the given angle from a straight angle treats the triangle as if that right angle were not there.',
+    example: 'one acute angle is j: the other is a straight angle minus j ✗ → the other is a right angle minus j',
+  },
+  geo_semicircle_as_quarter: {
+    id: 'geo_semicircle_as_quarter',
+    title: 'A diameter cuts off a semicircle',
+    lesson: 'A diameter divides the circle into two semicircles. Each is half a full turn, not a quarter of one.',
+    example: 'semicircle AB: a quarter turn ✗ → half a full turn',
+  },
+  geo_tangent_right_vertex: {
+    id: 'geo_tangent_right_vertex',
+    title: 'The right angle has to be at the point of tangency',
+    lesson: 'A segment from an outside point is tangent only when it is perpendicular to the radius at the point of tangency. A right angle at the center, or at the outside point, is a different triangle, and the segment is not a tangent.',
+    example: 'the right angle is at the center: the segment is a tangent ✗ → it is a tangent only when the right angle is at the point of tangency',
+  },
+  geo_tangent_not_squared: {
+    id: 'geo_tangent_not_squared',
+    title: 'The tangent is squared',
+    lesson: 'When a tangent and a secant are drawn from the same outside point, the square of the tangent equals the outside part of the secant times the whole secant. Multiplying the tangent by the outside part, or stopping before the square root, leaves that square undone.',
+    example: 'tangent times the outside part equals the whole secant ✗ → the tangent squared equals the outside part times the whole secant',
+  },
+  geo_secant_part_not_whole: {
+    id: 'geo_secant_part_not_whole',
+    title: 'Use the whole secant',
+    lesson: 'Two secants from the same outside point have equal products: the outside part times the whole secant, on each one. The whole secant is the outside part plus the inside part. Using the inside part instead of the whole makes the products too small.',
+    example: 'outside times the inside part ✗ → outside times the whole secant',
+  },
+  geo_chord_parts_crossed: {
+    id: 'geo_chord_parts_crossed',
+    title: 'Each chord multiplies its own parts',
+    lesson: 'When two chords cross inside a circle, the product of the parts of one chord equals the product of the parts of the other. Multiplying a part of one chord by a part of the other crosses the chords instead of pairing each chord with itself.',
+    example: 'parts j and k of one chord and part m of the other: the missing part is j times m over k ✗ → j times k over m',
+  },
+  geo_diameter_for_radius: {
+    id: 'geo_diameter_for_radius',
+    title: 'That is the diameter',
+    lesson: 'The radius reaches from the center to the circle. The diameter is twice that far. Using the diameter in the equation, or when you compare a point with the circle, describes a circle twice as wide.',
+    example: 'radius r: the right side is the square of twice r ✗ → the right side is the square of r',
+  },
+  geo_radius_unsquared: {
+    id: 'geo_radius_unsquared',
+    title: 'The radius is squared in the equation',
+    lesson: 'The standard form of the equation of a circle has the radius squared on the right side. Reading that number as the radius, or writing the radius there without squaring it, mixes the radius with its square.',
+    example: 'the right side is the square of r: the radius is that number ✗ → the radius is r',
+  },
+  geo_center_signs_flipped: {
+    id: 'geo_center_signs_flipped',
+    title: 'The center has the opposite signs',
+    lesson: 'In the standard form, (x − h) and (y − k) put the center at (h, k). The signs in front of h and k are already the subtraction. Reading the center as (−h, −k) flips both of them.',
+    example: '(x − h) and (y − k): the center is (−h, −k) ✗ → the center is (h, k)',
+  },
+  geo_circumscribed_adjacent: {
+    id: 'geo_circumscribed_adjacent',
+    title: 'The opposite sides are the ones that add',
+    lesson: 'Two tangent segments from the same outside point are congruent, so a quadrilateral drawn around a circle has equal sums of the opposite sides. Copying a neighboring side, or adding the two sides that meet the unknown one, pairs the wrong sides.',
+    example: 'the unknown side equals a neighboring side ✗ → the sums of the opposite sides are equal',
+  },
   // --- precalculus Unit 4, trigonometric functions (engine/trig; content/modules/angleMeasure, unitCircle). Answers
   // there are angles, π-multiples and the special values, so examples use letters (d, k, θ, x, y, r) and numbers are
   // written as words: no example or lesson can show a generated answer.

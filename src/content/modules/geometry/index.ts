@@ -45,6 +45,10 @@ import { drawSpecial } from './unit7Special'
 import { drawTrigAngle, drawTrigRatio, drawTrigSide } from './unit7bRatios'
 import { drawElevStory, drawElevTwo } from './unit7bElev'
 import { ELEVATION_RULES, TRIG_RATIO_RULES } from './unit7bRules'
+import { drawInscribed, drawInside, drawOutside } from './unit8Angles'
+import { drawEquation, drawLengths } from './unit8Measures'
+import { ANGLE_RULES_8, MEASURE_RULES, TANGENT_RULES } from './unit8Rules'
+import { drawArcs, drawChords, drawTangent } from './unit8Tangent'
 
 export { readGeoAnswer, formatPoint, formatQty, formatValue, geoQty, sameGeoValue, sameQty, simplifyRadical } from './answer'
 export type { GeoQty, GeoRead, GeoReadOptions, GeoValue } from './answer'
@@ -682,8 +686,118 @@ export const geoElevDepressModule: ModuleDef = {
   nextStep: () => null,
 }
 
+/**
+ * Tangents, arcs and chords (honors geometry Unit 8, Jurgensen 9-1 to 9-3). A tangent and the radius, two tangents
+ * from one point, central angles and arcs, and a radius perpendicular to a chord.
+ */
+export const geoTangentChordsModule: ModuleDef = {
+  id: 'geoTangentChords',
+  subject: 'Geometry',
+  title: 'Tangents, arcs and chords',
+  blurb: 'A tangent meets the radius at a right angle, two tangents from one point match, and arcs and chords follow the center.',
+  order: 29,
+  templates: [
+    geoTemplate(
+      'geoTangentChords',
+      'tc.tangent',
+      'Tangents',
+      'A tangent and the radius, the converse, two tangents from one point, or a walk around the circle.',
+      drawTangent,
+    ),
+    geoTemplate(
+      'geoTangentChords',
+      'tc.arcs',
+      'Central angles and arcs',
+      'A central angle and its arc, a semicircle, arcs around the circle, or a minor arc and its major arc.',
+      drawArcs,
+    ),
+    geoTemplate(
+      'geoTangentChords',
+      'tc.chords',
+      'Chords',
+      'Congruent chords, or a radius perpendicular to a chord: the half-chord, the distance to the center, or the radius.',
+      drawChords,
+    ),
+  ],
+  ruleCards: TANGENT_RULES,
+  progress: PROGRESS,
+  nextStep: () => null,
+}
+
+/**
+ * Inscribed and other angles (honors geometry Unit 8, Jurgensen 9-5 to 9-7). An inscribed angle, an angle inside
+ * the circle, and an angle outside the circle.
+ */
+export const geoCircleAnglesModule: ModuleDef = {
+  id: 'geoCircleAngles',
+  subject: 'Geometry',
+  title: 'Inscribed and other angles',
+  blurb: 'An inscribed angle is half its arc. Inside the circle the arcs are added, and outside they are subtracted.',
+  order: 30,
+  templates: [
+    geoTemplate(
+      'geoCircleAngles',
+      'ia.inscribed',
+      'Inscribed angles',
+      'An inscribed angle and its arc, an angle inscribed in a semicircle, or opposite angles of an inscribed quadrilateral.',
+      drawInscribed,
+    ),
+    geoTemplate(
+      'geoCircleAngles',
+      'ia.inside',
+      'An angle inside the circle',
+      'Two chords crossing inside the circle, or a tangent and a chord at the point of tangency.',
+      drawInside,
+    ),
+    geoTemplate(
+      'geoCircleAngles',
+      'ia.outside',
+      'An angle outside the circle',
+      'Two secants, a secant and a tangent, or two tangents from a point outside the circle.',
+      drawOutside,
+    ),
+  ],
+  ruleCards: ANGLE_RULES_8,
+  progress: PROGRESS,
+  nextStep: () => null,
+}
+
+/**
+ * Segment lengths and the equation of a circle (honors geometry Unit 8, Jurgensen 9-4 and 9-7, plus the circle
+ * equation). Products of lengths, then center and radius.
+ */
+export const geoCircleMeasuresModule: ModuleDef = {
+  id: 'geoCircleMeasures',
+  subject: 'Geometry',
+  title: 'Segment lengths and circle equations',
+  blurb: 'Products of chord parts, secants, and a tangent with a secant, then the equation of a circle.',
+  order: 31,
+  templates: [
+    geoTemplate(
+      'geoCircleMeasures',
+      'cm.lengths',
+      'Segment lengths',
+      'Two chords crossing inside, two secants from one point, or a tangent and a secant.',
+      drawLengths,
+    ),
+    geoTemplate(
+      'geoCircleMeasures',
+      'cm.equation',
+      'Equation of a circle',
+      'Read a center and radius, write the equation, decide where a point is, or complete the square.',
+      drawEquation,
+    ),
+  ],
+  ruleCards: MEASURE_RULES,
+  progress: PROGRESS,
+  nextStep: () => null,
+}
+
 registerModule(geoRightSimilarModule)
 registerModule(geoPythagoreanModule)
 registerModule(geoSpecialRightModule)
 registerModule(geoTrigRatiosModule)
 registerModule(geoElevDepressModule)
+registerModule(geoTangentChordsModule)
+registerModule(geoCircleAnglesModule)
+registerModule(geoCircleMeasuresModule)

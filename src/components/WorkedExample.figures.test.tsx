@@ -53,4 +53,31 @@ describe('WorkedExample figures', () => {
     expect(answers.length).toBeGreaterThan(0)
     for (const answer of answers) expect(answer.textContent?.trim().length).toBeGreaterThan(0)
   })
+
+  it('draws the sibling circle for each Unit 8 template', () => {
+    const templates = [
+      ['geoTangentChords', 'tc.tangent'],
+      ['geoTangentChords', 'tc.arcs'],
+      ['geoTangentChords', 'tc.chords'],
+      ['geoCircleAngles', 'ia.inscribed'],
+      ['geoCircleAngles', 'ia.inside'],
+      ['geoCircleAngles', 'ia.outside'],
+      ['geoCircleMeasures', 'cm.lengths'],
+      ['geoCircleMeasures', 'cm.equation'],
+    ] as const
+    for (const [moduleId, templateId] of templates) {
+      const instance = generateProblem(moduleId, templateId, 42)
+      if (instance.answer.type !== 'geometry') throw new Error(templateId)
+      const ex = buildWorkedExample(instance)
+      expect(ex, templateId).not.toBeNull()
+      if (!ex || ex.sibling.answer.type !== 'geometry') throw new Error(templateId)
+      expect(figureJson(instance.answer)).not.toBe(figureJson(ex.sibling.answer))
+      const { container, unmount } = render(<WorkedExample instance={instance} />)
+      const figure = container.querySelector('[data-example-figure]')
+      const circle = figure?.querySelector('[data-geo="circle"]')
+      expect(circle, templateId).toBeTruthy()
+      expect(figure?.querySelector('svg')?.getAttribute('aria-label')).toBe(ex.sibling.answer.figure.ariaLabel)
+      unmount()
+    }
+  })
 })

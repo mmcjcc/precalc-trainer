@@ -15,7 +15,7 @@
 export type RelOp = '=' | '<' | '<=' | '>' | '>='
 /** `h` is the difference-quotient step; the parser accepts it only when the problem owns it (ctx.vars). */
 export type VarName = 'x' | 'y' | 'n' | 'h'
-export type ModuleId = 'numberLine' | 'inequalities' | 'evenOdd' | 'inverses' | 'propertiesDrill' | 'sigFigs' | 'atoms' | 'diffQuotient' | 'graphFeatures' | 'domainRange' | 'composition' | 'functionOps' | 'transformations' | 'piecewiseRate' | 'electrons' | 'quantumNumbers' | 'periodic' | 'quadratics' | 'optimization' | 'polyDivision' | 'polyZeros' | 'rationalFns' | 'signCharts' | 'complexNums' | 'logForms' | 'logProperties' | 'expLogEquations' | 'expLogGraphs' | 'expModels' | 'angleMeasure' | 'rightTriangle' | 'unitCircle' | 'sinusoids' | 'otherTrigGraphs' | 'inverseTrig' | 'trigIdentities' | 'trigFormulas' | 'trigEquations' | 'geoSegments' | 'geoAngles' | 'geoLogic' | 'geoProof' | 'geoParallel' | 'geoPolygonAngles' | 'geoCongruence' | 'geoIsosceles' | 'geoTriangleProofs' | 'geoParallelograms' | 'geoSpecialQuads' | 'geoTrapezoids' | 'geoRatios' | 'geoSimilarTriangles' | 'geoProportionalParts' | 'geoRightSimilar' | 'geoPythagorean' | 'geoSpecialRight' | 'geoTrigRatios' | 'geoElevDepress' | 'ionicNames' | 'molecularAcids' | 'ionicBonding'
+export type ModuleId = 'numberLine' | 'inequalities' | 'evenOdd' | 'inverses' | 'propertiesDrill' | 'sigFigs' | 'atoms' | 'diffQuotient' | 'graphFeatures' | 'domainRange' | 'composition' | 'functionOps' | 'transformations' | 'piecewiseRate' | 'electrons' | 'quantumNumbers' | 'periodic' | 'quadratics' | 'optimization' | 'polyDivision' | 'polyZeros' | 'rationalFns' | 'signCharts' | 'complexNums' | 'logForms' | 'logProperties' | 'expLogEquations' | 'expLogGraphs' | 'expModels' | 'angleMeasure' | 'rightTriangle' | 'unitCircle' | 'sinusoids' | 'otherTrigGraphs' | 'inverseTrig' | 'trigIdentities' | 'trigFormulas' | 'trigEquations' | 'geoSegments' | 'geoAngles' | 'geoLogic' | 'geoProof' | 'geoParallel' | 'geoPolygonAngles' | 'geoCongruence' | 'geoIsosceles' | 'geoTriangleProofs' | 'geoParallelograms' | 'geoSpecialQuads' | 'geoTrapezoids' | 'geoRatios' | 'geoSimilarTriangles' | 'geoProportionalParts' | 'geoRightSimilar' | 'geoPythagorean' | 'geoSpecialRight' | 'geoTrigRatios' | 'geoElevDepress' | 'geoTangentChords' | 'geoCircleAngles' | 'geoCircleMeasures' | 'ionicNames' | 'molecularAcids' | 'ionicBonding'
 export type CalcId = 'ti84' | 'nspire'
 
 /** Fine-grained property tags. Canonical steps carry one; the engine's move detector reports one. */
@@ -644,6 +644,30 @@ export type ErrorPatternId =
   // slips themselves reuse the precalculus trig_ ids. This one is the two-observation picture: the two ground
   // distances added where they should be subtracted, or the reverse.
   | 'geo_distances_combined'
+  // honors geometry Unit 8, circles (content/modules/geometry). Each id is the exact number, point, or pick that slip
+  // produces on THIS problem: an inscribed angle left as the whole arc or an arc left as the angle, the half-sum used
+  // where the half-difference belongs (or the reverse), a major arc named as the minor, an arc added instead of taken
+  // from the full circle, opposite angles of an inscribed quadrilateral not made supplementary, a triangle in a
+  // semicircle whose third angle is not found from the right angle, a semicircle read as a quarter, a tangent checked
+  // for a right angle at the wrong vertex, a tangent-secant product without the square, a secant product using the
+  // inside part, the parts of crossing chords multiplied the wrong way, a diameter used as a radius, a radius left as
+  // its square, the center's signs read backwards, or the sides around a circle paired with the wrong neighbors.
+  | 'geo_inscribed_not_halved'
+  | 'geo_arc_not_doubled'
+  | 'geo_half_sum_difference_swapped'
+  | 'geo_major_minor_swapped'
+  | 'geo_arcs_not_from_full'
+  | 'geo_cyclic_not_supplementary'
+  | 'geo_semicircle_right_missed'
+  | 'geo_semicircle_as_quarter'
+  | 'geo_tangent_right_vertex'
+  | 'geo_tangent_not_squared'
+  | 'geo_secant_part_not_whole'
+  | 'geo_chord_parts_crossed'
+  | 'geo_diameter_for_radius'
+  | 'geo_radius_unsquared'
+  | 'geo_center_signs_flipped'
+  | 'geo_circumscribed_adjacent'
   // precalculus Unit 4, trigonometric functions (engine/trig; content/modules/angleMeasure, unitCircle). Each id is
   // the exact value, angle or quadrant that slip gives on THIS problem, computed by the core; never a right answer.
   | 'trig_conversion_inverted'

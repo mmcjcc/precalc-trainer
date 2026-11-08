@@ -79,6 +79,13 @@ export function layoutOf(spec: GeoFigureSpec): { sx: (x: number) => number; sy: 
     take(spec.grid.xMax, spec.grid.yMax)
   } else {
     for (const p of spec.points) take(p.x, p.y)
+    // Same extent GeoFigure uses: a circle can be wider than its labeled points.
+    for (const c of spec.circles ?? []) {
+      const p = spec.points.find((pt) => pt.id === c.center)
+      if (!p) continue
+      take(p.x - c.r, p.y - c.r)
+      take(p.x + c.r, p.y + c.r)
+    }
   }
   if (!Number.isFinite(minX)) {
     minX = 0
@@ -188,8 +195,20 @@ export function segmentHitsBox([x1, y1, x2, y2]: Stroke, box: Box, margin = 2): 
 
 type At = (id: string) => { x: number; y: number }
 
-function drawnStrokes(spec: GeoFigureSpec, at: At, h: number): Stroke[] {
+function drawnStrokes(spec: GeoFigureSpec, at: At, h: number, sx: (x: number) => number): Stroke[] {
   const out: Stroke[] = []
+  // A circle as 36 short chords, matching GeoFigure, so a label stays off the rim.
+  for (const c of spec.circles ?? []) {
+    const p = spec.points.find((pt) => pt.id === c.center)
+    if (!p) continue
+    const ctr = at(c.center)
+    const r = sx(p.x + c.r) - sx(p.x)
+    for (let i = 0; i < 36; i++) {
+      const a0 = (i / 36) * 2 * Math.PI
+      const a1 = ((i + 1) / 36) * 2 * Math.PI
+      out.push([ctr.x + Math.cos(a0) * r, ctr.y + Math.sin(a0) * r, ctr.x + Math.cos(a1) * r, ctr.y + Math.sin(a1) * r])
+    }
+  }
   for (const line of spec.lines ?? []) {
     const a = at(line.through[0])
     const b = at(line.through[1])
@@ -216,7 +235,7 @@ function pointLabelBox(p: GeoPoint, side: Side, sx: (x: number) => number, sy: (
 }
 
 function placePointLabels(spec: GeoFigureSpec, at: At, sx: (x: number) => number, sy: (y: number) => number, h: number): Map<string, Side> {
-  const strokes = drawnStrokes(spec, at, h)
+  const strokes = drawnStrokes(spec, at, h, sx)
   const dots: Box[] = spec.points.map((p) => ({ l: sx(p.x) - 6, t: sy(p.y) - 6, r: sx(p.x) + 6, b: sy(p.y) + 6 }))
   const taken: Box[] = []
   const sides = new Map<string, Side>()
@@ -445,7 +464,7 @@ export function figureLayout(spec: GeoFigureSpec): FigureLayout {
   }
   const arrows = parallelMarkBoxes(spec, at, h)
   taken.push(...arrows)
-  const strokes = drawnStrokes(spec, at, h)
+  const strokes = drawnStrokes(spec, at, h, sx)
   const avoid = [...strokes]
   const anglePlaces = placeAngleLabels(spec, at, h, taken, avoid)
   const labels: PlacedLabel[] = []

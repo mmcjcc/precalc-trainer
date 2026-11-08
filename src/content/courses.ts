@@ -187,6 +187,12 @@ export const COURSES: readonly CourseDef[] = [
         title: 'Right triangles',
         moduleIds: ['geoRightSimilar', 'geoPythagorean', 'geoSpecialRight', 'geoTrigRatios', 'geoElevDepress'],
       },
+      {
+        id: 'g8',
+        label: 'Unit 8',
+        title: 'Circles',
+        moduleIds: ['geoTangentChords', 'geoCircleAngles', 'geoCircleMeasures'],
+      },
     ],
   },
   {
