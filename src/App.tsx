@@ -34,6 +34,7 @@ const ReviewPage = lazy(() => import('./pages/Review'))
 const SetPage = lazy(() => import('./pages/SetPage'))
 const DrillPage = lazy(() => import('./pages/Drill'))
 const MonstersPage = lazy(() => import('./pages/Monsters'))
+const DashPage = lazy(() => import('./pages/Dash'))
 const GrapherPage = lazy(() => import('./pages/Grapher'))
 const OwnBuilderPage = lazy(() => import('./pages/OwnBuilder'))
 const OwnProblemPage = lazy(() => import('./pages/OwnProblem'))
@@ -142,6 +143,7 @@ function UnlockedShell() {
             <Route path="/study/:setId/test" element={<StudyTestPage />} />
             <Route path="/drill" element={<DrillPage />} />
             <Route path="/monsters" element={<MonstersPage />} />
+            <Route path="/dash" element={<DashPage />} />
             <Route path="/graph" element={<GrapherPage />} />
             <Route path="/progress" element={<ProgressPage />} />
             <Route path="/settings" element={<SettingsPage />} />

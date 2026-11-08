@@ -14,6 +14,7 @@ import type { ChipId } from '@/shared/types'
 import { buildBackup, importBackup, normalizeSettings, settingsAfterImport, type ImportMode } from './backup'
 import { chestOpenings, drawChestReward, ownedThemes } from './chest'
 import { compact } from './compaction'
+import { dashTokens } from './dash'
 import { mergeCatches } from './catches'
 import { mergeMilestones } from './milestones'
 import { addDays, chestRestEligible, computeRewards, dailyGoalOf, foldRewards, normalizeRewards, rewardsOn, settleDays, type RewardsView } from './rewards'
@@ -69,6 +70,7 @@ export * from './rewards'
 export * from './milestones'
 export * from './catches'
 export * from './chest'
+export * from './dash'
 export * from './themes'
 export { compact, keptForGood } from './compaction'
 export { STORAGE_KEYS, saveReturnTo, takeReturnTo } from './storage'
@@ -202,6 +204,11 @@ interface Actions {
    * that chest was opened already or the day is neither today nor yesterday.
    */
   openChest: (day: string, now?: number) => ChestReward | null
+  /**
+   * One finished Monster Dash run (pages/Dash.tsx): logs `dash_run` — spending one of today's play
+   * tokens (src/dash/tokens.ts) — and keeps the best score. False when no token is left today.
+   */
+  noteDashRun: (input: { runner: string; score: number; now?: number }) => boolean
   // study sets (src/store/studySets.ts)
   createStudySet: (input: { title: string; cards?: readonly StudyDraftCard[]; source?: StudySet['source']; now?: number }) => StudyWriteResult
   renameStudySet: (id: string, title: string, now?: number) => StudyWriteResult
@@ -641,6 +648,18 @@ export const useStore = create<StoreState>()(
         const ev: Ev = { t: 'chest_opened', at: now, day, reward }
         set({ events: [...s.events, ev] })
         return reward
+      },
+      noteDashRun: ({ runner, score, now = Date.now() }) => {
+        let accepted = false
+        set((s) => {
+          if (dashTokens(s.events, dayKey(now)) <= 0) return {}
+          accepted = true
+          const ev: Ev = { t: 'dash_run', at: now, runner, score }
+          const best = s.rewards.dashBest ?? 0
+          const rewards = score > best ? { ...s.rewards, dashBest: score } : s.rewards
+          return { events: [...s.events, ev], rewards }
+        })
+        return accepted
       },
 
       // --- study sets -------------------------------------------------------

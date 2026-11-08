@@ -724,6 +724,9 @@ export function mergeRewards(a: RewardsState, b: RewardsState): RewardsState {
   // A monster caught on either device is not caught again.
   const caught = mergeCatches(a.caught, b.caught)
   if (caught.length > 0) merged.caught = caught
+  // The Dash best is the best on either device.
+  const dashBest = Math.max(a.dashBest ?? 0, b.dashBest ?? 0)
+  if (dashBest > 0) merged.dashBest = dashBest
   return merged
 }
 
@@ -777,6 +780,7 @@ export function normalizeRewards(raw: unknown): RewardsState {
   if (milestones) out.milestones = milestones
   const caught = normalizeCatches(raw.caught)
   if (caught) out.caught = caught
+  if (finite(raw.dashBest) && raw.dashBest > 0) out.dashBest = Math.floor(raw.dashBest)
   return out
 }
 

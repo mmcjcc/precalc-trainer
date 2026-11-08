@@ -1,4 +1,5 @@
 import { useCallback, useId, useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { CardColumns } from '@/components/CardColumns'
 import { useMotionAllowed } from '@/components/juice/motion'
 import { monsterCollection, monsterStateWords, tallyLine, type MonsterEntry, type SpeciesEntry } from '@/components/monsters/collection'
@@ -124,6 +125,15 @@ export function MonstersPage() {
         <p className="text-lg font-semibold text-navy" data-monster-tally="">
           {tallyLine(collection)}
         </p>
+        {rewards && !none && (
+          <p className="max-w-2xl text-sm text-navy/80">
+            Caught monsters can run:{' '}
+            <Link to="/dash" className="font-semibold text-navy underline" data-dash-link>
+              play Monster Dash
+            </Link>
+            . Finishing a set earns a play.
+          </p>
+        )}
         {none && (
           <p className="max-w-2xl text-sm text-navy/80">
             None caught yet. The first time the checker names one of your mistakes, its monster shows up right there in the

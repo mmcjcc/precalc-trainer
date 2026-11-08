@@ -370,6 +370,17 @@ export type Ev =
       setId: string
       mode: 'flash' | 'learn' | 'match' | 'test'
     })
+  | (EvBase & {
+      /**
+       * One finished Monster Dash run (pages/Dash.tsx). Spends one of the day's play tokens, which finished
+       * sets earn (src/dash/tokens.ts). No skill and no XP; the compaction drops it with its 60-day-old
+       * neighbors — the best score survives in `RewardsState.dashBest`.
+       */
+      t: 'dash_run'
+      /** The catalog id of the monster that ran (its species' picture is the fallback). */
+      runner: string
+      score: number
+    })
 
 /** What a daily chest gave her (store/chest.ts). */
 export type ChestReward =
@@ -459,6 +470,11 @@ export interface RewardsState {
    * never comes twice (store/catches.ts). Absent: none yet (a slice or a backup from before the monsters).
    */
   caught?: string[]
+  /**
+   * Monster Dash: the best score of any finished run, kept here so it outlives the compaction of old
+   * `dash_run` events. Absent: no run yet (or a slice from before the game).
+   */
+  dashBest?: number
 }
 
 export function emptyRewards(): RewardsState {
