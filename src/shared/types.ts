@@ -15,7 +15,7 @@
 export type RelOp = '=' | '<' | '<=' | '>' | '>='
 /** `h` is the difference-quotient step; the parser accepts it only when the problem owns it (ctx.vars). */
 export type VarName = 'x' | 'y' | 'n' | 'h'
-export type ModuleId = 'numberLine' | 'inequalities' | 'evenOdd' | 'inverses' | 'propertiesDrill' | 'sigFigs' | 'atoms' | 'diffQuotient' | 'graphFeatures' | 'domainRange' | 'composition' | 'functionOps' | 'transformations' | 'piecewiseRate' | 'electrons' | 'quantumNumbers' | 'periodic' | 'quadratics' | 'optimization' | 'polyDivision' | 'polyZeros' | 'rationalFns' | 'signCharts' | 'complexNums' | 'logForms' | 'logProperties' | 'expLogEquations' | 'expLogGraphs' | 'expModels' | 'angleMeasure' | 'rightTriangle' | 'unitCircle' | 'sinusoids' | 'otherTrigGraphs' | 'inverseTrig' | 'trigIdentities' | 'trigFormulas' | 'trigEquations' | 'geoSegments' | 'geoAngles' | 'geoLogic' | 'geoProof' | 'geoParallel' | 'geoPolygonAngles' | 'geoCongruence' | 'geoIsosceles' | 'geoTriangleProofs' | 'geoParallelograms' | 'geoSpecialQuads' | 'geoTrapezoids' | 'geoRatios' | 'geoSimilarTriangles' | 'geoProportionalParts' | 'geoRightSimilar' | 'geoPythagorean' | 'geoSpecialRight' | 'geoTrigRatios' | 'geoElevDepress' | 'ionicNames' | 'molecularAcids' | 'ionicBonding'
+export type ModuleId = 'numberLine' | 'inequalities' | 'evenOdd' | 'inverses' | 'propertiesDrill' | 'sigFigs' | 'atoms' | 'diffQuotient' | 'graphFeatures' | 'domainRange' | 'composition' | 'functionOps' | 'transformations' | 'piecewiseRate' | 'electrons' | 'quantumNumbers' | 'periodic' | 'quadratics' | 'optimization' | 'polyDivision' | 'polyZeros' | 'rationalFns' | 'signCharts' | 'complexNums' | 'logForms' | 'logProperties' | 'expLogEquations' | 'expLogGraphs' | 'expModels' | 'angleMeasure' | 'rightTriangle' | 'unitCircle' | 'sinusoids' | 'otherTrigGraphs' | 'inverseTrig' | 'trigIdentities' | 'trigFormulas' | 'trigEquations' | 'geoSegments' | 'geoAngles' | 'geoLogic' | 'geoProof' | 'geoParallel' | 'geoPolygonAngles' | 'geoCongruence' | 'geoIsosceles' | 'geoTriangleProofs' | 'geoParallelograms' | 'geoSpecialQuads' | 'geoTrapezoids' | 'geoRatios' | 'geoSimilarTriangles' | 'geoProportionalParts' | 'geoRightSimilar' | 'geoPythagorean' | 'geoSpecialRight' | 'geoTrigRatios' | 'geoElevDepress' | 'ionicNames' | 'molecularAcids' | 'ionicBonding' | 'covalentBonding'
 export type CalcId = 'ti84' | 'nspire'
 
 /** Fine-grained property tags. Canonical steps carry one; the engine's move detector reports one. */
@@ -572,6 +572,18 @@ export type ErrorPatternId =
   | 'ib_props_weak'
   | 'mb_fixed_electrons'
   | 'mb_ionic_confusion'
+  // covalent bonding (content/modules/covalentBonding; chemistry chapter 9). Each id fires only
+  // when her answer is exactly what that slip produces for the molecule, pair or counts in front of her.
+  | 'cb_transfer_share'
+  | 'cb_h_octet'
+  | 'cb_pairs_swapped'
+  | 'cb_pairs_for_electrons'
+  | 'cb_electron_groups_shape'
+  | 'cb_angle_wrong_shape'
+  | 'cb_en_negative'
+  | 'cb_bands_flipped'
+  | 'cb_polar_because_bonds'
+  | 'cb_hbond_any_h'
   // honors geometry Unit 4 (content/modules/geometry). Each id is the exact pick or number
   // that slip produces on this problem: a method that does not apply, or the wrong vertex.
   | 'geo_ssa_as_congruence'

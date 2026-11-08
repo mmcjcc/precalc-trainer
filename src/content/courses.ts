@@ -138,6 +138,12 @@ export const COURSES: readonly CourseDef[] = [
         title: 'Ionic and metallic bonding',
         moduleIds: ['ionicBonding'],
       },
+      {
+        id: 'ch9',
+        label: 'Chapter 9',
+        title: 'Covalent bonding',
+        moduleIds: ['covalentBonding'],
+      },
     ],
   },
   {
