@@ -23,9 +23,9 @@ function setDone(at: number, skipped = 0): Ev {
   return { t: 'set_done', at, setId: `set-${at}`, done: ['a1', 'a2', 'a3'], skipped }
 }
 
-function renderPage() {
+function renderPage(entry = '/dash') {
   return render(
-    <MemoryRouter initialEntries={['/dash']}>
+    <MemoryRouter initialEntries={[entry]}>
       <DashPage />
     </MemoryRouter>,
   )
@@ -92,5 +92,25 @@ describe('plays', () => {
     })
     renderPage()
     expect(screen.getByText(/best 420/)).toBeTruthy()
+  })
+})
+
+describe('?test=1, the practice entrance', () => {
+  it('skips every gate: rewards off, nothing caught, no plays — and the species stand in as runners', () => {
+    useStore.getState().setSettings({ rewards: false })
+    renderPage('/dash?test=1')
+    expect(screen.getByText(/practice mode — nothing saved/)).toBeTruthy()
+    expect(screen.getAllByRole('button', { name: /^Run as / }).length).toBeGreaterThan(0)
+    const play = screen.getByRole('button', { name: 'Play' })
+    expect((play as HTMLButtonElement).disabled).toBe(false)
+  })
+
+  it('a caught monster still comes first when there is one', () => {
+    useStore.getState().setSettings({ rewards: true })
+    useStore.setState({ events: [rejected('a', dayAt(0, 8), 'flip_on_add')] })
+    renderPage('/dash?test=1')
+    const picks = screen.getAllByRole('button', { name: /^Run as / })
+    expect(picks.length).toBe(1)
+    expect(picks[0].getAttribute('aria-pressed')).toBe('true')
   })
 })

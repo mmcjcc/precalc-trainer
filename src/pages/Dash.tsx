@@ -3,9 +3,12 @@
  * subject-flavored obstacles (components/dash/DashGame.tsx); finishing a practice set with nothing
  * skipped earns one play that day (store/dash.ts), and the best score sticks for good. Rewards off
  * hides the game everywhere; this page then just says how to turn it on.
+ *
+ * `#/dash?test=1` is the parent's practice entrance: no rewards, catches or plays needed, and
+ * nothing is spent or recorded — for trying the game out, not for playing around the economy.
  */
 import { useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { monsterCollection, type MonsterEntry } from '@/components/monsters/collection'
 import { MonsterArt } from '@/components/monsters/MonsterArt'
 import { speciesForEdition } from '@/components/monsters/species'
@@ -25,6 +28,8 @@ export default function DashPage() {
   const view = useRewards()
   const rewards = useStore((s) => s.rewards)
   const noteDashRun = useStore((s) => s.noteDashRun)
+  const [search] = useSearchParams()
+  const testMode = search.get('test') === '1'
   const [screen, setScreen] = useState<Screen>({ kind: 'menu' })
   const [runner, setRunner] = useState<string | null>(null)
 
@@ -38,12 +43,19 @@ export default function DashPage() {
     return out
   }, [view.cards])
 
+  // Who can run: her catches, or in test mode with none caught, the species themselves as stand-ins.
+  const demo = testMode && caught.length === 0
+  const runners = useMemo(() => {
+    if (!demo) return caught.map(({ entry, speciesName }) => ({ id: entry.id, label: `${speciesName}: ${entry.title}`, species: false }))
+    return speciesForEdition(STORE).map((s) => ({ id: s.id, label: s.name, species: true }))
+  }, [caught, demo])
+
   const today = dayKey(Date.now())
   const tokens = dashTokens(events, today)
   const best = dashBestOf(rewards, events)
-  const picked = runner ?? caught[0]?.entry.id ?? null
+  const picked = runner ?? runners[0]?.id ?? null
 
-  if (!rewardsOn) {
+  if (!rewardsOn && !testMode) {
     return (
       <div className="mx-auto max-w-xl px-4 py-6">
         <h1 className="text-xl font-bold text-navy">Monster Dash</h1>
@@ -56,7 +68,7 @@ export default function DashPage() {
   }
 
   const finish = (score: number) => {
-    const recorded = noteDashRun({ runner: picked ?? 'monster', score })
+    const recorded = testMode ? false : noteDashRun({ runner: picked ?? 'monster', score })
     setScreen({ kind: 'over', score, recorded })
   }
 
@@ -65,11 +77,11 @@ export default function DashPage() {
       <div className="flex items-baseline justify-between gap-3">
         <h1 className="text-xl font-bold text-navy">Monster Dash</h1>
         <p className="text-sm text-navy-600" data-dash-tokens>
-          {tokenWord(tokens)} left today{best > 0 ? ` · best ${best}` : ''}
+          {testMode ? 'practice mode — nothing saved' : `${tokenWord(tokens)} left today${best > 0 ? ` · best ${best}` : ''}`}
         </p>
       </div>
 
-      {caught.length === 0 ? (
+      {runners.length === 0 ? (
         <div className="mt-4 rounded-2xl border border-navy-100 bg-white px-4 py-4">
           <p className="text-navy-600">
             Your runner is a monster you have caught. Practice, catch one red-handed, then come back and take it for a run.
@@ -88,16 +100,16 @@ export default function DashPage() {
           <section aria-label="Pick your runner" className="mt-4 rounded-2xl border border-navy-100 bg-white px-4 py-3">
             <h2 className="text-sm font-semibold text-navy">Your runner</h2>
             <ul className="mt-2 flex flex-wrap gap-2">
-              {caught.slice(0, 12).map(({ entry, speciesName }) => (
-                <li key={entry.id}>
+              {runners.slice(0, 12).map((r) => (
+                <li key={r.id}>
                   <button
                     type="button"
-                    onClick={() => setRunner(entry.id)}
-                    aria-pressed={entry.id === picked}
-                    aria-label={`Run as ${speciesName}: ${entry.title}`}
-                    className={`rounded-xl border px-1.5 py-1.5 hover:bg-navy-50 ${entry.id === picked ? 'border-2 border-gold bg-gold-100' : 'border-navy-100 bg-white'}`}
+                    onClick={() => setRunner(r.id)}
+                    aria-pressed={r.id === picked}
+                    aria-label={`Run as ${r.label}`}
+                    className={`rounded-xl border px-1.5 py-1.5 hover:bg-navy-50 ${r.id === picked ? 'border-2 border-gold bg-gold-100' : 'border-navy-100 bg-white'}`}
                   >
-                    <MonsterArt id={entry.id} size={44} />
+                    {r.species ? <MonsterArt species={r.id} size={44} /> : <MonsterArt id={r.id} size={44} />}
                   </button>
                 </li>
               ))}
@@ -108,22 +120,27 @@ export default function DashPage() {
             <div className="mt-4 rounded-2xl border border-navy-100 bg-white px-4 py-3" role="status">
               <p className="font-semibold text-navy">
                 Run over — score {screen.score}
-                {screen.score >= best && screen.score > 0 ? ' · new best!' : ''}
+                {!testMode && screen.score >= best && screen.score > 0 ? ' · new best!' : ''}
               </p>
-              {!screen.recorded && <p className="mt-1 text-sm text-navy-600">That run was on the house (no plays left today).</p>}
+              {testMode ? (
+                <p className="mt-1 text-sm text-navy-600">Practice run — nothing saved.</p>
+              ) : (
+                !screen.recorded && <p className="mt-1 text-sm text-navy-600">That run was on the house (no plays left today).</p>
+              )}
             </div>
           )}
 
           <div className="mt-4 flex flex-wrap items-center gap-3">
             <button
               type="button"
-              disabled={tokens === 0}
+              disabled={!testMode && tokens === 0}
               onClick={() => setScreen({ kind: 'running', seed: Date.now() >>> 0 })}
               className="rounded-xl bg-navy px-5 py-2.5 font-semibold text-white disabled:cursor-not-allowed disabled:opacity-40"
             >
-              {screen.kind === 'over' ? 'Play again' : 'Play'} · 1 play
+              {screen.kind === 'over' ? 'Play again' : 'Play'}
+              {testMode ? '' : ' · 1 play'}
             </button>
-            {tokens === 0 && (
+            {!testMode && tokens === 0 && (
               <p className="text-sm text-navy-600">
                 Finish a practice set (nothing skipped) to earn a play — up to {DASH_DAY_CAP} a day.{' '}
                 <Link to="/set" className="font-semibold text-navy underline">
