@@ -384,11 +384,30 @@ export function ProblemFrame({ instance, attempt, flags, templateTitle, progress
 
   // ---- completion ------------------------------------------------------------------------------------------------
   const completionRef = useRef<HTMLElement>(null)
+  /**
+   * Show the problem again: scroll whatever holds it (the desktop screen's left column, the window
+   * elsewhere) back to the top — title, instructions and problem — so a finished page reads downward.
+   * Finishing used to pull the view down to the completion card instead, and the problem had to be
+   * scrolled back by hand (her 2026-11-08 report); the verdict already sits by the answer box.
+   */
+  const scrollProblemTop = useCallback(() => {
+    let el: HTMLElement | null = cardRef.current
+    while (el && !(el.scrollHeight > el.clientHeight + 1 && /(auto|scroll)/.test(getComputedStyle(el).overflowY))) {
+      el = el.parentElement
+    }
+    if (el) el.scrollTo({ top: 0, behavior: 'smooth' })
+    else window.scrollTo({ top: 0, behavior: 'smooth' })
+  }, [])
   useEffect(() => {
     if (!completion) return
-    const card = completionRef.current
-    if (card && typeof card.scrollIntoView === 'function') card.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
-  }, [completion])
+    if (phone) {
+      // The phone's pinned strip brings the problem back any time; show the completion card by the keypad.
+      const card = completionRef.current
+      if (card && typeof card.scrollIntoView === 'function') card.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
+      return
+    }
+    scrollProblemTop()
+  }, [completion, phone, scrollProblemTop])
   const native = isNativeApp()
   const rewardsOn = useRewardsOn()
   const stepGuideSeen = useStore((s) => s.settings.seenStepGuide === true)
@@ -400,8 +419,13 @@ export function ProblemFrame({ instance, attempt, flags, templateTitle, progress
   const nextRef = useRef<HTMLButtonElement>(null)
   const closeFinish = useCallback(() => {
     setSheetClosedFor(completion)
-    setTimeout(() => nextRef.current?.focus({ preventScroll: false }), 0)
-  }, [completion])
+    // Focus still lands on "Next problem"; only the phone scrolls to it. Larger screens show the problem
+    // again — the finish sheet covered the page while the completion scroll ran, so it runs again here.
+    setTimeout(() => {
+      nextRef.current?.focus({ preventScroll: !phone })
+      if (!phone) scrollProblemTop()
+    }, 0)
+  }, [completion, phone, scrollProblemTop])
   useEffect(() => {
     if (completion?.newlyMastered) burstConfetti({ count: 64 })
   }, [completion])
@@ -522,7 +546,7 @@ export function ProblemFrame({ instance, attempt, flags, templateTitle, progress
       <h1 className="text-2xl font-semibold text-navy">{instance.title}</h1>
       {ownBadge}
       <p className="text-sm text-navy/80">{instance.instructions}</p>
-      <div className="rounded-2xl bg-gold-100 px-4 py-3 text-navy" data-problem-card="">
+      <div ref={cardRef} className="rounded-2xl bg-gold-100 px-4 py-3 text-navy" data-problem-card="">
         {statementNode}
       </div>
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-navy/70" aria-live="polite">
