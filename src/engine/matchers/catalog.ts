@@ -2396,6 +2396,69 @@ export const ERROR_PATTERNS: Record<ErrorPatternId, ErrorPatternInfo> = {
     lesson: 'A metal is positive centers in a sea of shared electrons, one kind of atom throughout. It is not an ionic lattice: no negative ions sit in it, and its current is electrons on the move, not ions breaking loose.',
     example: 'copper described as plus and minus ions ✗ → cations in an electron sea',
   },
+  // --- covalent bonding (content/modules/covalentBonding; chemistry chapter 9). Counts are written in
+  // words and worked molecules are PH₃, SiH₄ and HBr, which the chapter 9 templates never draw. A lesson
+  // that must name the shapes or the bands names every one of them together, so it singles out none. ---
+  cb_transfer_share: {
+    id: 'cb_transfer_share',
+    title: 'Who keeps the electrons depends on who is pulling',
+    lesson: 'Two nonmetals pull on the same electrons almost equally hard, so neither can take them: the pair sits between the atoms and belongs to both. Only a metal beside a nonmetal lets its electrons go outright. Match the behaviour to the atoms in front of you.',
+    example: 'PH₃ pictured as ions after a hand-over ✗ → phosphorus and hydrogen hold the pairs together',
+  },
+  cb_h_octet: {
+    id: 'cb_h_octet',
+    title: 'Hydrogen is full at two',
+    lesson: 'Hydrogen only has the first shell, and the first shell holds just two electrons. In a finished structure every other atom reaches eight, but a full hydrogen shows one shared pair and nothing more — eight would not fit on it.',
+    example: 'an H in SiH₄ ringed with a full octet ✗ → one shared pair completes hydrogen',
+  },
+  cb_pairs_swapped: {
+    id: 'cb_pairs_swapped',
+    title: 'Bonding pairs bond; lone pairs stay home',
+    lesson: 'The two counts answer different questions: a bonding pair sits between two atoms and holds them together, while a lone pair stays on one atom and bonds nothing. Count the pairs in bonds first, then the pairs kept at home, and keep the two answers in their own boxes.',
+    example: 'PH₃: the lone pair written where the bonding pairs go ✗ → three pairs bond, one stays home',
+  },
+  cb_pairs_for_electrons: {
+    id: 'cb_pairs_for_electrons',
+    title: 'A pair is two electrons',
+    lesson: 'Some questions count pairs and some count electrons, and the two differ by a factor of two. A double bond is two shared pairs but four shared electrons; a triple bond is three pairs but six electrons. Read which one the question asks for before you count.',
+    example: 'a triple bond written as three shared electrons ✗ → three pairs share six electrons',
+  },
+  cb_electron_groups_shape: {
+    id: 'cb_electron_groups_shape',
+    title: 'Name the atoms, not the electron groups',
+    lesson: 'Every electron group — lone pairs included — takes a corner of the arrangement, but the shape is named after the atoms alone. When a lone pair holds one of the corners, the molecule’s name shows fewer corners than the arrangement has. Count the groups first, then name only what the atoms draw.',
+    example: 'PH₃ named for all four of its electron groups ✗ → one corner is a lone pair, so name the other three',
+  },
+  cb_angle_wrong_shape: {
+    id: 'cb_angle_wrong_shape',
+    title: 'The lone pairs squeeze the angle',
+    lesson: 'Each shape has its own approximate angle, and a lone pair pushes harder than a bonded atom, so it squeezes the bonds a little closer than the plain arrangement would. Giving a molecule another shape’s angle — or the arrangement’s unsqueezed one — misses what the lone pairs did.',
+    example: 'PH₃ given the flat triangle’s wide angle ✗ → its lone pair presses the three bonds closer together',
+  },
+  cb_en_negative: {
+    id: 'cb_en_negative',
+    title: 'A difference is a distance',
+    lesson: 'The electronegativity difference measures how far apart two pulls are, so it is never negative: subtract the smaller value from the larger. Subtracting in the other order gives the same distance with a minus sign stuck on, and the minus means nothing here.',
+    example: 'H and Br subtracted backwards into a value below zero ✗ → report the gap as a positive number',
+  },
+  cb_bands_flipped: {
+    id: 'cb_bands_flipped',
+    title: 'Small difference shares; big difference takes',
+    lesson: 'The bands run up with the difference: below 0.4 the sharing is even — nonpolar covalent; from 0.4 to 1.7 the sharing is lopsided — polar covalent; above 1.7 one atom takes the electrons outright — ionic. Reading the scale backwards turns the gentlest pairs into the fiercest.',
+    example: 'H and Br read with the bands reversed ✗ → their middling gap means lopsided sharing, not a hand-over',
+  },
+  cb_polar_because_bonds: {
+    id: 'cb_polar_because_bonds',
+    title: 'Polar bonds can cancel',
+    lesson: 'A polar molecule needs two things at once: bonds that pull unevenly AND a shape that does not cancel the pulls. When equal bonds point exactly opposite ways, or spread evenly around the center, the tugs balance and the molecule as a whole is nonpolar, however hard each bond pulls.',
+    example: 'equal pulls out both ends of a straight molecule read as adding up ✗ → they cancel each other exactly',
+  },
+  cb_hbond_any_h: {
+    id: 'cb_hbond_any_h',
+    title: 'Hydrogen bonding needs N, O or F',
+    lesson: 'Having hydrogen in the formula is not enough. Hydrogen bonding happens only when the H is bonded directly to nitrogen, oxygen or fluorine — those three pull hard enough to leave the H bare. An H sitting on any other atom brings no hydrogen bonds at all.',
+    example: 'HBr expected to hydrogen-bond because it has an H ✗ → its H sits on bromine, so it cannot',
+  },
   // --- honors geometry Unit 4. Examples use 11, 23, and 41.
   // No template generates those as an answer. A lesson may name a method only together with the
   // one it is confused with, and never with the words a correct button would show for that slip.

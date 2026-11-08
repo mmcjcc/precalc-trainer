@@ -17,7 +17,7 @@ import type {
   VarName,
 } from '@/shared/types'
 
-export type ProblemKind = 'inequality' | 'numberLine' | 'evenOdd' | 'inverse' | 'drill' | 'sigFigs' | 'atoms' | 'diffQuotient' | 'graphFeatures' | 'domainRange' | 'composition' | 'functionOps' | 'transformations' | 'piecewiseRate' | 'electrons' | 'quantumNumbers' | 'periodic' | 'quadratics' | 'optimization' | 'polyDivision' | 'polyZeros' | 'rationalFns' | 'signCharts' | 'complexNums' | 'logForms' | 'logProperties' | 'expLogEquations' | 'expLogGraphs' | 'expModels' | 'angleMeasure' | 'rightTriangle' | 'unitCircle' | 'sinusoids' | 'otherTrigGraphs' | 'inverseTrig' | 'trigIdentities' | 'trigFormulas' | 'trigEquations' | 'geometry' | 'nomenclature' | 'satrw' | 'ionicBonding'
+export type ProblemKind = 'inequality' | 'numberLine' | 'evenOdd' | 'inverse' | 'drill' | 'sigFigs' | 'atoms' | 'diffQuotient' | 'graphFeatures' | 'domainRange' | 'composition' | 'functionOps' | 'transformations' | 'piecewiseRate' | 'electrons' | 'quantumNumbers' | 'periodic' | 'quadratics' | 'optimization' | 'polyDivision' | 'polyZeros' | 'rationalFns' | 'signCharts' | 'complexNums' | 'logForms' | 'logProperties' | 'expLogEquations' | 'expLogGraphs' | 'expModels' | 'angleMeasure' | 'rightTriangle' | 'unitCircle' | 'sinusoids' | 'otherTrigGraphs' | 'inverseTrig' | 'trigIdentities' | 'trigFormulas' | 'trigEquations' | 'geometry' | 'nomenclature' | 'satrw' | 'ionicBonding' | 'covalentBonding'
 
 /** Precalculus Unit 2, optimization with quadratics: a pen against a wall, pens in a row, two numbers, price and sales. */
 export type OptimizationQuestion = 'wall' | 'pens' | 'numbers' | 'revenue'
@@ -642,6 +642,58 @@ export type IbCheck =
   | { kind: 'props'; scenario: IbScenario }
   /** The electron-sea explanation of a metal's behaviour (choice). */
   | { kind: 'sea'; ask: MbAsk }
+
+/** One checked part of a covalent-bonding problem (chemistry chapter 9). */
+export type CbStageId = 'a' | 'b' | 'c' | 'd' | 'e'
+
+/** The five molecular shapes of chapter 9, as the choice buttons print them. */
+export type CbShape = 'Linear' | 'Trigonal planar' | 'Tetrahedral' | 'Trigonal pyramidal' | 'Bent'
+
+/** The electronegativity-difference bands, as the choice buttons print them. */
+export type CbBand = 'Nonpolar covalent' | 'Polar covalent' | 'Ionic'
+
+/**
+ * How to recompute one covalent-bonding part from the molecule table and the trend data.
+ * The grader uses this. The crosscheck test does not: it reads the prompt's words and numbers
+ * and works the part out on its own.
+ */
+export type CbCheck =
+  /** Are the electrons of this substance shared or transferred? 'salt' is the chapter 8 contrast. */
+  | { kind: 'bond-type'; subject: 'molecule' | 'salt'; formula: string }
+  /** Total valence electrons in the molecule. */
+  | { kind: 'total-valence'; formula: string }
+  /** Shared (bonding) pairs around the central atom. */
+  | { kind: 'bonding-pairs'; formula: string }
+  /** Lone pairs on the central atom. */
+  | { kind: 'lone-pairs'; formula: string }
+  /** Order of the bond of a two-atom molecule (choice Single/Double/Triple). */
+  | { kind: 'bond-order'; formula: string }
+  /** Electrons the bond of a two-atom molecule shares. */
+  | { kind: 'bond-electrons'; formula: string }
+  /** Shared pairs in the whole molecule, read from the described dot structure. */
+  | { kind: 'shared-pairs'; formula: string }
+  /** Unshared (lone) pairs in the whole molecule. */
+  | { kind: 'unshared-pairs'; formula: string }
+  /** Electrons shown around one named atom of the dot structure. */
+  | { kind: 'atom-dots'; formula: string; atom: string }
+  /** Why hydrogen stops at two electrons (choice; variant picks the right sentence's wording). */
+  | { kind: 'duet-why'; variant: number }
+  /** Molecular shape from atoms bonded to the center and lone pairs on it (choice of the five). */
+  | { kind: 'shape'; bonded: number; lone: number }
+  /** Approximate bond angle for that shape (typed: 180, 120, 109.5, 107, 104.5). */
+  | { kind: 'angle'; bonded: number; lone: number }
+  /** Why lone pairs change the shape (choice; variant picks the wording). */
+  | { kind: 'bend-why'; variant: number }
+  /** Electronegativity difference of two elements, to the hundredth, from values in the prompt. */
+  | { kind: 'en-diff'; a: string; b: string }
+  /** The band that difference falls in (choice of the three bands). */
+  | { kind: 'bond-class'; a: string; b: string }
+  /** Is the molecule itself polar (choice Polar/Nonpolar)? */
+  | { kind: 'molecule-polar'; formula: string }
+  /** The strongest force between molecules of a sample (choice of the three forces). */
+  | { kind: 'force'; formula: string }
+  /** Which of two samples boils higher, and why (choice of explanations). */
+  | { kind: 'boil'; a: string; b: string }
 
 /** Which complex-number screen this problem is. */
 export type ComplexNumsQuestion = 'arith' | 'divide' | 'powers' | 'quadratic' | 'zeros'
@@ -1791,6 +1843,45 @@ export type AnswerSpec =
     }
   | {
       /**
+       * Covalent bonding (chemistry, CK-12 chapter 9). Parts are checked one at a time.
+       * Grade a part with `gradeCbStage`. Named mistakes are the `cb_` ids.
+       */
+      type: 'covalentBonding'
+      question: 'electrons' | 'dots' | 'shape' | 'polarity' | 'forces'
+      /** What the problem is. No method and no trap. */
+      prompt: string
+      stages: {
+        id: CbStageId
+        kind: 'text' | 'choice'
+        /** Box or choice legend, e.g. "The bond angle". */
+        label: string
+        /** Line under the box or the choices. Never this part's answer. */
+        hint: string
+        /** What a correct answer looks like (app text). Choice parts use the choice id. */
+        answerText: string
+        /** Other spellings that grade correct. */
+        accept?: string[]
+        /** Choice parts only. `trap` is set when that pick is a named mistake. */
+        choices?: { id: string; text: string; trap?: ErrorPatternId; witness?: string }[]
+        nudge: string
+        ruleCard: RuleCardId
+        /** Hint rung 3. May state this part's answer. */
+        reveal: string[]
+        /** Slips on this part, in detection order. `text` is the typed value or the choice id. */
+        traps: { id: ErrorPatternId; text: string; witness: string }[]
+        check: CbCheck
+      }[]
+      expectedDisplay: string
+      reveal: string[]
+      ruleCards: RuleCardId[]
+      /** The named mistake this seed promises, when one is possible on some part. */
+      trap?: ErrorPatternId
+      trapStage?: CbStageId
+      /** What that slip produces. Never the right answer. */
+      trapAnswer?: string
+    }
+  | {
+      /**
        * Logarithms and exponential form (precalculus Unit 3). One number, or one rewritten equation.
        * Grade with `gradeLogValue` or `gradeConvertForm`. Named mistakes are the `log_` ids.
        */
@@ -2194,6 +2285,8 @@ export type NomenclatureAnswer = Extract<AnswerSpec, { type: 'nomenclature' }>
 
 /** The ionic/metallic-bonding arm of `AnswerSpec` (chapter 8), named so the flow and the generators share it. */
 export type IonicBondingAnswer = Extract<AnswerSpec, { type: 'ionicBonding' }>
+
+export type CovalentBondingAnswer = Extract<AnswerSpec, { type: 'covalentBonding' }>
 
 /** One part of a nomenclature problem. */
 export type NmStage = NomenclatureAnswer['stages'][number]

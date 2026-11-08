@@ -1113,6 +1113,26 @@ export const SPECIES: readonly Species[] = [
       'mb_ionic_confusion',
     ],
   },
+  {
+    id: 'covalent',
+    name: 'The Pair Poacher',
+    personality: 'Grabs both electrons of every shared pair for one atom, then bends the molecule into whatever shape it fancies.',
+    family: 'Covalent bonding slips: sharing read as a hand-over, hydrogen crowded past its duet, bonding and lone pairs swapped, shapes named after electron groups, wrong-shape angles, backwards electronegativity bands, symmetric molecules called polar, and hydrogen bonding claimed on sight of an H.',
+    subject: 'chemistry',
+    look: { body: 'pear', hue: 268, sat: 54, light: 58, accent: 92, top: 'antennae', eyes: 'side', mouth: 'grin', feet: 'stubs', arms: 'brackets', mark: 'orbiters' },
+    variants: [
+      'cb_transfer_share',
+      'cb_h_octet',
+      'cb_pairs_swapped',
+      'cb_pairs_for_electrons',
+      'cb_electron_groups_shape',
+      'cb_angle_wrong_shape',
+      'cb_en_negative',
+      'cb_bands_flipped',
+      'cb_polar_because_bonds',
+      'cb_hbond_any_h',
+    ],
+  },
 ]
 
 const SPECIES_BY_ID = new Map<string, Species>(SPECIES.map((s) => [s.id, s]))

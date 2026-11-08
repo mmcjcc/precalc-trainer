@@ -110,7 +110,7 @@ describe('course registry', () => {
     expect(precalc!.units.map((u) => u.id)).toEqual(['unit1', 'unit2', 'unit3', 'unit4', 'unit5', 'unit6'])
 
 
-    expect(unitsWithModules(chemistry!).map((u) => u.id)).toEqual(['ch3', 'ch4', 'ch5', 'ch6', 'ch7', 'ch8'])
+    expect(unitsWithModules(chemistry!).map((u) => u.id)).toEqual(['ch3', 'ch4', 'ch5', 'ch6', 'ch7', 'ch8', 'ch9'])
     expect(chemistry!.units.map((u) => [u.id, u.moduleIds])).toEqual([
       ['ch3', ['sigFigs']],
       ['ch4', ['atoms']],
@@ -118,6 +118,7 @@ describe('course registry', () => {
       ['ch6', ['periodic']],
       ['ch7', ['ionicNames', 'molecularAcids']],
       ['ch8', ['ionicBonding']],
+      ['ch9', ['covalentBonding']],
     ])
     const ch7 = chemistry!.units[4]!
     expect([ch7.label, ch7.title]).toEqual(['Chapter 7', 'Chemical nomenclature'])
@@ -125,6 +126,9 @@ describe('course registry', () => {
     const ch8 = chemistry!.units[5]!
     expect([ch8.label, ch8.title]).toEqual(['Chapter 8', 'Ionic and metallic bonding'])
     expect(modulesInUnit(ch8).map((m) => m.id)).toEqual(['ionicBonding'])
+    const ch9 = chemistry!.units[6]!
+    expect([ch9.label, ch9.title]).toEqual(['Chapter 9', 'Covalent bonding'])
+    expect(modulesInUnit(ch9).map((m) => m.id)).toEqual(['covalentBonding'])
     const geometry = getCourse('geometry')
     expect(geometry?.units.map((u) => [u.id, u.label, u.title, u.moduleIds])).toEqual([
       ['g1', 'Unit 1', 'Tools of geometry', ['geoSegments', 'geoAngles']],
