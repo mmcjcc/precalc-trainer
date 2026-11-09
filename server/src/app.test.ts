@@ -33,7 +33,8 @@ function tempDir(): string {
 }
 afterEach(async () => {
   while (apps.length) await apps.pop()!.close()
-  while (dirs.length) rmSync(dirs.pop()!, { recursive: true, force: true })
+  // maxRetries: a straggler write landing mid-delete raises ENOTEMPTY; let rm try again.
+  while (dirs.length) rmSync(dirs.pop()!, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 })
 })
 
 async function status(a: TestApp, user: string | null = KID) {

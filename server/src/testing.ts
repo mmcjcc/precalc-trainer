@@ -125,11 +125,15 @@ export async function startApp(opts: StartOptions = {}): Promise<TestApp> {
     log,
     limiter,
     logs,
-    close: () =>
-      new Promise<void>((resolve) => {
+    // Flush after the server is down: a queued log append may still be in flight, and a test's
+    // temp log dir is removed right after close (ENOTEMPTY on CI otherwise).
+    close: async () => {
+      await new Promise<void>((resolve) => {
         server.closeAllConnections()
         server.close(() => resolve())
-      }),
+      })
+      await log.flush()
+    },
   }
 }
 
