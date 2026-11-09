@@ -41,6 +41,7 @@ describe('starter decks', () => {
     }
     expect(deck('polyatomic-ions').subject).toBe('Chemistry')
     expect(deck('chem-vocab').subject).toBe('Chemistry')
+    expect(deck('chem-electrons').subject).toBe('Chemistry')
     expect(deck('element-symbols').subject).toBe('Chemistry')
     expect(deck('sat-transitions').subject).toBe('English')
     expect(deck('unit-circle').subject).toBeUndefined()
@@ -125,6 +126,48 @@ describe('starter decks', () => {
     for (const symbol of ['Fe', 'Cu', 'Ag', 'Au', 'Hg', 'Pb', 'Sn', 'W']) {
       expect(picked.some((el) => el.symbol === symbol)).toBe(true)
     }
+  })
+
+  it('electron-configuration cards add up against the element table', () => {
+    const SUP: Record<string, number> = { '⁰': 0, '¹': 1, '²': 2, '³': 3, '⁴': 4, '⁵': 5, '⁶': 6, '⁷': 7, '⁸': 8, '⁹': 9 }
+    const zOf = (symbol: string) => {
+      const el = ELEMENTS.find((e) => e.symbol === symbol)
+      if (!el) throw new Error(`no element ${symbol}`)
+      return el.z
+    }
+    const configCards = deck('chem-electrons').cards.filter((c) => c.term.startsWith('Electron configuration: '))
+    expect(configCards.length).toBeGreaterThanOrEqual(5)
+    for (const c of configCards) {
+      const m = c.term.match(/^Electron configuration: ([a-z]+) \(Z = (\d+)\)$/)
+      if (!m) throw new Error(`bad term ${c.term}`)
+      const el = ELEMENTS.find((e) => e.name === m[1])
+      if (!el) throw new Error(`no element named ${m[1]}`)
+      expect(el.z).toBe(Number(m[2]))
+      let electrons = 0
+      for (const token of c.definition.match(/\[(?:Ne|Ar)\]|\d[spdf][⁰¹²³⁴⁵⁶⁷⁸⁹]+/g) ?? []) {
+        if (token.startsWith('[')) electrons += zOf(token.slice(1, -1))
+        else electrons += [...token.slice(2)].reduce((n, ch) => n * 10 + SUP[ch]!, 0)
+      }
+      expect(electrons).toBe(el.z)
+    }
+  })
+
+  it('the filling-order card obeys the n + l rule', () => {
+    const order = deck('chem-electrons').cards.find((c) => c.term === 'Orbital filling order')
+    if (!order) throw new Error('no filling-order card')
+    const L: Record<string, number> = { s: 0, p: 1, d: 2, f: 3 }
+    const subs = (order.definition.match(/\d[spdf]/g) ?? []).map((t) => ({ n: Number(t[0]), l: L[t[1]!]! }))
+    expect(subs.length).toBe(19)
+    expect(subs[0]).toEqual({ n: 1, l: 0 })
+    for (let i = 1; i < subs.length; i++) {
+      const a = subs[i - 1]!
+      const b = subs[i]!
+      // Madelung: fill by rising n + l, and inside a tie by rising n.
+      const ka = a.n + a.l
+      const kb = b.n + b.l
+      expect(kb > ka || (kb === ka && b.n > a.n)).toBe(true)
+    }
+    for (const { n, l } of subs) expect(l).toBeLessThanOrEqual(n - 1)
   })
 
   it('the transition deck carries every taught word and a summary card per relation', () => {

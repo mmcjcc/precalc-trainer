@@ -241,6 +241,63 @@ const CHEM_VOCAB_CARDS: readonly StudyDraftCard[] = [
   card('Alloy', 'A mixture of a metal with one or more other elements that keeps metallic properties, like steel or brass.'),
 ]
 
+/**
+ * The electrons-in-atoms chapter: light and photons through quantum numbers and configurations,
+ * in our own words. The configuration examples and the filling order are re-checked numerically
+ * by the tests (electron counts against the element table, the order against the n+l rule).
+ */
+const CHEM_ELECTRON_CARDS: readonly StudyDraftCard[] = [
+  // Light and quanta
+  card('Electromagnetic radiation', 'Energy that travels through space as waves: radio waves, visible light, X-rays, and the rest of the spectrum.'),
+  card('Wavelength (λ)', 'The distance from one crest of a wave to the next. Longer wavelength means lower frequency and lower energy.'),
+  card('Frequency (ν)', 'How many wave cycles pass a point each second, measured in hertz (Hz).'),
+  card('c = λν', 'Wavelength times frequency equals the speed of light (3.00 × 10⁸ m/s) - so wavelength and frequency are inversely related.'),
+  card('Electromagnetic spectrum, lowest to highest energy', 'Radio, microwave, infrared, visible, ultraviolet, X-ray, gamma ray.'),
+  card('Visible light', 'The narrow slice the eye sees, about 700 nm (red, lowest energy) to 400 nm (violet, highest energy) - ROYGBIV.'),
+  card('Quantum', 'The smallest step of energy an atom can gain or lose. Energy changes in fixed steps, not in a smooth flow.'),
+  card('E = hν', "A quantum of radiation carries energy equal to Planck's constant (h = 6.626 × 10⁻³⁴ J·s) times the frequency: higher frequency, higher energy."),
+  card('Photon', 'A particle of light that carries one quantum of energy.'),
+  card('Photoelectric effect', "Light shining on a metal knocks electrons off - but only when the light's frequency is above a threshold. Dim violet light can do what bright red light cannot."),
+  card('What the photoelectric effect proved', 'Light acts as particles: a single photon must carry enough energy by itself to free one electron, so frequency decides and brightness alone does not.'),
+  card('Wave-particle duality', 'Light (and matter) behaves as a wave in some experiments and as a particle in others.'),
+  card("de Broglie's idea", 'Moving particles have wavelengths too: electrons behave as waves, which is why the quantum model treats them that way.'),
+  card('Atomic emission spectrum', "The set of specific colored lines an element gives off when its excited electrons fall back down. Each element's lines are unique - a fingerprint."),
+  card('Why emission spectra are lines, not rainbows', 'Electrons sit only at fixed energy levels, so the light given off carries only the exact differences between those levels.'),
+  card('Ground state', 'An atom with every electron in the lowest-energy arrangement available.'),
+  card('Excited state', 'An atom after an electron has absorbed energy and jumped to a higher level. It falls back to the ground state by giving off light.'),
+  card('Bohr model', "Electrons travel in fixed circular orbits with set energies. It explained hydrogen's spectrum but fails for every other element."),
+  // The quantum mechanical model
+  card('Quantum mechanical model', 'The modern model of the atom: mathematics that gives the probability of finding an electron in a region, not a path it follows.'),
+  card('How the quantum model differs from Bohr', 'Electrons do not orbit in perfect circles. They occupy orbitals - fuzzy regions where they are likely to be found.'),
+  card('Heisenberg uncertainty principle', 'It is impossible to know both the position and the velocity of a particle exactly at the same time.'),
+  card('Electron cloud', 'A picture of where an electron spends its time: the darker the region, the higher the probability of finding the electron there.'),
+  card('Orbital', 'A three-dimensional region around the nucleus where there is a high probability of finding an electron. One orbital holds at most 2 electrons.'),
+  card('The four quantum numbers', "Principal (energy level), angular momentum (sublevel shape), magnetic (orientation), and spin (direction): together they describe one electron, and no two electrons in an atom share all four."),
+  card('Principal quantum number (n)', 'The main energy level of an electron. Larger n means larger orbitals, farther from the nucleus, with more energy.'),
+  card('Angular momentum quantum number (l)', 'Which sublevel the electron is in - the orbital shape. l runs from 0 to n − 1, so level n has n sublevels, designated s, p, d, or f.'),
+  card('Magnetic quantum number', "The orientation of an orbital in space around the nucleus. An s orbital is a sphere, so its orientation doesn't matter."),
+  card('Spin quantum number', 'The direction an electron spins - clockwise or counterclockwise - which creates a magnetic field. Two electrons sharing an orbital must have opposite spins.'),
+  card('s, p, d, f: how many orbitals', 's has 1 orbital, p has 3, d has 5, f has 7 - and each orbital holds up to 2 electrons.'),
+  card('s, p, d, f: how many electrons', 's holds up to 2 electrons, p holds 6, d holds 10, f holds 14.'),
+  card('Most electrons energy level n can hold', '2n² - level 1 holds 2, level 2 holds 8, level 3 holds 18, level 4 holds 32.'),
+  card('Shape of an s orbital', 'A sphere centered on the nucleus.'),
+  card('Shape of a p orbital', 'A dumbbell (figure eight) along one of three axes - which is why there are three p orbitals.'),
+  // Rules and configurations
+  card('Pauli exclusion principle', 'No two electrons in an atom can have the same four quantum numbers - so an orbital holds at most two electrons, and they must have opposite spins.'),
+  card('Aufbau principle', 'Electrons fill the lowest-energy orbitals first. Because the sublevels of different levels overlap, 4s fills before 3d.'),
+  card("Hund's rule", 'In orbitals of equal energy, every orbital gets one electron - all spinning the same way - before any orbital gets a second.'),
+  card('Orbital filling order', '1s 2s 2p 3s 3p 4s 3d 4p 5s 4d 5p 6s 4f 5d 6p 7s 5f 6d 7p (the diagonal chart).'),
+  card('Electron configuration', "The arrangement of an atom's electrons: the sublevels in filling order, each with its electron count as a superscript, like 1s² 2s² 2p⁴."),
+  card('Orbital diagram', 'One box per orbital with an arrow per electron. Opposite arrows are opposite spins, and every orbital of a used sublevel is drawn even if it is empty.'),
+  card('Valence electrons', "The electrons in the highest principal energy level. They are responsible for an element's chemical behavior, and an atom can have at most 8 (a full s and p)."),
+  card('Noble gas notation', 'For period 3 and beyond: write the previous noble gas in brackets, then the rest of the configuration - sodium is [Ne] 3s¹.'),
+  card('Electron configuration: oxygen (Z = 8)', '1s² 2s² 2p⁴'),
+  card('Electron configuration: sodium (Z = 11)', '[Ne] 3s¹'),
+  card('Electron configuration: chlorine (Z = 17)', '[Ne] 3s² 3p⁵'),
+  card('Electron configuration: calcium (Z = 20)', '[Ar] 4s²'),
+  card('Electron configuration: iron (Z = 26)', '[Ar] 4s² 3d⁶'),
+]
+
 // --- SAT transitions -------------------------------------------------------------------------------------
 
 /** 'cause→effect' prints as a readable card label. */
@@ -305,6 +362,13 @@ function buildDecks(): StarterDeck[] {
       blurb: 'The chapter 7-8 terms, defined in plain words.',
       subject: 'Chemistry',
       cards: CHEM_VOCAB_CARDS,
+    },
+    {
+      id: 'chem-electrons',
+      title: 'Electrons in atoms: the quantum model',
+      blurb: 'Photons, orbitals, the four quantum numbers, and electron configurations.',
+      subject: 'Chemistry',
+      cards: CHEM_ELECTRON_CARDS,
     },
     {
       id: 'element-symbols',
