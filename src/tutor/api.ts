@@ -4,6 +4,9 @@
  */
 import type {
   TutorAskRequest,
+  TutorCard,
+  TutorCardsRequest,
+  TutorCardsResponse,
   TutorErrorBody,
   TutorFlagRequest,
   TutorLogItem,
@@ -104,6 +107,45 @@ export async function askTutor(body: TutorAskRequest, on: (event: TutorStreamEve
   await readEventStream(res, (event) => {
     if (!signal?.aborted) on(event)
   })
+}
+
+export type PhotoCards = { ok: true; cards: TutorCard[]; remaining: number } | { ok: false; message: string }
+
+/** Error codes whose message the server wrote for her to read (app.ts MESSAGES and the cards texts). */
+const SAYS_IT_ITSELF: ReadonlySet<string> = new Set(['limit', 'busy', 'blocked', 'timeout', 'unavailable', 'not_configured', 'unsupported'])
+
+/** A photo of her notes -> cards (POST /api/tutor/cards). Never throws: a failure is a sentence to show her. */
+export async function cardsFromPhoto(image: TutorCardsRequest['image'], signal?: AbortSignal): Promise<PhotoCards> {
+  let res: Response
+  try {
+    res = await fetch('/api/tutor/cards', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ image } satisfies TutorCardsRequest),
+      signal,
+    })
+  } catch {
+    return { ok: false, message: OFFLINE }
+  }
+  if (res.status === 503) return { ok: false, message: OFFLINE }
+  if (res.status === 413) return { ok: false, message: 'That photo is too big to send. Try a closer photo of one page.' }
+  if (!res.ok) {
+    try {
+      const err = (await res.json()) as TutorErrorBody
+      if (typeof err.error === 'string' && err.error && SAYS_IT_ITSELF.has(err.code ?? '')) return { ok: false, message: err.error }
+    } catch {
+      /* keep the calm fallback */
+    }
+    return { ok: false, message: "That photo couldn't be read. Try another one." }
+  }
+  try {
+    const data = (await res.json()) as TutorCardsResponse
+    if (!data || !Array.isArray(data.cards)) return { ok: false, message: UNAVAILABLE }
+    const cards = data.cards.filter((c) => c && typeof c.term === 'string' && typeof c.definition === 'string')
+    return { ok: true, cards, remaining: typeof data.remaining === 'number' ? data.remaining : 0 }
+  } catch {
+    return { ok: false, message: UNAVAILABLE }
+  }
 }
 
 export async function flagTutorAnswer(body: TutorFlagRequest): Promise<{ ok: true } | { ok: false; message: string }> {

@@ -4,12 +4,15 @@
  * field (never a guess). The body-size cap itself is enforced while reading (http.ts).
  */
 import {
+  TUTOR_IMAGE_TYPES,
   TUTOR_LIMITS,
   TUTOR_SUBJECTS,
   type TutorAskRequest,
+  type TutorCardsRequest,
   type TutorContext,
   type TutorFlagRequest,
   type TutorFreeformContext,
+  type TutorImageType,
   type TutorMistake,
   type TutorVerdict,
 } from '../../src/shared/tutor.ts'
@@ -178,6 +181,35 @@ export function parseFlagRequest(body: unknown): TutorFlagRequest {
   if (reason !== 'wrong' && reason !== 'inappropriate') throw new RequestError('reason must be wrong or inappropriate')
   const note = str(o, 'note', '', TUTOR_LIMITS.flagNote, false)?.trim()
   return { id, reason, ...(note ? { note } : {}) }
+}
+
+/** The first bytes every file of the type starts with: a renamed or cut-off upload is refused here. */
+function looksLike(mime: TutorImageType, bytes: Buffer): boolean {
+  if (mime === 'image/jpeg') return bytes.length > 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff
+  if (mime === 'image/png') return bytes.length > 8 && bytes.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))
+  return bytes.length > 12 && bytes.toString('latin1', 0, 4) === 'RIFF' && bytes.toString('latin1', 8, 12) === 'WEBP'
+}
+
+/**
+ * A photo of her notes. The type is one of three, the data is strict base64 of a real image of
+ * that type, and the image is at most TUTOR_LIMITS.imageBytes once decoded.
+ */
+export function parseCardsRequest(body: unknown): TutorCardsRequest {
+  const image = obj(obj(body, 'body').image, 'image')
+  const mime = image.mime
+  if (typeof mime !== 'string' || !(TUTOR_IMAGE_TYPES as readonly string[]).includes(mime)) {
+    throw new RequestError(`image.mime must be one of ${TUTOR_IMAGE_TYPES.join(', ')}`)
+  }
+  const data = image.data
+  if (typeof data !== 'string' || data.length === 0) throw new RequestError('image.data is required')
+  if (data.length > Math.ceil(TUTOR_LIMITS.imageBytes / 3) * 4) {
+    throw new RequestError(`the image is larger than ${TUTOR_LIMITS.imageBytes} bytes`, 'too_large', 413)
+  }
+  if (data.length % 4 !== 0 || !/^[A-Za-z0-9+/]+={0,2}$/.test(data)) throw new RequestError('image.data must be base64')
+  const bytes = Buffer.from(data, 'base64')
+  if (bytes.length > TUTOR_LIMITS.imageBytes) throw new RequestError(`the image is larger than ${TUTOR_LIMITS.imageBytes} bytes`, 'too_large', 413)
+  if (!looksLike(mime as TutorImageType, bytes)) throw new RequestError('image.data is not an image of the type image.mime names')
+  return { image: { mime: mime as TutorImageType, data } }
 }
 
 /**

@@ -13,7 +13,7 @@ export function normalizeStudyAnswer(text: string): string {
 function looseKey(text: string): string {
   return normalizeStudyAnswer(text)
     .replace(/[‘’“”'"]/g, '')
-    .replace(/([a-z])[-‐‑](?=[a-z])/g, '$1 ')
+    .replace(/([a-z])[-\u2010\u2011](?=[a-z])/g, '$1 ')
     .replace(/[.,;:!?]+(?=\s|$)/g, '')
     .replace(/^(?:a|an|the)\s+/, '')
     .replace(/\s+/g, ' ')

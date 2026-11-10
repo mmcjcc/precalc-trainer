@@ -103,6 +103,7 @@ describe('status', () => {
       remaining: 7,
       isParent: false,
       logging: 'memory',
+      photoCards: true,
     })
   })
 

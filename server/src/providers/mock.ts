@@ -94,5 +94,14 @@ export function createMockProvider(opts: { delayMs: number }): TutorProvider {
       }
       return { truncated: false }
     },
+    // The mock cannot see: every photo is the same three cards, marked as the mock's like its answers.
+    async cardsFromImage(_image, signal): Promise<string> {
+      await sleep(opts.delayMs, signal)
+      return JSON.stringify([
+        { term: '(Mock) Photon', definition: 'A particle of light that carries one quantum of energy.' },
+        { term: '(Mock) Orbital', definition: 'A region around the nucleus where an electron is likely to be found.' },
+        { term: '(Mock) Ground state', definition: 'The lowest-energy arrangement of the electrons in an atom.' },
+      ])
+    },
   }
 }

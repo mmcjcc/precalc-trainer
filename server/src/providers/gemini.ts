@@ -19,11 +19,14 @@ import {
   HarmBlockThreshold,
   HarmCategory,
   ThinkingLevel,
+  Type,
   type Content,
   type GenerateContentConfig,
   type GenerateContentResponse,
   type SafetySetting,
 } from '@google/genai'
+import type { TutorCardsRequest } from '../../../src/shared/tutor.ts'
+import { CARDS_PROMPT, CARDS_SYSTEM } from '../cards.ts'
 import type { GeminiThinking } from '../config.ts'
 import type { ProviderRequest } from '../prompt.ts'
 import { ProviderError, statusCode, type ProviderResult, type TutorProvider } from './types.ts'
@@ -72,6 +75,36 @@ export function geminiParams(model: string, thinking: GeminiThinking, req: Provi
     abortSignal: signal,
     httpOptions: { timeout: timeoutMs },
     ...(thinking === 'off' ? {} : { thinkingConfig: { thinkingLevel: LEVEL[thinking] } }),
+  }
+  return { model, contents, config }
+}
+
+/** A page of notes is a few dozen short cards; the cap leaves room for the model's thinking as well. */
+export const GEMINI_CARDS_MAX_OUTPUT_TOKENS = 8192
+
+/**
+ * The request for a photo of notes (exported for the tests): the image and one line of text, the
+ * card rules as the system instruction, and a JSON list of {term, definition} as the only reply
+ * the model may give. Same safety settings as an answer. Reading a page needs little thinking.
+ */
+export function geminiCardsParams(model: string, thinking: GeminiThinking, image: TutorCardsRequest['image'], signal: AbortSignal, timeoutMs: number) {
+  const contents: Content[] = [{ role: 'user', parts: [{ inlineData: { mimeType: image.mime, data: image.data } }, { text: CARDS_PROMPT }] }]
+  const config: GenerateContentConfig = {
+    systemInstruction: CARDS_SYSTEM,
+    safetySettings: GEMINI_SAFETY_SETTINGS,
+    maxOutputTokens: GEMINI_CARDS_MAX_OUTPUT_TOKENS,
+    responseMimeType: 'application/json',
+    responseSchema: {
+      type: Type.ARRAY,
+      items: {
+        type: Type.OBJECT,
+        properties: { term: { type: Type.STRING }, definition: { type: Type.STRING } },
+        required: ['term', 'definition'],
+      },
+    },
+    abortSignal: signal,
+    httpOptions: { timeout: timeoutMs },
+    ...(thinking === 'off' ? {} : { thinkingConfig: { thinkingLevel: ThinkingLevel.LOW } }),
   }
   return { model, contents, config }
 }
@@ -128,6 +161,19 @@ export function createGeminiProvider(opts: GeminiOptions): TutorProvider {
       }
       if (!any) throw new ProviderError('unavailable', 'empty')
       return { truncated }
+    },
+    async cardsFromImage(image, signal): Promise<string> {
+      try {
+        const res = await ai().models.generateContent(geminiCardsParams(opts.model, opts.thinking, image, signal, opts.timeoutMs))
+        if (res.promptFeedback?.blockReason) throw new ProviderError('blocked', 'prompt_blocked')
+        const finish = res.candidates?.[0]?.finishReason
+        if (finish && BLOCKED_FINISH.has(finish)) throw new ProviderError('blocked', `finish_${finish.toLowerCase()}`)
+        const text = chunkText(res)
+        if (!text) throw new ProviderError('unavailable', 'empty')
+        return text
+      } catch (err) {
+        throw failure(err, signal)
+      }
     },
   }
 }

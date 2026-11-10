@@ -37,7 +37,44 @@ export const TUTOR_LIMITS = {
   tried: 1000,
   /** Class name she picks on that page. */
   className: 100,
+  /** POST /api/tutor/cards: the whole JSON body (a photo in base64 is a third larger than the photo). */
+  cardsBodyBytes: 1_500_000,
+  /** The photo itself once decoded. The app shrinks a camera photo well under this before sending. */
+  imageBytes: 1_000_000,
+  /** Most cards one photo makes. */
+  cards: 60,
+  /** Longest term and definition of a card made from a photo. */
+  cardTerm: 200,
+  cardDefinition: 500,
 } as const
+
+// ---------------------------------------------------------------------------
+// POST /api/tutor/cards: a photo of her notes -> flashcards (study sets)
+// ---------------------------------------------------------------------------
+
+export const TUTOR_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'] as const
+export type TutorImageType = (typeof TUTOR_IMAGE_TYPES)[number]
+
+/** The photo is read once and never kept: not in the log, not on disk. */
+export interface TutorCardsRequest {
+  image: {
+    mime: TutorImageType
+    /** Base64, no data: prefix. */
+    data: string
+  }
+}
+
+export interface TutorCard {
+  term: string
+  definition: string
+}
+
+/** Counts as one of her tutor questions for the day. An unreadable photo is an empty list, not an error. */
+export interface TutorCardsResponse {
+  cards: TutorCard[]
+  remaining: number
+  limit: number
+}
 
 // ---------------------------------------------------------------------------
 // POST /api/tutor/ask
@@ -192,6 +229,8 @@ export interface TutorStatus {
   isParent: boolean
   /** 'file': questions are kept in TUTOR_LOG_DIR (survives restarts). 'memory': lost on restart. */
   logging: 'file' | 'memory'
+  /** The provider can read a photo (POST /api/tutor/cards). Absent on a server from before that. */
+  photoCards?: boolean
 }
 
 // ---------------------------------------------------------------------------

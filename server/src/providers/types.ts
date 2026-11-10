@@ -1,4 +1,4 @@
-import type { TutorProviderName } from '../../../src/shared/tutor.ts'
+import type { TutorCardsRequest, TutorProviderName } from '../../../src/shared/tutor.ts'
 import type { ProviderRequest } from '../prompt.ts'
 
 /**
@@ -35,6 +35,12 @@ export interface TutorProvider {
    * rejects with a ProviderError (anything else is a bug and is treated as `unavailable`).
    */
   stream(req: ProviderRequest, onText: (text: string) => void, signal: AbortSignal): Promise<ProviderResult>
+  /**
+   * Reads a photo of notes and returns the model's reply, which should be a JSON list of cards
+   * (cards.ts parses it and trusts none of it). Absent on a provider that cannot read a photo.
+   * Rejects with a ProviderError like `stream`.
+   */
+  cardsFromImage?(image: TutorCardsRequest['image'], signal: AbortSignal): Promise<string>
   /** Free start-up check that the key and the model id work (no tokens spent). Throws a ProviderError. */
   check(): Promise<void>
 }

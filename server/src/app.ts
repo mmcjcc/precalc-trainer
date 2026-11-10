@@ -4,6 +4,7 @@
  *   GET  /healthz           "ok" (container health only; nginx never routes it here)
  *   GET  /api/tutor/status  TutorStatus
  *   POST /api/tutor/ask     TutorAskRequest -> text/event-stream of TutorStreamEvent
+ *   POST /api/tutor/cards   TutorCardsRequest (a photo of her notes) -> TutorCardsResponse
  *   GET  /api/tutor/log     TutorLogResponse (PARENT_USERS only)
  *   POST /api/tutor/flag    TutorFlagRequest -> TutorFlagResponse
  *
@@ -14,6 +15,7 @@ import type { IncomingMessage, ServerResponse } from 'node:http'
 import {
   TUTOR_LIMITS,
   type TutorAskRequest,
+  type TutorCardsResponse,
   type TutorErrorCode,
   type TutorFlagResponse,
   type TutorFreeformContext,
@@ -22,12 +24,13 @@ import {
   type TutorStreamEvent,
 } from '../../src/shared/tutor.ts'
 import { identify } from './auth.ts'
+import { CARDS_LOG, cardsSummary, parseCards } from './cards.ts'
 import { HEARTBEAT, formatEvent, parseJson, readBody, sendError, sendJson, startEventStream } from './http.ts'
 import type { DailyLimiter } from './limits.ts'
 import type { AskRecord, TutorLog } from './log.ts'
 import { buildFreeformRequest, buildRequest } from './prompt.ts'
 import { ProviderError, type TutorProvider } from './providers/types.ts'
-import { RequestError, parseAskRequest, parseFlagRequest, redactPersonal } from './validate.ts'
+import { RequestError, parseAskRequest, parseCardsRequest, parseFlagRequest, redactPersonal } from './validate.ts'
 
 export interface AppDeps {
   allowedUsers: ReadonlySet<string>
@@ -53,6 +56,10 @@ export const MESSAGES: Record<TutorErrorCode, string> = {
   blocked: "I can't help with that one. Let's get back to the problem.",
   not_configured: "The tutor isn't set up yet.",
 }
+
+/** POST /api/tutor/cards: shown to her as-is, like MESSAGES. */
+export const CARDS_UNSUPPORTED = "The tutor can't read photos with its current setup."
+export const CARDS_BLOCKED = "I can't make cards from that photo. Try a photo of your class notes."
 
 /** 400 when she asks for the full solution before two earlier questions in that conversation. */
 export const FULL_SOLUTION_TOO_SOON =
@@ -225,6 +232,89 @@ export function createHandler(deps: AppDeps): Handler {
     }
   }
 
+  /**
+   * A photo of her notes -> cards. One of her day's questions, taken the same way an answer takes
+   * it: reserved before the provider is called, counted only when the provider replied. The photo
+   * goes to the provider and nowhere else: the log keeps a line saying a photo was read and the
+   * terms of the cards it made.
+   */
+  async function cards(req: IncomingMessage, res: ServerResponse, user: string): Promise<void> {
+    const { image } = parseCardsRequest(parseJson(await readBody(req, TUTOR_LIMITS.cardsBodyBytes)))
+    if (!deps.provider.configured) return sendError(res, 503, MESSAGES.not_configured, 'not_configured')
+    const read = deps.provider.cardsFromImage?.bind(deps.provider)
+    if (!read) return sendError(res, 501, CARDS_UNSUPPORTED, 'unsupported')
+    const slot = deps.limiter.reserve(user)
+    if (slot === 'busy') return sendError(res, 429, MESSAGES.busy, 'busy')
+    if (slot === 'limit') return sendError(res, 429, MESSAGES.limit, 'limit')
+
+    // From here the slot is reserved: every path below commits it exactly once.
+    const started = Date.now()
+    const id = newId()
+    const record = (fields: Pick<AskRecord, 'answer' | 'status' | 'counted'> & Partial<AskRecord>): AskRecord => ({
+      type: 'ask',
+      v: 1,
+      id,
+      at: now().toISOString(),
+      day: deps.log.today(),
+      user,
+      problemId: id,
+      moduleId: CARDS_LOG.moduleId,
+      kind: CARDS_LOG.kind,
+      askKind: 'freeform',
+      className: CARDS_LOG.className,
+      problemText: CARDS_LOG.problemText,
+      question: CARDS_LOG.question,
+      finished: false,
+      revealed: false,
+      provider: deps.provider.name,
+      model: deps.provider.model,
+      ms: Date.now() - started,
+      ...fields,
+    })
+    const controller = new AbortController()
+    const timer = setTimeout(() => controller.abort('timeout'), deps.timeoutMs)
+    const onClose = () => {
+      if (!res.writableEnded) controller.abort('client')
+    }
+    res.on('close', onClose)
+    try {
+      const made = parseCards(await read(image, controller.signal))
+      const remaining = deps.limiter.commit(user, true)
+      void deps.log.append(record({ answer: cardsSummary(made), status: 'ok', counted: true }))
+      logger(`tutor: cards ok ms=${Date.now() - started} cards=${made.length}`)
+      const out: TutorCardsResponse = { cards: made, remaining, limit: deps.limiter.limit }
+      sendJson(res, 200, out)
+    } catch (err) {
+      const pe = err instanceof ProviderError ? err : new ProviderError('unavailable', 'internal')
+      if (!(err instanceof ProviderError)) logger(`tutor: unexpected ${err instanceof Error ? err.name : typeof err}`)
+      const reason = controller.signal.aborted ? String(controller.signal.reason) : ''
+      if (pe.kind === 'blocked') {
+        deps.limiter.commit(user, true)
+        void deps.log.append(record({ answer: '', status: 'blocked', counted: true, error: pe.code }))
+        logger(`tutor: cards blocked code=${pe.code}`)
+        sendError(res, 422, CARDS_BLOCKED, 'blocked')
+      } else if (reason === 'client') {
+        deps.limiter.commit(user, false)
+        void deps.log.append(record({ answer: '', status: 'aborted', counted: false, error: 'client_closed' }))
+        logger('tutor: cards aborted by the client')
+        if (!res.writableEnded) res.end()
+      } else if (reason === 'timeout' || pe.kind === 'timeout') {
+        deps.limiter.commit(user, false)
+        void deps.log.append(record({ answer: '', status: 'timeout', counted: false, error: 'timeout' }))
+        logger('tutor: cards timed out')
+        sendError(res, 504, MESSAGES.timeout, 'timeout')
+      } else {
+        deps.limiter.commit(user, false)
+        void deps.log.append(record({ answer: '', status: 'error', counted: false, error: pe.code }))
+        logger(`tutor: cards provider failed code=${pe.code}`)
+        sendError(res, 502, MESSAGES.unavailable, 'unavailable')
+      }
+    } finally {
+      clearTimeout(timer)
+      res.off('close', onClose)
+    }
+  }
+
   async function flag(req: IncomingMessage, res: ServerResponse, user: string, isParent: boolean): Promise<void> {
     const body = parseFlagRequest(parseJson(await readBody(req, TUTOR_LIMITS.bodyBytes)))
     const target = deps.log.find(body.id)
@@ -288,12 +378,16 @@ export function createHandler(deps: AppDeps): Handler {
           remaining: deps.limiter.remaining(caller.user),
           isParent: caller.isParent,
           logging: deps.log.logging,
+          photoCards: typeof deps.provider.cardsFromImage === 'function',
         }
         return sendJson(res, 200, out)
       }
       case 'ask':
         if (!wants('POST') || !json()) return
         return ask(req, res, caller.user)
+      case 'cards':
+        if (!wants('POST') || !json()) return
+        return cards(req, res, caller.user)
       case 'log': {
         if (!wants('GET')) return
         if (!caller.isParent) return sendError(res, 403, 'only a parent account may read the log', 'not_parent')

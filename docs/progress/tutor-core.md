@@ -49,6 +49,14 @@ cookie does the work (nginx strips the cookie and Google tokens before the sidec
 | `POST /api/tutor/ask` | family | `TutorAskRequest` JSON, header `Content-Type: application/json` | `text/event-stream` of `TutorStreamEvent` (§4) |
 | `GET /api/tutor/log?limit=N` | `PARENT_USERS` only | `limit` 1–500, default 100 | `TutorLogResponse` JSON, newest first |
 | `POST /api/tutor/flag` | family (her own answers; a parent any) | `TutorFlagRequest` JSON | `{ "ok": true }` |
+| `POST /api/tutor/cards` | family | `TutorCardsRequest` JSON: a photo of her notes, base64 (JPEG, PNG or WebP, at most 1 MB once decoded; the app shrinks it in the browser first) | `TutorCardsResponse` JSON: the cards, and the questions she has left |
+
+`cards` (study sets, `src/study/BulkPaste.tsx`) is one of the day's questions: the slot is reserved and
+counted exactly like an answer. The photo goes to the provider and nowhere else; the log keeps one line
+saying a photo was read and the terms of the cards it made (`server/src/cards.ts`). Its run-time failures
+are JSON, not events: 429 `limit` / `busy`, 422 `blocked`, 502 `unavailable`, 504 `timeout`,
+503 `not_configured`, 501 `unsupported` (a provider with no `cardsFromImage`; `status.photoCards` is false
+then and the app does not offer the button). The `error` of those is a sentence to show her as-is.
 
 Non-stream failures are JSON `TutorErrorBody` `{ error, code }`:
 
@@ -59,7 +67,7 @@ Non-stream failures are JSON `TutorErrorBody` `{ error, code }`:
 | 403 | `not_parent` | the log, for a non-parent | hide the log link unless `status.isParent` |
 | 404 | `not_found` | flag of an unknown / someone else's answer | "Couldn't flag that answer" |
 | 405 / 415 | `method_not_allowed` / `unsupported_media_type` | wrong method; POST without JSON content type | a bug |
-| 413 | `too_large` | body over 32 KB (nginx refuses over 64 KB with its own 413) | a bug |
+| 413 | `too_large` | body over 32 KB (a photo for `cards`: over 1.5 MB, or an image over 1 MB; nginx refuses anything over 2 MB with its own 413) | a bug; for a photo, "too big to send" |
 | 503 | – | **nginx**, body exactly `{"error":"tutor offline"}`: no sidecar or it is down | "The tutor is offline right now." |
 
 Anything the student can cause at run time (limit, busy, provider down, timeout, safety block, no key) comes
