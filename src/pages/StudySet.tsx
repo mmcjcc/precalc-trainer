@@ -1,23 +1,28 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { BulkPaste, useBulkDraft } from '@/study/BulkPaste'
 import { encodeStudySet } from '@/study/code'
 import { StudyMissing, useRouteStudySet } from '@/study/frame'
 import { btnPrimary, btnSecondary, fieldClass, textClass } from '@/study/ui'
 import { useStore } from '@/store'
-import { blankCardsNote, newStudyId, type StudyDraftCard } from '@/store/studySets'
+import { blankCardsNote, newStudyId, STUDY_LIMITS, type StudyDraftCard } from '@/store/studySets'
 
 const MODES = [
-  ['flash', 'Flashcards'],
-  ['learn', 'Learn'],
-  ['match', 'Match'],
-  ['test', 'Test'],
+  ['flash', 'Flashcards', 'Flip each card and sort what you know.'],
+  ['learn', 'Learn', 'Multiple choice. Misses come back until they stick.'],
+  ['match', 'Match', 'Pair terms with definitions against the clock.'],
+  ['test', 'Test', 'Type the answers and get a score.'],
 ] as const
 
-/** One deck: edit the cards, then open a study mode or copy a share code. */
+/** One deck: pick a way to study it, change its cards (one at a time or pasted in), or copy a share code. */
 export function StudySetPage() {
   const set = useRouteStudySet()
   if (!set) return <StudyMissing />
   return <Editor key={set.id} id={set.id} />
+}
+
+function sameCards(a: readonly StudyDraftCard[], b: readonly StudyDraftCard[]): boolean {
+  return a.length === b.length && a.every((card, i) => card.term === b[i]!.term && card.definition === b[i]!.definition)
 }
 
 function Editor({ id }: { id: string }) {
@@ -31,11 +36,13 @@ function Editor({ id }: { id: string }) {
   const [error, setError] = useState<string | null>(null)
   const [note, setNote] = useState<string | null>(null)
   const [confirming, setConfirming] = useState(false)
+  const [pasting, setPasting] = useState(() => (set?.cards.length ?? 0) === 0)
+  const draft = useBulkDraft(STUDY_LIMITS.maxCards - rows.length)
 
   if (!set) return <StudyMissing />
 
-  function persist() {
-    const result = saveStudySet(id, { title, cards: rows })
+  function persist(cards: readonly StudyDraftCard[] = rows, done?: string) {
+    const result = saveStudySet(id, { title, cards })
     if (!result.ok) {
       setError(result.error)
       setNote(null)
@@ -44,7 +51,7 @@ function Editor({ id }: { id: string }) {
     setTitle(result.set.title)
     setRows(result.set.cards.map((card) => ({ ...card })))
     setError(null)
-    setNote(result.dropped > 0 ? blankCardsNote(result.dropped) : null)
+    setNote(result.dropped > 0 ? blankCardsNote(result.dropped) : (done ?? null))
     return result
   }
 
@@ -56,6 +63,18 @@ function Editor({ id }: { id: string }) {
       return
     }
     navigate(`/study/${id}/${mode}`)
+  }
+
+  function addPasted() {
+    const found = draft.result.cards
+    if (found.length === 0) return
+    const added = found.map((card) => ({ id: newStudyId(), term: card.term, definition: card.definition }))
+    // Rows she has not typed in yet would only come back as "blank cards removed".
+    const kept = rows.filter((row) => row.term.trim() !== '' || row.definition.trim() !== '')
+    const result = persist([...kept, ...added], `Added ${found.length} ${found.length === 1 ? 'card' : 'cards'}.`)
+    if (!result) return
+    draft.clear()
+    setPasting(false)
   }
 
   async function share() {
@@ -72,64 +91,118 @@ function Editor({ id }: { id: string }) {
   }
 
   const code = encodeStudySet(set)
+  const unsaved = title.trim() !== set.title || !sameCards(rows, set.cards)
+  const found = draft.result.cards.length
 
   return (
     <div className="mx-auto flex w-full max-w-xl flex-col gap-6">
       <Link to="/study" className="text-sm font-semibold text-navy underline">
         All study sets
       </Link>
-      <h1 className="text-3xl font-semibold text-navy">{set.title}</h1>
-      {set.bestMatchMs !== undefined && <p className="text-sm text-navy/80">Best match {formatSeconds(set.bestMatchMs)}</p>}
-      <div className="grid grid-cols-2 gap-2">
-        {MODES.map(([mode, label]) => (
-          <button key={mode} type="button" className={btnSecondary} onClick={() => openMode(mode)}>
-            {label}
-          </button>
-        ))}
+      <div className="flex flex-col gap-1">
+        <h1 className="text-3xl font-semibold text-navy">{set.title}</h1>
+        <p className="text-sm text-navy/80">
+          {set.cards.length} {set.cards.length === 1 ? 'card' : 'cards'}
+          {set.bestMatchMs !== undefined ? ` · Best match ${formatSeconds(set.bestMatchMs)}` : ''}
+        </p>
       </div>
+
+      <section className="flex flex-col gap-2" aria-labelledby="study-heading">
+        <h2 id="study-heading" className="text-xl font-semibold text-navy">
+          Study this set
+        </h2>
+        {set.cards.length === 0 && rows.length === 0 ? (
+          <p className="text-navy">This set has no cards yet. Paste your notes or add cards below, then come back up here to study.</p>
+        ) : (
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+            {MODES.map(([mode, label, about]) => (
+              <button
+                key={mode}
+                type="button"
+                data-mode={mode}
+                className="flex min-h-16 flex-col items-start justify-center rounded-2xl border border-navy-100 bg-white px-4 py-3 text-left hover:bg-navy-50"
+                onClick={() => openMode(mode)}
+              >
+                <span className="text-lg font-semibold text-navy">{label}</span>
+                <span className="text-sm text-navy/70">{about}</span>
+              </button>
+            ))}
+          </div>
+        )}
+      </section>
+
       <form
         className="flex flex-col gap-4"
+        aria-labelledby="cards-heading"
         onSubmit={(e) => {
           e.preventDefault()
-          persist()
+          persist(rows, 'Saved.')
         }}
       >
+        <h2 id="cards-heading" className="text-xl font-semibold text-navy">
+          Cards
+        </h2>
         <label className="flex flex-col gap-1">
           <span className="font-semibold text-navy">Title</span>
           <input value={title} onChange={(e) => setTitle(e.target.value)} maxLength={80} aria-label="Title" className={fieldClass} />
         </label>
-        <ul className="flex flex-col gap-4">
+
+        {pasting ? (
+          <div className="flex flex-col gap-3 rounded-2xl border border-navy-100 bg-white p-4" data-bulk-add="">
+            <BulkPaste draft={draft} label="Paste your notes" />
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <button type="button" className={`${btnPrimary} disabled:cursor-not-allowed disabled:opacity-40`} disabled={found === 0} onClick={addPasted}>
+                {found > 0 ? `Add ${found} ${found === 1 ? 'card' : 'cards'}` : 'Add cards'}
+              </button>
+              <button type="button" className={btnSecondary} onClick={() => setPasting(false)}>
+                Close
+              </button>
+            </div>
+          </div>
+        ) : (
+          <button type="button" className={btnSecondary} onClick={() => setPasting(true)}>
+            Paste many cards at once
+          </button>
+        )}
+
+        <ul className="flex flex-col gap-3">
           {rows.map((row, i) => (
             <li key={row.id ?? i} className="flex flex-col gap-2 rounded-2xl border border-navy-100 bg-white p-3">
-              <label className="flex flex-col gap-1">
-                <span className="text-sm font-semibold text-navy">Term</span>
-                <textarea
-                  value={row.term}
-                  onChange={(e) => setRows((prev) => prev.map((item, n) => (n === i ? { ...item, term: e.target.value } : item)))}
-                  rows={2}
-                  maxLength={500}
-                  aria-label={`Term ${i + 1}`}
-                  className={`${fieldClass} ${textClass}`}
-                />
-              </label>
-              <label className="flex flex-col gap-1">
-                <span className="text-sm font-semibold text-navy">Definition</span>
-                <textarea
-                  value={row.definition}
-                  onChange={(e) => setRows((prev) => prev.map((item, n) => (n === i ? { ...item, definition: e.target.value } : item)))}
-                  rows={2}
-                  maxLength={500}
-                  aria-label={`Definition ${i + 1}`}
-                  className={`${fieldClass} ${textClass}`}
-                />
-              </label>
-              <button
-                type="button"
-                className={btnSecondary}
-                onClick={() => setRows((prev) => prev.filter((_, n) => n !== i))}
-              >
-                Remove card {i + 1}
-              </button>
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-semibold text-navy/70">Card {i + 1}</span>
+                <button
+                  type="button"
+                  aria-label={`Remove card ${i + 1}`}
+                  className="min-h-9 rounded-lg px-3 text-sm font-semibold text-navy underline hover:bg-navy-50"
+                  onClick={() => setRows((prev) => prev.filter((_, n) => n !== i))}
+                >
+                  Remove
+                </button>
+              </div>
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                <label className="flex flex-col gap-1">
+                  <span className="text-sm font-semibold text-navy">Term</span>
+                  <textarea
+                    value={row.term}
+                    onChange={(e) => setRows((prev) => prev.map((item, n) => (n === i ? { ...item, term: e.target.value } : item)))}
+                    rows={2}
+                    maxLength={500}
+                    aria-label={`Term ${i + 1}`}
+                    className={`${fieldClass} ${textClass}`}
+                  />
+                </label>
+                <label className="flex flex-col gap-1">
+                  <span className="text-sm font-semibold text-navy">Definition</span>
+                  <textarea
+                    value={row.definition}
+                    onChange={(e) => setRows((prev) => prev.map((item, n) => (n === i ? { ...item, definition: e.target.value } : item)))}
+                    rows={2}
+                    maxLength={500}
+                    aria-label={`Definition ${i + 1}`}
+                    className={`${fieldClass} ${textClass}`}
+                  />
+                </label>
+              </div>
             </li>
           ))}
         </ul>
@@ -149,15 +222,17 @@ function Editor({ id }: { id: string }) {
         <button type="submit" className={btnPrimary}>
           Save
         </button>
+        {unsaved && <p className="text-sm text-navy/70">You have changes that are not saved yet. Starting a study mode saves them too.</p>}
       </form>
+
       <section className="flex flex-col gap-2" aria-labelledby="share-heading">
         <h2 id="share-heading" className="text-lg font-semibold text-navy">
-          Share
+          Share with a classmate
         </h2>
-        <p className="text-sm text-navy/80">A classmate pastes this code to get a copy. Save first if you changed the cards.</p>
+        <p className="text-sm text-navy/80">Send them this code. They paste it under "Got a code from a classmate?" on their Study page and get their own copy.</p>
         <textarea readOnly value={code} rows={4} aria-label="Share code" className={`${fieldClass} font-mono text-sm`} />
         <button type="button" className={btnSecondary} onClick={() => void share()}>
-          Share
+          Copy the share code
         </button>
       </section>
       {confirming ? (

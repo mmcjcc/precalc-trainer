@@ -40,7 +40,8 @@ export function ImportPanel({ onAdded }: { onAdded?: (id: string) => void }) {
       }}
     >
       <label className="flex flex-col gap-1">
-        <span className="font-semibold text-navy">Paste a share code</span>
+        <span className="font-semibold text-navy">Paste the share code</span>
+        <span className="text-sm text-navy/70">A share code is the block of letters a classmate copies from the bottom of their set. To make cards from your own notes, use "Make a new set" instead.</span>
         <textarea
           value={text}
           onChange={(e) => {
@@ -54,7 +55,7 @@ export function ImportPanel({ onAdded }: { onAdded?: (id: string) => void }) {
         />
       </label>
       <button type="submit" className={btnSecondary}>
-        Preview
+        Show the set
       </button>
       {parsed && !parsed.ok && (
         <p role="alert" className="text-sm font-semibold text-bad">
