@@ -1308,14 +1308,28 @@ export type AnswerSpec =
        * `gradeRemainder` and `gradeIsFactor`. Never compare text.
        */
       type: 'polyDivision'
-      /** `table`: the whole table, then quotient and remainder. `value`: f(c). `factor`: is x − c a factor? */
-      question: 'table' | 'value' | 'factor'
-      /** f(x) in standard form, app syntax: "2x^3 - 3x^2 - 5". */
+      /**
+       * `table`: the whole table, then quotient and remainder. `value`: f(c). `factor`: is x − c a factor?
+       * `long`: long division by a divisor synthetic division cannot take (a quadratic); see `long`.
+       */
+      question: 'table' | 'value' | 'factor' | 'long'
+      /**
+       * f(x) in standard form, app syntax: "2x^3 - 3x^2 - 5". For `long` it is the quotient to work out,
+       * as her worksheet prints it: "(x^3 + 3x^2 + 2x - 5)/(x^2 + 1)".
+       */
       f: string
-      /** The number that makes the divisor zero, exact app syntax: "2", "-2". */
+      /** The number that makes the divisor zero, exact app syntax: "2", "-2". Empty for `long`. */
       c: string
-      /** The divisor as it is shown, app syntax: "x - 2", "x + 2" (never "x - (-2)"). */
+      /** The divisor as it is shown, app syntax: "x - 2", "x + 2" (never "x - (-2)"); "x^2 + 1" for `long`. */
       divisor: string
+      /**
+       * Long division only: the ENGINE's `longDivision(dividend, divisor)`, round by round. Grade every box
+       * with `gradeLongPart`. The rows line `current` and `product` up by power, with "0" where one is missing.
+       */
+      long?: {
+        dividend: string
+        rounds: { current: string; term: string; product: string; difference: string; currentRow: string[]; productRow: string[] }[]
+      }
       degree: number
       /** The question in one line, plain words. Says nothing about the method's steps or the trap. */
       prompt: string
@@ -1328,7 +1342,8 @@ export type AnswerSpec =
       isFactor: boolean
       /** The parts she answers, in order. Each has its own hint ladder (hint key = its index). */
       stages: {
-        id: 'row' | 'grid' | 'answers' | 'bottom' | 'value' | 'factor'
+        /** The `ld…` parts are long division: divide and multiply, subtract, twice over, then both answers. */
+        id: 'row' | 'grid' | 'answers' | 'bottom' | 'value' | 'factor' | 'ldStep1' | 'ldSub1' | 'ldStep2' | 'ldSub2' | 'ldAnswer'
         /** Hint rung 1 for this part (never contains the answer). */
         nudge: string
         /** Hint rung 2 before any named mistake in this part. */

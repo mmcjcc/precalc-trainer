@@ -10,9 +10,55 @@ export const SD_RULE_IDS = {
   read: 'sd-read-bottom-row',
   remainder: 'sd-remainder-theorem',
   factor: 'sd-factor-theorem',
+  ldDivide: 'ld-divide-leading-terms',
+  ldMultiply: 'ld-multiply-whole-divisor',
+  ldSubtract: 'ld-subtract-every-term',
+  ldColumns: 'ld-like-terms-in-columns',
+  ldStop: 'ld-stop-and-write',
 } as const
 
 export type SdRuleKey = keyof typeof SD_RULE_IDS
+
+/**
+ * The one division every long-division card's example comes from: (2x^3 + x^2 − 3x + 4) ÷ (x^2 + 2),
+ * quotient 2x + 1, remainder −7x + 2. No problem is ever this division (long.ts refuses to draw it, and
+ * it is not on her worksheet), so a card never shows the answer of the problem it is opened on.
+ */
+export const LD_CARD_EXAMPLE = { dividend: [2, 1, -3, 4], divisor: [1, 0, 2] } as const
+
+/** Long division: the same three moves every round, and the two places it goes wrong (signs, columns). */
+const LD_RULES: RuleCard[] = [
+  {
+    id: SD_RULE_IDS.ldDivide,
+    title: 'Each round starts with the leading terms only',
+    body: 'Divide the first term of what is left by the first term of the divisor: coefficients divide, exponents subtract. The answer is the next term of the quotient. The other terms of the divisor wait for the multiplying.',
+    example: '(2x^3 + x^2 − 3x + 4) ÷ (x^2 + 2): 2x^3 ÷ x^2 = 2x',
+  },
+  {
+    id: SD_RULE_IDS.ldMultiply,
+    title: 'Multiply the whole divisor by that term',
+    body: 'The term you just found multiplies every term of the divisor, signs included. Write each piece of the product under the term with the same power.',
+    example: '2x · (x^2 + 2) = 2x^3 + 4x',
+  },
+  {
+    id: SD_RULE_IDS.ldSubtract,
+    title: 'Subtracting changes every sign of the product',
+    body: 'You subtract the whole product, so change the sign of each of its terms and then add. The leading terms always cancel. Terms with nothing under them come down unchanged.',
+    example: '(2x^3 + x^2 − 3x + 4) − (2x^3 + 4x) = x^2 − 7x + 4',
+  },
+  {
+    id: SD_RULE_IDS.ldColumns,
+    title: 'Like terms share a column, and a missing power keeps its place',
+    body: 'Only like terms subtract: x^2 from x^2, x from x, numbers from numbers. When the divisor skips a power, the product skips one too. Leave that column empty (or write 0x) so nothing slides under the wrong term.',
+    example: '2x^3 + 4x under 2x^3 + x^2 − 3x + 4: the 4x goes under −3x, and nothing goes under x^2',
+  },
+  {
+    id: SD_RULE_IDS.ldStop,
+    title: 'Stop when what is left has a lower degree than the divisor',
+    body: 'What is left then is the remainder. The quotient is the sum of the terms you found. The whole result is the quotient plus the remainder over the divisor.',
+    example: 'quotient 2x + 1, remainder −7x + 2 → 2x + 1 + (−7x + 2)/(x^2 + 2)',
+  },
+]
 
 export const SD_RULES: RuleCard[] = [
   {
@@ -57,6 +103,7 @@ export const SD_RULES: RuleCard[] = [
     body: 'x − c is a factor of f(x) exactly when f(c) = 0, which means the remainder is 0. Any other remainder means it is not a factor.',
     example: 'x^3 − 7x + 6 with −3 in the box leaves 0 → x + 3 is a factor',
   },
+  ...LD_RULES,
 ]
 
 /** The rule card that answers each named slip of this module. */

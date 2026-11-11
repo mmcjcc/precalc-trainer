@@ -197,7 +197,11 @@ function runSelfTest(f: string, c: string): string | null {
 // Parts, hints, and the instance
 // ---------------------------------------------------------------------------
 
-const NUDGE: Record<PolyDivisionStageId, string> = {
+/** The synthetic-division questions and their parts. Long division is assembled in long.ts. */
+export type SdQuestion = Exclude<PolyDivisionQuestion, 'long'>
+export type SdStageId = Exclude<PolyDivisionStageId, `ld${string}`>
+
+const NUDGE: Record<SdStageId, string> = {
   row: 'Write one number for each power of x, starting with the highest power and ending with the constant term, signs included. Count the powers down one at a time as you go. Does f(x) have a term for every one of them?',
   grid: 'The box holds the number that makes the divisor equal 0. Bring the first coefficient straight down. Then work one column at a time: multiply the box number by the bottom number you just wrote, put the product under the next coefficient, and add that column.',
   answers: 'Everything you need is in the bottom row. One of its numbers is the remainder. The others are the coefficients of the quotient, and dividing by x − c lowers the degree by one.',
@@ -207,7 +211,7 @@ const NUDGE: Record<PolyDivisionStageId, string> = {
 }
 
 /** The part of the problem where each slip would show up first. */
-const STAGE_KINDS: Record<PolyDivisionStageId, readonly PolyMistakeKind[]> = {
+const STAGE_KINDS: Record<SdStageId, readonly PolyMistakeKind[]> = {
   row: ['sd_missing_placeholder'],
   grid: ['sd_wrong_sign_c', 'sd_subtracted', 'sd_first_coefficient'],
   answers: ['sd_quotient_degree', 'sd_remainder_last_quotient'],
@@ -216,7 +220,7 @@ const STAGE_KINDS: Record<PolyDivisionStageId, readonly PolyMistakeKind[]> = {
   factor: [],
 }
 
-const STAGE_CARD: Record<PolyDivisionStageId, SdRuleKey> = {
+const STAGE_CARD: Record<SdStageId, SdRuleKey> = {
   row: 'row',
   grid: 'add',
   answers: 'read',
@@ -225,13 +229,13 @@ const STAGE_CARD: Record<PolyDivisionStageId, SdRuleKey> = {
   factor: 'factor',
 }
 
-const QUESTION_STAGES: Record<PolyDivisionQuestion, readonly PolyDivisionStageId[]> = {
+const QUESTION_STAGES: Record<SdQuestion, readonly SdStageId[]> = {
   table: ['row', 'grid', 'answers'],
   value: ['bottom', 'value'],
   factor: ['bottom', 'factor'],
 }
 
-const QUESTION_CARDS: Record<PolyDivisionQuestion, readonly SdRuleKey[]> = {
+const QUESTION_CARDS: Record<SdQuestion, readonly SdRuleKey[]> = {
   table: ['row', 'box', 'down', 'add', 'read'],
   value: ['box', 'row', 'down', 'add', 'remainder'],
   factor: ['box', 'row', 'down', 'add', 'factor'],
@@ -239,10 +243,11 @@ const QUESTION_CARDS: Record<PolyDivisionQuestion, readonly SdRuleKey[]> = {
 
 /** Which part of a question a named slip belongs to (its rule card leads that part's hints). */
 export function sdStageOf(question: PolyDivisionQuestion, kind: string): PolyDivisionStageId | null {
+  if (question === 'long') return null
   return QUESTION_STAGES[question].find((id) => (STAGE_KINDS[id] as readonly string[]).includes(kind)) ?? null
 }
 
-function stageReveal(id: PolyDivisionStageId, t: SyntheticTable): string[] {
+function stageReveal(id: SdStageId, t: SyntheticTable): string[] {
   const n = t.degree
   const e = t.explanation
   // box, coefficients, bring down, then one line per column.
@@ -265,7 +270,7 @@ function stageReveal(id: PolyDivisionStageId, t: SyntheticTable): string[] {
   }
 }
 
-function expectedDisplay(question: PolyDivisionQuestion, t: SyntheticTable): string {
+function expectedDisplay(question: SdQuestion, t: SyntheticTable): string {
   const bottom = `bottom row ${polyShow(t.rows.bottom.join(', '))}`
   const c = polyShow(ratToString(t.c))
   const divisor = polyShow(t.divisor)
@@ -277,7 +282,7 @@ function expectedDisplay(question: PolyDivisionQuestion, t: SyntheticTable): str
 }
 
 /** The question in one line. It names the divisor or the input and nothing about how the table is filled. */
-export function sdPrompt(question: PolyDivisionQuestion, c: string): string {
+export function sdPrompt(question: SdQuestion, c: string): string {
   const divisor = polyShow(divisorText(c))
   if (question === 'table') return `Divide f(x) by ${divisor} with synthetic division.`
   if (question === 'value') return `Use synthetic division to find f(${polyShow(c)}).`
@@ -285,7 +290,7 @@ export function sdPrompt(question: PolyDivisionQuestion, c: string): string {
 }
 
 export interface SdBuild {
-  question: PolyDivisionQuestion
+  question: SdQuestion
   templateId: string
   version: number
   seed: number

@@ -74,11 +74,11 @@ function canonicalEntries(a: SdAnswer): Record<string, string> {
 const METHOD_WORDS = /zero|opposite|sign\b|placeholder|missing|skip|bring|multiply|\badd|subtract|last number|in the box|theorem|\b0\b/i
 
 describe('polyDivision module', () => {
-  it('is registered after completing the square with three templates and its own rule cards', () => {
+  it('is registered after completing the square with its synthetic and long division templates and its own rule cards', () => {
     const mod = getModule('polyDivision')
-    expect(mod.title).toBe('Synthetic division')
+    expect(mod.title).toBe('Polynomial division')
     expect(mod.subject).toBeUndefined()
-    expect(mod.templates.map((t) => t.id)).toEqual(['sd.table', 'sd.value', 'sd.factor'])
+    expect(mod.templates.map((t) => t.id)).toEqual(['sd.table', 'sd.value', 'sd.factor', 'ld.long', 'ld.worksheet'])
     expect(mod.order).toBeGreaterThan(getModule('quadratics').order)
     expect(mod.order).toBeLessThan(getModule('sigFigs').order)
     expect(mod.ruleCards).toBe(SD_RULES)

@@ -4,7 +4,7 @@
  * table points at, and keeps the names of the stored boxes in one place.
  */
 import type { AnswerSpec } from '@/content/types'
-import { gradeBottomRow, gradeCoefficientRow, gradeIsFactor, gradeQuotient, gradeRemainder, gradeSyntheticTable, syntheticDivision } from '@/engine'
+import { gradeBottomRow, gradeCoefficientRow, gradeIsFactor, gradeLongPart, gradeQuotient, gradeRemainder, gradeSyntheticTable, syntheticDivision } from '@/engine'
 import type { PolyGrade } from '@/engine'
 
 type DivisionAnswer = Extract<AnswerSpec, { type: 'polyDivision' }>
@@ -26,7 +26,16 @@ export const SD_KEYS = {
   value: 'value',
   /** 'yes' or 'no'. */
   factor: 'factor',
+  /** Long division, round r (0 or 1): the quotient's next term, that term times the divisor, what is left. */
+  ldTerm: (round: number) => `lt${round}`,
+  ldProduct: (round: number) => `lm${round}`,
+  ldDifference: (round: number) => `ld${round}`,
+  ldQuotient: 'lq',
+  ldRemainder: 'lr',
 } as const
+
+/** The round of the division a long-division part works on (the last part, both answers, has none). */
+export const LD_ROUND: Partial<Record<DivisionStageId, number>> = { ldStep1: 0, ldSub1: 0, ldStep2: 1, ldSub2: 1 }
 
 export interface SdTableEntries {
   box: string
@@ -94,6 +103,11 @@ export const SD_FIRST_KEY: Record<DivisionStageId, string> = {
   bottom: SD_KEYS.bottomRow,
   value: SD_KEYS.value,
   factor: SD_KEYS.factor,
+  ldStep1: SD_KEYS.ldTerm(0),
+  ldSub1: SD_KEYS.ldDifference(0),
+  ldStep2: SD_KEYS.ldTerm(1),
+  ldSub2: SD_KEYS.ldDifference(1),
+  ldAnswer: SD_KEYS.ldQuotient,
 }
 
 /**
@@ -129,6 +143,34 @@ export function gradeDivisionStage(answer: DivisionAnswer, stage: DivisionStageI
       return one(gradeRemainder(f, c, (entries[SD_KEYS.value] ?? '').trim(), { ask: 'value' }), SD_KEYS.value)
     case 'factor':
       return one(gradeIsFactor(f, c, entries[SD_KEYS.factor] ?? ''), SD_KEYS.factor)
+    case 'ldStep1':
+    case 'ldStep2': {
+      const round = LD_ROUND[stage]!
+      const dividend = answer.long?.dividend ?? ''
+      const term = gradeLongPart(dividend, answer.divisor, { what: 'term', round }, entries[SD_KEYS.ldTerm(round)] ?? '')
+      const termPart = { label: 'Next term of the quotient', grade: term }
+      // The product is that term times the divisor: with the wrong term there is nothing to check it against yet.
+      if (term.verdict !== 'correct') return { parts: [termPart], focus: term.verdict === 'invalid' ? SD_KEYS.ldTerm(round) : null }
+      const product = gradeLongPart(dividend, answer.divisor, { what: 'product', round }, entries[SD_KEYS.ldProduct(round)] ?? '')
+      return { parts: [termPart, { label: 'That term times the divisor', grade: product }], focus: product.verdict === 'invalid' ? SD_KEYS.ldProduct(round) : null }
+    }
+    case 'ldSub1':
+    case 'ldSub2': {
+      const round = LD_ROUND[stage]!
+      return one(gradeLongPart(answer.long?.dividend ?? '', answer.divisor, { what: 'difference', round }, entries[SD_KEYS.ldDifference(round)] ?? ''), SD_KEYS.ldDifference(round))
+    }
+    case 'ldAnswer': {
+      const dividend = answer.long?.dividend ?? ''
+      const quotient = gradeLongPart(dividend, answer.divisor, { what: 'quotient' }, entries[SD_KEYS.ldQuotient] ?? '')
+      const remainder = gradeLongPart(dividend, answer.divisor, { what: 'remainder' }, entries[SD_KEYS.ldRemainder] ?? '')
+      return {
+        parts: [
+          { label: 'Quotient', grade: quotient },
+          { label: 'Remainder', grade: remainder },
+        ],
+        focus: quotient.verdict === 'invalid' ? SD_KEYS.ldQuotient : remainder.verdict === 'invalid' ? SD_KEYS.ldRemainder : null,
+      }
+    }
   }
 }
 
@@ -138,11 +180,21 @@ const blank = (text: string | undefined) => (text?.trim() ? text.trim() : '_')
  * Her work as lines for the tutor, in reading order: the rows of the table as rows (an empty cell is "_"),
  * not one line per cell. Boxes she has not touched are left out.
  */
-export function divisionWork(question: 'table' | 'value' | 'factor', degree: number, c: string, entries: Record<string, string> | undefined): string[] {
+export function divisionWork(question: DivisionAnswer['question'], degree: number, c: string, entries: Record<string, string> | undefined): string[] {
   if (!entries) return []
   const lines: string[] = []
   const push = (label: string, text: string | undefined) => {
     if (text?.trim()) lines.push(`${label}: ${text.trim()}`)
+  }
+  if (question === 'long') {
+    for (const round of [0, 1]) {
+      push(`round ${round + 1}, next term of the quotient`, entries[SD_KEYS.ldTerm(round)])
+      push(`round ${round + 1}, term times the divisor`, entries[SD_KEYS.ldProduct(round)])
+      push(`round ${round + 1}, after subtracting`, entries[SD_KEYS.ldDifference(round)])
+    }
+    push('quotient', entries[SD_KEYS.ldQuotient])
+    push('remainder', entries[SD_KEYS.ldRemainder])
+    return lines
   }
   if (question === 'table') {
     push('top row', entries[SD_KEYS.row])

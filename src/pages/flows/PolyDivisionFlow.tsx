@@ -5,7 +5,7 @@ import { MathTextInput } from '@/components/MathTextInput'
 import { SigFigExplanation } from '@/components/SigFigFeedback'
 import { FUNCTION_KEYS } from '@/components/symbolStrip'
 import { polyShow } from '@/content/modules/polynomials/patterns'
-import { SD_FIRST_KEY, SD_KEYS, gradeDivisionStage, sdRuleIdFor, type PolyDivisionAnswer, type PolyDivisionStageId } from '@/content/modules/polyDivision'
+import { LD_ROUND, SD_FIRST_KEY, SD_KEYS, gradeDivisionStage, sdRuleIdFor, type PolyDivisionAnswer, type PolyDivisionStageId } from '@/content/modules/polyDivision'
 import { getModule } from '@/content/registry'
 import type { RuleCard } from '@/content/types'
 import { liveParseError, safeLatex, type ProgressLine } from '@/problem/stepEngine'
@@ -36,6 +36,11 @@ const STAGE_TITLE: Record<PolyDivisionStageId, string> = {
   bottom: 'The bottom row',
   value: 'The value',
   factor: 'Factor or not',
+  ldStep1: 'Divide, then multiply',
+  ldSub1: 'Subtract',
+  ldStep2: 'Divide, then multiply again',
+  ldSub2: 'Subtract again',
+  ldAnswer: 'Quotient and remainder',
 }
 
 const STAGE_LABEL: Record<PolyDivisionStageId, string> = {
@@ -45,6 +50,11 @@ const STAGE_LABEL: Record<PolyDivisionStageId, string> = {
   bottom: 'give the bottom row',
   value: 'give the value',
   factor: 'answer yes or no',
+  ldStep1: 'find the first term of the quotient and its product',
+  ldSub1: 'subtract the product',
+  ldStep2: 'find the next term of the quotient and its product',
+  ldSub2: 'subtract the product',
+  ldAnswer: 'give the quotient and the remainder',
 }
 
 const CHECK_LABEL: Record<PolyDivisionStageId, string> = {
@@ -54,6 +64,11 @@ const CHECK_LABEL: Record<PolyDivisionStageId, string> = {
   bottom: 'Check the row',
   value: 'Check the value',
   factor: 'Check the answer',
+  ldStep1: 'Check this step',
+  ldSub1: 'Check the subtraction',
+  ldStep2: 'Check this step',
+  ldSub2: 'Check the subtraction',
+  ldAnswer: 'Check answers',
 }
 
 /**
@@ -67,6 +82,80 @@ const PASSED_NOTE: Record<PolyDivisionStageId, string> = {
   bottom: 'The bottom row is right.',
   value: 'The value is right.',
   factor: 'That is the right answer.',
+  ldStep1: 'The term and its product are right.',
+  ldSub1: 'The subtraction is right. What is left still has the degree of the divisor, so there is another round.',
+  ldStep2: 'The term and its product are right.',
+  ldSub2: 'The subtraction is right. What is left has a lower degree than the divisor, so the dividing is done.',
+  ldAnswer: 'Quotient and remainder are right.',
+}
+
+/** One term of a lined-up row: empty for a missing power, a sign in front unless it opens the row. */
+function columnTex(coef: string, power: number, opens: boolean): string {
+  const n = Number(coef)
+  if (!Number.isInteger(n) || n === 0) return ''
+  const size = Math.abs(n)
+  const body = power === 0 ? `${size}` : `${size === 1 ? '' : size}${power === 1 ? 'x' : `x^{${power}}`}`
+  return opens ? `${n < 0 ? '-' : ''}${body}` : `${n < 0 ? '-' : '+'}\\,${body}`
+}
+
+/**
+ * What is being divided with the product under it, like terms in the same column and an empty column
+ * where the product skips a power: the layout of the subtraction on paper. Both rows are answers she
+ * has already had checked, so nothing here is ahead of her.
+ */
+function SubtractionLayout({ current, product, currentRow, productRow }: { current: string; product: string; currentRow: readonly string[]; productRow: readonly string[] }) {
+  const top = currentRow.length - 1
+  const cells = (row: readonly string[]) => {
+    let opened = false
+    return row.map((coef, i) => {
+      const tex = columnTex(coef, top - i, !opened)
+      if (tex) opened = true
+      return tex
+    })
+  }
+  const upper = cells(currentRow)
+  const lower = cells(productRow)
+  const lastFilled = lower.reduce((at, tex, i) => (tex ? i : at), -1)
+  if (lastFilled >= 0) lower[lastFilled] = `${lower[lastFilled]})`
+  const tex = `\\begin{array}{r${'r'.repeat(currentRow.length)}} & ${upper.join(' & ')} \\\\ -\\,( & ${lower.join(' & ')} \\\\ \\hline \\end{array}`
+  return (
+    <div className="overflow-x-auto pb-1" data-ld-layout="">
+      <Katex tex={tex} display ariaLabel={`${polyShow(current)}, minus the product ${polyShow(product)}, like terms lined up`} />
+    </div>
+  )
+}
+
+/** A polynomial box with what she has typed set as math under it, once it reads. */
+function PolyBox({
+  id,
+  label,
+  hint,
+  value,
+  disabled,
+  invalid,
+  onChange,
+  inputRef,
+}: {
+  id: string
+  label: string
+  hint: string
+  value: string
+  disabled: boolean
+  invalid: boolean
+  onChange: (v: string) => void
+  inputRef: (el: HTMLInputElement | null) => void
+}) {
+  const tex = useMemo(() => (value.trim() && !liveParseError(value, ['x'], 'expression') ? safeLatex(value) : ''), [value])
+  return (
+    <div>
+      <PolyTextBox id={id} label={label} hint={hint} placeholder="" value={value} disabled={disabled} invalid={invalid} onChange={onChange} inputRef={inputRef} keypad={QUOTIENT_BOX} />
+      {tex && (
+        <div className="mt-1 overflow-x-auto text-navy">
+          <Katex tex={tex} ariaLabel={`You typed ${polyShow(value)}`} />
+        </div>
+      )}
+    </div>
+  )
 }
 
 const ordinalWord = ['first', 'second', 'third', 'fourth', 'fifth', 'sixth']
@@ -416,6 +505,90 @@ function Body({ instance, attempt, flags, templateTitle, completion, finish, ans
             onChange={(v) => update(SD_KEYS.factor, v)}
             firstRef={register(SD_KEYS.factor)}
           />
+        )
+      case 'ldStep1':
+      case 'ldStep2': {
+        const round = LD_ROUND[id] ?? 0
+        const left = answer.long?.rounds[round]?.current
+        const termKey = SD_KEYS.ldTerm(round)
+        const productKey = SD_KEYS.ldProduct(round)
+        return (
+          <>
+            <p className="text-sm text-navy/80">
+              {round === 0 || !left
+                ? 'Divide the first term of the dividend by the first term of the divisor. Then multiply the whole divisor by what you get.'
+                : `What is left is ${polyShow(left)}. Divide its first term by the first term of the divisor, then multiply the whole divisor by what you get.`}
+            </p>
+            <PolyBox
+              id={`ld-term-${round}`}
+              label={round === 0 ? 'First term of the quotient' : 'Next term of the quotient'}
+              hint="One term, like 2x or -3."
+              value={text(termKey)}
+              disabled={locked}
+              invalid={flag === termKey}
+              onChange={(v) => update(termKey, v)}
+              inputRef={register(termKey)}
+            />
+            <PolyBox
+              id={`ld-product-${round}`}
+              label="That term times the divisor"
+              hint={`Multiply every term of ${divisor}.`}
+              value={text(productKey)}
+              disabled={locked}
+              invalid={flag === productKey}
+              onChange={(v) => update(productKey, v)}
+              inputRef={register(productKey)}
+            />
+          </>
+        )
+      }
+      case 'ldSub1':
+      case 'ldSub2': {
+        const round = LD_ROUND[id] ?? 0
+        const r = answer.long?.rounds[round]
+        const key = SD_KEYS.ldDifference(round)
+        return (
+          <>
+            <p className="text-sm text-navy/80">Your product goes under what you are dividing, like terms in the same column. Subtract every term of it.</p>
+            {r && <SubtractionLayout current={r.current} product={r.product} currentRow={r.currentRow} productRow={r.productRow} />}
+            <PolyBox
+              id={`ld-difference-${round}`}
+              label="What is left"
+              hint="Subtract the whole product, then bring down any term that had nothing under it."
+              value={text(key)}
+              disabled={locked}
+              invalid={flag === key}
+              onChange={(v) => update(key, v)}
+              inputRef={register(key)}
+            />
+          </>
+        )
+      }
+      case 'ldAnswer':
+        return (
+          <>
+            <p className="text-sm text-navy/80">Put the terms you found together, and give what the last subtraction left.</p>
+            <PolyBox
+              id="ld-quotient"
+              label="Quotient"
+              hint="A polynomial in x."
+              value={text(SD_KEYS.ldQuotient)}
+              disabled={locked}
+              invalid={flag === SD_KEYS.ldQuotient}
+              onChange={(v) => update(SD_KEYS.ldQuotient, v)}
+              inputRef={register(SD_KEYS.ldQuotient)}
+            />
+            <PolyBox
+              id="ld-remainder"
+              label="Remainder"
+              hint="What is left at the end. Its degree is lower than the divisor's."
+              value={text(SD_KEYS.ldRemainder)}
+              disabled={locked}
+              invalid={flag === SD_KEYS.ldRemainder}
+              onChange={(v) => update(SD_KEYS.ldRemainder, v)}
+              inputRef={register(SD_KEYS.ldRemainder)}
+            />
+          </>
         )
     }
   }

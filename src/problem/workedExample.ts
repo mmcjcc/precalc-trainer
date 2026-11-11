@@ -737,6 +737,24 @@ function buildPartsForAnswer(sibling: ProblemInstance, ans: AnswerSpec, cards: r
                 ? `Yes — the remainder is 0, so ${ans.divisor} is a factor`
                 : `No — the remainder is ${ans.remainderText} ≠ 0`
               break
+            case 'ldStep1':
+            case 'ldStep2': {
+              const round = ans.long?.rounds[stage.id === 'ldStep1' ? 0 : 1]
+              label = stage.id === 'ldStep1' ? 'Divide, then multiply' : 'Divide, then multiply again'
+              answer = round ? `Term: ${round.term} · Product: ${round.product}` : ''
+              break
+            }
+            case 'ldSub1':
+            case 'ldSub2': {
+              const round = ans.long?.rounds[stage.id === 'ldSub1' ? 0 : 1]
+              label = stage.id === 'ldSub1' ? 'Subtract' : 'Subtract again'
+              answer = round ? round.difference : ''
+              break
+            }
+            case 'ldAnswer':
+              label = 'Quotient and remainder'
+              answer = `Quotient: ${ans.quotientText}; Remainder: ${ans.remainderText}`
+              break
           }
           return {
             id: stage.id,

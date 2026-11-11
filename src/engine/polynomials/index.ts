@@ -64,6 +64,8 @@ export {
   syntheticDivision,
   syntheticMistakes,
 } from './synthetic'
+export { gradeLongPart, longDivision } from './long'
+export type { LongDivision, LongPart, LongRound } from './long'
 export {
   analyzeFactored,
   endBehaviorMistakes,
