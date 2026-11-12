@@ -982,7 +982,7 @@ function applyProblem(rng: Rng, s: StoryDraw, places: Places): GeoBuilt | null {
   }
   const exactValue = approxQ(answer)
   if (nearHalf(exactValue, places)) return null
-  for (const t of traps) if (typeof t.value !== 'number' && nearHalf(approxQ(t.value), places)) return null
+  for (const t of traps) if (typeof t.value !== 'number' && 'rad' in t.value && nearHalf(approxQ(t.value), places)) return null
   const u = s.unit
   // The figure carries the numbers; the prompt carries the unit (a label as wide as "150 ft" cannot sit beside an
   // upright side without touching it).

@@ -1170,10 +1170,24 @@ export interface GeoFigureSpec {
   angles?: GeoAngleMark[]
   /** Full circles, drawn under the segments. The center's dot and letter come from its point. */
   circles?: GeoCircleSpec[]
+  /** Shaded parts of a circle (Unit 9), drawn under everything else. Existing figures leave this unset. */
+  regions?: GeoRegionSpec[]
   /** Integer lattice and axes. Omit on a figure that is not on the coordinate plane. */
   grid?: GeoGrid
   /** Words for role="img" and for the tutor. Describes the picture, not the method. */
   ariaLabel: string
+}
+
+/**
+ * A shaded part of a circle: the sector between two radii, or the segment between a chord and its arc. The arc
+ * runs counterclockwise (as the figure is seen, y up) from `from` to `to`; both points are on the circle.
+ */
+export interface GeoRegionSpec {
+  kind: 'sector' | 'segment'
+  /** Point id of the circle's center. */
+  center: string
+  from: string
+  to: string
 }
 
 export interface GeoCircleSpec {

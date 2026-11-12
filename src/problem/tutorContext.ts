@@ -726,6 +726,9 @@ export function assertGeometryQuestion(question: GeometryQuestion): void {
     case 'polygonArea':
     case 'specialArea':
     case 'regularArea':
+    case 'circleArea':
+    case 'arcSector':
+    case 'circleSegment':
       return
     default: {
       const unexpected: never = question

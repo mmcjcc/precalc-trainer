@@ -34,6 +34,10 @@ const GEO_KEYS_STRIP: readonly StripKey[] = [
   { label: ',', insert: ',', caret: 0, name: 'comma' },
 ]
 
+/** Circles in terms of π (Unit 9): the same strip with a π key first. Every other problem keeps the strip above. */
+const GEO_KEYS_PI: readonly StripKey[] = [{ label: 'π', insert: 'pi', caret: 0, name: 'pi' }, ...GEO_KEYS_STRIP]
+const PI_QUESTIONS: ReadonlySet<GeometryAnswer['question']> = new Set(['circleArea', 'arcSector', 'circleSegment'])
+
 /** A line is written as an equation in x and y (y = x + 1); the strip leaves the letters to the keyboard. */
 const LINE_VARS: readonly string[] = ['x', 'y']
 
@@ -205,6 +209,7 @@ function Body({ instance, attempt, flags, templateTitle, completion, finish, ans
   const stage = stages[passed]!
   const hint = useHintLadder(attempt, done, passed)
   const keypadOn = useMathKeypadOn()
+  const stripKeys = PI_QUESTIONS.has(answer.question) ? GEO_KEYS_PI : GEO_KEYS_STRIP
 
   const restoredFor = useRef<string | null>(attempt?.id ?? null)
   useEffect(() => {
@@ -360,9 +365,9 @@ function Body({ instance, attempt, flags, templateTitle, completion, finish, ans
                       invalid={Boolean(invalid)}
                       onChange={(v) => update(key, v)}
                       inputRef={register(key)}
-                      keypad={{ keys: GEO_KEYS_STRIP, vars: s.kind === 'line' ? LINE_VARS : undefined }}
+                      keypad={{ keys: stripKeys, vars: s.kind === 'line' ? LINE_VARS : undefined }}
                     />
-                    {!keypadOn && <SymbolStrip onInsert={insert} keys={GEO_KEYS_STRIP} disabled={false} />}
+                    {!keypadOn && <SymbolStrip onInsert={insert} keys={stripKeys} disabled={false} />}
                   </>
                 )}
                 {(s.kind === 'choice' || s.kind === 'reason') && (

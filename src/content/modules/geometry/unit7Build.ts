@@ -13,7 +13,7 @@ import { ERROR_PATTERNS } from '@/engine'
 import { q as rq, tx, type TrigExact } from '@/engine/trig'
 import type { GeometryAnswer, GeometryQuestion, GeometryStageId, RuleCard } from '@/content/types'
 import type { ErrorPatternId, GeoFigureSpec, GeoPoint } from '@/shared/types'
-import { formatQty, readGeoAnswer, sameGeoValue, simplifyRadical, type GeoQty } from './answer'
+import { approxQty, approxValue, formatQty, formatValue, geoSum, readGeoAnswer, sameGeoValue, sameQty, simplifyRadical, type GeoQty } from './answer'
 import type { GeoBuilt } from './build'
 import { assertGeoAnswer, exampleShowsAnswer, exposedExact, gradeGeoStage, isGeoMistake, stageDisplay } from './grade'
 import { GEO_RULE_FOR } from './rules'
@@ -69,9 +69,15 @@ export function squareQ(q: GeoQty): [number, number] {
   return [n / g, d / g]
 }
 
-export const approxQ = (q: GeoQty): number => (q.n / q.d) * Math.sqrt(q.rad)
-export const sameQ = (a: GeoQty, b: GeoQty): boolean => a.n === b.n && a.d === b.d && a.rad === b.rad
-export const isWholeQ = (q: GeoQty): boolean => q.rad === 1 && q.d === 1
+export const approxQ = (q: GeoQty): number => approxQty(q)
+export const sameQ = (a: GeoQty, b: GeoQty): boolean => sameQty(a, b)
+export const isWholeQ = (q: GeoQty): boolean => q.rad === 1 && q.d === 1 && !q.pi
+
+/** k·√m·π from integers, simplified: radPi(25, 1, 1) is 25π, radPi(3, 2, 1) is (3π)/2 (Unit 9's circles). */
+export const radPi = (n: number, d: number, r: number): GeoQty => {
+  const q = simplifyRadical(n, d, r)
+  return q.n === 0 ? q : { ...q, pi: 1 }
+}
 
 /** The answer text she types: 7, 2√13, (14√3)/3, 9/2. */
 export const qText = (q: GeoQty): string => formatQty(q)
@@ -115,15 +121,27 @@ export type Stage7 = GeometryAnswer['stages'][number]
 export interface TrapDraft7 {
   id: ErrorPatternId
   stage: GeometryStageId
-  /** An exact slip value (for an exact part) or the slip's value before rounding (for a rounded part). */
-  value: GeoQty | number
+  /**
+   * An exact slip value (for an exact part), the slip's value before rounding (for a rounded part), or the terms
+   * of a slip that is a sum (4π + 8 where 4π − 8 is right; a term taken away has a negative `n`).
+   */
+  value: GeoQty | number | readonly GeoQty[]
   witness: string
 }
 
-function valueText(v: GeoQty | number, places?: Places): string | null {
+/** True for the terms of a sum, false for one quantity or a plain number. */
+const isTerms = (v: GeoQty | number | readonly GeoQty[]): v is readonly GeoQty[] => Array.isArray(v)
+
+function valueText(v: GeoQty | number | readonly GeoQty[], places?: Places): string | null {
   if (typeof v === 'number') {
     if (!Number.isFinite(v) || v <= 0) return null
     return places === undefined ? null : roundedText(v, places)
+  }
+  if (isTerms(v)) {
+    const sum = geoSum(v)
+    const size = approxValue(sum)
+    if (places !== undefined || size === null || size <= 0) return null
+    return formatValue(sum)
   }
   if (v.n <= 0) return null
   if (places !== undefined) return roundedText(approxQ(v), places)
@@ -149,8 +167,8 @@ function trapsFor7(stage: GeometryStageId, answerText: string, drafts: readonly 
   const out: Stage7['traps'] = []
   const same = (a: string, b: string) => {
     if (places !== undefined) return Number(a) === Number(b)
-    const ra = readGeoAnswer(a)
-    const rb = readGeoAnswer(b)
+    const ra = readGeoAnswer(a, { sum: true })
+    const rb = readGeoAnswer(b, { sum: true })
     return ra.ok && rb.ok && sameGeoValue(ra.value, rb.value)
   }
   for (const d of drafts) {
@@ -160,8 +178,9 @@ function trapsFor7(stage: GeometryStageId, answerText: string, drafts: readonly 
     if (same(text, answerText)) continue
     if (out.some((t) => same(t.text, text))) continue
     // A slip that lands on a length she was given reads as copying it, not as the slip.
-    if (places === undefined && typeof d.value !== 'number' && givens.some((g) => sameQ(g, d.value as GeoQty))) continue
-    if (places !== undefined && givens.some((g) => g.rad === 1 && Math.abs(g.n / g.d - Number(text)) < 1e-9)) continue
+    const slip = d.value
+    if (places === undefined && typeof slip !== 'number' && !isTerms(slip) && givens.some((g) => sameQ(g, slip))) continue
+    if (places !== undefined && givens.some((g) => g.rad === 1 && !g.pi && Math.abs(g.n / g.d - Number(text)) < 1e-9)) continue
     out.push({ id: d.id, text, witness: d.witness })
   }
   return out
@@ -171,17 +190,20 @@ export function exactStage7(opts: {
   id: GeometryStageId
   label: string
   hint: string
-  answer: GeoQty
+  /** One quantity, or the terms of a sum (Unit 9's segment of a circle: [4π, −8] is "4π - 8"). */
+  answer: GeoQty | readonly GeoQty[]
   nudge: string
   ruleCard: string
   reveal: string[]
   traps: readonly TrapDraft7[]
   givens: readonly GeoQty[]
 }): Stage7 {
-  const answerText = qText(opts.answer)
+  const value = isTerms(opts.answer) ? geoSum(opts.answer) : null
+  const answerText = value ? formatValue(value) : qText(opts.answer as GeoQty)
   return {
     id: opts.id,
     kind: 'number',
+    ...(value?.kind === 'sum' ? { sum: true } : {}),
     label: opts.label,
     hint: opts.hint,
     answerText,
@@ -246,7 +268,7 @@ export function choiceStage7(opts: {
 function spellings(display: string): string[] {
   const out = [display]
   if (display.includes('-')) out.push(display.replace(/-/g, '−'))
-  const frac = /^\((\d*√\d+)\)\/(\d+)$/.exec(display)
+  const frac = /^\((\d*π?(?:√\d+)?)\)\/(\d+)$/.exec(display)
   if (frac) out.push(`${frac[1]}/${frac[2]}`)
   const whole = /^(\d+)\.0+$/.exec(display)
   if (whole) out.push(whole[1]!)
@@ -271,7 +293,7 @@ export function screenTexts7(answer: GeometryAnswer): string[] {
   return out
 }
 
-const NUMBER_TOKEN = /(\d+(?:\.\d+)?)?√(\d+)|\d+(?:\.\d+)?/g
+const NUMBER_TOKEN = /(\d+(?:\.\d+)?)?π?√(\d+)|\d+(?:\.\d+)?π?/g
 
 /** The lengths the problem gives: every number or radical in the prompt and on the figure, exactly. */
 export function givenValues7(answer: GeometryAnswer): GeoQty[] {
@@ -298,8 +320,15 @@ function answerValue(stage: Stage7): { q: GeoQty; rounded: boolean } | null {
 function retries(stage: Stage7): string[] {
   if (stage.kind === 'choice') return ['', 'not-a-choice']
   const out = ['???', '1001', '0.001', `${stage.answerText}°`]
-  const read = readGeoAnswer(stage.answerText)
-  if (!read.ok || read.value.kind !== 'qty') return out
+  const read = readGeoAnswer(stage.answerText, stage.sum ? { sum: true } : {})
+  if (!read.ok) return out
+  if (read.value.kind === 'sum') {
+    // A calculator decimal for a sum, and each term on its own: neither note may show the whole answer.
+    const size = approxValue(read.value) ?? 0
+    out.push(size.toFixed(2), size.toFixed(3), ...read.value.terms.map((t) => qText(t.n < 0 ? { ...t, n: -t.n } : t)))
+    return out
+  }
+  if (read.value.kind !== 'qty') return out
   const q = read.value.q
   if (stage.round !== undefined) {
     if (stage.exact) out.push(stage.exact)
@@ -308,7 +337,10 @@ function retries(stage: Stage7): string[] {
     return out
   }
   const v = approxQ(q)
-  if (q.rad > 1) {
+  if (q.pi) {
+    // A calculator decimal (with the π key, and with 3.14), and the number with its π left off.
+    out.push(v.toFixed(2), v.toFixed(3), ((v / Math.PI) * 3.14).toFixed(2), qText({ n: q.n, d: q.d, rad: q.rad }))
+  } else if (q.rad > 1) {
     out.push(v.toFixed(2), v.toFixed(3))
     // The same value with a perfect square left under the radical: the simplest-form note.
     if (q.n / q.d > 1 && q.d === 1) out.push(`sqrt(${q.n * q.n * q.rad})`)
@@ -327,7 +359,7 @@ export function leakOf7(answer: GeometryAnswer, cards: readonly RuleCard[]): str
     const display = stageDisplay(stage)
     if (RESERVED7_TEXT.has(display)) return `answer ${display} is reserved`
     const v = answerValue(stage)
-    if (v && v.q.rad === 1 && RESERVED7_NUMBERS.has(v.q.n / v.q.d)) return `answer ${display} is reserved`
+    if (v && v.q.rad === 1 && !v.q.pi && RESERVED7_NUMBERS.has(v.q.n / v.q.d)) return `answer ${display} is reserved`
     if (v && !(v.q.n > 0)) return `answer ${display} is not positive`
   }
   const screenBlob = screenTexts7(answer).join('\n')
@@ -337,7 +369,7 @@ export function leakOf7(answer: GeometryAnswer, cards: readonly RuleCard[]): str
   for (const stage of answer.stages) {
     const v = answerValue(stage)
     if (!v) continue
-    const hit = v.rounded ? given.some((g) => g.rad === 1 && Math.abs(g.n / g.d - v.q.n / v.q.d) < 1e-9) : given.some((g) => sameQ(g, v.q))
+    const hit = v.rounded ? given.some((g) => g.rad === 1 && !g.pi && Math.abs(g.n / g.d - v.q.n / v.q.d) < 1e-9) : given.some((g) => sameQ(g, v.q))
     if (hit) return `${stage.id} answer ${stage.answerText} is a number the problem gives`
   }
   // A worked line shows its own answer, never a later part's.

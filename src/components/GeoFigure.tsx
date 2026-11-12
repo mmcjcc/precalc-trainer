@@ -4,7 +4,7 @@
  * Units 2 and 3 should pass a spec rather than draw their own SVG.
  */
 import { useId } from 'react'
-import type { GeoAngleMark, GeoFigureSpec, GeoPoint } from '@/shared/types'
+import type { GeoAngleMark, GeoFigureSpec, GeoPoint, GeoRegionSpec } from '@/shared/types'
 
 const NAVY = 'var(--color-navy)'
 const NAVY_100 = 'var(--color-navy-100)'
@@ -39,6 +39,10 @@ export function GeoFigure({ spec }: { spec: GeoFigureSpec }) {
           </marker>
         </defs>
         {spec.grid && <Grid spec={spec} sx={sx} sy={sy} />}
+        {spec.regions?.map((region, i) => {
+          const d = regionPath(spec, region, at)
+          return d ? <path key={`region-${i}`} data-geo="region" data-kind={region.kind} d={d} fill={NAVY} fillOpacity={0.14} stroke="none" /> : null
+        })}
         {spec.circles?.map((c, i) => {
           const p = spec.points.find((pt) => pt.id === c.center)
           if (!p) return null
@@ -143,6 +147,29 @@ export function GeoFigure({ spec }: { spec: GeoFigureSpec }) {
       </svg>
     </div>
   )
+}
+
+/**
+ * The outline of a shaded sector or segment, in screen coordinates. The arc runs counterclockwise as seen from
+ * `from` to `to`, which on a screen (y down) is an SVG arc with sweep 0. Null when a point is missing or the two
+ * points are the same.
+ */
+export function regionPath(spec: GeoFigureSpec, region: GeoRegionSpec, at: (id: string) => { x: number; y: number }): string | null {
+  const ids = [region.center, region.from, region.to]
+  const pts = ids.map((id) => spec.points.find((p) => p.id === id))
+  const [c, a, b] = pts
+  if (!c || !a || !b) return null
+  const turn = Math.atan2(b.y - c.y, b.x - c.x) - Math.atan2(a.y - c.y, a.x - c.x)
+  const ccw = ((turn % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI)
+  if (ccw < 1e-9) return null
+  const sc = at(region.center)
+  const sa = at(region.from)
+  const sb = at(region.to)
+  const r = Math.hypot(sa.x - sc.x, sa.y - sc.y)
+  const f = (n: number) => Math.round(n * 100) / 100
+  const arc = `A ${f(r)} ${f(r)} 0 ${ccw > Math.PI ? 1 : 0} 0 ${f(sb.x)} ${f(sb.y)}`
+  if (region.kind === 'segment') return `M ${f(sa.x)} ${f(sa.y)} ${arc} Z`
+  return `M ${f(sc.x)} ${f(sc.y)} L ${f(sa.x)} ${f(sa.y)} ${arc} Z`
 }
 
 function Grid({ spec, sx, sy }: { spec: GeoFigureSpec; sx: (x: number) => number; sy: (y: number) => number }) {
