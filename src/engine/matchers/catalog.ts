@@ -1129,6 +1129,92 @@ export const ERROR_PATTERNS: Record<ErrorPatternId, ErrorPatternInfo> = {
     lesson: 'p comes from the constant term and q from the leading coefficient. The coefficients in the middle play no part in the list.',
     example: '2x^3 − 5x^2 − 4x + 3: factors of −4 over 2 ✗ → factors of 3 over 2',
   },
+  // --- factoring polynomials (content/modules/factoring; precalculus Unit 2 review). Examples use numbers no
+  // problem draws (7 as a common factor or a leading coefficient, 10, 11, 12, and x^4 − 10000).
+  fa_gcf_not_greatest: {
+    id: 'fa_gcf_not_greatest',
+    title: 'Take out the greatest common factor',
+    lesson: 'The common factor is the biggest number AND the highest power of x that divide every term. If what is left inside still has a factor shared by all its terms, the factor you took out was not the greatest.',
+    example: '14x^3 + 21x^2: 7x(2x^2 + 3x) ✗ → 7x^2(2x + 3)',
+  },
+  fa_gcf_dropped_one: {
+    id: 'fa_gcf_dropped_one',
+    title: 'A term equal to the common factor leaves 1',
+    lesson: 'Dividing a term by itself gives 1, not nothing. When one term IS the common factor, a 1 stays in its place inside the parentheses, or the product no longer multiplies back to the polynomial.',
+    example: '7x^2 + 21x + 7: 7(x^2 + 3x) ✗ → 7(x^2 + 3x + 1)',
+  },
+  fa_sum_of_squares: {
+    id: 'fa_sum_of_squares',
+    title: 'A sum of two squares does not factor',
+    lesson: '(a + b)(a − b) gives a^2 − b^2, with a minus, and (a + b)^2 gives a middle term 2ab. Nothing with whole-number coefficients multiplies out to a^2 + b^2, so a sum of two squares does not factor over the integers.',
+    example: 'x^2 + 144: (x + 12)(x − 12) ✗ → does not factor over the integers',
+  },
+  fa_diff_as_square: {
+    id: 'fa_diff_as_square',
+    title: 'A difference of squares is (a + b)(a − b)',
+    lesson: 'Squaring a binomial always gives a middle term: (a − b)^2 = a^2 − 2ab + b^2. A difference of two squares has no middle term, so its two factors have opposite signs and the middle terms cancel.',
+    example: 'x^2 − 144: (x − 12)^2 ✗ → (x + 12)(x − 12)',
+  },
+  fa_square_sign: {
+    id: 'fa_square_sign',
+    title: 'The sign inside the square is the middle term’s',
+    lesson: 'A perfect-square trinomial a^2 + 2ab + b^2 is (a + b)^2, and a^2 − 2ab + b^2 is (a − b)^2. The last term is positive either way; the sign of the middle term says which one it is.',
+    example: 'x^2 − 22x + 121: (x + 11)^2 ✗ → (x − 11)^2',
+  },
+  fa_cube_middle_sign: {
+    id: 'fa_cube_middle_sign',
+    title: 'Same, opposite, always plus: the middle sign is opposite',
+    lesson: 'a^3 + b^3 = (a + b)(a^2 − ab + b^2) and a^3 − b^3 = (a − b)(a^2 + ab + b^2). The binomial keeps the SAME sign as the cubes, the middle term of the trinomial takes the OPPOSITE sign, and the last term is ALWAYS plus.',
+    example: 'x^3 − 1000: (x − 10)(x^2 − 10x + 100) ✗ → (x − 10)(x^2 + 10x + 100)',
+  },
+  fa_cube_middle_doubled: {
+    id: 'fa_cube_middle_doubled',
+    title: 'The cube pattern’s middle term is ab, not 2ab',
+    lesson: 'In a^3 ± b^3 = (a ± b)(a^2 ∓ ab + b^2) the middle term is the two cube roots multiplied once. The 2ab belongs to a perfect square, (a ± b)^2; borrowed here, the product no longer multiplies back.',
+    example: 'x^3 − 1000: (x − 10)(x^2 + 20x + 100) ✗ → (x − 10)(x^2 + 10x + 100)',
+  },
+  fa_cube_last_negative: {
+    id: 'fa_cube_last_negative',
+    title: 'Always plus: the last term is +b^2',
+    lesson: 'The last term of the trinomial is b^2, a square, so it is positive for a sum of cubes and for a difference of cubes alike. Only the binomial and the middle term change sign.',
+    example: 'x^3 − 1000: (x − 10)(x^2 + 10x − 100) ✗ → (x − 10)(x^2 + 10x + 100)',
+  },
+  fa_cube_binomial_cubed: {
+    id: 'fa_cube_binomial_cubed',
+    title: 'a^3 − b^3 is not (a − b)^3',
+    lesson: 'Cubing a binomial makes four terms: (a − b)^3 = a^3 − 3a^2b + 3ab^2 − b^3. A difference (or sum) of two cubes has only the two, so it factors as a binomial times a trinomial instead.',
+    example: 'x^3 − 1000: (x − 10)^3 ✗ → (x − 10)(x^2 + 10x + 100)',
+  },
+  fa_cube_root_coefficient: {
+    id: 'fa_cube_root_coefficient',
+    title: 'Take the cube root of the number too',
+    lesson: 'What is cubed is the cube root of the WHOLE term: of the number in front as well as of x^3. The number is not cubed as it stands; it is the cube of something smaller.',
+    example: '1000x^3 + 343: (1000x)^3 + 7^3 ✗ → (10x)^3 + 7^3',
+  },
+  fa_tri_signs_swapped: {
+    id: 'fa_tri_signs_swapped',
+    title: 'The right numbers with their signs swapped',
+    lesson: 'Swapping the signs of both numbers keeps their product, so the last term still matches, but it flips their sum: the middle term comes out with the wrong sign. The bigger number takes the sign of the middle term.',
+    example: 'x^2 + 3x − 88: (x − 11)(x + 8) ✗ → (x + 11)(x − 8)',
+  },
+  fa_tri_wrong_pair: {
+    id: 'fa_tri_wrong_pair',
+    title: 'The pair must multiply to c AND add to b',
+    lesson: 'Many pairs multiply to the last term; only one of them also gives the middle term. Check the inner and outer products add up to the middle term before you settle on a pair.',
+    example: 'x^2 + 3x − 88: (x + 22)(x − 4) ✗ → (x + 11)(x − 8)',
+  },
+  fa_group_sign: {
+    id: 'fa_group_sign',
+    title: 'Factoring out a negative changes both signs',
+    lesson: 'Taking a negative number out of a pair divides BOTH terms by it, so both signs inside change. Keep the second sign as it was and the pair no longer multiplies back, and its binomial will not match the first pair’s.',
+    example: '−2x − 22: −2(x − 11) ✗ → −2(x + 11)',
+  },
+  fa_stopped_early: {
+    id: 'fa_stopped_early',
+    title: 'Factor completely: check every factor again',
+    lesson: 'A product can be right and still not be finished. After each step, look at every factor again: a common factor, a difference of squares, a trinomial or a sum or difference of cubes may still be hiding inside one of them.',
+    example: 'x^4 − 10000: (x^2 + 100)(x^2 − 100) ✗ → (x^2 + 100)(x + 10)(x − 10)',
+  },
   // --- operations with functions (content/modules/functionOps; precalculus) ---
   op_wrong_function: {
     id: 'op_wrong_function',

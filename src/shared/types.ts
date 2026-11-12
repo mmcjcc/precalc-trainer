@@ -15,7 +15,7 @@
 export type RelOp = '=' | '<' | '<=' | '>' | '>='
 /** `h` is the difference-quotient step; the parser accepts it only when the problem owns it (ctx.vars). */
 export type VarName = 'x' | 'y' | 'n' | 'h'
-export type ModuleId = 'numberLine' | 'inequalities' | 'evenOdd' | 'inverses' | 'propertiesDrill' | 'sigFigs' | 'atoms' | 'diffQuotient' | 'graphFeatures' | 'domainRange' | 'composition' | 'functionOps' | 'transformations' | 'piecewiseRate' | 'electrons' | 'quantumNumbers' | 'periodic' | 'quadratics' | 'optimization' | 'polyDivision' | 'polyZeros' | 'rationalFns' | 'signCharts' | 'complexNums' | 'logForms' | 'logProperties' | 'expLogEquations' | 'expLogGraphs' | 'expModels' | 'angleMeasure' | 'rightTriangle' | 'unitCircle' | 'sinusoids' | 'otherTrigGraphs' | 'inverseTrig' | 'trigIdentities' | 'trigFormulas' | 'trigEquations' | 'obliqueTriangles' | 'geoSegments' | 'geoAngles' | 'geoLogic' | 'geoProof' | 'geoParallel' | 'geoPolygonAngles' | 'geoCongruence' | 'geoIsosceles' | 'geoTriangleProofs' | 'geoParallelograms' | 'geoSpecialQuads' | 'geoTrapezoids' | 'geoRatios' | 'geoSimilarTriangles' | 'geoProportionalParts' | 'geoRightSimilar' | 'geoPythagorean' | 'geoSpecialRight' | 'geoTrigRatios' | 'geoElevDepress' | 'geoTangentChords' | 'geoCircleAngles' | 'geoCircleMeasures' | 'ionicNames' | 'molecularAcids' | 'ionicBonding' | 'covalentBonding' | 'reactions' | 'moles' | 'chemFormulas'
+export type ModuleId = 'numberLine' | 'inequalities' | 'evenOdd' | 'inverses' | 'propertiesDrill' | 'sigFigs' | 'atoms' | 'diffQuotient' | 'graphFeatures' | 'domainRange' | 'composition' | 'functionOps' | 'transformations' | 'piecewiseRate' | 'electrons' | 'quantumNumbers' | 'periodic' | 'quadratics' | 'optimization' | 'polyDivision' | 'polyZeros' | 'rationalFns' | 'signCharts' | 'complexNums' | 'logForms' | 'logProperties' | 'expLogEquations' | 'expLogGraphs' | 'expModels' | 'angleMeasure' | 'rightTriangle' | 'unitCircle' | 'sinusoids' | 'otherTrigGraphs' | 'inverseTrig' | 'trigIdentities' | 'trigFormulas' | 'trigEquations' | 'obliqueTriangles' | 'geoSegments' | 'geoAngles' | 'geoLogic' | 'geoProof' | 'geoParallel' | 'geoPolygonAngles' | 'geoCongruence' | 'geoIsosceles' | 'geoTriangleProofs' | 'geoParallelograms' | 'geoSpecialQuads' | 'geoTrapezoids' | 'geoRatios' | 'geoSimilarTriangles' | 'geoProportionalParts' | 'geoRightSimilar' | 'geoPythagorean' | 'geoSpecialRight' | 'geoTrigRatios' | 'geoElevDepress' | 'geoTangentChords' | 'geoCircleAngles' | 'geoCircleMeasures' | 'ionicNames' | 'molecularAcids' | 'ionicBonding' | 'covalentBonding' | 'reactions' | 'moles' | 'chemFormulas' | 'factoring'
 export type CalcId = 'ti84' | 'nspire'
 
 /** Fine-grained property tags. Canonical steps carry one; the engine's move detector reports one. */
@@ -333,6 +333,22 @@ export type ErrorPatternId =
   | 'poly_rrt_no_plus_minus'
   | 'poly_rrt_integers_only'
   | 'poly_rrt_wrong_coefficients'
+  // factoring polynomials (content/modules/factoring; precalculus Unit 2 review). Each is named from her product
+  // multiplied out (or its factors) for this problem's numbers; see docs/progress/factoring.md.
+  | 'fa_gcf_not_greatest'
+  | 'fa_gcf_dropped_one'
+  | 'fa_sum_of_squares'
+  | 'fa_diff_as_square'
+  | 'fa_square_sign'
+  | 'fa_cube_middle_sign'
+  | 'fa_cube_middle_doubled'
+  | 'fa_cube_last_negative'
+  | 'fa_cube_binomial_cubed'
+  | 'fa_cube_root_coefficient'
+  | 'fa_tri_signs_swapped'
+  | 'fa_tri_wrong_pair'
+  | 'fa_group_sign'
+  | 'fa_stopped_early'
   // operations with functions (content/modules/functionOps; precalculus Unit 1). One id per slip the
   // module computes for the problem in front of her. A candidate equal to the right answer is never used.
   | 'op_wrong_function'

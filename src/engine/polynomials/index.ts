@@ -85,3 +85,6 @@ export {
   zeroMistakes,
 } from './zeros'
 export { gradeRationalZeros, gradeRootCandidates, rationalRootCandidates, rootCandidateMistakes } from './roots'
+// Factoring over the integers (factoring review): the complete factorization and her product compared with it.
+export { checkFactored, expandedPretty, factorOverIntegers, hasCommonFactor, isIntegerPoly, primitivePart, productText, readProduct, sameFactorization } from './factor'
+export type { FactoredCheck, IntFactor, IntFactorization, ProductLeaf, ProductReading } from './factor'

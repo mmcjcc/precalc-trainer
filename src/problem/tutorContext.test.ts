@@ -4,6 +4,7 @@ import type { OpsMistakeId } from '@/content/modules/functionOps/ops'
 import { gradeLightAnswer } from '@/content/modules/electrons/grade'
 import { SD_KEYS, gradeDivisionStage } from '@/content/modules/polyDivision'
 import { canonicalEntries, gradeZerosStage } from '@/content/modules/polyZeros'
+import { canonicalEntries as faEntries, gradeFactoringStage } from '@/content/modules/factoring'
 import { canonicalEntries as rfEntries, gradeRfStage, RF_KEYS, rfWork } from '@/content/modules/rationalFns'
 import { canonicalEntries as scEntries, gradeScStage, SC_KEYS, scWork } from '@/content/modules/signCharts'
 import { canonicalEntries as cxEntries, gradeCxStage, CX_KEYS, cxWork } from '@/content/modules/complexNums'
@@ -56,6 +57,7 @@ import {
   verdictFromTrigPart,
   verdictFromTrigStep,
   verdictFromOptPart,
+  verdictFromFactoring,
 } from '@/problem/tutorContext'
 import { gradeOptPart, optEntries, stagesFor } from '@/content/modules/optimization'
 import { ERROR_PATTERNS } from '@/engine'
@@ -652,6 +654,37 @@ describe('buildTutorContext', () => {
     expect(ratCtx.canonical).toEqual(r.reveal)
     expect(ratCtx.verdict?.status).toBe('wrong')
     expect(verdictFromPoly(gradeZerosStage(r, 'candidates', {}).parts.map((p) => p.grade))?.status).toBe('parse_error')
+  })
+
+  it('describes a factoring problem from her boxes, with the named fa_ slip', { timeout: 120_000 }, () => {
+    const instance = generateProblem('factoring', 'fa.cubes', 3)
+    if (instance.answer.type !== 'factoring') throw new Error('expected a factoring problem')
+    const a = instance.answer
+    const right = faEntries(a)
+    const slip = a.slips.find((s) => s.id === 'fa_cube_middle_sign')!
+    const entries = { ...right, ...slip.entries }
+    const grades = gradeFactoringStage(a, 'product', entries).parts.map((p) => p.grade)
+    const ctx = buildTutorContext(instance, attempt('fa-1', { moduleId: 'factoring', final: { polyEntries: entries, polyStage: 1 } }), verdictFromFactoring(grades), false)
+    expect(ctx.kind).toBe('factoring')
+    expect(ctx.moduleId).toBe('factoring')
+    expect(ctx.subject).toBe('precalculus')
+    expect(ctx.statement).toBe(`${a.f}. ${a.prompt}`)
+    expect(ctx.work).toEqual([`first term cubed: ${a.cubed!.first}`, `second term cubed: ${a.cubed!.second}`, `factored form: ${slip.entries.product}`])
+    expect(ctx.canonical).toEqual(a.reveal)
+    expect(ctx.answer).toBe(a.expectedDisplay)
+    expect(ctx.verdict?.status).toBe('wrong')
+    expect(ctx.verdict?.mistake?.id).toBe('fa_cube_middle_sign')
+    expect(ctx.verdict?.mistake?.title).toBe(ERROR_PATTERNS.fa_cube_middle_sign.title)
+    expect(ctx.verdict?.mistake?.witness).toContain('OPPOSITE')
+
+    // An unreadable product is a parse error, not a wrong answer; the right one is correct.
+    const blocked = verdictFromFactoring(gradeFactoringStage(a, 'product', { ...right, product: '(x +' }).parts.map((p) => p.grade))
+    expect(blocked?.status).toBe('parse_error')
+    expect(blocked?.mistake).toBeUndefined()
+    const done = buildTutorContext(instance, attempt('fa-2', { moduleId: 'factoring', final: { polyEntries: right, polyStage: 1 } }), verdictFromFactoring(gradeFactoringStage(a, 'product', right).parts.map((p) => p.grade)), true)
+    expect(done.verdict?.status).toBe('correct')
+    expect(done.finished).toBe(true)
+    expect(buildTutorContext(instance, attempt('fa-3', { moduleId: 'factoring' }), null, false).work).toEqual([])
   })
 
   it('describes an operations-with-functions answer, her box, and the named mistake', () => {

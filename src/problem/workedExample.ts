@@ -60,6 +60,12 @@ export const COVERED_PARTS_TEMPLATES = [
   'pz.end',
   'pz.build',
   'pz.rational',
+  'fa.gcf',
+  'fa.squares',
+  'fa.cubes',
+  'fa.trinomial',
+  'fa.grouping',
+  'fa.complete',
   'rf.features',
   'rf.asymptote',
   'rf.equation',
@@ -827,6 +833,35 @@ function buildPartsForAnswer(sibling: ProblemInstance, ans: AnswerSpec, cards: r
               label = 'Actual rational zeros'
               answer = entries[PZ_KEYS.rational] ?? ans.rationalZerosText ?? ''
               break
+          }
+          return {
+            id: stage.id,
+            label,
+            answer,
+            why: stage.nudge,
+            ...(rule ? { ruleTitle: rule.title, ruleBody: rule.body } : {}),
+            details: stage.reveal,
+          }
+        }),
+      }
+    }
+
+    case 'factoring': {
+      const show = (t: string) => t.replace(/-/g, '−')
+      return {
+        kind: 'parts',
+        sibling,
+        prompt: `${show(ans.f)}: ${ans.prompt}`,
+        parts: ans.stages.map((stage) => {
+          const rule = findRule(cards, stage.ruleCard)
+          let label = 'Factored form'
+          let answer = ans.prime ? `${show(ans.f)} does not factor over the integers` : `${show(ans.f)} = ${show(ans.answerText)}`
+          if (stage.id === 'cubed' && ans.cubed) {
+            label = 'What is cubed in each term'
+            answer = `${ans.cubed.first} and ${ans.cubed.second}`
+          } else if (stage.id === 'pairs' && ans.pairs) {
+            label = 'Each pair factored'
+            answer = `${show(ans.pairs.first)} = ${show(ans.pairs.firstAnswer)}; ${show(ans.pairs.second)} = ${show(ans.pairs.secondAnswer)}`
           }
           return {
             id: stage.id,

@@ -69,7 +69,7 @@ export const COURSES: readonly CourseDef[] = [
         id: 'unit2',
         label: 'Unit 2',
         title: 'Polynomial and rational functions',
-        moduleIds: ['quadratics', 'optimization', 'polyDivision', 'polyZeros', 'rationalFns', 'signCharts', 'complexNums'],
+        moduleIds: ['factoring', 'quadratics', 'optimization', 'polyDivision', 'polyZeros', 'rationalFns', 'signCharts', 'complexNums'],
       },
       {
         id: 'unit3',

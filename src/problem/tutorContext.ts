@@ -6,6 +6,7 @@ import type { PwGrade } from '@/content/modules/piecewiseRate/grade'
 import { FN_PATTERN } from '@/content/modules/domainRange/patterns'
 import { divisionWork } from '@/content/modules/polyDivision/grade'
 import { zerosWork } from '@/content/modules/polyZeros/grade'
+import { faWork, type FaGrade } from '@/content/modules/factoring/grade'
 import type { RfGrade } from '@/content/modules/rationalFns/grade'
 import { rfWork } from '@/content/modules/rationalFns/build'
 import type { ScGrade } from '@/content/modules/signCharts/grade'
@@ -171,6 +172,30 @@ export function verdictFromPoly(grades: readonly (PolyGrade | SquareLineGrade)[]
   if (wrong && wrong.verdict === 'wrong') return withMessage('wrong', wrong.message, line)
   const message = grades.map((g) => (g.verdict === 'correct' ? g.message : '')).filter(Boolean).join(' ')
   return withMessage('correct', message, line)
+}
+
+/**
+ * Factoring grades (precalculus Unit 2): the boxes of one check together. A box that is not an attempt makes the
+ * whole check a parse error; a named fa_ slip carries the catalog lesson plus the sentence about her product.
+ */
+export function verdictFromFactoring(grades: readonly FaGrade[]): TutorVerdict | null {
+  if (grades.length === 0) return null
+  const invalid = grades.find((g) => g.verdict === 'invalid')
+  if (invalid && invalid.verdict === 'invalid') return withMessage('parse_error', invalid.message)
+  const mistake = grades.find((g) => g.verdict === 'mistake')
+  if (mistake && mistake.verdict === 'mistake') {
+    const info = ERROR_PATTERNS[mistake.mistake]
+    return withMessage('wrong', mistake.witness, undefined, {
+      id: mistake.mistake,
+      title: clip(info.title, 200),
+      lesson: clip(info.lesson, TUTOR_LIMITS.field),
+      witness: clip(mistake.witness, TUTOR_LIMITS.field),
+    })
+  }
+  const wrong = grades.find((g) => g.verdict === 'wrong')
+  if (wrong && wrong.verdict === 'wrong') return withMessage('wrong', wrong.message)
+  const message = grades.map((g) => (g.verdict === 'correct' ? g.message : '')).filter(Boolean).join(' ')
+  return withMessage('correct', message)
 }
 
 /** Spectrum order, or any light grade already shaped like a sig-fig grade. Incomplete taps are not a verdict. */
@@ -520,6 +545,12 @@ function workOf(instance: ProblemInstance, attempt: Attempt | null): string[] {
       .slice(0, TUTOR_LIMITS.lines)
       .map((line) => clip(line, TUTOR_LIMITS.line))
   }
+  // Factoring: her boxes in reading order (what is cubed or the pairs, then the factored form).
+  if (instance.answer.type === 'factoring') {
+    return faWork(instance.answer, attempt.final?.polyEntries)
+      .slice(0, TUTOR_LIMITS.lines)
+      .map((line) => clip(line, TUTOR_LIMITS.line))
+  }
   if (instance.answer.type === 'rationalFns') {
     return rfWork(instance.answer, attempt.final?.polyEntries)
       .slice(0, TUTOR_LIMITS.lines)
@@ -721,6 +752,8 @@ function statementOf(instance: ProblemInstance): string {
   } else if (answer.type === 'polyZeros') {
     // pz.build gives zeros and a point, not f: there f is the answer, and the statement text is the question.
     text = answer.form === 'hidden' ? `${instance.statementText} ${answer.prompt}` : `f(x) = ${answer.f}. ${answer.prompt}`
+  } else if (answer.type === 'factoring') {
+    text = `${answer.f}. ${answer.prompt}`
   } else if (answer.type === 'rationalFns') {
     text = answer.question === 'equation' ? `${answer.equation}. ${answer.prompt}` : `f(x) = ${answer.f}. ${answer.prompt}`
   } else if (answer.type === 'signCharts') {
@@ -788,6 +821,7 @@ function canonicalOf(instance: ProblemInstance): string[] {
     answer.type === 'quadratics' ||
     answer.type === 'polyDivision' ||
     answer.type === 'polyZeros' ||
+    answer.type === 'factoring' ||
     answer.type === 'rationalFns' ||
     answer.type === 'signCharts' ||
     answer.type === 'complexNums' ||
@@ -834,6 +868,7 @@ function answerOf(instance: ProblemInstance): string | undefined {
     case 'quadratics':
     case 'polyDivision':
     case 'polyZeros':
+    case 'factoring':
     case 'rationalFns':
     case 'signCharts':
     case 'complexNums':
