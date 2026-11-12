@@ -9,8 +9,9 @@
  *   [mock-hang]     never answers, until the request times out or is closed
  *   [mock-long]     a reply long enough to test scrolling
  */
+import type { TutorTokenUsage } from '../../../src/shared/tutor.ts'
 import type { ProviderRequest } from '../prompt.ts'
-import { ProviderError, type ProviderResult, type TutorProvider } from './types.ts'
+import { ProviderError, type CardsReply, type ProviderResult, type TutorProvider } from './types.ts'
 
 function sleep(ms: number, signal: AbortSignal): Promise<void> {
   return new Promise((resolve, reject) => {
@@ -66,6 +67,11 @@ export function mockReply(req: ProviderRequest): string {
   return parts.join(' ')
 }
 
+/** Not a bill: about four characters to a token, so the screens and the log have numbers to show. */
+function roughTokens(sentChars: number, replyChars: number): TutorTokenUsage {
+  return { input: Math.ceil(sentChars / 4), output: Math.ceil(replyChars / 4) }
+}
+
 export function createMockProvider(opts: { delayMs: number }): TutorProvider {
   return {
     name: 'mock',
@@ -92,16 +98,18 @@ export function createMockProvider(opts: { delayMs: number }): TutorProvider {
         await sleep(opts.delayMs, signal)
         onText(w)
       }
-      return { truncated: false }
+      const sent = req.system.length + req.turns.reduce((n, t) => n + t.text.length, 0)
+      return { truncated: false, usage: roughTokens(sent, reply.length) }
     },
     // The mock cannot see: every photo is the same three cards, marked as the mock's like its answers.
-    async cardsFromImage(_image, signal): Promise<string> {
+    async cardsFromImage(image, signal): Promise<CardsReply> {
       await sleep(opts.delayMs, signal)
-      return JSON.stringify([
+      const text = JSON.stringify([
         { term: '(Mock) Photon', definition: 'A particle of light that carries one quantum of energy.' },
         { term: '(Mock) Orbital', definition: 'A region around the nucleus where an electron is likely to be found.' },
         { term: '(Mock) Ground state', definition: 'The lowest-energy arrangement of the electrons in an atom.' },
       ])
+      return { text, usage: roughTokens(image.data.length, text.length) }
     },
   }
 }

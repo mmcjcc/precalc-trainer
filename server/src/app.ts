@@ -22,6 +22,7 @@ import {
   type TutorLogResponse,
   type TutorStatus,
   type TutorStreamEvent,
+  type TutorTokenUsage,
 } from '../../src/shared/tutor.ts'
 import { identify } from './auth.ts'
 import { CARDS_LOG, cardsSummary, parseCards } from './cards.ts'
@@ -64,6 +65,12 @@ export const CARDS_BLOCKED = "I can't make cards from that photo. Try a photo of
 /** 400 when she asks for the full solution before two earlier questions in that conversation. */
 export const FULL_SOLUTION_TOO_SOON =
   'Ask two questions about this problem first. Then you can ask for the full solution.'
+
+/** The token counts for the console line: numbers only, like everything else that is logged there. */
+function tokensNote(usage: TutorTokenUsage | undefined): string {
+  if (!usage) return ''
+  return ` in=${usage.input} out=${usage.output}${usage.thinking ? ` thinking=${usage.thinking}` : ''}${usage.cached ? ` cached=${usage.cached}` : ''}`
+}
 
 function isFreeform(context: TutorAskRequest['context']): context is TutorFreeformContext {
   return 'mode' in context && context.mode === 'freeform'
@@ -194,8 +201,8 @@ export function createHandler(deps: AppDeps): Handler {
         controller.signal,
       )
       const remaining = deps.limiter.commit(user, true)
-      void deps.log.append(record({ answer, status: 'ok', counted: true, ...(result.truncated ? { truncated: true } : {}) }))
-      logger(`tutor: ask ok ms=${Date.now() - started} chars=${answer.length}${result.truncated ? ' truncated' : ''}`)
+      void deps.log.append(record({ answer, status: 'ok', counted: true, ...(result.truncated ? { truncated: true } : {}), ...(result.usage ? { usage: result.usage } : {}) }))
+      logger(`tutor: ask ok ms=${Date.now() - started} chars=${answer.length}${tokensNote(result.usage)}${result.truncated ? ' truncated' : ''}`)
       send({ type: 'done', id, remaining, limit: deps.limiter.limit, ...(result.truncated ? { truncated: true } : {}) })
     } catch (err) {
       const pe = err instanceof ProviderError ? err : new ProviderError('unavailable', 'internal')
@@ -278,10 +285,11 @@ export function createHandler(deps: AppDeps): Handler {
     }
     res.on('close', onClose)
     try {
-      const made = parseCards(await read(image, controller.signal))
+      const reply = await read(image, controller.signal)
+      const made = parseCards(reply.text)
       const remaining = deps.limiter.commit(user, true)
-      void deps.log.append(record({ answer: cardsSummary(made), status: 'ok', counted: true }))
-      logger(`tutor: cards ok ms=${Date.now() - started} cards=${made.length}`)
+      void deps.log.append(record({ answer: cardsSummary(made), status: 'ok', counted: true, ...(reply.usage ? { usage: reply.usage } : {}) }))
+      logger(`tutor: cards ok ms=${Date.now() - started} cards=${made.length}${tokensNote(reply.usage)}`)
       const out: TutorCardsResponse = { cards: made, remaining, limit: deps.limiter.limit }
       sendJson(res, 200, out)
     } catch (err) {
@@ -393,7 +401,7 @@ export function createHandler(deps: AppDeps): Handler {
         if (!caller.isParent) return sendError(res, 403, 'only a parent account may read the log', 'not_parent')
         const n = Number(url.searchParams.get('limit') ?? 100)
         const limit = Number.isInteger(n) && n > 0 ? Math.min(n, 500) : 100
-        const out: TutorLogResponse = { items: deps.log.recent(limit), logging: deps.log.logging }
+        const out: TutorLogResponse = { items: deps.log.recent(limit), logging: deps.log.logging, days: deps.log.usageByDay() }
         return sendJson(res, 200, out)
       }
       case 'flag':

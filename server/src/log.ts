@@ -15,6 +15,8 @@ import type {
   TutorFlagReason,
   TutorLogItem,
   TutorProviderName,
+  TutorTokenUsage,
+  TutorUsageDay,
 } from '../../src/shared/tutor.ts'
 
 export interface AskRecord {
@@ -53,6 +55,8 @@ export interface AskRecord {
   truncated?: boolean
   /** Short code for a failure ("rate_limited", "http_503", "network"...). Never an error body. */
   error?: string
+  /** The provider's token count for this answer, when it gave one. Absent on lines from before it was kept. */
+  usage?: TutorTokenUsage
 }
 
 export interface FlagRecord {
@@ -145,6 +149,9 @@ export class TutorLog {
       } catch {
         continue // last month may not exist
       }
+      // A copy cut off mid-write (a power failure, a failover) ends in half a line. End that line now,
+      // or the next record appended would be glued to it and lost with it.
+      if (day === today && text.length > 0 && !text.endsWith('\n')) await appendFile(join(this.dir, monthFile(day)), '\n', { mode: 0o640 })
       for (const line of text.split('\n')) {
         if (!line.trim()) continue
         let parsed: unknown
@@ -268,10 +275,29 @@ export class TutorLog {
         ...(a.problemText ? { problemText: a.problemText } : {}),
         ...(a.className ? { className: a.className } : {}),
         ...(a.fullSolution ? { fullSolution: true } : {}),
+        ...(a.usage ? { usage: a.usage } : {}),
         flags: this.flags.get(a.id) ?? [],
       })
     }
     return out
+  }
+
+  /**
+   * Tokens by day and model over every answer the log holds that has a count, newest day first.
+   * This is what the provider bills by, so it is the number to watch before the tutor serves more people.
+   */
+  usageByDay(): TutorUsageDay[] {
+    const rows = new Map<string, TutorUsageDay>()
+    for (const a of this.asks) {
+      if (!a.usage) continue
+      const key = `${a.day} | ${a.model}`
+      const row = rows.get(key) ?? { day: a.day, model: a.model, answers: 0, input: 0, output: 0 }
+      row.answers += 1
+      row.input += a.usage.input
+      row.output += a.usage.output
+      rows.set(key, row)
+    }
+    return [...rows.values()].sort((x, y) => (x.day < y.day ? 1 : x.day > y.day ? -1 : x.model.localeCompare(y.model)))
   }
 
   /** Resolves when every queued write has finished (tests, shutdown). */

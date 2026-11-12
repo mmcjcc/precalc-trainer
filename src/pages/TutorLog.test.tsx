@@ -129,6 +129,55 @@ describe('Tutor log', () => {
     expect(screen.getByText(/Subtract 3, then divide by 2/)).toBeTruthy()
   })
 
+  it('shows what the provider counted: on each answer, and in a table by day and model', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: RequestInfo | URL) => {
+        const url = String(input)
+        if (url.includes('/api/tutor/status')) return json(status({ isParent: true }))
+        if (url.includes('/api/tutor/log')) {
+          return json({
+            logging: 'file',
+            items: [
+              item({ id: 'counted', model: 'gemini-3.8-flash', usage: { input: 2431, output: 356, thinking: 240 } }),
+              item({ id: 'before', at: '2026-09-20T12:00:00.000Z', question: 'An answer from before counts were kept' }),
+            ],
+            days: [
+              { day: '2026-09-21', model: 'gemini-3.8-flash', answers: 12, input: 31200, output: 4100 },
+              { day: '2026-09-20', model: 'gemini-3.8-flash', answers: 3, input: 7000, output: 900 },
+            ],
+          })
+        }
+        return json({ error: 'nope' }, 404)
+      }),
+    )
+    render(
+      <MemoryRouter>
+        <TutorLogPage />
+      </MemoryRouter>,
+    )
+    expect(await screen.findByRole('heading', { name: 'Tokens by day' })).toBeTruthy()
+    const rows = screen.getAllByRole('row').map((row) => row.textContent)
+    expect(rows).toEqual(['DayModelAnswersInputOutput', '2026-09-21gemini-3.8-flash1231,2004,100', '2026-09-20gemini-3.8-flash37,000900'])
+    const cards = screen.getAllByRole('article')
+    expect(cards[0]?.querySelector('[data-tokens]')?.textContent).toBe('2,431 tokens in · 356 out (240 of them thinking) · gemini-3.8-flash')
+    expect(cards[1]?.querySelector('[data-tokens]')).toBeNull()
+  })
+
+  it('an older tutor that sends no token table shows the log as before', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: RequestInfo | URL) => (String(input).includes('/api/tutor/status') ? json(status({ isParent: true })) : json({ logging: 'file', items: [item({})] }))),
+    )
+    render(
+      <MemoryRouter>
+        <TutorLogPage />
+      </MemoryRouter>,
+    )
+    expect(await screen.findByText('Why flip the sign?')).toBeTruthy()
+    expect(screen.queryByRole('heading', { name: 'Tokens by day' })).toBeNull()
+  })
+
   it('refuses anyone who is not a parent', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => json(status({ isParent: false }))))
     render(

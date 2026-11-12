@@ -35,7 +35,7 @@ function reader(reply: string | ((signal: AbortSignal) => Promise<string>)): Tut
     photos,
     async cardsFromImage(image, signal) {
       photos.push(image)
-      return typeof reply === 'string' ? reply : reply(signal)
+      return { text: typeof reply === 'string' ? reply : await reply(signal) }
     },
   }
 }

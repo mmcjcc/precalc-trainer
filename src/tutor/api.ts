@@ -13,6 +13,7 @@ import type {
   TutorLogResponse,
   TutorStatus,
   TutorStreamEvent,
+  TutorUsageDay,
 } from '@/shared/tutor'
 
 const OFFLINE = 'The tutor is offline right now.'
@@ -163,13 +164,17 @@ export async function flagTutorAnswer(body: TutorFlagRequest): Promise<{ ok: tru
   }
 }
 
-export async function fetchTutorLog(signal?: AbortSignal): Promise<{ ok: true; items: TutorLogItem[]; logging: TutorLogResponse['logging'] } | { ok: false }> {
+export async function fetchTutorLog(
+  signal?: AbortSignal,
+): Promise<{ ok: true; items: TutorLogItem[]; logging: TutorLogResponse['logging']; days: TutorUsageDay[] } | { ok: false }> {
   try {
     const res = await fetch('/api/tutor/log', { signal })
     if (!res.ok) return { ok: false }
     const data = (await res.json()) as TutorLogResponse
     const items = [...(data.items ?? [])].sort((a, b) => (a.at < b.at ? 1 : a.at > b.at ? -1 : 0))
-    return { ok: true, items, logging: data.logging === 'file' ? 'file' : 'memory' }
+    // An older tutor sends no token table.
+    const days = Array.isArray(data.days) ? data.days : []
+    return { ok: true, items, logging: data.logging === 'file' ? 'file' : 'memory', days }
   } catch (err) {
     if (isAbort(err, signal)) return { ok: false }
     return { ok: false }

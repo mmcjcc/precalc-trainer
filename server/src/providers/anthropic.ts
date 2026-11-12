@@ -12,7 +12,7 @@
  */
 import Anthropic from '@anthropic-ai/sdk'
 import type { ProviderRequest } from '../prompt.ts'
-import { ProviderError, statusCode, type ProviderResult, type TutorProvider } from './types.ts'
+import { ProviderError, statusCode, tokenUsage, type ProviderResult, type TutorProvider } from './types.ts'
 
 export const ANTHROPIC_MAX_TOKENS = 4096
 export const ANTHROPIC_FALLBACK_BETA = 'server-side-fallback-2026-07-01'
@@ -79,7 +79,13 @@ export function createAnthropicProvider(opts: AnthropicOptions): TutorProvider {
         if (message.stop_reason === 'refusal') throw new ProviderError('blocked', 'refusal')
         const text = message.content.some((b) => b.type === 'text' && b.text.length > 0)
         if (!text) throw new ProviderError('unavailable', 'empty')
-        return { truncated: message.stop_reason === 'max_tokens' }
+        // input_tokens leaves out what was read from or written to the cache: the prompt is all three.
+        // Thinking is inside output_tokens and is not reported apart.
+        // A reply without the block is an answer without a count, never a failed answer.
+        const u = message.usage as Partial<typeof message.usage> | undefined
+        const cached = u?.cache_read_input_tokens ?? 0
+        const usage = typeof u?.input_tokens === 'number' ? tokenUsage(u.input_tokens + cached + (u.cache_creation_input_tokens ?? 0), u.output_tokens, { cached }) : undefined
+        return { truncated: message.stop_reason === 'max_tokens', ...(usage ? { usage } : {}) }
       } catch (err) {
         throw failure(err, signal)
       }

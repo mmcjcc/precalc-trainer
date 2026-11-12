@@ -25,11 +25,11 @@ import {
   type GenerateContentResponse,
   type SafetySetting,
 } from '@google/genai'
-import type { TutorCardsRequest } from '../../../src/shared/tutor.ts'
+import type { TutorCardsRequest, TutorTokenUsage } from '../../../src/shared/tutor.ts'
 import { CARDS_PROMPT, CARDS_SYSTEM } from '../cards.ts'
 import type { GeminiThinking } from '../config.ts'
 import type { ProviderRequest } from '../prompt.ts'
-import { ProviderError, statusCode, type ProviderResult, type TutorProvider } from './types.ts'
+import { ProviderError, statusCode, tokenUsage, type CardsReply, type ProviderResult, type TutorProvider } from './types.ts'
 
 /** Answers are a few sentences; the cap also bounds the model's thinking on a hard question. */
 export const GEMINI_MAX_OUTPUT_TOKENS = 2048
@@ -109,6 +109,18 @@ export function geminiCardsParams(model: string, thinking: GeminiThinking, image
   return { model, contents, config }
 }
 
+/**
+ * Gemini's count for a call. It counts the answer and the thinking apart and bills both as output,
+ * so they are added here; tokens it served from its cache are part of the prompt count.
+ */
+export function usageOf(m: GenerateContentResponse['usageMetadata']): TutorTokenUsage | undefined {
+  if (!m) return undefined
+  return tokenUsage(m.promptTokenCount, (m.candidatesTokenCount ?? 0) + (m.thoughtsTokenCount ?? 0), {
+    thinking: m.thoughtsTokenCount,
+    cached: m.cachedContentTokenCount,
+  })
+}
+
 /** Answer text of one chunk: text parts only, never thought parts. */
 function chunkText(chunk: GenerateContentResponse): string {
   const parts = chunk.candidates?.[0]?.content?.parts ?? []
@@ -143,9 +155,12 @@ export function createGeminiProvider(opts: GeminiOptions): TutorProvider {
     async stream(req, onText, signal): Promise<ProviderResult> {
       let truncated = false
       let any = false
+      let counted: GenerateContentResponse['usageMetadata']
       try {
         const stream = await ai().models.generateContentStream(geminiParams(opts.model, opts.thinking, req, signal, opts.timeoutMs))
         for await (const chunk of stream) {
+          // The running totals ride on the chunks; the last one that has them is the bill.
+          if (chunk.usageMetadata) counted = chunk.usageMetadata
           if (chunk.promptFeedback?.blockReason) throw new ProviderError('blocked', 'prompt_blocked')
           const text = chunkText(chunk)
           if (text) {
@@ -160,9 +175,10 @@ export function createGeminiProvider(opts: GeminiOptions): TutorProvider {
         throw failure(err, signal)
       }
       if (!any) throw new ProviderError('unavailable', 'empty')
-      return { truncated }
+      const usage = usageOf(counted)
+      return { truncated, ...(usage ? { usage } : {}) }
     },
-    async cardsFromImage(image, signal): Promise<string> {
+    async cardsFromImage(image, signal): Promise<CardsReply> {
       try {
         const res = await ai().models.generateContent(geminiCardsParams(opts.model, opts.thinking, image, signal, opts.timeoutMs))
         if (res.promptFeedback?.blockReason) throw new ProviderError('blocked', 'prompt_blocked')
@@ -170,7 +186,8 @@ export function createGeminiProvider(opts: GeminiOptions): TutorProvider {
         if (finish && BLOCKED_FINISH.has(finish)) throw new ProviderError('blocked', `finish_${finish.toLowerCase()}`)
         const text = chunkText(res)
         if (!text) throw new ProviderError('unavailable', 'empty')
-        return text
+        const usage = usageOf(res.usageMetadata)
+        return { text, ...(usage ? { usage } : {}) }
       } catch (err) {
         throw failure(err, signal)
       }

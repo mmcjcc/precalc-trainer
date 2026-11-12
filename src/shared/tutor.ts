@@ -249,6 +249,32 @@ export interface TutorFlag {
 
 export type TutorAnswerStatus = 'ok' | 'blocked' | 'error' | 'timeout' | 'aborted'
 
+/**
+ * What the provider counted for one answer, in its own tokens: the unit it bills in. Absent on answers
+ * from before this was recorded, on answers that failed before the provider reported, and from a
+ * provider that reports none. The mock's numbers are a rough count of characters, never a bill.
+ */
+export interface TutorTokenUsage {
+  /** Everything sent: the tutor's instructions, the problem, her question, earlier turns, a photo. */
+  input: number
+  /** Everything generated: the answer she sees plus the model's thinking, which is billed as output. */
+  output: number
+  /** The part of `output` that was thinking, when the provider says. */
+  thinking?: number
+  /** The part of `input` the provider served from its cache (billed at a lower rate), when it says. */
+  cached?: number
+}
+
+/** One day's tokens for one model (local day, as the daily limit counts days). */
+export interface TutorUsageDay {
+  day: string
+  model: string
+  /** Answers that day with a token count; ones without are in neither number. */
+  answers: number
+  input: number
+  output: number
+}
+
 export interface TutorLogItem {
   /** Log id (the `done` event's id). */
   id: string
@@ -282,6 +308,8 @@ export interface TutorLogItem {
   className?: string
   /** She asked for the complete worked solution. */
   fullSolution?: boolean
+  /** Tokens the provider counted for this answer (see TutorTokenUsage for when it is absent). */
+  usage?: TutorTokenUsage
   flags: TutorFlag[]
 }
 
@@ -289,6 +317,8 @@ export interface TutorLogResponse {
   /** Newest first. */
   items: TutorLogItem[]
   logging: 'file' | 'memory'
+  /** Tokens by day and model over everything the log holds (this month and last), newest day first. Absent on an older server. */
+  days?: TutorUsageDay[]
 }
 
 export interface TutorFlagRequest {

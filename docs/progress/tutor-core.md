@@ -58,6 +58,14 @@ are JSON, not events: 429 `limit` / `busy`, 422 `blocked`, 502 `unavailable`, 50
 503 `not_configured`, 501 `unsupported` (a provider with no `cardsFromImage`; `status.photoCards` is false
 then and the app does not offer the button). The `error` of those is a sentence to show her as-is.
 
+**Token counts.** Every answer and every photo keeps what the provider counted for it (`TutorTokenUsage`:
+`input`, `output`, and `thinking` / `cached` where the provider says), in the log record, on the parent's log
+(`TutorLogItem.usage`) and summed by day and model (`TutorLogResponse.days`, shown as a table on the Tutor log
+page). The console line carries the numbers too: `tutor: ask ok ms=… chars=… in=… out=…`. Gemini's count adds
+its thinking tokens to the answer's, because both are billed as output; Claude's prompt count adds what was read
+from and written to the cache. An answer that failed, or a line from before 2026-11-11, has no count and is in
+neither sum. These are the numbers to price the tutor from; nothing in the app turns them into money.
+
 Non-stream failures are JSON `TutorErrorBody` `{ error, code }`:
 
 | Status | code | When | UI |

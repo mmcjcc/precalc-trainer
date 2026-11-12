@@ -1,4 +1,4 @@
-import type { TutorCardsRequest, TutorProviderName } from '../../../src/shared/tutor.ts'
+import type { TutorCardsRequest, TutorProviderName, TutorTokenUsage } from '../../../src/shared/tutor.ts'
 import type { ProviderRequest } from '../prompt.ts'
 
 /**
@@ -23,6 +23,25 @@ export class ProviderError extends Error {
 export interface ProviderResult {
   /** The answer hit the output cap. */
   truncated: boolean
+  /** The provider's own token count for the call, when it gave one. */
+  usage?: TutorTokenUsage
+}
+
+/** A photo read into cards: the model's reply, and what the call cost in tokens. */
+export interface CardsReply {
+  text: string
+  usage?: TutorTokenUsage
+}
+
+/** Whole, non-negative token counts only: anything else from a provider is no count. */
+export function tokenUsage(input: unknown, output: unknown, extra: { thinking?: unknown; cached?: unknown } = {}): TutorTokenUsage | undefined {
+  const count = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) && v >= 0 ? Math.round(v) : undefined)
+  const i = count(input)
+  const o = count(output)
+  if (i === undefined || o === undefined) return undefined
+  const thinking = count(extra.thinking)
+  const cached = count(extra.cached)
+  return { input: i, output: o, ...(thinking ? { thinking } : {}), ...(cached ? { cached } : {}) }
 }
 
 export interface TutorProvider {
@@ -40,7 +59,7 @@ export interface TutorProvider {
    * (cards.ts parses it and trusts none of it). Absent on a provider that cannot read a photo.
    * Rejects with a ProviderError like `stream`.
    */
-  cardsFromImage?(image: TutorCardsRequest['image'], signal: AbortSignal): Promise<string>
+  cardsFromImage?(image: TutorCardsRequest['image'], signal: AbortSignal): Promise<CardsReply>
   /** Free start-up check that the key and the model id work (no tokens spent). Throws a ProviderError. */
   check(): Promise<void>
 }

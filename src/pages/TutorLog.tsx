@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import type { TutorLogItem } from '@/shared/tutor'
+import type { TutorLogItem, TutorUsageDay } from '@/shared/tutor'
 import { fetchTutorLog } from '@/tutor/api'
 import { useTutorStatus } from '@/tutor/useTutorStatus'
 
@@ -10,6 +10,66 @@ function formatWhen(iso: string): string {
   const date = new Date(iso)
   if (Number.isNaN(date.getTime())) return iso
   return date.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })
+}
+
+function count(n: number): string {
+  return n.toLocaleString('en-US')
+}
+
+/** Most days shown in the token table; the log itself holds this month and last. */
+const DAYS_SHOWN = 14
+
+/**
+ * What the AI provider counted, by day and model: the number its bill is made of. Shown to the parent
+ * so the cost of the tutor is known from real use before it is offered more widely.
+ */
+function TokenDays({ days }: { days: readonly TutorUsageDay[] }) {
+  if (days.length === 0) return null
+  const shown = days.slice(0, DAYS_SHOWN)
+  return (
+    <section aria-labelledby="tokens-heading" className="space-y-2 rounded-2xl border border-navy-100 bg-white p-4">
+      <h2 id="tokens-heading" className="font-semibold text-navy">
+        Tokens by day
+      </h2>
+      <p className="text-sm text-navy/70">
+        What the AI provider counted, which is what it bills by. Input is everything sent to it; output is everything it wrote, its thinking included.
+      </p>
+      <div className="overflow-x-auto">
+        <table className="w-full text-left text-sm text-navy">
+          <thead>
+            <tr className="border-b border-navy-100">
+              <th scope="col" className="py-1 pr-3 font-semibold">
+                Day
+              </th>
+              <th scope="col" className="py-1 pr-3 font-semibold">
+                Model
+              </th>
+              <th scope="col" className="py-1 pr-3 text-right font-semibold">
+                Answers
+              </th>
+              <th scope="col" className="py-1 pr-3 text-right font-semibold">
+                Input
+              </th>
+              <th scope="col" className="py-1 text-right font-semibold">
+                Output
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {shown.map((d) => (
+              <tr key={`${d.day} ${d.model}`} className="border-b border-navy-100 last:border-0">
+                <td className="py-1 pr-3 font-mono">{d.day}</td>
+                <td className="py-1 pr-3">{d.model}</td>
+                <td className="py-1 pr-3 text-right">{count(d.answers)}</td>
+                <td className="py-1 pr-3 text-right">{count(d.input)}</td>
+                <td className="py-1 text-right">{count(d.output)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  )
 }
 
 function LogCard({ item }: { item: TutorLogItem }) {
@@ -41,6 +101,12 @@ function LogCard({ item }: { item: TutorLogItem }) {
         <span className="font-semibold">Answer: </span>
         {item.answer || '—'}
       </p>
+      {item.usage && (
+        <p className="text-xs text-navy/60" data-tokens="">
+          {count(item.usage.input)} tokens in · {count(item.usage.output)} out
+          {item.usage.thinking ? ` (${count(item.usage.thinking)} of them thinking)` : ''} · {item.model}
+        </p>
+      )}
       {item.flags.length > 0 && (
         <ul className="space-y-1 text-sm text-navy">
           {item.flags.map((flag, index) => (
@@ -61,6 +127,7 @@ export function TutorLogPage() {
   const status = tutor.status
   const [phase, setPhase] = useState<'wait' | 'ready' | 'empty' | 'down'>('wait')
   const [items, setItems] = useState<TutorLogItem[]>([])
+  const [days, setDays] = useState<TutorUsageDay[]>([])
   const [memory, setMemory] = useState(false)
 
   useEffect(() => {
@@ -74,6 +141,7 @@ export function TutorLogPage() {
         return
       }
       setItems(result.items)
+      setDays(result.days)
       setMemory(result.logging === 'memory')
       setPhase(result.items.length === 0 ? 'empty' : 'ready')
     })
@@ -116,6 +184,7 @@ export function TutorLogPage() {
       )}
       {phase === 'down' && <p className="text-navy">The tutor log isn't available right now.</p>}
       {phase === 'empty' && <p className="text-navy">No tutor questions yet.</p>}
+      {(phase === 'ready' || phase === 'empty') && <TokenDays days={days} />}
       {phase === 'ready' && (
         <div className="space-y-3">
           {items.map((item) => (
