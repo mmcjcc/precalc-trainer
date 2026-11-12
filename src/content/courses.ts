@@ -144,6 +144,12 @@ export const COURSES: readonly CourseDef[] = [
         title: 'Covalent bonding',
         moduleIds: ['covalentBonding'],
       },
+      {
+        id: 'ch10',
+        label: 'Chapter 10',
+        title: 'The mole',
+        moduleIds: ['moles', 'chemFormulas'],
+      },
     ],
   },
   {

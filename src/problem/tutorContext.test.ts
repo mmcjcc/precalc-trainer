@@ -23,6 +23,7 @@ import { gradeTiPart } from '@/content/modules/trigIdentities'
 import { verifyTrigStep } from '@/engine/trig'
 import { trigEntries } from '@/content/modules/trig/parts'
 import { gradeNmStage, NM_KEYS, nmWork } from '@/content/modules/nomenclature'
+import { gradeMoStage, MO_KEYS, moWork, splitNumeral } from '@/content/modules/moles'
 import { reasonLabel } from '@/content/modules/geometry/reasons'
 import { checkSquareLine, configurationMistakes, gradeAxisOfSymmetry, gradeConfiguration, gradeLogEquation, gradeLogValue, gradeVertex, squareMistakes, syntheticMistakes, vertexMistakes } from '@/engine'
 import { ratToString } from '@/notation'
@@ -1552,5 +1553,52 @@ describe('buildTutorContext', () => {
     expect(keys).not.toContain('name')
     expect(keys).not.toContain('user')
     expect(keys).not.toContain('student')
+  })
+})
+
+describe('chapter 10: the mole and formulas', () => {
+  it('describes a mole problem, her parts with their units, and the named mo_ slip', () => {
+    const instance = generateProblem('moles', 'mo.mass', 1)
+    if (instance.answer.type !== 'mole') throw new Error('expected a mole problem')
+    const a = instance.answer
+    const entries: Record<string, string> = {}
+    for (const stage of a.stages) {
+      const key = MO_KEYS[stage.id]
+      const { coefficient, power } = splitNumeral(stage.answerText)
+      entries[key] = coefficient
+      if (power) entries[`${key}^`] = power
+    }
+    const ctx = buildTutorContext(instance, attempt('mo-1', { moduleId: 'moles', final: { polyEntries: entries } }), null, false)
+    expect(ctx.subject).toBe('chemistry')
+    expect(ctx.kind).toBe('mole')
+    expect(ctx.moduleId).toBe('moles')
+    expect(ctx.statement).toBe(a.prompt)
+    expect(ctx.work).toEqual(moWork(a, entries))
+    expect(ctx.work[0]).toBe(`${a.stages[0]!.label}: ${a.stages[0]!.answerText} ${a.stages[0]!.unit}`)
+    expect(ctx.answer).toBe(a.expectedDisplay)
+    expect(ctx.canonical[0]).toBe(a.reveal[0])
+    if (!a.trap || !a.trapStage || a.trapAnswer == null) throw new Error('seed 1 has no promised trap')
+    const trap = gradeMoStage(a, a.trapStage, a.trapAnswer)
+    expect(trap.verdict).toBe('mistake')
+    const trapStage = a.stages.find((s) => s.id === a.trapStage)!
+    const { coefficient, power } = splitNumeral(a.trapAnswer)
+    const bad = buildTutorContext(
+      instance,
+      attempt('mo-2', { moduleId: 'moles', final: { polyEntries: { [MO_KEYS[a.trapStage]]: coefficient, ...(power ? { [`${MO_KEYS[a.trapStage]}^`]: power } : {}) } } }),
+      { status: 'wrong', message: trap.message, mistake: { id: a.trap, title: ERROR_PATTERNS[a.trap].title, lesson: ERROR_PATTERNS[a.trap].lesson } },
+      false,
+    )
+    expect(bad.work).toEqual([`${trapStage.label}: ${a.trapAnswer} ${trapStage.unit}`])
+    expect(bad.verdict?.mistake?.id).toBe(a.trap)
+    // A formula part shows her counts as a formula; an empty attempt shows nothing.
+    const formula = generateProblem('chemFormulas', 'cf.empirical', 1)
+    if (formula.answer.type !== 'mole') throw new Error('expected a formula problem')
+    const counts = formula.answer.stages.find((s) => s.kind === 'counts')!
+    const countEntries = Object.fromEntries(counts.answerText.split(';').map((p) => p.split('=')).map(([s, n]) => [`${MO_KEYS[counts.id]}.${s}`, n!]))
+    const shown = buildTutorContext(formula, attempt('mo-3', { moduleId: 'chemFormulas', final: { polyEntries: countEntries } }), null, false)
+    expect(shown.work).toHaveLength(1)
+    expect(shown.work[0]!.startsWith(`${counts.label}: `)).toBe(true)
+    expect(shown.work[0]).not.toContain('=')
+    expect(buildTutorContext(instance, attempt('mo-4', { moduleId: 'moles' }), null, false).work).toEqual([])
   })
 })

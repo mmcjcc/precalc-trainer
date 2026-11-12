@@ -110,10 +110,12 @@ describe('chapter 7 registration', () => {
     const ids = MODULES.map((m) => m.id)
     expect(ids.indexOf('ionicNames')).toBe(ids.indexOf('periodic') + 1)
     expect(ids.indexOf('molecularAcids')).toBe(ids.indexOf('ionicNames') + 1)
-    // Chapters 8 and 9 (ionicBonding, covalentBonding) now sit between the nomenclature modules and geometry.
+    // Chapters 8, 9 and 10 (ionicBonding, covalentBonding, moles, chemFormulas) now sit between the nomenclature modules and geometry.
     expect(ids.indexOf('ionicBonding')).toBe(ids.indexOf('molecularAcids') + 1)
     expect(ids.indexOf('covalentBonding')).toBe(ids.indexOf('ionicBonding') + 1)
-    expect(ids.indexOf('geoSegments')).toBe(ids.indexOf('covalentBonding') + 1)
+    expect(ids.indexOf('moles')).toBe(ids.indexOf('covalentBonding') + 1)
+    expect(ids.indexOf('chemFormulas')).toBe(ids.indexOf('moles') + 1)
+    expect(ids.indexOf('geoSegments')).toBe(ids.indexOf('chemFormulas') + 1)
     expect(ionic.templates.map((t) => t.id)).toEqual(['nm.ion', 'nm.ionicFormula', 'nm.ionicName', 'nm.ionicFromName'])
     expect(molecular.templates.map((t) => t.id)).toEqual(['nm.molecular', 'nm.acid', 'nm.hydrate', 'nm.classify'])
     expect(ionic.ruleCards.map((c) => c.id)).toEqual([...ION_RULE_IDS])

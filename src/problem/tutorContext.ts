@@ -19,6 +19,7 @@ import { ptWork } from '@/content/modules/periodic/grade'
 import type { QnGrade } from '@/content/modules/quantumNumbers/grade'
 import { qnWork } from '@/content/modules/quantumNumbers/grade'
 import { nmWork } from '@/content/modules/nomenclature/grade'
+import { moWork } from '@/content/modules/moles/grade'
 import { EC_PATTERN } from '@/content/modules/electrons/patterns'
 import { POLY_PATTERN } from '@/content/modules/polynomials/patterns'
 import { TR_PATTERN } from '@/content/modules/transformations/patterns'
@@ -581,6 +582,12 @@ function workOf(instance: ProblemInstance, attempt: Attempt | null): string[] {
       .slice(0, TUTOR_LIMITS.lines)
       .map((line) => clip(line, TUTOR_LIMITS.line))
   }
+  // The mole and formulas (chemistry chapter 10): her parts, with their units, in reading order.
+  if (instance.answer.type === 'mole') {
+    return moWork(instance.answer, attempt.final?.polyEntries)
+      .slice(0, TUTOR_LIMITS.lines)
+      .map((line) => clip(line, TUTOR_LIMITS.line))
+  }
   const final = attempt.final
   if (!final) return []
   const lines: string[] = []
@@ -735,7 +742,7 @@ function statementOf(instance: ProblemInstance): string {
     text = `${answer.prompt}${lines}${figure}`
   } else if (answer.type === 'quantum') {
     text = answer.figure ? `${answer.prompt} Figure: ${answer.figure.ariaLabel}` : answer.prompt
-  } else if (answer.type === 'periodic' || answer.type === 'nomenclature') {
+  } else if (answer.type === 'periodic' || answer.type === 'nomenclature' || answer.type === 'mole') {
     text = answer.prompt
   }
   const clipped = clip(text, TUTOR_LIMITS.field)
@@ -770,7 +777,8 @@ function canonicalOf(instance: ProblemInstance): string[] {
     answer.type === 'geometry' ||
     answer.type === 'periodic' ||
     answer.type === 'nomenclature' ||
-    answer.type === 'quantum'
+    answer.type === 'quantum' ||
+    answer.type === 'mole'
   ) {
     lines = answer.reveal
   } else if (answer.type === 'angleMeasure' || answer.type === 'rightTriangle' || answer.type === 'unitCircle' || answer.type === 'sinusoids' || answer.type === 'otherTrigGraphs' || answer.type === 'inverseTrig' || answer.type === 'trigIdentities' || answer.type === 'trigFormulas' || answer.type === 'trigEquations') {
@@ -825,6 +833,7 @@ function answerOf(instance: ProblemInstance): string | undefined {
     case 'periodic':
     case 'nomenclature':
     case 'quantum':
+    case 'mole':
       text = answer.expectedDisplay
       break
     case 'graphFeatures':

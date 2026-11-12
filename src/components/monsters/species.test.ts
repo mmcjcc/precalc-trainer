@@ -8,8 +8,8 @@ import { ERROR_PATTERNS } from '@/engine'
 import { NOT_MONSTERS, RARE, SPECIES, isMonster, speciesForEdition, speciesOf, variantIndex } from './species'
 
 const CATALOG = Object.keys(ERROR_PATTERNS)
-/** The chemistry modules' mistakes: significant figures, atoms, light, configurations, quantum numbers, the table, nomenclature, bonding (ionic and covalent). */
-const CHEMISTRY = /^(sf|at|lt|ec|pt|nm|qn|ib|mb|cb)_/
+/** The chemistry modules' mistakes: significant figures, atoms, light, configurations, quantum numbers, the table, nomenclature, bonding (ionic and covalent), the mole. */
+const CHEMISTRY = /^(sf|at|lt|ec|pt|nm|qn|ib|mb|cb|mo)_/
 
 describe('the species table', () => {
   it('places every catalog id in exactly one species, or lists it as not a mistake', () => {
@@ -28,7 +28,7 @@ describe('the species table', () => {
 
   it('every species has variants, its own id and its own name, a personality and a family', () => {
     expect(SPECIES.length).toBeGreaterThanOrEqual(28)
-    expect(SPECIES.length).toBeLessThanOrEqual(36)
+    expect(SPECIES.length).toBeLessThanOrEqual(37)
     expect(new Set(SPECIES.map((s) => s.id)).size).toBe(SPECIES.length)
     expect(new Set(SPECIES.map((s) => s.name)).size).toBe(SPECIES.length)
     for (const s of SPECIES) {
