@@ -2459,6 +2459,123 @@ export const ERROR_PATTERNS: Record<ErrorPatternId, ErrorPatternInfo> = {
     lesson: 'Having hydrogen in the formula is not enough. Hydrogen bonding happens only when the H is bonded directly to nitrogen, oxygen or fluorine — those three pull hard enough to leave the H bare. An H sitting on any other atom brings no hydrogen bonds at all.',
     example: 'HBr expected to hydrogen-bond because it has an H ✗ → its H sits on bromine, so it cannot',
   },
+  // --- the mole, percent composition and formulas (content/modules/moles and chemFormulas; chemistry
+  // chapter 10). Worked substances are Br₂, Ca(OH)₂ and BaCl₂·2H₂O, which no chapter 10 template draws,
+  // and a lesson about the counting unit never names one unit in the plural (the choice buttons do). ---
+  mo_particle_kind: {
+    id: 'mo_particle_kind',
+    title: 'Count each substance in its own unit',
+    lesson: 'Every substance has its own counting unit. A lone element is counted one atom at a time; a paired-up element or a molecular compound one molecule at a time; and an ionic compound, which has no separate clusters, one formula unit at a time — its smallest repeating ratio of ions.',
+    example: 'Ca(OH)₂ counted by the cluster ✗ → it is ionic, so count its smallest repeating ion ratio',
+  },
+  mo_avogadro_inverted: {
+    id: 'mo_avogadro_inverted',
+    title: 'Avogadro’s number multiplies into particles',
+    lesson: 'Moles to particles makes the number enormous, so multiply by 6.022 × 10²³; particles to moles shrinks it, so divide. Using the factor the wrong way leaves the answer off by that factor twice over — a sure sign to flip it.',
+    example: 'Br₂: moles ÷ 6.022 × 10²³ for a particle count ✗ → moles × 6.022 × 10²³',
+  },
+  mo_molecules_for_atoms: {
+    id: 'mo_molecules_for_atoms',
+    title: 'Atoms of one element: use the subscript',
+    lesson: 'A count of particles is not yet a count of atoms. Each particle of the compound holds as many atoms of an element as its subscript says, so multiply the particle count by that subscript — or divide by it to go back.',
+    example: 'Br atoms in a mole of Br₂ given as one Avogadro’s number ✗ → twice that many',
+  },
+  mo_stopped_at_moles: {
+    id: 'mo_stopped_at_moles',
+    title: 'The road goes through moles, not to them',
+    lesson: 'Grams to particles, liters to grams and trips like them have two legs: the first lands on moles, the second carries on to what the question asked for. Moles in the box is only the halfway point.',
+    example: 'Ca(OH)₂ grams to a count, stopped after dividing by 74.10 ✗ → then multiply by 6.022 × 10²³',
+  },
+  mo_molar_mass_inverted: {
+    id: 'mo_molar_mass_inverted',
+    title: 'Grams divide by the molar mass',
+    lesson: 'The molar mass is the grams in one mole. Grams to moles: divide by it. Moles to grams: multiply by it. The opposite move leaves units of grams squared per mole, a size that means nothing.',
+    example: 'grams of Ca(OH)₂ × 74.10 for moles ✗ → grams ÷ 74.10 g/mol',
+  },
+  mo_atomic_mass_for_molar: {
+    id: 'mo_atomic_mass_for_molar',
+    title: 'A compound weighs its whole formula',
+    lesson: 'The molar mass of a compound adds up every atom in its formula. One element’s atomic mass is only a piece of it, so a mass or a mole amount built on that piece comes out the wrong size.',
+    example: 'Ca(OH)₂ weighed as its calcium alone, 40.08 ✗ → the whole formula, 74.10 g/mol',
+  },
+  mo_subscripts_ignored: {
+    id: 'mo_subscripts_ignored',
+    title: 'Subscripts multiply',
+    lesson: 'A subscript counts how many of that atom the formula holds, so it multiplies that atom’s mass. Adding one of each element leaves every extra atom out.',
+    example: 'Ca(OH)₂ as 40.08 + 16.00 + 1.01 ✗ → 40.08 + 2 × (16.00 + 1.01) = 74.10',
+  },
+  mo_paren_first_only: {
+    id: 'mo_paren_first_only',
+    title: 'The number after parentheses multiplies the whole group',
+    lesson: 'Parentheses wrap a group that repeats. The subscript outside them multiplies every atom inside the group, not just the first one.',
+    example: 'Ca(OH)₂ as 40.08 + 2 × 16.00 + 1.01 ✗ → 40.08 + 2 × (16.00 + 1.01)',
+  },
+  mo_diatomic_single: {
+    id: 'mo_diatomic_single',
+    title: 'Seven elements come in pairs',
+    lesson: 'Hydrogen, nitrogen, oxygen, fluorine, chlorine, bromine and iodine are found as two-atom molecules. A mole of the element as it is found weighs two atomic masses, not one.',
+    example: 'Br₂ weighed as 79.90 ✗ → 2 × 79.90 = 159.80 g/mol',
+  },
+  mo_hydrate_water_left_out: {
+    id: 'mo_hydrate_water_left_out',
+    title: 'The water is part of the hydrate',
+    lesson: 'The waters after the dot are built into every formula unit of a hydrate. Its molar mass — and anything worked out from it — includes them.',
+    example: 'BaCl₂·2H₂O weighed as the salt alone, 208.23 ✗ → salt plus both waters, 244.27 g/mol',
+  },
+  mo_hydrate_water_once: {
+    id: 'mo_hydrate_water_once',
+    title: 'Count every water',
+    lesson: 'The number in front of H₂O after the dot is how many waters each formula unit carries. A single water is right only when that number is one.',
+    example: 'BaCl₂·2H₂O weighed with one of its waters, 226.25 ✗ → both waters, 244.27 g/mol',
+  },
+  mo_molar_volume_inverted: {
+    id: 'mo_molar_volume_inverted',
+    title: 'Liters divide by the molar volume',
+    lesson: 'At STP one mole of any gas fills 22.4 L. Liters to moles: divide by 22.4 L/mol. Moles to liters: multiply by it.',
+    example: 'liters × 22.4 for moles ✗ → liters ÷ 22.4 L/mol',
+  },
+  mo_stp_misapplied: {
+    id: 'mo_stp_misapplied',
+    title: 'That shortcut needs a gas at STP',
+    lesson: 'The molar volume works because gas particles sit far apart, and it is 22.4 L only at 0 °C and 1 atm. A liquid or a solid fills far less, and a gas at another temperature or pressure fills a different volume.',
+    example: 'liquid Br₂ given 22.4 L per mole ✗ → a liquid packs far tighter, so the shortcut fails',
+  },
+  mo_percent_by_count: {
+    id: 'mo_percent_by_count',
+    title: 'Percent composition is by mass',
+    lesson: 'Counting atoms tells you the formula, not the mass. A heavy atom carries more of the mass than a light one, so an element’s percent is its mass share: subscript times atomic mass, over the molar mass, times 100.',
+    example: 'O in Ca(OH)₂ taken as two atoms out of five ✗ → its mass share, 43.18%',
+  },
+  mo_percent_one_atom: {
+    id: 'mo_percent_one_atom',
+    title: 'Weigh every atom of the element',
+    lesson: 'When the formula holds more than one atom of an element, all of them count toward its share: multiply the atomic mass by the subscript before you divide by the molar mass.',
+    example: 'O in Ca(OH)₂ from a single O, 21.59% ✗ → both of them, 43.18%',
+  },
+  mo_percent_part_over_part: {
+    id: 'mo_percent_part_over_part',
+    title: 'A percent is part over whole',
+    lesson: 'Percent composition divides one part by the whole: the full molar mass, the whole sample, or the whole hydrate. Dividing by the other parts instead makes the share come out too big.',
+    example: 'BaCl₂·2H₂O: its waters over the salt alone ✗ → over the whole hydrate, 14.75%',
+  },
+  mo_mass_ratio_as_mole_ratio: {
+    id: 'mo_mass_ratio_as_mole_ratio',
+    title: 'Compare moles, not grams',
+    lesson: 'Subscripts count atoms, and atoms of different elements weigh different amounts. Turn each element’s grams into moles first; only the mole amounts give the ratio of atoms.',
+    example: 'equal grams of two elements read as a one-to-one formula ✗ → convert each to moles, then compare',
+  },
+  mo_ratio_rounded: {
+    id: 'mo_ratio_rounded',
+    title: 'Multiply a half up; do not round it away',
+    lesson: 'Rounding works only for a ratio within a few hundredths of a whole number. A ratio near a half, a third or a quarter is real: multiply every ratio by two, three or four until all of them are whole.',
+    example: 'a ratio of one to one and a half rounded to one to two ✗ → doubled to two to three',
+  },
+  mo_empirical_as_molecular: {
+    id: 'mo_empirical_as_molecular',
+    title: 'Multiply the empirical formula up',
+    lesson: 'The molecular formula is the empirical formula times the whole-number multiplier. Writing the empirical formula back, or the multiplier alone in every box, skips the last step: multiply each subscript by the multiplier.',
+    example: 'Br from a molar mass of 159.80 ✗ → the multiplier is two, so Br₂',
+  },
   // --- chemical reactions (content/modules/reactions; chemistry chapter 11). Counts are written in
   // words, and every worked example uses lithium, fluorine, nickel, tin, strontium or butane, which no
   // chapter 11 template draws. No lesson names a reaction type or the words of an activity choice. ---

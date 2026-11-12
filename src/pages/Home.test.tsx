@@ -51,6 +51,7 @@ const unit2Titles = modulesInUnit(precalc.units[1]!).map((module) => module.titl
 const ch7Titles = ['Ions and ionic compounds', 'Molecular compounds, acids, and hydrates']
 const ch8Titles = ['Ionic and metallic bonding']
 const ch9Titles = ['Covalent bonding']
+const ch10Titles = ['The mole: particles, mass and gas volume', 'Percent composition and formulas']
 const ch11Titles = ['Chemical reactions']
 const unit3Titles = modulesInUnit(precalc.units[2]!).map((module) => module.title)
 const unit4Titles = modulesInUnit(precalc.units[3]!).map((module) => module.title)
@@ -243,6 +244,11 @@ describe('Home: classes and units', () => {
     expect(moduleTitles()).toEqual(ch11Titles)
     expect(signposts()).toEqual(ch11Titles)
     expect(moduleLinks()).toEqual(['/m/reactions'])
+
+    fireEvent.click(screen.getByRole('button', { name: /Chapter 10/ }))
+    expect(moduleTitles()).toEqual(ch10Titles)
+    expect(signposts()).toEqual(ch10Titles)
+    expect(moduleLinks()).toEqual(['/m/moles', '/m/chemFormulas'])
 
     fireEvent.click(screen.getByRole('button', { name: /Chapter 9/ }))
     expect(moduleTitles()).toEqual(ch9Titles)

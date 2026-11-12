@@ -19,6 +19,7 @@ import { ptWork } from '@/content/modules/periodic/grade'
 import type { QnGrade } from '@/content/modules/quantumNumbers/grade'
 import { qnWork } from '@/content/modules/quantumNumbers/grade'
 import { nmWork } from '@/content/modules/nomenclature/grade'
+import { moWork } from '@/content/modules/moles/grade'
 import { rxWork, type RxGrade } from '@/content/modules/reactions/grade'
 import { EC_PATTERN } from '@/content/modules/electrons/patterns'
 import { POLY_PATTERN } from '@/content/modules/polynomials/patterns'
@@ -596,6 +597,12 @@ function workOf(instance: ProblemInstance, attempt: Attempt | null): string[] {
       .slice(0, TUTOR_LIMITS.lines)
       .map((line) => clip(line, TUTOR_LIMITS.line))
   }
+  // The mole and formulas (chemistry chapter 10): her parts, with their units, in reading order.
+  if (instance.answer.type === 'mole') {
+    return moWork(instance.answer, attempt.final?.polyEntries)
+      .slice(0, TUTOR_LIMITS.lines)
+      .map((line) => clip(line, TUTOR_LIMITS.line))
+  }
   if (instance.answer.type === 'reactions') {
     return rxWork(instance.answer, attempt.final?.polyEntries)
       .slice(0, TUTOR_LIMITS.lines)
@@ -755,7 +762,7 @@ function statementOf(instance: ProblemInstance): string {
     text = `${answer.prompt}${lines}${figure}`
   } else if (answer.type === 'quantum') {
     text = answer.figure ? `${answer.prompt} Figure: ${answer.figure.ariaLabel}` : answer.prompt
-  } else if (answer.type === 'periodic' || answer.type === 'nomenclature') {
+  } else if (answer.type === 'periodic' || answer.type === 'nomenclature' || answer.type === 'mole') {
     text = answer.prompt
   } else if (answer.type === 'reactions') {
     text = answer.prompt
@@ -793,6 +800,7 @@ function canonicalOf(instance: ProblemInstance): string[] {
     answer.type === 'periodic' ||
     answer.type === 'nomenclature' ||
     answer.type === 'quantum' ||
+    answer.type === 'mole' ||
     answer.type === 'reactions'
   ) {
     lines = answer.reveal
@@ -849,6 +857,7 @@ function answerOf(instance: ProblemInstance): string | undefined {
     case 'periodic':
     case 'nomenclature':
     case 'quantum':
+    case 'mole':
     case 'reactions':
       text = answer.expectedDisplay
       break

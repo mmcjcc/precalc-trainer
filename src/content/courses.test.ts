@@ -112,7 +112,7 @@ describe('course registry', () => {
     expect(precalc!.units.map((u) => u.id)).toEqual(['unit1', 'unit2', 'unit3', 'unit4', 'unit5', 'unit6', 'unit7'])
 
 
-    expect(unitsWithModules(chemistry!).map((u) => u.id)).toEqual(['ch3', 'ch4', 'ch5', 'ch6', 'ch7', 'ch8', 'ch9', 'ch11'])
+    expect(unitsWithModules(chemistry!).map((u) => u.id)).toEqual(['ch3', 'ch4', 'ch5', 'ch6', 'ch7', 'ch8', 'ch9', 'ch10', 'ch11'])
     expect(chemistry!.units.map((u) => [u.id, u.moduleIds])).toEqual([
       ['ch3', ['sigFigs']],
       ['ch4', ['atoms']],
@@ -121,6 +121,7 @@ describe('course registry', () => {
       ['ch7', ['ionicNames', 'molecularAcids']],
       ['ch8', ['ionicBonding']],
       ['ch9', ['covalentBonding']],
+      ['ch10', ['moles', 'chemFormulas']],
       ['ch11', ['reactions']],
     ])
     const ch7 = chemistry!.units[4]!
@@ -132,6 +133,9 @@ describe('course registry', () => {
     const ch9 = chemistry!.units[6]!
     expect([ch9.label, ch9.title]).toEqual(['Chapter 9', 'Covalent bonding'])
     expect(modulesInUnit(ch9).map((m) => m.id)).toEqual(['covalentBonding'])
+    const ch10 = chemistry!.units[7]!
+    expect([ch10.label, ch10.title]).toEqual(['Chapter 10', 'The mole'])
+    expect(modulesInUnit(ch10).map((m) => m.id)).toEqual(['moles', 'chemFormulas'])
     const ch11 = chemistry!.units.find((u) => u.id === 'ch11')!
     expect([ch11.label, ch11.title]).toEqual(['Chapter 11', 'Chemical reactions'])
     expect(modulesInUnit(ch11).map((m) => m.id)).toEqual(['reactions'])

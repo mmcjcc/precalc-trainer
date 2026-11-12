@@ -17,7 +17,7 @@ import type {
   VarName,
 } from '@/shared/types'
 
-export type ProblemKind = 'inequality' | 'numberLine' | 'evenOdd' | 'inverse' | 'drill' | 'sigFigs' | 'atoms' | 'diffQuotient' | 'graphFeatures' | 'domainRange' | 'composition' | 'functionOps' | 'transformations' | 'piecewiseRate' | 'electrons' | 'quantumNumbers' | 'periodic' | 'quadratics' | 'optimization' | 'polyDivision' | 'polyZeros' | 'rationalFns' | 'signCharts' | 'complexNums' | 'logForms' | 'logProperties' | 'expLogEquations' | 'expLogGraphs' | 'expModels' | 'angleMeasure' | 'rightTriangle' | 'unitCircle' | 'sinusoids' | 'otherTrigGraphs' | 'inverseTrig' | 'trigIdentities' | 'trigFormulas' | 'trigEquations' | 'obliqueTriangles' | 'geometry' | 'nomenclature' | 'satrw' | 'ionicBonding' | 'covalentBonding' | 'reactions'
+export type ProblemKind = 'inequality' | 'numberLine' | 'evenOdd' | 'inverse' | 'drill' | 'sigFigs' | 'atoms' | 'diffQuotient' | 'graphFeatures' | 'domainRange' | 'composition' | 'functionOps' | 'transformations' | 'piecewiseRate' | 'electrons' | 'quantumNumbers' | 'periodic' | 'quadratics' | 'optimization' | 'polyDivision' | 'polyZeros' | 'rationalFns' | 'signCharts' | 'complexNums' | 'logForms' | 'logProperties' | 'expLogEquations' | 'expLogGraphs' | 'expModels' | 'angleMeasure' | 'rightTriangle' | 'unitCircle' | 'sinusoids' | 'otherTrigGraphs' | 'inverseTrig' | 'trigIdentities' | 'trigFormulas' | 'trigEquations' | 'obliqueTriangles' | 'geometry' | 'nomenclature' | 'satrw' | 'ionicBonding' | 'covalentBonding' | 'reactions' | 'mole'
 
 /** Precalculus Unit 2, optimization with quadratics: a pen against a wall, pens in a row, two numbers, price and sales. */
 export type OptimizationQuestion = 'wall' | 'pens' | 'numbers' | 'revenue'
@@ -710,6 +710,49 @@ export type CbCheck =
   | { kind: 'force'; formula: string }
   /** Which of two samples boils higher, and why (choice of explanations). */
   | { kind: 'boil'; a: string; b: string }
+
+/** One checked part of a chapter 10 problem (the mole; percent composition and formulas). */
+export type MoStageId = 'a' | 'b' | 'c' | 'd' | 'e'
+
+/** A quantity on the mole road map. 'atoms' is the atoms of ONE element in a compound sample. */
+export type MoQuantity = 'g' | 'mol' | 'particles' | 'atoms' | 'L'
+
+/** A whole-number count of one element in a formula. */
+export interface MoCount {
+  symbol: string
+  n: number
+}
+
+/**
+ * How to recompute one chapter 10 part from the substance table (moles/facts.ts) and the given
+ * numbers, which are TEXT exactly as printed. The grader uses this. The crosscheck test does not:
+ * it reads the prompt's numbers and formulas and works the part out on its own.
+ */
+export type MoCheck =
+  /** Which particle the substance is counted in (choice: atoms / molecules / formula units). */
+  | { kind: 'particle-kind'; formula: string }
+  /** One road-map conversion of a measured amount of the substance. `atom` names the element for 'atoms'. */
+  | { kind: 'convert'; formula: string; from: MoQuantity; to: MoQuantity; given: string; atom?: string }
+  /** Molar mass from the formula, g/mol to the hundredths (±0.02 accepted). */
+  | { kind: 'molar-mass'; formula: string }
+  /** May 22.4 L/mol be used for this sample? (choice). `state` is the sample's state as described. */
+  | { kind: 'stp-ok'; formula: string; state: 'gas' | 'liquid' | 'solid'; atStp: boolean }
+  /** Percent by mass of one element from the formula, rounded to `place` (-1 tenths, -2 hundredths). */
+  | { kind: 'percent'; formula: string; element: string; place: number }
+  /** Percent water by mass in a hydrate, rounded to `place`. */
+  | { kind: 'percent-water'; formula: string; place: number }
+  /** Percent by mass of one element from the measured masses of the elements in a sample (sig figs). */
+  | { kind: 'percent-sample'; parts: { symbol: string; grams: string }[]; element: string }
+  /** Moles of one element from its measured grams (sig figs). */
+  | { kind: 'element-moles'; symbol: string; grams: string }
+  /** The empirical formula from percents (a 100 g sample) or masses, as counts per element. */
+  | { kind: 'empirical'; data: { symbol: string; amount: string }[]; basis: 'percent' | 'mass' }
+  /** The empirical formula mass, g/mol to the hundredths (±0.02 accepted). */
+  | { kind: 'formula-mass'; counts: MoCount[] }
+  /** The whole-number multiplier from the empirical formula and a measured molar mass. */
+  | { kind: 'multiplier'; counts: MoCount[]; molarMass: string }
+  /** The molecular formula, as counts per element. */
+  | { kind: 'molecular'; counts: MoCount[]; molarMass: string }
 
 /** One checked part of a chemical-reactions problem (chemistry chapter 11). */
 export type RxStageId = 'a' | 'b' | 'c' | 'd' | 'e'
@@ -1943,6 +1986,53 @@ export type AnswerSpec =
     }
   | {
       /**
+       * The mole (moles) and percent composition and formulas (chemFormulas): chemistry, CK-12
+       * chapter 10. Parts are checked one at a time; grade a part with `gradeMoStage`. Named
+       * mistakes are the `mo_` ids, plus the sig-fig engine's own `sf_` ids for a right value
+       * written with the wrong figures.
+       */
+      type: 'mole'
+      question: 'particles' | 'molarMass' | 'mass' | 'gas' | 'percent' | 'empirical' | 'molecular'
+      /** What the problem is, with every number she needs. No method and no trap. */
+      prompt: string
+      stages: {
+        id: MoStageId
+        /** choice: buttons; number: a measured number (sig-fig input); whole: a whole number; counts: a whole number beside each symbol. */
+        kind: 'choice' | 'number' | 'whole' | 'counts'
+        label: string
+        /** Line under the box or the choices. Never this part's answer. */
+        hint: string
+        /**
+         * The right answer as she would enter it: a choice id; engine ASCII numeral text
+         * ('1.51 x 10^24'); a whole number; counts as 'C=1;H=2;O=1' in `symbols` order.
+         */
+        answerText: string
+        /** Other spellings that grade correct. */
+        accept?: string[]
+        choices?: { id: string; text: string; trap?: ErrorPatternId; witness?: string }[]
+        /** Printed beside a number box ('g', 'mol', 'g/mol', '%', 'L', 'molecules' ...). */
+        unit?: string
+        /** Counts parts: the element boxes, in order. */
+        symbols?: string[]
+        nudge: string
+        ruleCard: RuleCardId
+        /** Hint rung 3. States this part's answer. */
+        reveal: string[]
+        /** Slips on this part, in detection order. `text` is what she would enter (same format as answerText). */
+        traps: { id: ErrorPatternId; text: string; witness: string }[]
+        check: MoCheck
+      }[]
+      expectedDisplay: string
+      reveal: string[]
+      ruleCards: RuleCardId[]
+      /** The named mistake this seed promises, when one is possible on some part. */
+      trap?: ErrorPatternId
+      trapStage?: MoStageId
+      /** What that slip produces. Never the right answer. */
+      trapAnswer?: string
+    }
+  | {
+      /**
        * Chemical reactions (chemistry, CK-12 chapter 11). Parts are checked one at a time.
        * Grade a part with `gradeRxStage`. Named mistakes are the `rx_` ids, plus the nomenclature
        * engine's `nm_` ids on the formula parts it grades.
@@ -2410,6 +2500,12 @@ export type NomenclatureAnswer = Extract<AnswerSpec, { type: 'nomenclature' }>
 export type IonicBondingAnswer = Extract<AnswerSpec, { type: 'ionicBonding' }>
 
 export type CovalentBondingAnswer = Extract<AnswerSpec, { type: 'covalentBonding' }>
+
+/** The chapter 10 arm of `AnswerSpec` (moles and chemFormulas), shared by the flow and the generators. */
+export type MoleAnswer = Extract<AnswerSpec, { type: 'mole' }>
+
+/** One part of a chapter 10 problem. */
+export type MoStage = MoleAnswer['stages'][number]
 
 /** The chemical-reactions arm of `AnswerSpec` (chapter 11), named so the flow and the generators share it. */
 export type ReactionsAnswer = Extract<AnswerSpec, { type: 'reactions' }>

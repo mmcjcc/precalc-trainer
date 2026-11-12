@@ -32,6 +32,7 @@ import { NomenclatureFlow } from './flows/NomenclatureFlow'
 import { SatRwFlow } from './flows/SatRwFlow'
 import { IonicBondingFlow } from './flows/IonicBondingFlow'
 import { CovalentBondingFlow } from './flows/CovalentBondingFlow'
+import { MoleFlow } from './flows/MoleFlow'
 import { ReactionsFlow } from './flows/ReactionsFlow'
 import { QuadraticsFlow } from './flows/QuadraticsFlow'
 import { TransformationFlow } from './flows/TransformationFlow'
@@ -202,6 +203,8 @@ function flowFor(props: FlowProps): ReactNode {
       return <IonicBondingFlow {...props} />
     case 'covalentBonding':
       return <CovalentBondingFlow {...props} />
+    case 'mole':
+      return <MoleFlow {...props} />
     case 'reactions':
       return <ReactionsFlow {...props} />
     default:

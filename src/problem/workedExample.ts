@@ -10,6 +10,7 @@ import { expLogStepContext, trigIdentitiesStepContext } from '@/problem/cardSour
 import { stageDisplay } from '@/content/modules/geometry/grade'
 import { plain as optPlain } from '@/content/modules/optimization/text'
 import { plain as trigPlain } from '@/content/modules/trig/text'
+import { displayOf as moleDisplayOf } from '@/content/modules/moles/build'
 
 import { detectInverseCompletion } from '@/problem/inverse'
 import { buildStepContext, classifyStep } from '@/problem/stepEngine'
@@ -219,6 +220,14 @@ export const COVERED_PARTS_TEMPLATES = [
   'cb.shape',
   'cb.polarity',
   'cb.forces',
+  // Chemistry chapter 10 (the mole; percent composition and formulas).
+  'mo.particles',
+  'mo.molarMass',
+  'mo.mass',
+  'mo.gas',
+  'cf.percent',
+  'cf.empirical',
+  'cf.molecular',
   // Chemistry chapter 11 (chemical reactions).
   'rx.count',
   'rx.balance',
@@ -1088,6 +1097,26 @@ function buildPartsForAnswer(sibling: ProblemInstance, ans: AnswerSpec, cards: r
             id: stage.id,
             label: stage.label,
             answer: choiceText ?? stage.answerText,
+            why: stage.nudge,
+            ...(rule ? { ruleTitle: rule.title, ruleBody: rule.body } : {}),
+            details: stage.reveal,
+          }
+        }),
+      }
+    }
+
+    case 'mole': {
+      // Plain text throughout: numbers as she reads them (1.51 × 10²⁴ molecules), formulas with subscripts.
+      return {
+        kind: 'parts',
+        sibling,
+        prompt: ans.prompt,
+        parts: ans.stages.map((stage) => {
+          const rule = findRule(cards, stage.ruleCard)
+          return {
+            id: stage.id,
+            label: stage.label,
+            answer: moleDisplayOf(stage),
             why: stage.nudge,
             ...(rule ? { ruleTitle: rule.title, ruleBody: rule.body } : {}),
             details: stage.reveal,
