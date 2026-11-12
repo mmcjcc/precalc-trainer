@@ -1577,6 +1577,9 @@ describe('buildTutorContext', () => {
       ['geoPolygonArea', 'ar.basic', 'polygonArea'],
       ['geoPolygonArea', 'ar.special', 'specialArea'],
       ['geoPolygonArea', 'ar.regular', 'regularArea'],
+      ['geoCircleArea', 'ca.circle', 'circleArea'],
+      ['geoCircleArea', 'ca.sector', 'arcSector'],
+      ['geoCircleArea', 'ca.segment', 'circleSegment'],
     ] as const
     for (const [moduleId, templateId, question] of cases) {
       const instance = generateProblem(moduleId, templateId, 1)

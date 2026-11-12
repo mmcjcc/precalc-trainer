@@ -15,7 +15,7 @@
 export type RelOp = '=' | '<' | '<=' | '>' | '>='
 /** `h` is the difference-quotient step; the parser accepts it only when the problem owns it (ctx.vars). */
 export type VarName = 'x' | 'y' | 'n' | 'h'
-export type ModuleId = 'numberLine' | 'inequalities' | 'evenOdd' | 'inverses' | 'propertiesDrill' | 'sigFigs' | 'atoms' | 'diffQuotient' | 'graphFeatures' | 'domainRange' | 'composition' | 'functionOps' | 'transformations' | 'piecewiseRate' | 'electrons' | 'quantumNumbers' | 'periodic' | 'quadratics' | 'optimization' | 'polyDivision' | 'polyZeros' | 'rationalFns' | 'signCharts' | 'complexNums' | 'logForms' | 'logProperties' | 'expLogEquations' | 'expLogGraphs' | 'expModels' | 'angleMeasure' | 'rightTriangle' | 'unitCircle' | 'sinusoids' | 'otherTrigGraphs' | 'inverseTrig' | 'trigIdentities' | 'trigFormulas' | 'trigEquations' | 'obliqueTriangles' | 'geoSegments' | 'geoAngles' | 'geoLogic' | 'geoProof' | 'geoParallel' | 'geoPolygonAngles' | 'geoCongruence' | 'geoIsosceles' | 'geoTriangleProofs' | 'geoParallelograms' | 'geoSpecialQuads' | 'geoTrapezoids' | 'geoRatios' | 'geoSimilarTriangles' | 'geoProportionalParts' | 'geoRightSimilar' | 'geoPythagorean' | 'geoSpecialRight' | 'geoTrigRatios' | 'geoElevDepress' | 'geoTangentChords' | 'geoCircleAngles' | 'geoCircleMeasures' | 'ionicNames' | 'molecularAcids' | 'ionicBonding' | 'covalentBonding' | 'reactions' | 'moles' | 'chemFormulas' | 'factoring' | 'geoPolygonArea'
+export type ModuleId = 'numberLine' | 'inequalities' | 'evenOdd' | 'inverses' | 'propertiesDrill' | 'sigFigs' | 'atoms' | 'diffQuotient' | 'graphFeatures' | 'domainRange' | 'composition' | 'functionOps' | 'transformations' | 'piecewiseRate' | 'electrons' | 'quantumNumbers' | 'periodic' | 'quadratics' | 'optimization' | 'polyDivision' | 'polyZeros' | 'rationalFns' | 'signCharts' | 'complexNums' | 'logForms' | 'logProperties' | 'expLogEquations' | 'expLogGraphs' | 'expModels' | 'angleMeasure' | 'rightTriangle' | 'unitCircle' | 'sinusoids' | 'otherTrigGraphs' | 'inverseTrig' | 'trigIdentities' | 'trigFormulas' | 'trigEquations' | 'obliqueTriangles' | 'geoSegments' | 'geoAngles' | 'geoLogic' | 'geoProof' | 'geoParallel' | 'geoPolygonAngles' | 'geoCongruence' | 'geoIsosceles' | 'geoTriangleProofs' | 'geoParallelograms' | 'geoSpecialQuads' | 'geoTrapezoids' | 'geoRatios' | 'geoSimilarTriangles' | 'geoProportionalParts' | 'geoRightSimilar' | 'geoPythagorean' | 'geoSpecialRight' | 'geoTrigRatios' | 'geoElevDepress' | 'geoTangentChords' | 'geoCircleAngles' | 'geoCircleMeasures' | 'ionicNames' | 'molecularAcids' | 'ionicBonding' | 'covalentBonding' | 'reactions' | 'moles' | 'chemFormulas' | 'factoring' | 'geoPolygonArea' | 'geoCircleArea'
 export type CalcId = 'ti84' | 'nspire'
 
 /** Fine-grained property tags. Canonical steps carry one; the engine's move detector reports one. */
@@ -743,6 +743,22 @@ export type ErrorPatternId =
   | 'geo_perimeter_for_area'
   | 'geo_area_for_perimeter'
   | 'geo_apothem_for_radius'
+  // honors geometry Unit 9, the circle half (content/modules/geometry/unit9Circles.ts). Each id is the exact number
+  // that slip produces on THIS problem: the circumference and the area swapped, the diameter and the radius swapped,
+  // the radius left unsquared, the π left off, the whole circle given for an arc or a sector, the arc length and the
+  // sector's area swapped, the arc's degree measure given as its length, and the triangle not taken away from the
+  // sector (or added to it) for a segment of a circle.
+  | 'geo_circumference_for_area'
+  | 'geo_area_for_circumference'
+  | 'geo_circle_diameter_as_radius'
+  | 'geo_circle_radius_as_diameter'
+  | 'geo_circle_radius_not_squared'
+  | 'geo_pi_left_off'
+  | 'geo_sector_fraction_left_off'
+  | 'geo_arc_sector_swapped'
+  | 'geo_arc_measure_for_length'
+  | 'geo_segment_triangle_not_subtracted'
+  | 'geo_segment_triangle_added'
   // precalculus Unit 4, trigonometric functions (engine/trig; content/modules/angleMeasure, unitCircle). Each id is
   // the exact value, angle or quadrant that slip gives on THIS problem, computed by the core; never a right answer.
   | 'trig_conversion_inverted'
@@ -1170,10 +1186,24 @@ export interface GeoFigureSpec {
   angles?: GeoAngleMark[]
   /** Full circles, drawn under the segments. The center's dot and letter come from its point. */
   circles?: GeoCircleSpec[]
+  /** Shaded parts of a circle (Unit 9), drawn under everything else. Existing figures leave this unset. */
+  regions?: GeoRegionSpec[]
   /** Integer lattice and axes. Omit on a figure that is not on the coordinate plane. */
   grid?: GeoGrid
   /** Words for role="img" and for the tutor. Describes the picture, not the method. */
   ariaLabel: string
+}
+
+/**
+ * A shaded part of a circle: the sector between two radii, or the segment between a chord and its arc. The arc
+ * runs counterclockwise (as the figure is seen, y up) from `from` to `to`; both points are on the circle.
+ */
+export interface GeoRegionSpec {
+  kind: 'sector' | 'segment'
+  /** Point id of the circle's center. */
+  center: string
+  from: string
+  to: string
 }
 
 export interface GeoCircleSpec {

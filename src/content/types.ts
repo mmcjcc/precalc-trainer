@@ -469,7 +469,8 @@ export interface TrigTriangleSpec {
  * adds the tangent, sine and cosine ratios and angles of elevation and depression.
  * Unit 8 adds circles: tangents, arcs, chords, inscribed and other angles, segment lengths, and the equation of a circle.
  * Unit 9 adds areas of polygons: rectangles, parallelograms, triangles, trapezoids, rhombi and kites, then a height
- * found first, then regular polygons.
+ * found first, then regular polygons; then circles in terms of π: circumference and area, arc length and the area
+ * of a sector, and the segment between a chord and its arc.
  */
 export type GeometryQuestion =
   | 'addition'
@@ -531,6 +532,9 @@ export type GeometryQuestion =
   | 'polygonArea'
   | 'specialArea'
   | 'regularArea'
+  | 'circleArea'
+  | 'arcSector'
+  | 'circleSegment'
 
 /**
  * One checked part of a geometry problem. `x` and `result` are the Unit 1 boxes.
@@ -1801,6 +1805,11 @@ export type AnswerSpec =
          */
         lowest?: boolean
         exact?: string
+        /**
+         * Unit 9: the answer is two or more unlike terms (the segment of a circle, 4π − 8). The terms may be typed in
+         * any order, or factored (4(π − 2)). Off unless set: every other part refuses a sum as not a single number.
+         */
+        sum?: boolean
         /** Box label, e.g. "x", "AB", "Reason for line 2". */
         label: string
         /** Line under the box or the choices. Never this part's answer. */

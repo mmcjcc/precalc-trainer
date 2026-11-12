@@ -3225,6 +3225,73 @@ export const ERROR_PATTERNS: Record<ErrorPatternId, ErrorPatternInfo> = {
     lesson: 'The apothem of a regular polygon is the perpendicular distance from the center to a side. The radius reaches a vertex, which is farther out. Using one in place of the other changes the area.',
     example: 'the radius in place of the apothem ✗ → the apothem',
   },
+  // --- honors geometry Unit 9, circles. Answers are multiples of π, so examples use letters and words only.
+  geo_circumference_for_area: {
+    id: 'geo_circumference_for_area',
+    title: 'That is the circumference',
+    lesson: 'The circumference is the distance around the circle, two times π times the radius. The area is the space inside, π times the square of the radius. Doubling the radius instead of squaring it gives the circumference, not the area.',
+    example: 'radius r: two times π times r ✗ → π times the square of r',
+  },
+  geo_area_for_circumference: {
+    id: 'geo_area_for_circumference',
+    title: 'That is the area',
+    lesson: 'The area is the space inside the circle, π times the square of the radius. The circumference is the distance around it, π times the diameter. Squaring the radius belongs to the area, not to the distance around.',
+    example: 'radius r: π times the square of r ✗ → two times π times r',
+  },
+  geo_circle_diameter_as_radius: {
+    id: 'geo_circle_diameter_as_radius',
+    title: 'The radius is half the diameter',
+    lesson: 'The radius reaches from the center to the circle, and the diameter goes all the way across, twice as far. Putting the diameter where the formula wants the radius makes the answer too big, and giving the diameter when the radius is asked doubles it.',
+    example: 'diameter d: π times the square of d ✗ → π times the square of half of d',
+  },
+  geo_circle_radius_as_diameter: {
+    id: 'geo_circle_radius_as_diameter',
+    title: 'The circumference uses the diameter',
+    lesson: 'The circumference is π times the diameter, and the diameter is twice the radius. Multiplying π by the radius alone leaves out that two, so the distance around comes out half as long.',
+    example: 'radius r: π times r ✗ → π times twice r',
+  },
+  geo_circle_radius_not_squared: {
+    id: 'geo_circle_radius_not_squared',
+    title: 'Square the radius for the area',
+    lesson: 'The area of a circle is π times the square of the radius. Multiplying π by the radius without squaring it gives a number that is not an area at all.',
+    example: 'radius r: π times r ✗ → π times r times r',
+  },
+  geo_pi_left_off: {
+    id: 'geo_pi_left_off',
+    title: 'Keep the π',
+    lesson: 'An answer in terms of π is a number times π, and the π is part of the answer. The number in front of it on its own is a different, much smaller amount.',
+    example: 'k times π: k ✗ → k times π',
+  },
+  geo_sector_fraction_left_off: {
+    id: 'geo_sector_fraction_left_off',
+    title: 'Take the fraction of the circle',
+    lesson: 'An arc or a sector is only part of the circle: the central angle out of the full turn of the circle. The whole circumference or the whole area is the full circle, so multiply it by that fraction.',
+    example: 'central angle m: the whole circle ✗ → m out of the full turn, times the whole circle',
+  },
+  geo_arc_sector_swapped: {
+    id: 'geo_arc_sector_swapped',
+    title: 'Arc length and sector area are different',
+    lesson: 'The arc length is a distance along the circle, a fraction of the circumference. The area of a sector is the space inside, the same fraction of the area of the circle. Using one formula for the other gives the wrong kind of answer.',
+    example: 'arc length: that fraction of π times the square of r ✗ → that fraction of two times π times r',
+  },
+  geo_arc_measure_for_length: {
+    id: 'geo_arc_measure_for_length',
+    title: 'Degrees are not a length',
+    lesson: 'The measure of an arc is in degrees, the same as its central angle. The arc length is a distance, measured in units like centimeters. Giving the degrees as the length mixes the two.',
+    example: 'an arc of m degrees: the length is m ✗ → the length is m out of the full turn, times the circumference',
+  },
+  geo_segment_triangle_not_subtracted: {
+    id: 'geo_segment_triangle_not_subtracted',
+    title: 'Take the triangle away',
+    lesson: 'A segment of a circle is the region between a chord and its arc. The sector reaches all the way to the center, so it is the segment plus the triangle. Subtract the triangle from the sector to leave only the segment.',
+    example: 'the area of the sector ✗ → the sector minus the triangle',
+  },
+  geo_segment_triangle_added: {
+    id: 'geo_segment_triangle_added',
+    title: 'Subtract the triangle, do not add it',
+    lesson: 'The sector already holds the triangle and the segment together. Adding the triangle counts it twice. The segment is what is left when the triangle is taken away.',
+    example: 'the sector plus the triangle ✗ → the sector minus the triangle',
+  },
   // --- precalculus Unit 4, trigonometric functions (engine/trig; content/modules/angleMeasure, unitCircle). Answers
   // there are angles, π-multiples and the special values, so examples use letters (d, k, θ, x, y, r) and numbers are
   // written as words: no example or lesson can show a generated answer.

@@ -68,7 +68,7 @@ const unit7Titles = [
   'Angles of elevation and depression',
 ]
 const unit8Titles = ['Tangents, arcs and chords', 'Inscribed and other angles', 'Segment lengths and circle equations']
-const unit9Titles = ['Areas of polygons']
+const unit9Titles = ['Areas of polygons', 'Circles: circumference, area, arcs and sectors']
 
 function done(at: number, moduleId: string, skill: string): Ev {
   return {

@@ -6,7 +6,7 @@
  */
 import type { ErrorPatternId } from '@/shared/types'
 import type { GeometryAnswer, GeometryStageId } from '@/content/types'
-import { readGeoAnswer, sameGeoValue, type GeoQty } from './answer'
+import { approxQty, approxValue, readGeoAnswer, sameGeoValue, type GeoQty } from './answer'
 import { formatLine, readLine, sameLine } from './lines'
 import { isReason, reasonLabel, reasonMistake, reasonWitness } from './reasons'
 
@@ -171,6 +171,18 @@ export const GEO_UNIT9_MISTAKE_IDS = [
   'geo_perimeter_for_area',
   'geo_area_for_perimeter',
   'geo_apothem_for_radius',
+  // The circle half of Unit 9 (circumference, area, arcs, sectors, segments).
+  'geo_circumference_for_area',
+  'geo_area_for_circumference',
+  'geo_circle_diameter_as_radius',
+  'geo_circle_radius_as_diameter',
+  'geo_circle_radius_not_squared',
+  'geo_pi_left_off',
+  'geo_sector_fraction_left_off',
+  'geo_arc_sector_swapped',
+  'geo_arc_measure_for_length',
+  'geo_segment_triangle_not_subtracted',
+  'geo_segment_triangle_added',
 ] as const
 
 /**
@@ -242,7 +254,11 @@ export function gradeGeoStage(answer: GeometryAnswer, stageId: GeometryStageId, 
   if (stage.kind === 'reason') return gradeReason(stage, text)
   if (stage.kind === 'line') return gradeLine(stage, text)
   if (stage.round !== undefined) return gradeRounded(stage, text)
-  const opts = { ...(stage.allowUndefined ? { allowUndefined: true as const } : {}), ...(stage.ratio ? { ratio: true as const } : {}) }
+  const opts = {
+    ...(stage.allowUndefined ? { allowUndefined: true as const } : {}),
+    ...(stage.ratio ? { ratio: true as const } : {}),
+    ...(stage.sum ? { sum: true as const } : {}),
+  }
   const unitless = stage.lengthUnit ? withoutLengthUnit(text, stage.lengthUnit) : { ok: true as const, text }
   if (!unitless.ok) return { verdict: 'invalid', message: unitless.message }
   const read = readGeoAnswer(unitless.text, opts)
@@ -278,11 +294,13 @@ export function gradeGeoStage(answer: GeometryAnswer, stageId: GeometryStageId, 
     if (!isGeoMistake(trap.id)) continue
     return { verdict: 'mistake', mistake: trap.id, witness: trap.witness }
   }
-  if (read.decimal && read.value.kind === 'qty' && right.value.kind === 'qty') {
-    // A calculator decimal close to the exact answer: right idea, wrong form. Not an attempt.
-    const near = Math.abs(approx(read.value.q) - approx(right.value.q)) <= 0.01 * Math.max(1, Math.abs(approx(right.value.q)))
+  const want = approxValue(right.value)
+  if (read.decimal && read.value.kind === 'qty' && !read.value.q.pi && want !== null) {
+    // A calculator decimal close to the exact answer (3.14 for π counts): right idea, wrong form. Not an attempt.
+    const near = Math.abs(approx(read.value.q) - want) <= 0.01 * Math.max(1, Math.abs(want))
     if (near) {
-      const form = right.value.q.rad > 1 ? 'in simplest radical form' : 'as an integer or a fraction'
+      const terms = right.value.kind === 'sum' ? right.value.terms : right.value.kind === 'qty' ? [right.value.q] : []
+      const form = terms.some((t) => t.pi) ? 'in terms of π' : terms.some((t) => t.rad > 1) ? 'in simplest radical form' : 'as an integer or a fraction'
       return { verdict: 'invalid', message: `That looks like a calculator decimal. Give the exact value, ${form}.` }
     }
   }
@@ -329,7 +347,7 @@ function gradeReason(stage: GeometryAnswer['stages'][number], text: string): Geo
   return { verdict: 'wrong', message: 'That reason does not justify this line.' }
 }
 
-const approx = (q: GeoQty) => (q.n / q.d) * Math.sqrt(q.rad)
+const approx = (q: GeoQty) => approxQty(q)
 
 type LengthUnit = NonNullable<GeometryAnswer['stages'][number]['lengthUnit']>
 
@@ -404,6 +422,9 @@ function gradeRounded(stage: GeometryAnswer['stages'][number], text: string): Ge
   // before a negative number is turned away.
   if (read.degrees && stage.unit !== 'deg') return { verdict: 'invalid', message: 'This part is not an angle measure, so leave off the degree sign.' }
   const q = read.value.q
+  if (q.pi) {
+    return { verdict: 'invalid', message: `This problem asks for a decimal rounded to the nearest ${place}. Use the π key of a calculator, then round.` }
+  }
   if (q.rad > 1) {
     return { verdict: 'invalid', message: `This problem asks for a decimal rounded to the nearest ${place}. Use a calculator for the square root, then round.` }
   }
@@ -706,18 +727,21 @@ const EXACT_BOUND_QUESTIONS: ReadonlySet<string> = new Set([
   'polygonArea',
   'specialArea',
   'regularArea',
+  'circleArea',
+  'arcSector',
+  'circleSegment',
 ])
 
 /**
  * Like `exposed`, with a radical bound to the number it touches: in "6√2" neither 6 nor √2 is shown on its own, and a
  * decimal's digits are not a whole number ("6.5" does not show 6). "6√2" itself, "6" in "(6, 2)" or "x + 6", and an
- * answer ending a sentence ("is 6.") still count.
+ * answer ending a sentence ("is 6.") still count. π binds the same way: "6π" does not show a 6.
  */
 export function exposedExact(blob: string, secret: string): boolean {
   const trimmed = secret.trim()
   if (!trimmed) return false
   const esc = trimmed.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-  return new RegExp(`(?:^|[^0-9A-Za-z√.])${esc}(?![0-9A-Za-z√]|\\.\\d)`).test(blob)
+  return new RegExp(`(?:^|[^0-9A-Za-z√π.])${esc}(?![0-9A-Za-z√π]|\\.\\d)`).test(blob)
 }
 
 /** True when `secret` shows up as its own number, not as a digit inside a longer one. */

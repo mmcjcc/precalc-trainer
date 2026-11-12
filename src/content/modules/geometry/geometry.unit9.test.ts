@@ -14,6 +14,7 @@ import { readGeoAnswer, sameGeoValue } from './answer'
 import { GEO_UNIT9_MISTAKE_IDS, exampleShowsAnswer, exposedExact, gradeGeoStage, stageDisplay } from './grade'
 import { GEO_RULE_FOR } from './rules'
 import { AREA_RULES } from './unit9Rules'
+import { CIRCLE_MISTAKE_IDS } from './unit9CircleRules'
 
 const SEEDS = Array.from({ length: 300 }, (_, i) => i + 1)
 const HEAVY = 120_000
@@ -288,7 +289,8 @@ describe('geometry unit 9 trap coverage', () => {
           for (const stage of p.answer.stages) for (const trap of stage.traps) seen.add(trap.id)
         }
       }
-      for (const id of GEO_UNIT9_MISTAKE_IDS) {
+      // The circle half's ids are covered by geometry.unit9c.test.ts.
+      for (const id of GEO_UNIT9_MISTAKE_IDS.filter((x) => !(CIRCLE_MISTAKE_IDS as readonly string[]).includes(x))) {
         expect(seen.has(id), id).toBe(true)
         expect(promised.has(id), `${id} promised`).toBe(true)
         const info = ERROR_PATTERNS[id]
