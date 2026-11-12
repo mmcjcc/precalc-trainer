@@ -65,6 +65,7 @@ const unit7Titles = [
   'Angles of elevation and depression',
 ]
 const unit8Titles = ['Tangents, arcs and chords', 'Inscribed and other angles', 'Segment lengths and circle equations']
+const unit9Titles = ['Areas of polygons']
 
 function done(at: number, moduleId: string, skill: string): Ev {
   return {
@@ -126,8 +127,8 @@ describe('Home: classes and units', () => {
 
     fireEvent.keyDown(tablist, { key: 'ArrowRight' })
     expect(screen.getByRole('tab', { name: 'Honors Geometry', selected: true })).toBeTruthy()
-    // A first visit lands on the last unit that has modules: Unit 8.
-    expect(moduleTitles()).toEqual(unit8Titles)
+    // A first visit lands on the last unit that has modules: Unit 9.
+    expect(moduleTitles()).toEqual(unit9Titles)
 
     fireEvent.keyDown(tablist, { key: 'ArrowRight' })
     expect(screen.getByRole('tab', { name: 'SAT Math Prep', selected: true })).toBeTruthy()
@@ -151,11 +152,11 @@ describe('Home: classes and units', () => {
     expect(screen.queryByRole('heading', { name: 'Unit 1 review' })).toBeNull()
   })
 
-  it('shows Honors Geometry Units 1, 2, 3, 4, 5, 6, 7, and 8', () => {
+  it('shows Honors Geometry Units 1, 2, 3, 4, 5, 6, 7, 8, and 9', () => {
     renderHome('/c/geometry')
     expect(screen.getByRole('tab', { name: 'Honors Geometry', selected: true })).toBeTruthy()
-    // A first visit lands on the last unit that has modules: Unit 8.
-    expect(moduleTitles()).toEqual(unit8Titles)
+    // A first visit lands on the last unit that has modules: Unit 9.
+    expect(moduleTitles()).toEqual(unit9Titles)
     const unit1 = screen.getByRole('button', { name: /Unit 1/ })
     const unit2 = screen.getByRole('button', { name: /Unit 2/ })
     const unit3 = screen.getByRole('button', { name: /Unit 3/ })
@@ -164,6 +165,7 @@ describe('Home: classes and units', () => {
     const unit6 = screen.getByRole('button', { name: /Unit 6/ })
     const unit7 = screen.getByRole('button', { name: /Unit 7/ })
     const unit8 = screen.getByRole('button', { name: /Unit 8/ })
+    const unit9 = screen.getByRole('button', { name: /Unit 9/ })
     expect(unit1.textContent).not.toMatch(/Coming soon/)
     expect(unit2.textContent).not.toMatch(/Coming soon/)
     expect(unit3.textContent).not.toMatch(/Coming soon/)
@@ -172,7 +174,9 @@ describe('Home: classes and units', () => {
     expect(unit6.textContent).not.toMatch(/Coming soon/)
     expect(unit7.textContent).not.toMatch(/Coming soon/)
     expect(unit8.textContent).not.toMatch(/Coming soon/)
-    expect(unit8.getAttribute('aria-pressed')).toBe('true')
+    expect(unit9.textContent).not.toMatch(/Coming soon/)
+    expect(unit9.getAttribute('aria-pressed')).toBe('true')
+    expect(unit8.getAttribute('aria-pressed')).toBe('false')
     expect(unit1.textContent).toMatch(/Tools of geometry/)
     expect(unit2.textContent).toMatch(/Reasoning and proof/)
     expect(unit3.textContent).toMatch(/Parallel and perpendicular lines/)
@@ -181,6 +185,7 @@ describe('Home: classes and units', () => {
     expect(unit6.textContent).toMatch(/Similarity/)
     expect(unit7.textContent).toMatch(/Right triangles/)
     expect(unit8.textContent).toMatch(/Circles/)
+    expect(unit9.textContent).toMatch(/Areas of plane figures/)
     expect(screen.queryByText(/Nothing to practise here yet/)).toBeNull()
     fireEvent.click(unit1)
     expect(moduleTitles()).toEqual(['Segments, midpoints and distance', 'Angles and angle pairs'])
@@ -198,6 +203,8 @@ describe('Home: classes and units', () => {
     expect(moduleTitles()).toEqual(unit7Titles)
     fireEvent.click(unit8)
     expect(moduleTitles()).toEqual(unit8Titles)
+    fireEvent.click(unit9)
+    expect(moduleTitles()).toEqual(unit9Titles)
   })
 
   it('shows only the selected unit, with the review card on precalc Unit 1 only', () => {

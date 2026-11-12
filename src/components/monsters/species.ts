@@ -704,6 +704,13 @@ export const SPECIES: readonly Species[] = [
       'geo_radius_unsquared',
       'geo_center_signs_flipped',
       'geo_circumscribed_adjacent',
+      'geo_slant_as_height',
+      'geo_area_not_halved',
+      'geo_half_applied',
+      'geo_bases_multiplied',
+      'geo_perimeter_for_area',
+      'geo_area_for_perimeter',
+      'geo_apothem_for_radius',
     ],
   },
   {

@@ -2910,6 +2910,49 @@ export const ERROR_PATTERNS: Record<ErrorPatternId, ErrorPatternInfo> = {
     lesson: 'Two tangent segments from the same outside point are congruent, so a quadrilateral drawn around a circle has equal sums of the opposite sides. Copying a neighboring side, or adding the two sides that meet the unknown one, pairs the wrong sides.',
     example: 'the unknown side equals a neighboring side ✗ → the sums of the opposite sides are equal',
   },
+  // --- honors geometry Unit 9, areas of polygons. Examples use words only, so none can show a generated answer.
+  geo_slant_as_height: {
+    id: 'geo_slant_as_height',
+    title: 'That side is not the height',
+    lesson: 'The height of a parallelogram or a triangle is the perpendicular distance between the base and the opposite side. A slanted side is longer than that distance, so using it as the height makes the area too big.',
+    example: 'base times the slanted side ✗ → base times the height',
+  },
+  geo_area_not_halved: {
+    id: 'geo_area_not_halved',
+    title: 'This area takes half',
+    lesson: 'The area of a triangle, a trapezoid, or a rhombus or kite takes half of a product. Leaving the half out makes the area twice as big.',
+    example: 'the product without the half ✗ → half of that product',
+  },
+  geo_half_applied: {
+    id: 'geo_half_applied',
+    title: 'This area is the whole product',
+    lesson: 'A rectangle or a parallelogram has area base times height, the whole product. Taking half of it describes a triangle with those same dimensions, not this figure.',
+    example: 'half of base times height ✗ → base times height',
+  },
+  geo_bases_multiplied: {
+    id: 'geo_bases_multiplied',
+    title: 'Add the two bases',
+    lesson: 'The area of a trapezoid uses the height times the sum of the two bases, then half. Multiplying the bases together is not that sum.',
+    example: 'height times the product of the bases ✗ → height times the sum of the bases',
+  },
+  geo_perimeter_for_area: {
+    id: 'geo_perimeter_for_area',
+    title: 'That is the perimeter',
+    lesson: 'The perimeter is the distance around the figure. The area is the space inside it. Adding the sides gives the perimeter, not the area.',
+    example: 'the sum of the sides ✗ → the area',
+  },
+  geo_area_for_perimeter: {
+    id: 'geo_area_for_perimeter',
+    title: 'That is the area',
+    lesson: 'The area is the space inside the figure. The perimeter is the distance around it. The area formula does not give the perimeter.',
+    example: 'half the apothem times the perimeter ✗ → the perimeter itself',
+  },
+  geo_apothem_for_radius: {
+    id: 'geo_apothem_for_radius',
+    title: 'The apothem is not the radius',
+    lesson: 'The apothem of a regular polygon is the perpendicular distance from the center to a side. The radius reaches a vertex, which is farther out. Using one in place of the other changes the area.',
+    example: 'the radius in place of the apothem ✗ → the apothem',
+  },
   // --- precalculus Unit 4, trigonometric functions (engine/trig; content/modules/angleMeasure, unitCircle). Answers
   // there are angles, π-multiples and the special values, so examples use letters (d, k, θ, x, y, r) and numbers are
   // written as words: no example or lesson can show a generated answer.

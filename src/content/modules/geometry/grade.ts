@@ -162,6 +162,17 @@ export const GEO_UNIT8_MISTAKE_IDS = [
   'geo_circumscribed_adjacent',
 ] as const
 
+/** Unit 9 mistakes (areas of polygons). A number is named only when it is exactly what that slip produces here. */
+export const GEO_UNIT9_MISTAKE_IDS = [
+  'geo_slant_as_height',
+  'geo_area_not_halved',
+  'geo_half_applied',
+  'geo_bases_multiplied',
+  'geo_perimeter_for_area',
+  'geo_area_for_perimeter',
+  'geo_apothem_for_radius',
+] as const
+
 /**
  * Mistakes of the precalculus right-triangle core (engine/trig) that Unit 7 names too: the special triangles' factors
  * swapped or used the wrong way, the squares added where one side is the hypotenuse (or subtracted for two legs), the
@@ -197,6 +208,7 @@ export type GeoMistakeId =
   | (typeof GEO_UNIT7_MISTAKE_IDS)[number]
   | (typeof GEO_UNIT7B_MISTAKE_IDS)[number]
   | (typeof GEO_UNIT8_MISTAKE_IDS)[number]
+  | (typeof GEO_UNIT9_MISTAKE_IDS)[number]
   | (typeof GEO_BORROWED_TRIG_IDS)[number]
 
 export type GeoGrade =
@@ -458,6 +470,7 @@ export function isGeoMistake(id: ErrorPatternId): id is GeoMistakeId {
     (GEO_UNIT7_MISTAKE_IDS as readonly string[]).includes(id) ||
     (GEO_UNIT7B_MISTAKE_IDS as readonly string[]).includes(id) ||
     (GEO_UNIT8_MISTAKE_IDS as readonly string[]).includes(id) ||
+    (GEO_UNIT9_MISTAKE_IDS as readonly string[]).includes(id) ||
     (GEO_BORROWED_TRIG_IDS as readonly string[]).includes(id)
   )
 }
@@ -690,6 +703,9 @@ const EXACT_BOUND_QUESTIONS: ReadonlySet<string> = new Set([
   'outsideAngle',
   'segmentLengths',
   'circleEquation',
+  'polygonArea',
+  'specialArea',
+  'regularArea',
 ])
 
 /**

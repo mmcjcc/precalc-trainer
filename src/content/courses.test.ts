@@ -139,8 +139,9 @@ describe('course registry', () => {
       ['g6', 'Unit 6', 'Similarity', ['geoRatios', 'geoSimilarTriangles', 'geoProportionalParts']],
       ['g7', 'Unit 7', 'Right triangles', ['geoRightSimilar', 'geoPythagorean', 'geoSpecialRight', 'geoTrigRatios', 'geoElevDepress']],
       ['g8', 'Unit 8', 'Circles', ['geoTangentChords', 'geoCircleAngles', 'geoCircleMeasures']],
+      ['g9', 'Unit 9', 'Areas of plane figures', ['geoPolygonArea']],
     ])
-    expect(unitsWithModules(geometry!).map((u) => u.id)).toEqual(['g1', 'g2', 'g3', 'g4', 'g5', 'g6', 'g7', 'g8'])
+    expect(unitsWithModules(geometry!).map((u) => u.id)).toEqual(['g1', 'g2', 'g3', 'g4', 'g5', 'g6', 'g7', 'g8', 'g9'])
     expect(modulesInUnit(geometry!.units[0]!).map((m) => m.id)).toEqual(['geoSegments', 'geoAngles'])
     expect(modulesInUnit(geometry!.units[1]!).map((m) => m.id)).toEqual(['geoLogic', 'geoProof'])
     expect(modulesInUnit(geometry!.units[2]!).map((m) => m.id)).toEqual(['geoParallel', 'geoPolygonAngles'])
@@ -149,6 +150,7 @@ describe('course registry', () => {
     expect(modulesInUnit(geometry!.units[5]!).map((m) => m.id)).toEqual(['geoRatios', 'geoSimilarTriangles', 'geoProportionalParts'])
     expect(modulesInUnit(geometry!.units[6]!).map((m) => m.id)).toEqual(['geoRightSimilar', 'geoPythagorean', 'geoSpecialRight', 'geoTrigRatios', 'geoElevDepress'])
     expect(modulesInUnit(geometry!.units[7]!).map((m) => m.id)).toEqual(['geoTangentChords', 'geoCircleAngles', 'geoCircleMeasures'])
+    expect(modulesInUnit(geometry!.units[8]!).map((m) => m.id)).toEqual(['geoPolygonArea'])
     expect(precalc!.units[0]!.reviewId).toBe('unit1')
     expect(precalc!.units[1]!.reviewId).toBeUndefined()
     expect(precalc!.units[2]!.reviewId).toBeUndefined()
