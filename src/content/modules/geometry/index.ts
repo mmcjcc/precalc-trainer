@@ -49,6 +49,8 @@ import { drawInscribed, drawInside, drawOutside } from './unit8Angles'
 import { drawEquation, drawLengths } from './unit8Measures'
 import { ANGLE_RULES_8, MEASURE_RULES, TANGENT_RULES } from './unit8Rules'
 import { drawArcs, drawChords, drawTangent } from './unit8Tangent'
+import { drawBasic, drawRegular, drawSpecial as drawPolygonSpecial } from './unit9Polygons'
+import { AREA_RULES } from './unit9Rules'
 
 export { readGeoAnswer, formatPoint, formatQty, formatValue, geoQty, sameGeoValue, sameQty, simplifyRadical } from './answer'
 export type { GeoQty, GeoRead, GeoReadOptions, GeoValue } from './answer'
@@ -793,6 +795,45 @@ export const geoCircleMeasuresModule: ModuleDef = {
   nextStep: () => null,
 }
 
+/**
+ * Areas of polygons (honors geometry Unit 9, Jurgensen chapter 11, first half). Rectangle, parallelogram,
+ * triangle, trapezoid, rhombus and kite, then a height found first, then a regular polygon.
+ * Circle areas are a later build: a quantity cannot carry π.
+ */
+export const geoPolygonAreaModule: ModuleDef = {
+  id: 'geoPolygonArea',
+  subject: 'Geometry',
+  title: 'Areas of polygons',
+  blurb: 'Areas of rectangles, parallelograms, triangles, trapezoids, rhombi and kites, then a height found first, then regular polygons.',
+  order: 32,
+  templates: [
+    geoTemplate(
+      'geoPolygonArea',
+      'ar.basic',
+      'Areas of polygons',
+      'A rectangle, parallelogram, triangle, trapezoid, or a rhombus or kite from its diagonals.',
+      drawBasic,
+    ),
+    geoTemplate(
+      'geoPolygonArea',
+      'ar.special',
+      'A height found first',
+      'An isosceles or right triangle, an equilateral triangle, an isosceles trapezoid, or an angle of 30 or 45 degrees.',
+      drawPolygonSpecial,
+    ),
+    geoTemplate(
+      'geoPolygonArea',
+      'ar.regular',
+      'Regular polygons',
+      'A regular polygon from its apothem and side, or a hexagon, square, or equilateral triangle from one length.',
+      drawRegular,
+    ),
+  ],
+  ruleCards: AREA_RULES,
+  progress: PROGRESS,
+  nextStep: () => null,
+}
+
 registerModule(geoRightSimilarModule)
 registerModule(geoPythagoreanModule)
 registerModule(geoSpecialRightModule)
@@ -801,3 +842,4 @@ registerModule(geoElevDepressModule)
 registerModule(geoTangentChordsModule)
 registerModule(geoCircleAnglesModule)
 registerModule(geoCircleMeasuresModule)
+registerModule(geoPolygonAreaModule)

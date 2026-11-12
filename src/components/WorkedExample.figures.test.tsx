@@ -80,4 +80,21 @@ describe('WorkedExample figures', () => {
       unmount()
     }
   })
+
+  it('renders a worked figure for each Unit 9 area template', () => {
+    for (const templateId of ['ar.basic', 'ar.special', 'ar.regular'] as const) {
+      const instance = generateProblem('geoPolygonArea', templateId, 42)
+      if (instance.answer.type !== 'geometry') throw new Error(templateId)
+      const ex = buildWorkedExample(instance)
+      expect(ex, templateId).not.toBeNull()
+      if (!ex || ex.sibling.answer.type !== 'geometry') throw new Error(templateId)
+      expect(figureJson(instance.answer)).not.toBe(figureJson(ex.sibling.answer))
+      const { container, unmount } = render(<WorkedExample instance={instance} />)
+      const figure = container.querySelector('[data-example-figure]')
+      expect(figure?.querySelector('svg'), templateId).toBeTruthy()
+      expect(figure?.querySelector('svg')?.getAttribute('aria-label')).toBe(ex.sibling.answer.figure.ariaLabel)
+      expect(container.textContent).not.toMatch(/\[object|undefined/)
+      unmount()
+    }
+  })
 })

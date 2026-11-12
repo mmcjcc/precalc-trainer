@@ -1574,6 +1574,9 @@ describe('buildTutorContext', () => {
       ['geoCircleAngles', 'ia.outside', 'outsideAngle'],
       ['geoCircleMeasures', 'cm.lengths', 'segmentLengths'],
       ['geoCircleMeasures', 'cm.equation', 'circleEquation'],
+      ['geoPolygonArea', 'ar.basic', 'polygonArea'],
+      ['geoPolygonArea', 'ar.special', 'specialArea'],
+      ['geoPolygonArea', 'ar.regular', 'regularArea'],
     ] as const
     for (const [moduleId, templateId, question] of cases) {
       const instance = generateProblem(moduleId, templateId, 1)

@@ -15,7 +15,7 @@
 export type RelOp = '=' | '<' | '<=' | '>' | '>='
 /** `h` is the difference-quotient step; the parser accepts it only when the problem owns it (ctx.vars). */
 export type VarName = 'x' | 'y' | 'n' | 'h'
-export type ModuleId = 'numberLine' | 'inequalities' | 'evenOdd' | 'inverses' | 'propertiesDrill' | 'sigFigs' | 'atoms' | 'diffQuotient' | 'graphFeatures' | 'domainRange' | 'composition' | 'functionOps' | 'transformations' | 'piecewiseRate' | 'electrons' | 'quantumNumbers' | 'periodic' | 'quadratics' | 'optimization' | 'polyDivision' | 'polyZeros' | 'rationalFns' | 'signCharts' | 'complexNums' | 'logForms' | 'logProperties' | 'expLogEquations' | 'expLogGraphs' | 'expModels' | 'angleMeasure' | 'rightTriangle' | 'unitCircle' | 'sinusoids' | 'otherTrigGraphs' | 'inverseTrig' | 'trigIdentities' | 'trigFormulas' | 'trigEquations' | 'obliqueTriangles' | 'geoSegments' | 'geoAngles' | 'geoLogic' | 'geoProof' | 'geoParallel' | 'geoPolygonAngles' | 'geoCongruence' | 'geoIsosceles' | 'geoTriangleProofs' | 'geoParallelograms' | 'geoSpecialQuads' | 'geoTrapezoids' | 'geoRatios' | 'geoSimilarTriangles' | 'geoProportionalParts' | 'geoRightSimilar' | 'geoPythagorean' | 'geoSpecialRight' | 'geoTrigRatios' | 'geoElevDepress' | 'geoTangentChords' | 'geoCircleAngles' | 'geoCircleMeasures' | 'ionicNames' | 'molecularAcids' | 'ionicBonding' | 'covalentBonding' | 'reactions' | 'moles' | 'chemFormulas' | 'factoring'
+export type ModuleId = 'numberLine' | 'inequalities' | 'evenOdd' | 'inverses' | 'propertiesDrill' | 'sigFigs' | 'atoms' | 'diffQuotient' | 'graphFeatures' | 'domainRange' | 'composition' | 'functionOps' | 'transformations' | 'piecewiseRate' | 'electrons' | 'quantumNumbers' | 'periodic' | 'quadratics' | 'optimization' | 'polyDivision' | 'polyZeros' | 'rationalFns' | 'signCharts' | 'complexNums' | 'logForms' | 'logProperties' | 'expLogEquations' | 'expLogGraphs' | 'expModels' | 'angleMeasure' | 'rightTriangle' | 'unitCircle' | 'sinusoids' | 'otherTrigGraphs' | 'inverseTrig' | 'trigIdentities' | 'trigFormulas' | 'trigEquations' | 'obliqueTriangles' | 'geoSegments' | 'geoAngles' | 'geoLogic' | 'geoProof' | 'geoParallel' | 'geoPolygonAngles' | 'geoCongruence' | 'geoIsosceles' | 'geoTriangleProofs' | 'geoParallelograms' | 'geoSpecialQuads' | 'geoTrapezoids' | 'geoRatios' | 'geoSimilarTriangles' | 'geoProportionalParts' | 'geoRightSimilar' | 'geoPythagorean' | 'geoSpecialRight' | 'geoTrigRatios' | 'geoElevDepress' | 'geoTangentChords' | 'geoCircleAngles' | 'geoCircleMeasures' | 'ionicNames' | 'molecularAcids' | 'ionicBonding' | 'covalentBonding' | 'reactions' | 'moles' | 'chemFormulas' | 'factoring' | 'geoPolygonArea'
 export type CalcId = 'ti84' | 'nspire'
 
 /** Fine-grained property tags. Canonical steps carry one; the engine's move detector reports one. */
@@ -732,6 +732,17 @@ export type ErrorPatternId =
   | 'geo_radius_unsquared'
   | 'geo_center_signs_flipped'
   | 'geo_circumscribed_adjacent'
+  // honors geometry Unit 9, areas of polygons (content/modules/geometry). Each id is the exact number that slip
+  // produces on THIS problem: a slanted side used as the height, the half left off a triangle, trapezoid, rhombus
+  // or kite, a half taken on a rectangle or parallelogram, the bases of a trapezoid multiplied, the perimeter given
+  // for the area or the area given for the perimeter, or the apothem swapped with the radius.
+  | 'geo_slant_as_height'
+  | 'geo_area_not_halved'
+  | 'geo_half_applied'
+  | 'geo_bases_multiplied'
+  | 'geo_perimeter_for_area'
+  | 'geo_area_for_perimeter'
+  | 'geo_apothem_for_radius'
   // precalculus Unit 4, trigonometric functions (engine/trig; content/modules/angleMeasure, unitCircle). Each id is
   // the exact value, angle or quadrant that slip gives on THIS problem, computed by the core; never a right answer.
   | 'trig_conversion_inverted'

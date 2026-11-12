@@ -217,6 +217,12 @@ export const COURSES: readonly CourseDef[] = [
         title: 'Circles',
         moduleIds: ['geoTangentChords', 'geoCircleAngles', 'geoCircleMeasures'],
       },
+      {
+        id: 'g9',
+        label: 'Unit 9',
+        title: 'Areas of plane figures',
+        moduleIds: ['geoPolygonArea'],
+      },
     ],
   },
   {

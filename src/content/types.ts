@@ -468,6 +468,8 @@ export interface TrigTriangleSpec {
  * Pythagorean Theorem and its converse, word problems rounded as asked, the special right triangles). The second half
  * adds the tangent, sine and cosine ratios and angles of elevation and depression.
  * Unit 8 adds circles: tangents, arcs, chords, inscribed and other angles, segment lengths, and the equation of a circle.
+ * Unit 9 adds areas of polygons: rectangles, parallelograms, triangles, trapezoids, rhombi and kites, then a height
+ * found first, then regular polygons.
  */
 export type GeometryQuestion =
   | 'addition'
@@ -526,6 +528,9 @@ export type GeometryQuestion =
   | 'outsideAngle'
   | 'segmentLengths'
   | 'circleEquation'
+  | 'polygonArea'
+  | 'specialArea'
+  | 'regularArea'
 
 /**
  * One checked part of a geometry problem. `x` and `result` are the Unit 1 boxes.
