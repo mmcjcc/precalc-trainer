@@ -84,6 +84,7 @@ describe('course registry', () => {
       'diffQuotient',
     ])
     expect(modulesInUnit(precalc!.units[1]!).map((m) => m.id)).toEqual([
+      'factoring',
       'quadratics',
       'optimization',
       'polyDivision',

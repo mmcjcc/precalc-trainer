@@ -15,6 +15,7 @@ import { DomainRangeFlow } from './flows/DomainRangeFlow'
 import { PiecewiseRateFlow } from './flows/PiecewiseRateFlow'
 import { PolyDivisionFlow } from './flows/PolyDivisionFlow'
 import { PolyZerosFlow } from './flows/PolyZerosFlow'
+import { FactoringFlow } from './flows/FactoringFlow'
 import { RationalFnsFlow } from './flows/RationalFnsFlow'
 import { SignChartsFlow } from './flows/SignChartsFlow'
 import { ComplexNumsFlow } from './flows/ComplexNumsFlow'
@@ -150,6 +151,8 @@ function flowFor(props: FlowProps): ReactNode {
       return <PolyDivisionFlow {...props} />
     case 'polyZeros':
       return <PolyZerosFlow {...props} />
+    case 'factoring':
+      return <FactoringFlow {...props} />
     case 'rationalFns':
       return <RationalFnsFlow {...props} />
     case 'signCharts':

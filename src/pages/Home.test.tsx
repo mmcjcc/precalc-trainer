@@ -267,6 +267,9 @@ describe('Home: classes and units', () => {
     expect(moduleTitles()).toContain('Completing the square')
     expect(screen.queryByText('Nothing to practise here yet: this unit is being built.')).toBeNull()
     expect(moduleLinks()).toContain('/m/quadratics')
+    // The factoring review comes first in Unit 2, before completing the square.
+    expect(moduleLinks()[0]).toBe('/m/factoring')
+    expect(moduleTitles()[0]).toBe('Factoring polynomials')
     expect(screen.queryByRole('heading', { name: 'Unit 1 review' })).toBeNull()
     expect(screen.queryByRole('heading', { name: 'Difference quotient' })).toBeNull()
     expect(screen.getByRole('button', { name: /Unit 2/, pressed: true }).textContent).not.toMatch(/Coming soon/)

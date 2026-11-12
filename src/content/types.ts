@@ -17,7 +17,7 @@ import type {
   VarName,
 } from '@/shared/types'
 
-export type ProblemKind = 'inequality' | 'numberLine' | 'evenOdd' | 'inverse' | 'drill' | 'sigFigs' | 'atoms' | 'diffQuotient' | 'graphFeatures' | 'domainRange' | 'composition' | 'functionOps' | 'transformations' | 'piecewiseRate' | 'electrons' | 'quantumNumbers' | 'periodic' | 'quadratics' | 'optimization' | 'polyDivision' | 'polyZeros' | 'rationalFns' | 'signCharts' | 'complexNums' | 'logForms' | 'logProperties' | 'expLogEquations' | 'expLogGraphs' | 'expModels' | 'angleMeasure' | 'rightTriangle' | 'unitCircle' | 'sinusoids' | 'otherTrigGraphs' | 'inverseTrig' | 'trigIdentities' | 'trigFormulas' | 'trigEquations' | 'geometry' | 'nomenclature' | 'satrw' | 'ionicBonding' | 'covalentBonding'
+export type ProblemKind = 'inequality' | 'numberLine' | 'evenOdd' | 'inverse' | 'drill' | 'sigFigs' | 'atoms' | 'diffQuotient' | 'graphFeatures' | 'domainRange' | 'composition' | 'functionOps' | 'transformations' | 'piecewiseRate' | 'electrons' | 'quantumNumbers' | 'periodic' | 'quadratics' | 'optimization' | 'polyDivision' | 'polyZeros' | 'factoring' | 'rationalFns' | 'signCharts' | 'complexNums' | 'logForms' | 'logProperties' | 'expLogEquations' | 'expLogGraphs' | 'expModels' | 'angleMeasure' | 'rightTriangle' | 'unitCircle' | 'sinusoids' | 'otherTrigGraphs' | 'inverseTrig' | 'trigIdentities' | 'trigFormulas' | 'trigEquations' | 'geometry' | 'nomenclature' | 'satrw' | 'ionicBonding' | 'covalentBonding'
 
 /** Precalculus Unit 2, optimization with quadratics: a pen against a wall, pens in a row, two numbers, price and sales. */
 export type OptimizationQuestion = 'wall' | 'pens' | 'numbers' | 'revenue'
@@ -696,6 +696,31 @@ export type CbCheck =
   | { kind: 'boil'; a: string; b: string }
 
 /** Which complex-number screen this problem is. */
+/** Factoring polynomials (precalculus Unit 2): one question per template. */
+export type FactoringQuestion = 'gcf' | 'squares' | 'cubes' | 'trinomial' | 'grouping' | 'complete'
+
+/** The parts of a factoring problem: what is cubed (fa.cubes), the two pairs (fa.grouping), the product. */
+export type FactoringStageId = 'cubed' | 'pairs' | 'product'
+
+/**
+ * How a factoring problem was built. `g·x^e` is the common factor taken out first (1 and 0 when there is none).
+ * The pattern inside (`core`): `gcf` the inner polynomial `inner`; `dos` m²x² − n²; `pst` (mx + s·n)²; `sos`
+ * m²x² + n²; `cubes` (mx)³ + s·n³; `tri` (p0·x + q0)(p1·x + q1); `group` (x + t)(x² + u); `dos2` m⁴x⁴ − n⁴;
+ * `quartic` (x² + u0)(x² + u1).
+ */
+export interface FactoringShape {
+  core: 'gcf' | 'dos' | 'pst' | 'sos' | 'cubes' | 'tri' | 'group' | 'dos2' | 'quartic'
+  g: number
+  e: number
+  m: number
+  n: number
+  s: 1 | -1
+  /** `tri`: [p0, q0, p1, q1]; `group`: [t, u]; `quartic`: [u0, u1]; else []. */
+  k: number[]
+  /** The polynomial after the common factor, app syntax. */
+  inner: string
+}
+
 export type ComplexNumsQuestion = 'arith' | 'divide' | 'powers' | 'quadratic' | 'zeros'
 
 /** One checked part of a complex-number problem. */
@@ -1427,6 +1452,57 @@ export type AnswerSpec =
        * panel can be opened before she finishes. The flow shows this one only after the problem is complete.
        */
       graph: GraphSpec
+    }
+  | {
+      /**
+       * Factoring polynomials (precalculus Unit 2, factoring review; module `factoring`). Grade a part with
+       * the module's `gradeFactoringStage`, which reads her product exactly (`checkFactored` in
+       * src/engine/polynomials/factor.ts) and names the slip whose product hers multiplies out to. Never
+       * compare text.
+       */
+      type: 'factoring'
+      question: FactoringQuestion
+      /** The polynomial, standard form, app syntax: "8x^3 + 27". */
+      f: string
+      /** The question in one line, plain words. No numbers, no method beyond what the template names. */
+      prompt: string
+      /** The complete factorization over the integers, app syntax ('' when it does not factor). */
+      answerText: string
+      /** fa.squares: a sum of two squares, which does not factor over the integers. */
+      prime: boolean
+      /** How the polynomial was built: what the candidates, witnesses and explanations are made from. */
+      shape: FactoringShape
+      /** fa.squares: the two choices in the order she sees them. */
+      choiceOrder?: ('factors' | 'prime')[]
+      /** fa.grouping: the two pairs as shown (app syntax) and each factored. */
+      pairs?: { first: string; second: string; firstAnswer: string; secondAnswer: string }
+      /** fa.cubes: what is cubed in each term (app syntax, "2x" and "3"), after the common factor. */
+      cubed?: { first: string; second: string }
+      /** The parts she answers, in order. Each has its own hint ladder (hint key = its index). */
+      stages: {
+        id: FactoringStageId
+        /** Hint rung 1 for this part (never contains the answer). */
+        nudge: string
+        /** Hint rung 2 before any named mistake in this part. */
+        ruleCard: RuleCardId
+        /** Hint rung 3 for this part: the worked lines that answer it. */
+        reveal: string[]
+      }[]
+      /**
+       * The wrong answers this problem's slips give, as she would type them, each with the id it grades as and
+       * the part it belongs to. Built and checked per seed; none equals the right answer or another's product.
+       */
+      slips: { id: ErrorPatternId; stage: FactoringStageId; entries: Record<string, string> }[]
+      /** The whole answer, pretty, for the tutor. */
+      expectedDisplay: string
+      nudge: string
+      ruleCard: RuleCardId
+      ruleCards: RuleCardId[]
+      /** The after-finish explanation. Reveals the answer. */
+      reveal: string[]
+      /** The named mistake this seed promises, when one is possible, and the part it is promised on. */
+      trap?: ErrorPatternId
+      trapStage?: FactoringStageId
     }
   | {
       /**
