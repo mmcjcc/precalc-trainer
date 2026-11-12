@@ -42,7 +42,9 @@ describe('the optimization module', () => {
   it('sits in Unit 2 right after completing the square', () => {
     const precalc = getCourse('precalc')!
     const unit2 = modulesInUnit(precalc.units[1]!).map((m) => m.id)
-    expect(unit2.slice(0, 2)).toEqual(['quadratics', 'optimization'])
+    // Factoring review opens the unit; optimization still follows completing the square directly.
+    const at = unit2.indexOf('quadratics')
+    expect(unit2.slice(at, at + 2)).toEqual(['quadratics', 'optimization'])
     expect(getModule('optimization').templates.map((t) => t.id)).toEqual([...TEMPLATES])
   })
 

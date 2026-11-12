@@ -119,7 +119,7 @@ describe('You are here: the set builder’s first type', () => {
     ]
     // What each log's set starts with: the unit Home shows (new student), her working unit, the mistake, the review.
     expect(logs.map((events) => setStart(precalc, events, emptyRewards(), NOW, 'unit2')!.templateId)).toEqual([
-      'cs.form',
+      'fa.gcf',
       'lf.convert',
       'ineq.linear',
       'dr.domain',
