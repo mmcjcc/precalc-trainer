@@ -24,6 +24,7 @@ import { gradeOtPart } from '@/content/modules/obliqueTriangles'
 import { verifyTrigStep } from '@/engine/trig'
 import { trigEntries } from '@/content/modules/trig/parts'
 import { gradeNmStage, NM_KEYS, nmWork } from '@/content/modules/nomenclature'
+import { gradeRxStage, RX_KEYS, rxWork, slotKey } from '@/content/modules/reactions'
 import { reasonLabel } from '@/content/modules/geometry/reasons'
 import { checkSquareLine, configurationMistakes, gradeAxisOfSymmetry, gradeConfiguration, gradeLogEquation, gradeLogValue, gradeVertex, squareMistakes, syntheticMistakes, vertexMistakes } from '@/engine'
 import { ratToString } from '@/notation'
@@ -50,6 +51,7 @@ import {
   verdictFromQn,
   verdictFromExpLogPart,
   verdictFromNm,
+  verdictFromRx,
   verdictFromTrigPart,
   verdictFromTrigStep,
   verdictFromOptPart,
@@ -1022,6 +1024,41 @@ describe('buildTutorContext', () => {
     const picked = buildTutorContext(classify, attempt('nm-3', { moduleId: 'molecularAcids', final: { polyEntries: { a: 'hydrate' } } }), null, false)
     expect(picked.work).toEqual(['Kind of compound: hydrate'])
     expect(buildTutorContext(instance, attempt('nm-4', { moduleId: 'ionicNames' }), null, false).work).toEqual([])
+  })
+
+  it('describes a chemical-reactions problem and her parts, with the named rx_ slip', () => {
+    const instance = generateProblem('reactions', 'rx.count', 1)
+    if (instance.answer.type !== 'reactions') throw new Error('expected a reactions problem')
+    const a = instance.answer
+    const entries: Record<string, string> = {}
+    for (const stage of a.stages) entries[RX_KEYS[stage.id]] = stage.answerText
+    const ctx = buildTutorContext(instance, attempt('rx-1', { moduleId: 'reactions', final: { polyEntries: entries } }), null, false)
+    expect(ctx.subject).toBe('chemistry')
+    expect(ctx.kind).toBe('reactions')
+    expect(ctx.moduleId).toBe('reactions')
+    expect(ctx.statement).toBe(a.prompt)
+    expect(ctx.work).toEqual(rxWork(a, entries))
+    expect(ctx.work[0]).toBe(`${a.stages[0]!.label}: ${a.stages[0]!.answerText}`)
+    expect(ctx.answer).toBe(a.expectedDisplay)
+    expect(ctx.canonical[0]).toBe(a.reveal[0])
+    if (!a.trap || !a.trapStage || a.trapAnswer == null) throw new Error('seed 1 has no promised trap')
+    const trap = gradeRxStage(a, a.trapStage, a.trapAnswer)
+    expect(trap.verdict).toBe('mistake')
+    if (trap.verdict !== 'mistake') return
+    const verdict = verdictFromRx(trap)
+    expect(verdict?.status).toBe('wrong')
+    expect(verdict?.mistake?.id).toBe(a.trap)
+    expect(verdict?.mistake?.witness).toBe(trap.witness)
+    expect(verdictFromRx(gradeRxStage(a, a.stages[0]!.id, '???'))?.status).toBe('parse_error')
+    expect(verdictFromRx(gradeRxStage(a, a.stages[0]!.id, a.stages[0]!.answerText))?.status).toBe('correct')
+    // A balance problem reads her coefficient boxes back beside each species.
+    const balance = generateProblem('reactions', 'rx.balance', 1)
+    if (balance.answer.type !== 'reactions') throw new Error('expected a balance problem')
+    const stage = balance.answer.stages[0]!
+    const boxes = Object.fromEntries(stage.slots!.map((_, i) => [slotKey(stage.id, i), '1']))
+    const work = buildTutorContext(balance, attempt('rx-2', { moduleId: 'reactions', final: { polyEntries: boxes } }), null, false).work
+    expect(work).toEqual([`Coefficients: ${stage.slots!.map((slot) => `1 ${slot}`).join(', ')}`])
+    expect(buildTutorContext(instance, attempt('rx-3', { moduleId: 'reactions' }), null, false).work).toEqual([])
   })
 
   it('describes a Unit 3 transversal, a triangle, and a line', () => {

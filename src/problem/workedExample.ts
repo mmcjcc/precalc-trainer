@@ -219,6 +219,12 @@ export const COVERED_PARTS_TEMPLATES = [
   'cb.shape',
   'cb.polarity',
   'cb.forces',
+  // Chemistry chapter 11 (chemical reactions).
+  'rx.count',
+  'rx.balance',
+  'rx.types',
+  'rx.predict',
+  'rx.word',
 ] as const
 
 const STEP_SET = new Set<string>(COVERED_STEP_TEMPLATES)
@@ -1070,6 +1076,27 @@ function buildPartsForAnswer(sibling: ProblemInstance, ans: AnswerSpec, cards: r
     }
 
     case 'covalentBonding': {
+      return {
+        kind: 'parts',
+        sibling,
+        prompt: ans.prompt,
+        parts: ans.stages.map((stage) => {
+          const rule = findRule(cards, stage.ruleCard)
+          const choiceText =
+            stage.kind === 'choice' ? stage.choices?.find((c) => c.id === stage.answerText)?.text : undefined
+          return {
+            id: stage.id,
+            label: stage.label,
+            answer: choiceText ?? stage.answerText,
+            why: stage.nudge,
+            ...(rule ? { ruleTitle: rule.title, ruleBody: rule.body } : {}),
+            details: stage.reveal,
+          }
+        }),
+      }
+    }
+
+    case 'reactions': {
       return {
         kind: 'parts',
         sibling,

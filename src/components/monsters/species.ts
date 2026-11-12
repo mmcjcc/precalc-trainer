@@ -1150,6 +1150,27 @@ export const SPECIES: readonly Species[] = [
       'cb_hbond_any_h',
     ],
   },
+  {
+    id: 'reactions',
+    name: 'The Arrow Juggler',
+    personality: 'Tosses atoms across the arrow and never counts how many land on the other side.',
+    family: 'Chemical reaction slips: coefficients and subscripts that reach only part of a formula or get added, equations left uneven or not in lowest terms, reaction types mixed up, the activity series read upside down, pair-forming elements written alone, partners that never trade, and fires that burn into the wrong products.',
+    subject: 'chemistry',
+    look: { body: 'drop', hue: 18, sat: 62, light: 56, accent: 200, top: 'tuft', eyes: 'spiral', mouth: 'teeth', feet: 'stubs', arms: 'stubs', mark: 'arrow' },
+    variants: [
+      'rx_coef_first_only',
+      'rx_paren_first_only',
+      'rx_add_not_multiply',
+      'rx_not_lowest',
+      'rx_element_unbalanced',
+      'rx_combo_decomp_swapped',
+      'rx_single_double_swapped',
+      'rx_activity_backwards',
+      'rx_diatomic_single',
+      'rx_not_swapped',
+      'rx_combustion_products',
+    ],
+  },
 ]
 
 const SPECIES_BY_ID = new Map<string, Species>(SPECIES.map((s) => [s.id, s]))
