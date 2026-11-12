@@ -201,6 +201,12 @@ export const COVERED_PARTS_TEMPLATES = [
   'ta.half',
   'te.linear',
   'te.factor',
+  // Precalc trig, Unit 7 (oblique triangles).
+  'ot.sines',
+  'ot.ambiguous',
+  'ot.cosines',
+  'ot.area',
+  'ot.choose',
   // Chemistry chapter 8 (ionic and metallic bonding).
   'ib.valence',
   'ib.dots',
@@ -322,6 +328,7 @@ function withUnit(display: string, unit: string): string {
  */
 function carriedFigure(ans: AnswerSpec): unknown {
   if (ans.type === 'geometry') return ans.figure.points.length > 0 ? ans.figure : undefined
+  if (ans.type === 'obliqueTriangles') return ans.oblique
   if (
     ans.type === 'angleMeasure' ||
     ans.type === 'rightTriangle' ||
@@ -1156,6 +1163,7 @@ function buildPartsForAnswer(sibling: ProblemInstance, ans: AnswerSpec, cards: r
     case 'inverseTrig':
     case 'trigFormulas':
     case 'trigEquations':
+    case 'obliqueTriangles':
       return trigParts(sibling, ans, cards)
 
     case 'sigFigs': {

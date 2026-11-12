@@ -3471,6 +3471,111 @@ export const ERROR_PATTERNS: Record<ErrorPatternId, ErrorPatternInfo> = {
     lesson: 'Sine and cosine only take values from minus one to one. A factor that asks for a number past that has no angle, and it adds nothing to the solution list. Tangent can be any number.',
     example: 'sin x = a number past one, listed as an angle ✗ → no solution for that factor',
   },
+  // --- precalculus Unit 7, oblique triangles (content/modules/obliqueTriangles). Letters and words only, and the
+  // angles 10°, 12° and 158°, which no problem draws (every drawn angle is from 15° to 150°), so no example or lesson
+  // can show a side, an angle or an area she is asked for. ---
+  ot_sines_wrong_pair: {
+    id: 'ot_sines_wrong_pair',
+    title: 'Pair each side with the angle across from it',
+    lesson: 'The law of sines matches every side with the angle opposite it: a with A, b with B, c with C. Put a side over the sine of a different angle and the ratio flips: the long side comes out short and the short one long.',
+    example: 'b = a · sin A / sin B ✗ → b = a · sin B / sin A',
+  },
+  ot_third_angle_skipped: {
+    id: 'ot_third_angle_skipped',
+    title: 'Find the third angle first',
+    lesson: 'With two angles known, the third is 180° minus both of them, and the law of sines often needs it: it is the angle across from the side you know or the side you want. Using one of the given angles in its place pairs a side with the wrong angle.',
+    example: 'A = 12°, B = 10°: c = a · sin B / sin A ✗ → C = 158°, so c = a · sin C / sin A',
+  },
+  ot_cosines_term_dropped: {
+    id: 'ot_cosines_term_dropped',
+    title: 'Keep the −2ab cos C term',
+    lesson: 'The law of cosines is c² = a² + b² − 2ab cos C. Without the last term it is the Pythagorean theorem, which only holds when C is a right angle. In any other triangle the term moves the answer.',
+    example: 'c² = a² + b² ✗ → c² = a² + b² − 2ab cos C',
+  },
+  ot_square_root_skipped: {
+    id: 'ot_square_root_skipped',
+    title: 'Finish with the square root',
+    lesson: 'The law of cosines gives c², the square of the side, and Heron’s formula ends in a square root too. The number before the root is far too big for a side or an area: take the square root last.',
+    example: 'c = a² + b² − 2ab cos C ✗ → c = √(a² + b² − 2ab cos C)',
+  },
+  ot_cos_sign_obtuse: {
+    id: 'ot_cos_sign_obtuse',
+    title: 'An obtuse angle has a negative cosine',
+    lesson: 'Past a right angle the cosine is negative. In c² = a² + b² − 2ab cos C that makes the last term add, so the side across from an obtuse angle is the longest. Going back, a negative cosine gives an obtuse angle: keep its sign.',
+    example: 'C = 158°: c² = a² + b² − 2ab·|cos C| ✗ → c² = a² + b² − 2ab cos C, with cos C below zero',
+  },
+  ot_cosines_order: {
+    id: 'ot_cosines_order',
+    title: 'Multiply before you subtract',
+    lesson: 'In a² + b² − 2ab cos C, the 2ab multiplies cos C first, and that product is subtracted. Typed as (a² + b² − 2ab) cos C, the calculator subtracts first. Enter 2ab cos C as one product, or close no bracket before cos.',
+    example: '(a² + b² − 2ab) · cos C ✗ → a² + b² − (2ab · cos C)',
+  },
+  ot_cosines_wrong_side: {
+    id: 'ot_cosines_wrong_side',
+    title: 'The side across from the angle is the one subtracted',
+    lesson: 'To find angle C from three sides, c is the side across from C: cos C = (a² + b² − c²)/(2ab). With another side in c’s place, you get the angle across from that side instead.',
+    example: 'cos C = (a² + c² − b²)/(2ac) ✗ → cos C = (a² + b² − c²)/(2ab)',
+  },
+  ot_sine_acute_taken: {
+    id: 'ot_sine_acute_taken',
+    title: 'sin⁻¹ gives only the acute angle',
+    lesson: 'An angle and its supplement have the same sine, and sin⁻¹ always answers with the acute one. When the angle is obtuse, it is 180° minus what the calculator shows.',
+    example: 'B obtuse with sin B = s: B = sin⁻¹ s ✗ → B = 180° − sin⁻¹ s',
+  },
+  ot_ssa_second_missed: {
+    id: 'ot_ssa_second_missed',
+    title: 'Side a can swing to two places',
+    lesson: 'In the ambiguous case, compare side a with the height h = b sin A. When a is longer than h but shorter than b, side a reaches the base in two places: one triangle with B acute and one with B obtuse.',
+    example: 'h < a < b: one triangle ✗ → two triangles',
+  },
+  ot_ssa_two_claimed: {
+    id: 'ot_ssa_two_claimed',
+    title: 'Two triangles need h < a < b',
+    lesson: 'There are two triangles only when side a is longer than the height h = b sin A and shorter than b. If a is shorter than h it cannot reach the base at all, and if a is at least b it reaches it in only one place.',
+    example: 'a shorter than h: two triangles ✗ → no triangle',
+  },
+  ot_area_half_dropped: {
+    id: 'ot_area_half_dropped',
+    title: 'The area has a ½',
+    lesson: 'A triangle is half of a parallelogram, so its area is ½ab sin C. Without the ½ you get the parallelogram, twice the triangle.',
+    example: 'area = ab sin C ✗ → ½ab sin C',
+  },
+  ot_area_cosine: {
+    id: 'ot_area_cosine',
+    title: 'The area uses the sine',
+    lesson: 'The height on side a is b sin C, so the area is ½ab sin C. The cosine gives how far along the base the height lands, not how tall it is.',
+    example: '½ab cos C ✗ → ½ab sin C',
+  },
+  ot_heron_perimeter: {
+    id: 'ot_heron_perimeter',
+    title: 'Heron’s formula uses half the perimeter',
+    lesson: 'In Heron’s formula, s is the semi-perimeter: s = (a + b + c)/2. With the whole perimeter in its place, every factor is too big and the area comes out several times too large.',
+    example: 's = a + b + c ✗ → s = (a + b + c)/2',
+  },
+  ot_sines_no_pair: {
+    id: 'ot_sines_no_pair',
+    title: 'The law of sines needs a matching pair',
+    lesson: 'The law of sines starts from an angle and the side across from it. With two sides and the angle between them, or three sides, no such pair is known yet: the law of cosines starts those.',
+    example: 'SAS or SSS: the law of sines ✗ → the law of cosines',
+  },
+  ot_cosines_for_pair: {
+    id: 'ot_cosines_for_pair',
+    title: 'An angle and its side: the law of sines',
+    lesson: 'When you know an angle and the side across from it, or two angles (which give the third), the law of sines gets you to the next side or angle in one step. The law of cosines needs two sides and the angle between them, or all three sides.',
+    example: 'AAS, ASA or SSA: the law of cosines ✗ → the law of sines',
+  },
+  ot_right_missed: {
+    id: 'ot_right_missed',
+    title: 'A right triangle needs neither law',
+    lesson: 'When one angle is a right angle, the Pythagorean theorem and SOH CAH TOA solve the triangle directly. The laws of sines and cosines are for triangles with no right angle.',
+    example: 'a right angle marked: the law of cosines ✗ → the Pythagorean theorem or SOH CAH TOA',
+  },
+  ot_right_assumed: {
+    id: 'ot_right_assumed',
+    title: 'SOH CAH TOA needs a right angle',
+    lesson: 'The right-triangle ratios and the Pythagorean theorem only work when one angle is a right angle. With no right angle given or marked, use the law of sines or the law of cosines.',
+    example: 'no right angle: the Pythagorean theorem ✗ → the law of cosines',
+  },
   // --- precalculus Unit 2, optimization with quadratics (engine/optim). Examples use l and w, letters no problem
   // uses, so no example can be a generated answer. ---
   opt_wall_fenced: {

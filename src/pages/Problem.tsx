@@ -23,6 +23,7 @@ import { LogFormsFlow } from './flows/LogFormsFlow'
 import { ExpLogGraphsFlow, ExpModelsFlow } from './flows/ExpLogPartsFlow'
 import { AngleMeasureFlow, InverseTrigFlow, OtherTrigGraphsFlow, RightTriangleFlow, SinusoidsFlow, TrigEquationsFlow, TrigFormulasFlow, UnitCircleFlow } from './flows/TrigFlow'
 import { TrigIdentitiesFlow } from './flows/TrigIdentitiesFlow'
+import { ObliqueFlow } from './flows/ObliqueFlow'
 import { OptimizationFlow } from './flows/OptimizationFlow'
 import { GeometryFlow } from './flows/GeometryFlow'
 import { assertGeometryQuestion } from '@/problem/tutorContext'
@@ -184,6 +185,8 @@ function flowFor(props: FlowProps): ReactNode {
       return <TrigFormulasFlow {...props} />
     case 'trigEquations':
       return <TrigEquationsFlow {...props} />
+    case 'obliqueTriangles':
+      return <ObliqueFlow {...props} />
     case 'geometry':
       if (instance.answer.type === 'geometry') assertGeometryQuestion(instance.answer.question)
       return <GeometryFlow {...props} />

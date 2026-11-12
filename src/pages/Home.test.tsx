@@ -55,6 +55,7 @@ const unit3Titles = modulesInUnit(precalc.units[2]!).map((module) => module.titl
 const unit4Titles = modulesInUnit(precalc.units[3]!).map((module) => module.title)
 const precalcUnit5Titles = modulesInUnit(precalc.units[4]!).map((module) => module.title)
 const precalcUnit6Titles = modulesInUnit(precalc.units[5]!).map((module) => module.title)
+const precalcUnit7Titles = modulesInUnit(precalc.units[6]!).map((module) => module.title)
 const unit5Titles = ['Parallelograms', 'Rectangles, rhombuses, and squares', 'Trapezoids, kites, and midsegments']
 const unit6Titles = ['Ratio, proportion and similar polygons', 'Similar triangles', 'Proportional parts']
 const unit7Titles = [
@@ -140,8 +141,8 @@ describe('Home: classes and units', () => {
 
     fireEvent.keyDown(tablist, { key: 'Home' })
     expect(screen.getByRole('tab', { name: 'Honors Precalculus', selected: true })).toBeTruthy()
-    // A first visit lands on the last unit that has modules: Unit 5.
-    expect(moduleTitles()).toEqual(precalcUnit6Titles)
+    // A first visit lands on the last unit that has modules: Unit 7.
+    expect(moduleTitles()).toEqual(precalcUnit7Titles)
 
     fireEvent.keyDown(tablist, { key: 'ArrowLeft' })
     expect(screen.getByRole('tab', { name: 'Honors Precalculus', selected: true })).toBeTruthy()
@@ -202,7 +203,11 @@ describe('Home: classes and units', () => {
 
   it('shows only the selected unit, with the review card on precalc Unit 1 only', () => {
     renderHome()
-    // A first visit lands on the last unit that has modules (Unit 5). Unit 1 is one press away.
+    // A first visit lands on the last unit that has modules (Unit 7). Unit 1 is one press away.
+    expect(moduleTitles()).toEqual(precalcUnit7Titles)
+    expect(moduleTitles()).toEqual(['Laws of sines and cosines'])
+    expect(screen.getByRole('button', { name: /Unit 7/, pressed: true }).textContent).toMatch(/Applications of trigonometry/)
+    fireEvent.click(screen.getByRole('button', { name: /Unit 6/ }))
     expect(moduleTitles()).toEqual(precalcUnit6Titles)
     expect(moduleTitles()).toEqual(['Fundamental trig identities', 'Sum, difference, double and half angles', 'Solving trigonometric equations'])
     expect(signposts()).toEqual(precalcUnit6Titles)

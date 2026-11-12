@@ -95,6 +95,12 @@ export const COURSES: readonly CourseDef[] = [
         title: 'Analytic trigonometry',
         moduleIds: ['trigIdentities', 'trigFormulas', 'trigEquations'],
       },
+      {
+        id: 'unit7',
+        label: 'Unit 7',
+        title: 'Applications of trigonometry',
+        moduleIds: ['obliqueTriangles'],
+      },
     ],
   },
   {

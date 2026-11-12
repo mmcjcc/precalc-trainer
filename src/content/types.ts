@@ -17,7 +17,7 @@ import type {
   VarName,
 } from '@/shared/types'
 
-export type ProblemKind = 'inequality' | 'numberLine' | 'evenOdd' | 'inverse' | 'drill' | 'sigFigs' | 'atoms' | 'diffQuotient' | 'graphFeatures' | 'domainRange' | 'composition' | 'functionOps' | 'transformations' | 'piecewiseRate' | 'electrons' | 'quantumNumbers' | 'periodic' | 'quadratics' | 'optimization' | 'polyDivision' | 'polyZeros' | 'rationalFns' | 'signCharts' | 'complexNums' | 'logForms' | 'logProperties' | 'expLogEquations' | 'expLogGraphs' | 'expModels' | 'angleMeasure' | 'rightTriangle' | 'unitCircle' | 'sinusoids' | 'otherTrigGraphs' | 'inverseTrig' | 'trigIdentities' | 'trigFormulas' | 'trigEquations' | 'geometry' | 'nomenclature' | 'satrw' | 'ionicBonding' | 'covalentBonding'
+export type ProblemKind = 'inequality' | 'numberLine' | 'evenOdd' | 'inverse' | 'drill' | 'sigFigs' | 'atoms' | 'diffQuotient' | 'graphFeatures' | 'domainRange' | 'composition' | 'functionOps' | 'transformations' | 'piecewiseRate' | 'electrons' | 'quantumNumbers' | 'periodic' | 'quadratics' | 'optimization' | 'polyDivision' | 'polyZeros' | 'rationalFns' | 'signCharts' | 'complexNums' | 'logForms' | 'logProperties' | 'expLogEquations' | 'expLogGraphs' | 'expModels' | 'angleMeasure' | 'rightTriangle' | 'unitCircle' | 'sinusoids' | 'otherTrigGraphs' | 'inverseTrig' | 'trigIdentities' | 'trigFormulas' | 'trigEquations' | 'obliqueTriangles' | 'geometry' | 'nomenclature' | 'satrw' | 'ionicBonding' | 'covalentBonding'
 
 /** Precalculus Unit 2, optimization with quadratics: a pen against a wall, pens in a row, two numbers, price and sales. */
 export type OptimizationQuestion = 'wall' | 'pens' | 'numbers' | 'revenue'
@@ -257,6 +257,22 @@ export type TrigFormulasQuestion = 'sumdiff' | 'double' | 'half'
 
 /** Trig equations on one full turn (precalculus Unit 6, part 2). */
 export type TrigEquationsQuestion = 'linear' | 'factor'
+
+/**
+ * Oblique triangles (precalculus Unit 7): the law of sines (AAS, ASA), the ambiguous case (SSA), the law of cosines
+ * (SAS, SSS), area (two sides and the included angle, Heron's formula), and which law starts a solution.
+ */
+export type ObliqueQuestion = 'sines' | 'ambiguous' | 'cosines' | 'area' | 'choose'
+
+/**
+ * The figure of an oblique-triangle problem, drawn by GeoFigure: `before` from the start; `after` replaces it once the
+ * part `stage` is answered (the ambiguous case draws side a's possible positions only after she has said how many
+ * triangles fit). Labels are the givens and the asked side's letter; no figure label is an answer of a later part.
+ */
+export interface ObliqueFigure {
+  before: GeoFigureSpec
+  after?: { stage: string; spec: GeoFigureSpec }
+}
 
 /**
  * How one part of a trig problem is answered and read (engine/trig's reader and grader):
@@ -2196,6 +2212,22 @@ export type AnswerSpec =
       type: 'trigEquations'
       question: TrigEquationsQuestion
     } & TrigAnswerFields)
+  | ({
+      /**
+       * Oblique triangles (precalculus Unit 7): the laws of sines and cosines, the ambiguous case, area, which law
+       * starts. Rounded sides and angles are graded as rightTriangle grades them (engine/trig gradeTrigAnswer); grade a
+       * part with the module's `gradeOtPart`, which also names the ot_ mistakes. `figure` is kind 'none' (its
+       * ariaLabel describes `oblique`, the triangle GeoFigure draws).
+       */
+      type: 'obliqueTriangles'
+      question: ObliqueQuestion
+      oblique: ObliqueFigure
+      /**
+       * Per part id: the answer worked out from intermediate values rounded too soon (a sine to two places, c² to a
+       * whole number). Her number matching one of these, a tenth or two from the answer, gets a note, not a mistake.
+       */
+      early: Record<string, number[]>
+    } & TrigAnswerFields)
   | {
       type: 'drill'
       question: 'which_property' | 'legal_or_illegal'
@@ -2276,7 +2308,8 @@ export type InverseTrigAnswer = Extract<AnswerSpec, { type: 'inverseTrig' }>
 export type TrigIdentitiesAnswer = Extract<AnswerSpec, { type: 'trigIdentities' }>
 export type TrigFormulasAnswer = Extract<AnswerSpec, { type: 'trigFormulas' }>
 export type TrigEquationsAnswer = Extract<AnswerSpec, { type: 'trigEquations' }>
-export type TrigAnswer = AngleMeasureAnswer | RightTriangleAnswer | UnitCircleAnswer | SinusoidsAnswer | OtherTrigGraphsAnswer | InverseTrigAnswer | TrigFormulasAnswer | TrigEquationsAnswer
+export type ObliqueAnswer = Extract<AnswerSpec, { type: 'obliqueTriangles' }>
+export type TrigAnswer = AngleMeasureAnswer | RightTriangleAnswer | UnitCircleAnswer | SinusoidsAnswer | OtherTrigGraphsAnswer | InverseTrigAnswer | TrigFormulasAnswer | TrigEquationsAnswer | ObliqueAnswer
 
 /** The optimization arm of `AnswerSpec`, named so the flow and the generators share it. */
 export type OptimizationAnswer = Extract<AnswerSpec, { type: 'optimization' }>

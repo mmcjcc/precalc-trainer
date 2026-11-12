@@ -106,8 +106,10 @@ describe('course registry', () => {
     expect(precalc!.units[4]).toMatchObject({ id: 'unit5', label: 'Unit 5', title: 'Graphs of the trigonometric functions' })
     expect(modulesInUnit(precalc!.units[5]!).map((m) => m.id)).toEqual(['trigIdentities', 'trigFormulas', 'trigEquations'])
     expect(precalc!.units[5]).toMatchObject({ id: 'unit6', label: 'Unit 6', title: 'Analytic trigonometry' })
-    expect(unitsWithModules(precalc!).map((u) => u.id)).toEqual(['unit1', 'unit2', 'unit3', 'unit4', 'unit5', 'unit6'])
-    expect(precalc!.units.map((u) => u.id)).toEqual(['unit1', 'unit2', 'unit3', 'unit4', 'unit5', 'unit6'])
+    expect(modulesInUnit(precalc!.units[6]!).map((m) => m.id)).toEqual(['obliqueTriangles'])
+    expect(precalc!.units[6]).toMatchObject({ id: 'unit7', label: 'Unit 7', title: 'Applications of trigonometry' })
+    expect(unitsWithModules(precalc!).map((u) => u.id)).toEqual(['unit1', 'unit2', 'unit3', 'unit4', 'unit5', 'unit6', 'unit7'])
+    expect(precalc!.units.map((u) => u.id)).toEqual(['unit1', 'unit2', 'unit3', 'unit4', 'unit5', 'unit6', 'unit7'])
 
 
     expect(unitsWithModules(chemistry!).map((u) => u.id)).toEqual(['ch3', 'ch4', 'ch5', 'ch6', 'ch7', 'ch8', 'ch9'])

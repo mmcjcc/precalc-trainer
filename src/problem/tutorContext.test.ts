@@ -20,6 +20,7 @@ import { gradeSgPart } from '@/content/modules/sinusoids'
 import { gradeOgPart } from '@/content/modules/otherTrigGraphs'
 import { gradeItPart } from '@/content/modules/inverseTrig'
 import { gradeTiPart } from '@/content/modules/trigIdentities'
+import { gradeOtPart } from '@/content/modules/obliqueTriangles'
 import { verifyTrigStep } from '@/engine/trig'
 import { trigEntries } from '@/content/modules/trig/parts'
 import { gradeNmStage, NM_KEYS, nmWork } from '@/content/modules/nomenclature'
@@ -1229,6 +1230,26 @@ describe('buildTutorContext', () => {
     expect(done.work).toEqual([`Every solution: ${l.stages[0]!.answerText}`])
     expect(verdictFromTrigPart(gradeUcPart(l, 'solutions', l.trapAnswer!), l.trapAnswer)?.mistake?.id).toBe(l.trap)
     expect(verdictFromTrigPart(gradeUcPart(l, 'solutions', '1, 1'))?.status).toBe('parse_error')
+  })
+
+  it('describes an oblique-triangle problem part by part, in words, with the figure and the named ot_ slip', { timeout: 120_000 }, () => {
+    const tri = generateProblem('obliqueTriangles', 'ot.sines', 2)
+    if (tri.answer.type !== 'obliqueTriangles') throw new Error('expected an oblique-triangle problem')
+    const a = tri.answer
+    const ctx = buildTutorContext(tri, attempt('ot-1', { moduleId: 'obliqueTriangles', final: { polyEntries: { third: '70' } } }), null, false)
+    expect(ctx.subject).toBe('precalculus')
+    expect(ctx.kind).toBe('obliqueTriangles')
+    expect(ctx.statement).not.toMatch(/\\|\$/)
+    expect(ctx.statement).toContain(`Figure: ${a.figure.ariaLabel}`)
+    expect(a.figure.ariaLabel).toBe(a.oblique.before.ariaLabel)
+    expect(ctx.work).toEqual([`${a.stages[0]!.label}: 70`])
+    expect(ctx.answer).toBe(a.expectedDisplay)
+    for (const line of ctx.canonical) expect(line).not.toMatch(/\\|\$/)
+    const slip = verdictFromTrigPart(gradeOtPart(a, a.trapStage!, a.trapAnswer!), a.trapAnswer)
+    expect(slip?.status).toBe('wrong')
+    expect(slip?.mistake?.id).toBe(a.trap)
+    expect(slip?.mistake?.lesson).toBe(ERROR_PATTERNS[a.trap!].lesson)
+    expect(verdictFromTrigPart(gradeOtPart(a, 'side', '12°'))?.status).toBe('parse_error')
   })
 
   it('describes Unit 5 part by part in words: the given equation, four graphs by their formulas, a reference triangle, and the named trig_ slip', { timeout: 120_000 }, () => {
