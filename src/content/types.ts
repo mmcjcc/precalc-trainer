@@ -17,7 +17,7 @@ import type {
   VarName,
 } from '@/shared/types'
 
-export type ProblemKind = 'inequality' | 'numberLine' | 'evenOdd' | 'inverse' | 'drill' | 'sigFigs' | 'atoms' | 'diffQuotient' | 'graphFeatures' | 'domainRange' | 'composition' | 'functionOps' | 'transformations' | 'piecewiseRate' | 'electrons' | 'quantumNumbers' | 'periodic' | 'quadratics' | 'optimization' | 'polyDivision' | 'polyZeros' | 'rationalFns' | 'signCharts' | 'complexNums' | 'logForms' | 'logProperties' | 'expLogEquations' | 'expLogGraphs' | 'expModels' | 'angleMeasure' | 'rightTriangle' | 'unitCircle' | 'sinusoids' | 'otherTrigGraphs' | 'inverseTrig' | 'trigIdentities' | 'trigFormulas' | 'trigEquations' | 'geometry' | 'nomenclature' | 'satrw' | 'ionicBonding' | 'covalentBonding'
+export type ProblemKind = 'inequality' | 'numberLine' | 'evenOdd' | 'inverse' | 'drill' | 'sigFigs' | 'atoms' | 'diffQuotient' | 'graphFeatures' | 'domainRange' | 'composition' | 'functionOps' | 'transformations' | 'piecewiseRate' | 'electrons' | 'quantumNumbers' | 'periodic' | 'quadratics' | 'optimization' | 'polyDivision' | 'polyZeros' | 'rationalFns' | 'signCharts' | 'complexNums' | 'logForms' | 'logProperties' | 'expLogEquations' | 'expLogGraphs' | 'expModels' | 'angleMeasure' | 'rightTriangle' | 'unitCircle' | 'sinusoids' | 'otherTrigGraphs' | 'inverseTrig' | 'trigIdentities' | 'trigFormulas' | 'trigEquations' | 'geometry' | 'nomenclature' | 'satrw' | 'ionicBonding' | 'covalentBonding' | 'reactions'
 
 /** Precalculus Unit 2, optimization with quadratics: a pen against a wall, pens in a row, two numbers, price and sales. */
 export type OptimizationQuestion = 'wall' | 'pens' | 'numbers' | 'revenue'
@@ -694,6 +694,36 @@ export type CbCheck =
   | { kind: 'force'; formula: string }
   /** Which of two samples boils higher, and why (choice of explanations). */
   | { kind: 'boil'; a: string; b: string }
+
+/** One checked part of a chemical-reactions problem (chemistry chapter 11). */
+export type RxStageId = 'a' | 'b' | 'c' | 'd' | 'e'
+
+/**
+ * How to recompute one chemical-reactions part from the reaction table (reactions/facts.ts), the
+ * balancer and the nomenclature engine. Reactions are named by their table id. The grader uses this;
+ * the crosscheck test does not: it reads the prompt and works the part out on its own.
+ */
+export type RxCheck =
+  /** Atoms of one element in a term: the coefficient times the formula's own count. */
+  | { kind: 'atom-count'; formula: string; coefficient: number; element: string }
+  /** Is the shown equation balanced, with these coefficients (reactants then products)? (choice) */
+  | { kind: 'is-balanced'; reaction: string; coefficients: number[] }
+  /** Which element does not balance with these coefficients, by name, or none (choice). */
+  | { kind: 'off-element'; reaction: string; coefficients: number[] }
+  /** Every coefficient of the reaction, lowest whole numbers (one box per species). */
+  | { kind: 'balance'; reaction: string }
+  /** The reaction's type (choice of the five). */
+  | { kind: 'type'; reaction: string }
+  /** An ionic product's formula from its two ions, graded by the nomenclature engine. `reactants`: the starting compounds. */
+  | { kind: 'ionic-product'; cation: string; anion: string; reactants: string[] }
+  /** A free element's formula (the seven diatomics with a 2). */
+  | { kind: 'element'; symbol: string }
+  /** Does the lone element react with the compound? The activity series decides (choice). */
+  | { kind: 'reacts'; lone: string; compound: string }
+  /** A complete-combustion product: the one carrying the fuel's carbon, or its hydrogen. */
+  | { kind: 'combustion-product'; fuel: string; carries: 'carbon' | 'hydrogen' }
+  /** A named compound's formula, graded by the nomenclature engine. */
+  | { kind: 'named-formula'; name: string }
 
 /** Which complex-number screen this problem is. */
 export type ComplexNumsQuestion = 'arith' | 'divide' | 'powers' | 'quadratic' | 'zeros'
@@ -1897,6 +1927,51 @@ export type AnswerSpec =
     }
   | {
       /**
+       * Chemical reactions (chemistry, CK-12 chapter 11). Parts are checked one at a time.
+       * Grade a part with `gradeRxStage`. Named mistakes are the `rx_` ids, plus the nomenclature
+       * engine's `nm_` ids on the formula parts it grades.
+       */
+      type: 'reactions'
+      question: 'count' | 'balance' | 'types' | 'predict' | 'word'
+      /** What the problem is. No method and no trap. */
+      prompt: string
+      stages: {
+        id: RxStageId
+        /** 'coefficients': one whole-number box per species, in `slots` order. */
+        kind: 'text' | 'choice' | 'coefficients'
+        /** Box or choice legend, e.g. "Formula for zinc chloride". */
+        label: string
+        /** Line under the box or the choices. Never this part's answer. */
+        hint: string
+        /** What a correct answer looks like (app text). Choice parts use the choice id; coefficients are space-separated. */
+        answerText: string
+        /** Other spellings that grade correct. */
+        accept?: string[]
+        /** Choice parts only. `trap` is set when that pick is a named mistake. */
+        choices?: { id: string; text: string; trap?: ErrorPatternId; witness?: string }[]
+        /** Coefficient parts only: each species as shown beside its box ('H₂(g)'), reactants first. */
+        slots?: string[]
+        /** Coefficient parts only: how many of the slots are reactants. */
+        reactantCount?: number
+        nudge: string
+        ruleCard: RuleCardId
+        /** Hint rung 3. May state this part's answer. */
+        reveal: string[]
+        /** Slips on this part, in detection order. `text` is the typed value, the choice id, or the coefficients. */
+        traps: { id: ErrorPatternId; text: string; witness: string }[]
+        check: RxCheck
+      }[]
+      expectedDisplay: string
+      reveal: string[]
+      ruleCards: RuleCardId[]
+      /** The named mistake this seed promises, when one is possible on some part. */
+      trap?: ErrorPatternId
+      trapStage?: RxStageId
+      /** What that slip produces. Never the right answer. */
+      trapAnswer?: string
+    }
+  | {
+      /**
        * Logarithms and exponential form (precalculus Unit 3). One number, or one rewritten equation.
        * Grade with `gradeLogValue` or `gradeConvertForm`. Named mistakes are the `log_` ids.
        */
@@ -2302,6 +2377,9 @@ export type NomenclatureAnswer = Extract<AnswerSpec, { type: 'nomenclature' }>
 export type IonicBondingAnswer = Extract<AnswerSpec, { type: 'ionicBonding' }>
 
 export type CovalentBondingAnswer = Extract<AnswerSpec, { type: 'covalentBonding' }>
+
+/** The chemical-reactions arm of `AnswerSpec` (chapter 11), named so the flow and the generators share it. */
+export type ReactionsAnswer = Extract<AnswerSpec, { type: 'reactions' }>
 
 /** One part of a nomenclature problem. */
 export type NmStage = NomenclatureAnswer['stages'][number]

@@ -19,6 +19,7 @@ import { ptWork } from '@/content/modules/periodic/grade'
 import type { QnGrade } from '@/content/modules/quantumNumbers/grade'
 import { qnWork } from '@/content/modules/quantumNumbers/grade'
 import { nmWork } from '@/content/modules/nomenclature/grade'
+import { rxWork, type RxGrade } from '@/content/modules/reactions/grade'
 import { EC_PATTERN } from '@/content/modules/electrons/patterns'
 import { POLY_PATTERN } from '@/content/modules/polynomials/patterns'
 import { TR_PATTERN } from '@/content/modules/transformations/patterns'
@@ -354,6 +355,20 @@ export function verdictFromNm(grade: NmGrade): TutorVerdict | null {
   })
 }
 
+/** Chemical reactions (chapter 11). The id is an rx_ id, or the nomenclature engine's nm_ id on a formula part. Unreadable input is a parse error. */
+export function verdictFromRx(grade: RxGrade): TutorVerdict | null {
+  if (grade.verdict === 'correct') return withMessage('correct', grade.message)
+  if (grade.verdict === 'wrong') return withMessage('wrong', grade.message)
+  if (grade.verdict === 'invalid') return withMessage('parse_error', grade.message)
+  const info = ERROR_PATTERNS[grade.mistake]
+  return withMessage('wrong', grade.witness, undefined, {
+    id: grade.mistake,
+    title: clip(info.title, 200),
+    lesson: clip(info.lesson, TUTOR_LIMITS.field),
+    witness: clip(grade.witness, TUTOR_LIMITS.field),
+  })
+}
+
 /** Geometry. The mistake id is already a geo_ catalog id. Unreadable input is a parse error. */
 export function verdictFromGeo(grade: GeoGrade): TutorVerdict | null {
   if (grade.verdict === 'correct') return withMessage('correct', grade.message)
@@ -581,6 +596,11 @@ function workOf(instance: ProblemInstance, attempt: Attempt | null): string[] {
       .slice(0, TUTOR_LIMITS.lines)
       .map((line) => clip(line, TUTOR_LIMITS.line))
   }
+  if (instance.answer.type === 'reactions') {
+    return rxWork(instance.answer, attempt.final?.polyEntries)
+      .slice(0, TUTOR_LIMITS.lines)
+      .map((line) => clip(line, TUTOR_LIMITS.line))
+  }
   const final = attempt.final
   if (!final) return []
   const lines: string[] = []
@@ -737,6 +757,8 @@ function statementOf(instance: ProblemInstance): string {
     text = answer.figure ? `${answer.prompt} Figure: ${answer.figure.ariaLabel}` : answer.prompt
   } else if (answer.type === 'periodic' || answer.type === 'nomenclature') {
     text = answer.prompt
+  } else if (answer.type === 'reactions') {
+    text = answer.prompt
   }
   const clipped = clip(text, TUTOR_LIMITS.field)
   return clipped.trim() ? clipped : clip(instance.title, TUTOR_LIMITS.field)
@@ -770,7 +792,8 @@ function canonicalOf(instance: ProblemInstance): string[] {
     answer.type === 'geometry' ||
     answer.type === 'periodic' ||
     answer.type === 'nomenclature' ||
-    answer.type === 'quantum'
+    answer.type === 'quantum' ||
+    answer.type === 'reactions'
   ) {
     lines = answer.reveal
   } else if (answer.type === 'angleMeasure' || answer.type === 'rightTriangle' || answer.type === 'unitCircle' || answer.type === 'sinusoids' || answer.type === 'otherTrigGraphs' || answer.type === 'inverseTrig' || answer.type === 'trigIdentities' || answer.type === 'trigFormulas' || answer.type === 'trigEquations') {
@@ -825,6 +848,7 @@ function answerOf(instance: ProblemInstance): string | undefined {
     case 'periodic':
     case 'nomenclature':
     case 'quantum':
+    case 'reactions':
       text = answer.expectedDisplay
       break
     case 'graphFeatures':

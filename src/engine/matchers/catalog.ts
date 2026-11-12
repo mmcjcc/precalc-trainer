@@ -2459,6 +2459,75 @@ export const ERROR_PATTERNS: Record<ErrorPatternId, ErrorPatternInfo> = {
     lesson: 'Having hydrogen in the formula is not enough. Hydrogen bonding happens only when the H is bonded directly to nitrogen, oxygen or fluorine — those three pull hard enough to leave the H bare. An H sitting on any other atom brings no hydrogen bonds at all.',
     example: 'HBr expected to hydrogen-bond because it has an H ✗ → its H sits on bromine, so it cannot',
   },
+  // --- chemical reactions (content/modules/reactions; chemistry chapter 11). Counts are written in
+  // words, and every worked example uses lithium, fluorine, nickel, tin, strontium or butane, which no
+  // chapter 11 template draws. No lesson names a reaction type or the words of an activity choice. ---
+  rx_coef_first_only: {
+    id: 'rx_coef_first_only',
+    title: 'A coefficient multiplies the whole formula',
+    lesson: 'The number in front of a formula counts whole units of it, so every atom in the formula gets multiplied, not just the first one written. Count the atoms in one unit, then multiply all of them by the coefficient.',
+    example: 'O atoms in 4Sr(NO₃)₂ counted as six ✗ → the four multiplies all six of them: twenty-four',
+  },
+  rx_paren_first_only: {
+    id: 'rx_paren_first_only',
+    title: 'A subscript after ) reaches everything inside',
+    lesson: 'A subscript written after a closing parenthesis multiplies every atom in the parentheses, the last ones as much as the first. Count what sits inside once, multiply all of it by that subscript, and only then apply the coefficient.',
+    example: 'O atoms in 4Sr(NO₃)₂ with the two given to N alone ✗ → the two doubles all of NO₃: twenty-four',
+  },
+  rx_add_not_multiply: {
+    id: 'rx_add_not_multiply',
+    title: 'Stacked numbers multiply',
+    lesson: 'A coefficient and a subscript both count groups: a coefficient of four is four units, and a subscript of three is three atoms in each unit. Groups of groups multiply, so the two numbers never add.',
+    example: 'O atoms in 4Sr(NO₃)₂ found by adding four, three and two ✗ → multiply them: twenty-four',
+  },
+  rx_not_lowest: {
+    id: 'rx_not_lowest',
+    title: 'Coefficients in lowest terms',
+    lesson: 'Doubling every coefficient of a balanced equation keeps it balanced, so many sets of numbers work. The equation is written with the one set that has no common factor: if every coefficient divides by the same number, divide.',
+    example: '4Li + 2F₂ → 4LiF ✗ → every number halves: 2Li + F₂ → 2LiF',
+  },
+  rx_element_unbalanced: {
+    id: 'rx_element_unbalanced',
+    title: 'Every element has to match',
+    lesson: 'An equation balances only when each element has the same number of atoms on both sides. Matching most of them is not enough: one element still uneven means atoms appeared or vanished, which never happens.',
+    example: 'Li + F₂ → 2LiF, lithium one atom against two ✗ → 2Li + F₂ → 2LiF',
+  },
+  rx_combo_decomp_swapped: {
+    id: 'rx_combo_decomp_swapped',
+    title: 'Read the arrow left to right',
+    lesson: 'Joining and coming apart are mirror images, so the arrow decides. Several substances in and one out means things joined; one substance in and several out means it came apart.',
+    example: '2Li + F₂ → 2LiF read as a breakup ✗ → two substances go in and one comes out: they joined',
+  },
+  rx_single_double_swapped: {
+    id: 'rx_single_double_swapped',
+    title: 'One lone element, or two compounds trading',
+    lesson: 'Look at what goes in. A lone element that takes the place of one partner in a compound is one swap. Two compounds that both split and trade partners are two swaps.',
+    example: 'Ni + Sn(NO₃)₂ → Ni(NO₃)₂ + Sn read as two compounds trading ✗ → a lone element took one place',
+  },
+  rx_activity_backwards: {
+    id: 'rx_activity_backwards',
+    title: 'Higher on the list pushes out lower',
+    lesson: 'A lone element can take the place of another only if it sits higher on the activity series. When it sits lower, it cannot push its way in and the mixture stays as it was. Find both elements on the list before deciding.',
+    example: 'tin in a solution of Ni(NO₃)₂ expected to push nickel out ✗ → tin sits below nickel: nothing happens',
+  },
+  rx_diatomic_single: {
+    id: 'rx_diatomic_single',
+    title: 'Some elements come in pairs',
+    lesson: 'Seven elements never stand alone as single atoms when free: hydrogen, nitrogen, oxygen, fluorine, chlorine, bromine and iodine each exist as two-atom molecules. Written as a free element in an equation, each gets the two.',
+    example: 'free fluorine written F ✗ → F₂',
+  },
+  rx_not_swapped: {
+    id: 'rx_not_swapped',
+    title: 'A product is a new pairing',
+    lesson: 'In a replacement, partners change: each cation leaves with a different anion. Writing a starting compound as a product means nothing happened to it. Pair each cation with the other compound’s anion and balance the charges again.',
+    example: 'SrCl₂ + Li₂SO₄ giving back SrCl₂ ✗ → SrSO₄ and LiCl',
+  },
+  rx_combustion_products: {
+    id: 'rx_combustion_products',
+    title: 'Complete burning gives carbon dioxide and water',
+    lesson: 'When a fuel made of carbon and hydrogen burns with plenty of oxygen, nothing is left half-burned: every carbon atom ends up in carbon dioxide and every hydrogen atom in water. Soot, carbon monoxide or hydrogen gas would mean the burning stopped short.',
+    example: 'butane, C₄H₁₀, burned into soot and CO ✗ → carbon dioxide and water',
+  },
   // --- honors geometry Unit 4. Examples use 11, 23, and 41.
   // No template generates those as an answer. A lesson may name a method only together with the
   // one it is confused with, and never with the words a correct button would show for that slip.
