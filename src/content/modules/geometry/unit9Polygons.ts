@@ -122,8 +122,8 @@ function generate(seed: number, salt: number, make: (rng: Rng) => GeoBuilt | nul
 
 const sq = (u: Unit) => `${u}²`
 /** Units as the ask sentence names them: "in in" reads as a typo, so inches are spelled out there. */
-const askUnit = (u: Unit) => (u === 'in' ? 'inches' : u)
-const askSq = (u: Unit) => (u === 'in' ? 'square inches' : sq(u))
+export const askUnit = (u: Unit) => (u === 'in' ? 'inches' : u)
+export const askSq = (u: Unit) => (u === 'in' ? 'square inches' : sq(u))
 /**
  * One format hint for every number box of the unit, the same whatever the answer is: areas of triangles
  * and heights of equilateral triangles are often halves, so the hint says a fraction is welcome.

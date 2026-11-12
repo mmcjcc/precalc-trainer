@@ -221,7 +221,7 @@ export const COURSES: readonly CourseDef[] = [
         id: 'g9',
         label: 'Unit 9',
         title: 'Areas of plane figures',
-        moduleIds: ['geoPolygonArea'],
+        moduleIds: ['geoPolygonArea', 'geoCircleArea'],
       },
     ],
   },

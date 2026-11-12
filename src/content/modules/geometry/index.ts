@@ -51,6 +51,8 @@ import { ANGLE_RULES_8, MEASURE_RULES, TANGENT_RULES } from './unit8Rules'
 import { drawArcs, drawChords, drawTangent } from './unit8Tangent'
 import { drawBasic, drawRegular, drawSpecial as drawPolygonSpecial } from './unit9Polygons'
 import { AREA_RULES } from './unit9Rules'
+import { drawCircle, drawSector, drawSegment } from './unit9Circles'
+import { CIRCLE_RULES } from './unit9CircleRules'
 
 export { readGeoAnswer, formatPoint, formatQty, formatValue, geoQty, sameGeoValue, sameQty, simplifyRadical } from './answer'
 export type { GeoQty, GeoRead, GeoReadOptions, GeoValue } from './answer'
@@ -834,6 +836,44 @@ export const geoPolygonAreaModule: ModuleDef = {
   nextStep: () => null,
 }
 
+/**
+ * Circles: circumference, area, arcs and sectors (honors geometry Unit 9, Jurgensen 11-5 and 11-6). Every answer is
+ * exact, in terms of π; the segment of a circle is a sum such as 4π − 8.
+ */
+export const geoCircleAreaModule: ModuleDef = {
+  id: 'geoCircleArea',
+  subject: 'Geometry',
+  title: 'Circles: circumference, area, arcs and sectors',
+  blurb: 'The circumference and area of a circle, arc length and the area of a sector, then the area of a segment, all in terms of π.',
+  order: 33,
+  templates: [
+    geoTemplate(
+      'geoCircleArea',
+      'ca.circle',
+      'Circumference and area of a circle',
+      'From the radius, the diameter, the circumference, or the area, in terms of π.',
+      drawCircle,
+    ),
+    geoTemplate(
+      'geoCircleArea',
+      'ca.sector',
+      'Arc length and area of a sector',
+      'An arc length or a sector’s area from the central angle, minor or major, or the angle or the radius worked back.',
+      drawSector,
+    ),
+    geoTemplate(
+      'geoCircleArea',
+      'ca.segment',
+      'Area of a segment of a circle',
+      'The sector, the triangle, and the segment between a chord and its arc, for a central angle of 60°, 90°, or 120°.',
+      drawSegment,
+    ),
+  ],
+  ruleCards: CIRCLE_RULES,
+  progress: PROGRESS,
+  nextStep: () => null,
+}
+
 registerModule(geoRightSimilarModule)
 registerModule(geoPythagoreanModule)
 registerModule(geoSpecialRightModule)
@@ -843,3 +883,4 @@ registerModule(geoTangentChordsModule)
 registerModule(geoCircleAnglesModule)
 registerModule(geoCircleMeasuresModule)
 registerModule(geoPolygonAreaModule)
+registerModule(geoCircleAreaModule)

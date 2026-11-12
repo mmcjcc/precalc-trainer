@@ -171,6 +171,18 @@ export const GEO_UNIT9_MISTAKE_IDS = [
   'geo_perimeter_for_area',
   'geo_area_for_perimeter',
   'geo_apothem_for_radius',
+  // The circle half of Unit 9 (circumference, area, arcs, sectors, segments).
+  'geo_circumference_for_area',
+  'geo_area_for_circumference',
+  'geo_circle_diameter_as_radius',
+  'geo_circle_radius_as_diameter',
+  'geo_circle_radius_not_squared',
+  'geo_pi_left_off',
+  'geo_sector_fraction_left_off',
+  'geo_arc_sector_swapped',
+  'geo_arc_measure_for_length',
+  'geo_segment_triangle_not_subtracted',
+  'geo_segment_triangle_added',
 ] as const
 
 /**
