@@ -85,14 +85,16 @@ function CoefficientBoxes({
   return (
     <fieldset className="space-y-2">
       <legend className="text-sm font-semibold text-navy">{stage.label}</legend>
-      <div className="flex flex-wrap items-end gap-2">
+      {/* Written the way an equation is: each box sits in front of its formula. The box keeps its full
+          label for screen readers; on screen the formula beside it says which species it belongs to. */}
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-3" data-rx-equation>
         {slots.map((slot, i) => {
           const key = slotKey(stage.id, i)
           return (
-            <div key={key} className="flex items-end gap-2">
-              {i === split && <span aria-hidden className="pb-3 text-lg text-navy">→</span>}
-              {i > 0 && i !== split && <span aria-hidden className="pb-3 text-lg text-navy">+</span>}
-              <div className="w-28">
+            <div key={key} className="flex items-center gap-2">
+              {i === split && <span aria-hidden className="text-lg text-navy">→</span>}
+              {i > 0 && i !== split && <span aria-hidden className="text-lg text-navy">+</span>}
+              <div className="w-14 [&_label]:sr-only">
                 <PolyTextBox
                   id={`rx-${stage.id}-${i}`}
                   label={`Coefficient for ${slot}`}
@@ -105,6 +107,9 @@ function CoefficientBoxes({
                   inputRef={register?.(key)}
                 />
               </div>
+              <span aria-hidden className="font-semibold text-navy">
+                {slot}
+              </span>
             </div>
           )
         })}

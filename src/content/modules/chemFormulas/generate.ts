@@ -6,7 +6,7 @@
  */
 import type { Rng } from '@/content/rng'
 import { measurement } from '@/content/modules/sigFigs/numbers'
-import { rat, ratDiv, ratMul, roundRatToPlace, roundRatToSigFigs, type Rat } from '@/engine/sigfigs/decimal'
+import { rat, ratCmp, ratDiv, ratMul, roundRatToPlace, roundRatToSigFigs, type Rat } from '@/engine/sigfigs/decimal'
 import { canonicalForms } from '@/engine/sigfigs/round'
 import type { MoCount } from '@/content/types'
 import { makeMoleTemplate, prettyNumber, type BuiltStage, type Drawn } from '../moles/build'
@@ -211,6 +211,29 @@ export function cleanEmpiricalData(s: MoSubstance, data: readonly { symbol: stri
   return Boolean(rounded && sameCounts(rounded.counts, want))
 }
 
+/**
+ * The whole procedure for the worked answer: every element's moles (three figures, as she would write
+ * them), each over the smallest, and the multiplier when the ratios are not whole yet. The generator only
+ * keeps data whose rounded moles give the same formula, so these are the numbers on her own page.
+ */
+export function empiricalSteps(data: readonly { symbol: string; amount: string }[]): string {
+  const symbols = data.map((d) => d.symbol)
+  const moles = molesOf(data, 3)
+  const solve = solveFromMoles(symbols, moles)
+  if (!solve) return 'Find the moles of every element, divide each by the smallest, and make the ratios whole.'
+  const molText = (r: Rat) => pretty(ratText(r, 3))
+  const ratioText = (r: Rat) => textOf(roundRatToPlace(r, -2))
+  let smallest = moles[0]!
+  for (const m of moles) if (ratCmp(m, smallest) < 0) smallest = m
+  const molesLine = data.map((d, i) => `${d.symbol} ${pretty(d.amount)} ÷ ${atomicMassText(d.symbol)} = ${molText(moles[i]!)}`).join(', ')
+  const ratioLine = symbols.map((s, i) => `${s} ${ratioText(solve.ratios[i]!)}`).join(', ')
+  const scaled =
+    solve.factor === 1
+      ? ''
+      : ` Those are not all whole numbers: multiply every one by ${solve.factor} to get ${solve.counts.map((c) => `${c.symbol} ${c.n}`).join(', ')}.`
+  return `Moles of each element: ${molesLine}. Divide each by the smallest, ${molText(smallest)}: ${ratioLine}.${scaled}`
+}
+
 function drawEmpirical(rng: Rng): Drawn {
   for (let tries = 0; tries < 200; tries++) {
     const s = rng.pick(EMPIRICAL_POOL)
@@ -244,7 +267,7 @@ function drawEmpirical(rng: Rng): Drawn {
       ruleCard: 'cf.empirical',
       symbols,
       check: { kind: 'empirical', data, basis: byPercent ? 'percent' : 'mass' },
-      reveal: (answer) => `Moles, divided by the smallest, made whole: the empirical formula is ${countsDisplay(parseAnswerCounts(answer))}.`,
+      reveal: (answer) => `${empiricalSteps(data)} The empirical formula is ${countsDisplay(parseAnswerCounts(answer))}.`,
     }
     return {
       prompt,
