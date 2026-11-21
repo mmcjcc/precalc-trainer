@@ -1186,7 +1186,7 @@ export interface GeoFigureSpec {
   angles?: GeoAngleMark[]
   /** Full circles, drawn under the segments. The center's dot and letter come from its point. */
   circles?: GeoCircleSpec[]
-  /** Shaded parts of a circle (Unit 9), drawn under everything else. Existing figures leave this unset. */
+  /** Shaded regions (Unit 9), drawn under everything else. Existing figures leave this unset. */
   regions?: GeoRegionSpec[]
   /** Integer lattice and axes. Omit on a figure that is not on the coordinate plane. */
   grid?: GeoGrid
@@ -1198,13 +1198,34 @@ export interface GeoFigureSpec {
  * A shaded part of a circle: the sector between two radii, or the segment between a chord and its arc. The arc
  * runs counterclockwise (as the figure is seen, y up) from `from` to `to`; both points are on the circle.
  */
-export interface GeoRegionSpec {
+export interface GeoArcRegionSpec {
   kind: 'sector' | 'segment'
   /** Point id of the circle's center. */
   center: string
   from: string
   to: string
 }
+
+/**
+ * A shaded region bounded by several closed outlines, filled by the even-odd rule: an outline inside another cuts
+ * a hole (a square with its inscribed circle taken out, the ring between two circles), and outlines that only
+ * touch are shaded together.
+ */
+export interface GeoCompoundRegionSpec {
+  kind: 'compound'
+  loops: GeoLoopSpec[]
+}
+
+/**
+ * One closed outline of a compound region: a polygon through points in order, a full circle (its radius in the
+ * figure's own units), or a sector or segment of a circle with its arc counterclockwise from `from` to `to`.
+ */
+export type GeoLoopSpec =
+  | { shape: 'polygon'; points: string[] }
+  | { shape: 'circle'; center: string; r: number }
+  | { shape: 'sector' | 'segment'; center: string; from: string; to: string }
+
+export type GeoRegionSpec = GeoArcRegionSpec | GeoCompoundRegionSpec
 
 export interface GeoCircleSpec {
   /** Point id of the center. */

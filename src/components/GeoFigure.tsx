@@ -4,7 +4,7 @@
  * Units 2 and 3 should pass a spec rather than draw their own SVG.
  */
 import { useId } from 'react'
-import type { GeoAngleMark, GeoFigureSpec, GeoPoint, GeoRegionSpec } from '@/shared/types'
+import type { GeoAngleMark, GeoFigureSpec, GeoLoopSpec, GeoPoint, GeoRegionSpec } from '@/shared/types'
 
 const NAVY = 'var(--color-navy)'
 const NAVY_100 = 'var(--color-navy-100)'
@@ -40,8 +40,8 @@ export function GeoFigure({ spec }: { spec: GeoFigureSpec }) {
         </defs>
         {spec.grid && <Grid spec={spec} sx={sx} sy={sy} />}
         {spec.regions?.map((region, i) => {
-          const d = regionPath(spec, region, at)
-          return d ? <path key={`region-${i}`} data-geo="region" data-kind={region.kind} d={d} fill={NAVY} fillOpacity={0.14} stroke="none" /> : null
+          const d = regionPath(spec, region, at, sx(1) - sx(0))
+          return d ? <path key={`region-${i}`} data-geo="region" data-kind={region.kind} d={d} fill={NAVY} fillOpacity={0.14} fillRule="evenodd" stroke="none" /> : null
         })}
         {spec.circles?.map((c, i) => {
           const p = spec.points.find((pt) => pt.id === c.center)
@@ -150,26 +150,57 @@ export function GeoFigure({ spec }: { spec: GeoFigureSpec }) {
 }
 
 /**
- * The outline of a shaded sector or segment, in screen coordinates. The arc runs counterclockwise as seen from
- * `from` to `to`, which on a screen (y down) is an SVG arc with sweep 0. Null when a point is missing or the two
- * points are the same.
+ * The outline of a shaded region, in screen coordinates. An arc runs counterclockwise as seen from `from` to `to`,
+ * which on a screen (y down) is an SVG arc with sweep 0. A compound region is all its loops in one path, for the
+ * even-odd fill. `unit` is the number of pixels to one of the figure's own units (a circle loop needs it). Null
+ * when a point is missing, an arc's two points are the same, or a loop is not a closed outline.
  */
-export function regionPath(spec: GeoFigureSpec, region: GeoRegionSpec, at: (id: string) => { x: number; y: number }): string | null {
-  const ids = [region.center, region.from, region.to]
-  const pts = ids.map((id) => spec.points.find((p) => p.id === id))
-  const [c, a, b] = pts
+export function regionPath(spec: GeoFigureSpec, region: GeoRegionSpec, at: (id: string) => { x: number; y: number }, unit = 1): string | null {
+  if (region.kind !== 'compound') return arcLoop(spec, region.kind, region.center, region.from, region.to, at)
+  if (region.loops.length === 0) return null
+  const parts: string[] = []
+  for (const loop of region.loops) {
+    const d = loopPath(spec, loop, at, unit)
+    if (!d) return null
+    parts.push(d)
+  }
+  // One path, filled even-odd by the caller: a loop inside another is a hole.
+  return parts.join(' ')
+}
+
+const px = (n: number) => Math.round(n * 100) / 100
+
+/** A sector (from the center out, along the arc, and back) or a segment (the arc closed by its chord). */
+function arcLoop(spec: GeoFigureSpec, kind: 'sector' | 'segment', center: string, from: string, to: string, at: (id: string) => { x: number; y: number }): string | null {
+  const [c, a, b] = [center, from, to].map((id) => spec.points.find((p) => p.id === id))
   if (!c || !a || !b) return null
   const turn = Math.atan2(b.y - c.y, b.x - c.x) - Math.atan2(a.y - c.y, a.x - c.x)
   const ccw = ((turn % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI)
   if (ccw < 1e-9) return null
-  const sc = at(region.center)
-  const sa = at(region.from)
-  const sb = at(region.to)
+  const sc = at(center)
+  const sa = at(from)
+  const sb = at(to)
   const r = Math.hypot(sa.x - sc.x, sa.y - sc.y)
-  const f = (n: number) => Math.round(n * 100) / 100
-  const arc = `A ${f(r)} ${f(r)} 0 ${ccw > Math.PI ? 1 : 0} 0 ${f(sb.x)} ${f(sb.y)}`
-  if (region.kind === 'segment') return `M ${f(sa.x)} ${f(sa.y)} ${arc} Z`
-  return `M ${f(sc.x)} ${f(sc.y)} L ${f(sa.x)} ${f(sa.y)} ${arc} Z`
+  const arc = `A ${px(r)} ${px(r)} 0 ${ccw > Math.PI ? 1 : 0} 0 ${px(sb.x)} ${px(sb.y)}`
+  if (kind === 'segment') return `M ${px(sa.x)} ${px(sa.y)} ${arc} Z`
+  return `M ${px(sc.x)} ${px(sc.y)} L ${px(sa.x)} ${px(sa.y)} ${arc} Z`
+}
+
+/** One closed outline of a compound region. `unit` is the number of pixels to one of the figure's own units. */
+function loopPath(spec: GeoFigureSpec, loop: GeoLoopSpec, at: (id: string) => { x: number; y: number }, unit: number): string | null {
+  const has = (id: string) => spec.points.some((p) => p.id === id)
+  if (loop.shape === 'polygon') {
+    if (loop.points.length < 3 || !loop.points.every(has)) return null
+    return `${loop.points.map((id, i) => `${i === 0 ? 'M' : 'L'} ${px(at(id).x)} ${px(at(id).y)}`).join(' ')} Z`
+  }
+  if (loop.shape === 'circle') {
+    if (!has(loop.center) || !(loop.r > 0)) return null
+    const c = at(loop.center)
+    const r = px(loop.r * unit)
+    // Two half turns: one arc cannot close on its own starting point.
+    return `M ${px(c.x - r)} ${px(c.y)} A ${r} ${r} 0 1 0 ${px(c.x + r)} ${px(c.y)} A ${r} ${r} 0 1 0 ${px(c.x - r)} ${px(c.y)} Z`
+  }
+  return arcLoop(spec, loop.shape, loop.center, loop.from, loop.to, at)
 }
 
 function Grid({ spec, sx, sy }: { spec: GeoFigureSpec; sx: (x: number) => number; sy: (y: number) => number }) {

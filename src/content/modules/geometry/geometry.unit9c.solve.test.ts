@@ -186,6 +186,7 @@ function requireShade(a: GeometryAnswer, kind: 'sector' | 'segment', degrees: nu
   const regions = a.figure.regions ?? []
   if (regions.length !== 1) throw new Error(`${regions.length} shaded regions`)
   const g = regions[0]!
+  if (g.kind === 'compound') throw new Error('a compound region where one sector or segment is asked about')
   if (g.kind !== kind || g.center !== 'O') throw new Error(`shaded ${g.kind}, asked about a ${kind}`)
   if (!['A', 'B'].includes(g.from) || !['A', 'B'].includes(g.to) || g.from === g.to) throw new Error('the region is not between A and B')
   const s = sweep(a, g.from, g.to)
@@ -366,6 +367,7 @@ function solveSector(a: GeometryAnswer) {
   if (c) {
     onCircle(a, 'C')
     const g = a.figure.regions![0]!
+    if (g.kind === 'compound') throw new Error('a compound region where the major sector is asked about')
     const toC = sweep(a, g.from, 'C')
     if (!(toC > 1e-6 && toC < 360 - deg - 1e-6)) throw new Error('C is not on the major arc')
   } else if (a.figure.points.some((p) => p.id === 'C')) throw new Error('a point C with no major arc asked')

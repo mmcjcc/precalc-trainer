@@ -50,3 +50,68 @@ describe('GeoFigure shaded regions', () => {
     expect(plain.container.querySelector('[data-geo="region"]')).toBeNull()
   })
 })
+
+describe('GeoFigure compound regions', () => {
+  // A square of side 10 around a circle of radius 5: the circle touches every side.
+  const boxed: GeoFigureSpec = {
+    ariaLabel: 'A square with a circle inside it that touches all four sides. The part of the square outside the circle is shaded.',
+    points: [
+      { id: 'O', x: 0, y: 0, label: 'O' },
+      { id: 'P', x: -5, y: -5, label: 'P' },
+      { id: 'Q', x: 5, y: -5, label: 'Q' },
+      { id: 'R', x: 5, y: 5, label: 'R' },
+      { id: 'S', x: -5, y: 5, label: 'S' },
+    ],
+    circles: [{ center: 'O', r: 5 }],
+    segments: [
+      { from: 'P', to: 'Q' },
+      { from: 'Q', to: 'R' },
+      { from: 'R', to: 'S' },
+      { from: 'S', to: 'P' },
+    ],
+    regions: [
+      {
+        kind: 'compound',
+        loops: [
+          { shape: 'polygon', points: ['P', 'Q', 'R', 'S'] },
+          { shape: 'circle', center: 'O', r: 5 },
+        ],
+      },
+    ],
+  }
+  const where = (id: string) => {
+    const p = boxed.points.find((pt) => pt.id === id)!
+    return { x: 100 + p.x * 10, y: 100 - p.y * 10 }
+  }
+
+  it('a polygon and a circle are two closed loops in one path, the circle as two half turns', () => {
+    const d = regionPath(boxed, boxed.regions![0]!, where, 10)
+    expect(d).toBe('M 50 150 L 150 150 L 150 50 L 50 50 Z M 50 100 A 50 50 0 1 0 150 100 A 50 50 0 1 0 50 100 Z')
+  })
+
+  it('a ring is two circles, and a sector or a segment can be a loop', () => {
+    const ring = regionPath(boxed, { kind: 'compound', loops: [{ shape: 'circle', center: 'O', r: 5 }, { shape: 'circle', center: 'O', r: 2 }] }, where, 10)
+    expect(ring).toBe('M 50 100 A 50 50 0 1 0 150 100 A 50 50 0 1 0 50 100 Z M 80 100 A 20 20 0 1 0 120 100 A 20 20 0 1 0 80 100 Z')
+    // Q to S is half the turn about O, counterclockwise through R.
+    const quarter = regionPath(boxed, { kind: 'compound', loops: [{ shape: 'segment', center: 'O', from: 'Q', to: 'S' }] }, where, 10)
+    expect(quarter).toMatch(/^M 150 150 A [\d.]+ [\d.]+ 0 0 0 50 50 Z$/)
+  })
+
+  it('draws nothing for a loop that is not a closed outline', () => {
+    expect(regionPath(boxed, { kind: 'compound', loops: [] }, where, 10)).toBeNull()
+    expect(regionPath(boxed, { kind: 'compound', loops: [{ shape: 'polygon', points: ['P', 'Q'] }] }, where, 10)).toBeNull()
+    expect(regionPath(boxed, { kind: 'compound', loops: [{ shape: 'polygon', points: ['P', 'Q', 'Z'] }] }, where, 10)).toBeNull()
+    expect(regionPath(boxed, { kind: 'compound', loops: [{ shape: 'circle', center: 'O', r: 0 }] }, where, 10)).toBeNull()
+    expect(regionPath(boxed, { kind: 'compound', loops: [{ shape: 'polygon', points: ['P', 'Q', 'R', 'S'] }, { shape: 'circle', center: 'Z', r: 5 }] }, where, 10)).toBeNull()
+  })
+
+  it('is filled even-odd, so the circle is a hole in the square, and its radius matches the drawn circle', () => {
+    const { container } = render(<GeoFigure spec={boxed} />)
+    const region = container.querySelector('[data-geo="region"]')!
+    expect(region.getAttribute('data-kind')).toBe('compound')
+    expect(region.getAttribute('fill-rule')).toBe('evenodd')
+    const drawn = Number(container.querySelector('[data-geo="circle"]')!.getAttribute('r'))
+    const hole = / A ([\d.]+) [\d.]+ 0 1 0 /.exec(region.getAttribute('d')!)
+    expect(Number(hole![1])).toBeCloseTo(drawn, 1)
+  })
+})
