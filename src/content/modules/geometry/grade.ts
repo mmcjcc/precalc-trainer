@@ -185,6 +185,19 @@ export const GEO_UNIT9_MISTAKE_IDS = [
   'geo_segment_triangle_added',
 ] as const
 
+/** Unit 9, the last module: ratios of areas, shaded regions and geometric probability. Each is exactly that slip's value here. */
+export const GEO_UNIT9B_MISTAKE_IDS = [
+  'geo_area_ratio_squared',
+  'geo_area_ratio_not_squared',
+  'geo_scale_from_areas_not_rooted',
+  'geo_area_ratio_reversed',
+  'geo_part_to_part_for_whole',
+  'geo_region_not_subtracted',
+  'geo_region_added',
+  'geo_inscribed_side_from_radius',
+  'geo_probability_complement',
+] as const
+
 /**
  * Mistakes of the precalculus right-triangle core (engine/trig) that Unit 7 names too: the special triangles' factors
  * swapped or used the wrong way, the squares added where one side is the hypotenuse (or subtracted for two legs), the
@@ -221,6 +234,7 @@ export type GeoMistakeId =
   | (typeof GEO_UNIT7B_MISTAKE_IDS)[number]
   | (typeof GEO_UNIT8_MISTAKE_IDS)[number]
   | (typeof GEO_UNIT9_MISTAKE_IDS)[number]
+  | (typeof GEO_UNIT9B_MISTAKE_IDS)[number]
   | (typeof GEO_BORROWED_TRIG_IDS)[number]
 
 export type GeoGrade =
@@ -492,6 +506,7 @@ export function isGeoMistake(id: ErrorPatternId): id is GeoMistakeId {
     (GEO_UNIT7B_MISTAKE_IDS as readonly string[]).includes(id) ||
     (GEO_UNIT8_MISTAKE_IDS as readonly string[]).includes(id) ||
     (GEO_UNIT9_MISTAKE_IDS as readonly string[]).includes(id) ||
+    (GEO_UNIT9B_MISTAKE_IDS as readonly string[]).includes(id) ||
     (GEO_BORROWED_TRIG_IDS as readonly string[]).includes(id)
   )
 }

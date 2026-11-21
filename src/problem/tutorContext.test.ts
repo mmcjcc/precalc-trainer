@@ -1580,6 +1580,10 @@ describe('buildTutorContext', () => {
       ['geoCircleArea', 'ca.circle', 'circleArea'],
       ['geoCircleArea', 'ca.sector', 'arcSector'],
       ['geoCircleArea', 'ca.segment', 'circleSegment'],
+      ['geoAreaRatios', 'ra.shared', 'areaRatio'],
+      ['geoAreaRatios', 'ra.similar', 'areaRatio'],
+      ['geoAreaRatios', 'ra.shaded', 'shadedRegion'],
+      ['geoAreaRatios', 'ra.chance', 'geoProbability'],
     ] as const
     for (const [moduleId, templateId, question] of cases) {
       const instance = generateProblem(moduleId, templateId, 1)
