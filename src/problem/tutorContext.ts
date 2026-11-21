@@ -729,6 +729,9 @@ export function assertGeometryQuestion(question: GeometryQuestion): void {
     case 'circleArea':
     case 'arcSector':
     case 'circleSegment':
+    case 'areaRatio':
+    case 'shadedRegion':
+    case 'geoProbability':
       return
     default: {
       const unexpected: never = question

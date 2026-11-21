@@ -470,7 +470,8 @@ export interface TrigTriangleSpec {
  * Unit 8 adds circles: tangents, arcs, chords, inscribed and other angles, segment lengths, and the equation of a circle.
  * Unit 9 adds areas of polygons: rectangles, parallelograms, triangles, trapezoids, rhombi and kites, then a height
  * found first, then regular polygons; then circles in terms of π: circumference and area, arc length and the area
- * of a sector, and the segment between a chord and its arc.
+ * of a sector, and the segment between a chord and its arc; then ratios of areas, shaded regions made of two
+ * figures, and geometric probability.
  */
 export type GeometryQuestion =
   | 'addition'
@@ -535,6 +536,9 @@ export type GeometryQuestion =
   | 'circleArea'
   | 'arcSector'
   | 'circleSegment'
+  | 'areaRatio'
+  | 'shadedRegion'
+  | 'geoProbability'
 
 /**
  * One checked part of a geometry problem. `x` and `result` are the Unit 1 boxes.

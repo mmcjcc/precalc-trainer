@@ -730,6 +730,9 @@ const EXACT_BOUND_QUESTIONS: ReadonlySet<string> = new Set([
   'circleArea',
   'arcSector',
   'circleSegment',
+  'areaRatio',
+  'shadedRegion',
+  'geoProbability',
 ])
 
 /**
