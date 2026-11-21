@@ -182,7 +182,8 @@ describe('geometry unit 9 circles: registration', () => {
     expect(GEO_UNIT9_MISTAKE_IDS.slice(-11)).toEqual([...CIRCLE_MISTAKE_IDS])
     const cardIds = new Set(CIRCLE_RULES.map((c) => c.id))
     const mismeasure = SPECIES.find((s) => s.id === 'mismeasure')!
-    expect(mismeasure.variants.slice(-11)).toEqual([...CIRCLE_MISTAKE_IDS])
+    // The area ratios module appends its nine ids after these (geometry.unit9d.test.ts).
+    expect(mismeasure.variants.slice(-20, -9)).toEqual([...CIRCLE_MISTAKE_IDS])
     for (const id of CIRCLE_MISTAKE_IDS) {
       expect(cardIds.has(GEO_RULE_FOR[id]!), id).toBe(true)
       const info = ERROR_PATTERNS[id]

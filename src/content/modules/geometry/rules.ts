@@ -10,6 +10,7 @@ import { UNIT7B_RULE_FOR } from './unit7bRules'
 import { UNIT8_RULE_FOR } from './unit8Rules'
 import { UNIT9_RULE_FOR } from './unit9Rules'
 import { UNIT9_CIRCLE_RULE_FOR } from './unit9CircleRules'
+import { UNIT9_RATIO_RULE_FOR } from './unit9RatioRules'
 
 export const GEO_RULE_IDS = {
   segment: 'geo-segment-add',
@@ -50,6 +51,7 @@ export const GEO_RULE_FOR: Partial<Record<GeoMistakeId, string>> = {
   ...UNIT8_RULE_FOR,
   ...UNIT9_RULE_FOR,
   ...UNIT9_CIRCLE_RULE_FOR,
+  ...UNIT9_RATIO_RULE_FOR,
 }
 
 export const SEGMENT_RULES: RuleCard[] = [

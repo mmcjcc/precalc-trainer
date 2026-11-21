@@ -34,9 +34,9 @@ const GEO_KEYS_STRIP: readonly StripKey[] = [
   { label: ',', insert: ',', caret: 0, name: 'comma' },
 ]
 
-/** Circles in terms of π (Unit 9): the same strip with a π key first. Every other problem keeps the strip above. */
+/** Answers that can have π (Unit 9's circles, shaded regions and probability): the same strip with a π key first. Every other problem keeps the strip above. */
 const GEO_KEYS_PI: readonly StripKey[] = [{ label: 'π', insert: 'pi', caret: 0, name: 'pi' }, ...GEO_KEYS_STRIP]
-const PI_QUESTIONS: ReadonlySet<GeometryAnswer['question']> = new Set(['circleArea', 'arcSector', 'circleSegment'])
+const PI_QUESTIONS: ReadonlySet<GeometryAnswer['question']> = new Set(['circleArea', 'arcSector', 'circleSegment', 'shadedRegion', 'geoProbability'])
 
 /** A line is written as an equation in x and y (y = x + 1); the strip leaves the letters to the keyboard. */
 const LINE_VARS: readonly string[] = ['x', 'y']

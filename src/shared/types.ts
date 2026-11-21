@@ -15,7 +15,7 @@
 export type RelOp = '=' | '<' | '<=' | '>' | '>='
 /** `h` is the difference-quotient step; the parser accepts it only when the problem owns it (ctx.vars). */
 export type VarName = 'x' | 'y' | 'n' | 'h'
-export type ModuleId = 'numberLine' | 'inequalities' | 'evenOdd' | 'inverses' | 'propertiesDrill' | 'sigFigs' | 'atoms' | 'diffQuotient' | 'graphFeatures' | 'domainRange' | 'composition' | 'functionOps' | 'transformations' | 'piecewiseRate' | 'electrons' | 'quantumNumbers' | 'periodic' | 'quadratics' | 'optimization' | 'polyDivision' | 'polyZeros' | 'rationalFns' | 'signCharts' | 'complexNums' | 'logForms' | 'logProperties' | 'expLogEquations' | 'expLogGraphs' | 'expModels' | 'angleMeasure' | 'rightTriangle' | 'unitCircle' | 'sinusoids' | 'otherTrigGraphs' | 'inverseTrig' | 'trigIdentities' | 'trigFormulas' | 'trigEquations' | 'obliqueTriangles' | 'geoSegments' | 'geoAngles' | 'geoLogic' | 'geoProof' | 'geoParallel' | 'geoPolygonAngles' | 'geoCongruence' | 'geoIsosceles' | 'geoTriangleProofs' | 'geoParallelograms' | 'geoSpecialQuads' | 'geoTrapezoids' | 'geoRatios' | 'geoSimilarTriangles' | 'geoProportionalParts' | 'geoRightSimilar' | 'geoPythagorean' | 'geoSpecialRight' | 'geoTrigRatios' | 'geoElevDepress' | 'geoTangentChords' | 'geoCircleAngles' | 'geoCircleMeasures' | 'ionicNames' | 'molecularAcids' | 'ionicBonding' | 'covalentBonding' | 'reactions' | 'moles' | 'chemFormulas' | 'factoring' | 'geoPolygonArea' | 'geoCircleArea'
+export type ModuleId = 'numberLine' | 'inequalities' | 'evenOdd' | 'inverses' | 'propertiesDrill' | 'sigFigs' | 'atoms' | 'diffQuotient' | 'graphFeatures' | 'domainRange' | 'composition' | 'functionOps' | 'transformations' | 'piecewiseRate' | 'electrons' | 'quantumNumbers' | 'periodic' | 'quadratics' | 'optimization' | 'polyDivision' | 'polyZeros' | 'rationalFns' | 'signCharts' | 'complexNums' | 'logForms' | 'logProperties' | 'expLogEquations' | 'expLogGraphs' | 'expModels' | 'angleMeasure' | 'rightTriangle' | 'unitCircle' | 'sinusoids' | 'otherTrigGraphs' | 'inverseTrig' | 'trigIdentities' | 'trigFormulas' | 'trigEquations' | 'obliqueTriangles' | 'geoSegments' | 'geoAngles' | 'geoLogic' | 'geoProof' | 'geoParallel' | 'geoPolygonAngles' | 'geoCongruence' | 'geoIsosceles' | 'geoTriangleProofs' | 'geoParallelograms' | 'geoSpecialQuads' | 'geoTrapezoids' | 'geoRatios' | 'geoSimilarTriangles' | 'geoProportionalParts' | 'geoRightSimilar' | 'geoPythagorean' | 'geoSpecialRight' | 'geoTrigRatios' | 'geoElevDepress' | 'geoTangentChords' | 'geoCircleAngles' | 'geoCircleMeasures' | 'ionicNames' | 'molecularAcids' | 'ionicBonding' | 'covalentBonding' | 'reactions' | 'moles' | 'chemFormulas' | 'factoring' | 'geoPolygonArea' | 'geoCircleArea' | 'geoAreaRatios'
 export type CalcId = 'ti84' | 'nspire'
 
 /** Fine-grained property tags. Canonical steps carry one; the engine's move detector reports one. */
@@ -759,6 +759,21 @@ export type ErrorPatternId =
   | 'geo_arc_measure_for_length'
   | 'geo_segment_triangle_not_subtracted'
   | 'geo_segment_triangle_added'
+  // honors geometry Unit 9, the last module (content/modules/geometry/unit9Ratios.ts): ratios of areas, shaded regions
+  // and geometric probability. Each id is the exact value that slip gives on THIS problem: the ratio of the bases
+  // squared for triangles that only share a height, a scale factor given as the ratio of the areas or the reverse, a
+  // ratio turned around, a part compared with the other part where the whole was asked (or the reverse), the outer
+  // area given for the shaded one, the two areas added, the radius used as the side of an inscribed square or
+  // triangle, and the probability of the other region.
+  | 'geo_area_ratio_squared'
+  | 'geo_area_ratio_not_squared'
+  | 'geo_scale_from_areas_not_rooted'
+  | 'geo_area_ratio_reversed'
+  | 'geo_part_to_part_for_whole'
+  | 'geo_region_not_subtracted'
+  | 'geo_region_added'
+  | 'geo_inscribed_side_from_radius'
+  | 'geo_probability_complement'
   // precalculus Unit 4, trigonometric functions (engine/trig; content/modules/angleMeasure, unitCircle). Each id is
   // the exact value, angle or quadrant that slip gives on THIS problem, computed by the core; never a right answer.
   | 'trig_conversion_inverted'
@@ -1186,7 +1201,7 @@ export interface GeoFigureSpec {
   angles?: GeoAngleMark[]
   /** Full circles, drawn under the segments. The center's dot and letter come from its point. */
   circles?: GeoCircleSpec[]
-  /** Shaded parts of a circle (Unit 9), drawn under everything else. Existing figures leave this unset. */
+  /** Shaded regions (Unit 9), drawn under everything else. Existing figures leave this unset. */
   regions?: GeoRegionSpec[]
   /** Integer lattice and axes. Omit on a figure that is not on the coordinate plane. */
   grid?: GeoGrid
@@ -1198,13 +1213,34 @@ export interface GeoFigureSpec {
  * A shaded part of a circle: the sector between two radii, or the segment between a chord and its arc. The arc
  * runs counterclockwise (as the figure is seen, y up) from `from` to `to`; both points are on the circle.
  */
-export interface GeoRegionSpec {
+export interface GeoArcRegionSpec {
   kind: 'sector' | 'segment'
   /** Point id of the circle's center. */
   center: string
   from: string
   to: string
 }
+
+/**
+ * A shaded region bounded by several closed outlines, filled by the even-odd rule: an outline inside another cuts
+ * a hole (a square with its inscribed circle taken out, the ring between two circles), and outlines that only
+ * touch are shaded together.
+ */
+export interface GeoCompoundRegionSpec {
+  kind: 'compound'
+  loops: GeoLoopSpec[]
+}
+
+/**
+ * One closed outline of a compound region: a polygon through points in order, a full circle (its radius in the
+ * figure's own units), or a sector or segment of a circle with its arc counterclockwise from `from` to `to`.
+ */
+export type GeoLoopSpec =
+  | { shape: 'polygon'; points: string[] }
+  | { shape: 'circle'; center: string; r: number }
+  | { shape: 'sector' | 'segment'; center: string; from: string; to: string }
+
+export type GeoRegionSpec = GeoArcRegionSpec | GeoCompoundRegionSpec
 
 export interface GeoCircleSpec {
   /** Point id of the center. */

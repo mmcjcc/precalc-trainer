@@ -53,6 +53,8 @@ import { drawBasic, drawRegular, drawSpecial as drawPolygonSpecial } from './uni
 import { AREA_RULES } from './unit9Rules'
 import { drawCircle, drawSector, drawSegment } from './unit9Circles'
 import { CIRCLE_RULES } from './unit9CircleRules'
+import { drawChance, drawShaded, drawShared, drawSimilar } from './unit9Ratios'
+import { RATIO_RULES as AREA_RATIO_RULES } from './unit9RatioRules'
 
 export { readGeoAnswer, formatPoint, formatQty, formatValue, geoQty, sameGeoValue, sameQty, simplifyRadical } from './answer'
 export type { GeoQty, GeoRead, GeoReadOptions, GeoValue } from './answer'
@@ -884,3 +886,26 @@ registerModule(geoCircleAnglesModule)
 registerModule(geoCircleMeasuresModule)
 registerModule(geoPolygonAreaModule)
 registerModule(geoCircleAreaModule)
+
+/**
+ * Area ratios, shaded regions and probability (honors geometry Unit 9, Jurgensen 11-7 and 11-8, and the shaded
+ * regions of 11-5 and 11-6). Every answer is exact: a ratio, a fraction, a number, a multiple of π, or two terms.
+ */
+export const geoAreaRatiosModule: ModuleDef = {
+  id: 'geoAreaRatios',
+  subject: 'Geometry',
+  title: 'Area ratios, shaded regions and probability',
+  blurb: 'Ratios of the areas of triangles that share a height and of similar figures, the areas of shaded regions, and geometric probability.',
+  order: 34,
+  templates: [
+    geoTemplate('geoAreaRatios', 'ra.shared', 'Triangles that share a height', 'Two triangles with the same height: the ratio of their areas, or one area from another.', drawShared),
+    geoTemplate('geoAreaRatios', 'ra.similar', 'Areas of similar figures', 'Perimeters and areas of similar figures from the scale factor, the scale factor from the areas, and a triangle cut by a parallel.', drawSimilar),
+    geoTemplate('geoAreaRatios', 'ra.shaded', 'Areas of shaded regions', 'A circle in a square, a square, hexagon or triangle in a circle, a ring, or a circle inside a rectangle: the shaded area.', drawShaded),
+    geoTemplate('geoAreaRatios', 'ra.chance', 'Geometric probability', 'A point picked at random on a segment, inside a target, a rectangle with a circle, or a rectangle with a shaded part.', drawChance),
+  ],
+  ruleCards: AREA_RATIO_RULES,
+  progress: PROGRESS,
+  nextStep: () => null,
+}
+
+registerModule(geoAreaRatiosModule)

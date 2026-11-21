@@ -3292,6 +3292,62 @@ export const ERROR_PATTERNS: Record<ErrorPatternId, ErrorPatternInfo> = {
     lesson: 'The sector already holds the triangle and the segment together. Adding the triangle counts it twice. The segment is what is left when the triangle is taken away.',
     example: 'the sector plus the triangle ✗ → the sector minus the triangle',
   },
+  // --- honors geometry Unit 9, ratios of areas, shaded regions and geometric probability. Answers are ratios,
+  // fractions and multiples of π, so examples use letters and words only.
+  geo_area_ratio_squared: {
+    id: 'geo_area_ratio_squared',
+    title: 'Same height: the areas keep the ratio of the bases',
+    lesson: 'Two triangles with the same height have areas in the same ratio as their bases, because each area is half the base times that one height. Squaring the ratio belongs to similar figures, and these triangles are not similar.',
+    example: 'bases j and k, the same height: areas j squared to k squared ✗ → areas j to k',
+  },
+  geo_area_ratio_not_squared: {
+    id: 'geo_area_ratio_not_squared',
+    title: 'Square the scale factor for the areas',
+    lesson: 'When two figures are similar with scale factor j to k, every length grows by that factor, and an area grows by it twice, once across and once up. So the areas are in the ratio of the squares, j squared to k squared, not j to k.',
+    example: 'scale factor j to k: areas j to k ✗ → areas j squared to k squared',
+  },
+  geo_scale_from_areas_not_rooted: {
+    id: 'geo_scale_from_areas_not_rooted',
+    title: 'Take the square root of the ratio of the areas',
+    lesson: 'The areas of similar figures are in the ratio of the squares of their sides. Going back from the areas to the scale factor undoes that square, so take the square root of each area in the ratio.',
+    example: 'areas j squared and k squared: scale factor j squared to k squared ✗ → j to k',
+  },
+  geo_area_ratio_reversed: {
+    id: 'geo_area_ratio_reversed',
+    title: 'Keep the order the question asks for',
+    lesson: 'A ratio has an order. The ratio of the first figure to the second puts the first figure’s measure on top. Turned upside down, it is the ratio of the second figure to the first, a different number.',
+    example: 'the first to the second, j to k: k to j ✗ → j to k',
+  },
+  geo_part_to_part_for_whole: {
+    id: 'geo_part_to_part_for_whole',
+    title: 'Part of the whole, or the other part?',
+    lesson: 'Comparing one piece with the other piece is not the same as comparing it with the whole, which holds both pieces. Read which one the question names. A probability always compares the piece with the whole, never with the rest.',
+    example: 'pieces j and k, the piece j out of the whole: j to k ✗ → j to j plus k',
+  },
+  geo_region_not_subtracted: {
+    id: 'geo_region_not_subtracted',
+    title: 'Take the inside figure away',
+    lesson: 'The shaded region is the outer figure with the inside figure cut out of it. The area of the outer figure counts the cut-out part too, so subtract the area of the inside figure.',
+    example: 'outer area P, inside area Q: P ✗ → P minus Q',
+  },
+  geo_region_added: {
+    id: 'geo_region_added',
+    title: 'Subtract the area cut out, do not add it',
+    lesson: 'The inside figure sits within the outer one, so the outer area already holds it. Adding the two areas counts the cut-out part twice. The shaded region is what is left when it is taken away.',
+    example: 'outer area P, inside area Q: P plus Q ✗ → P minus Q',
+  },
+  geo_inscribed_side_from_radius: {
+    id: 'geo_inscribed_side_from_radius',
+    title: 'The side of an inscribed figure is not the radius',
+    lesson: 'The radius of the circle reaches from the center to a vertex of the inscribed figure, not along a side. For a square, the diagonal is a diameter. For an equilateral triangle, the side is the radius times the square root of three. Only a regular hexagon has sides as long as the radius.',
+    example: 'a square inscribed in a circle of radius r: side r ✗ → the diagonal is two times r',
+  },
+  geo_probability_complement: {
+    id: 'geo_probability_complement',
+    title: 'That is the chance of the other region',
+    lesson: 'The probabilities of landing in a region and of landing outside it add up to one. That answer is the chance of the rest, one minus the probability the question asks for.',
+    example: 'the piece is j out of the whole w: the rest out of w ✗ → j out of w',
+  },
   // --- precalculus Unit 4, trigonometric functions (engine/trig; content/modules/angleMeasure, unitCircle). Answers
   // there are angles, π-multiples and the special values, so examples use letters (d, k, θ, x, y, r) and numbers are
   // written as words: no example or lesson can show a generated answer.

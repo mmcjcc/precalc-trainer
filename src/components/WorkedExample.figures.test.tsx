@@ -115,4 +115,24 @@ describe('WorkedExample figures', () => {
       unmount()
     }
   })
+
+  it('renders a worked figure for each template of the area ratios module, with the shaded region where there is one', () => {
+    for (const templateId of ['ra.shared', 'ra.similar', 'ra.shaded', 'ra.chance'] as const) {
+      const instance = generateProblem('geoAreaRatios', templateId, 42)
+      if (instance.answer.type !== 'geometry') throw new Error(templateId)
+      const ex = buildWorkedExample(instance)
+      expect(ex, templateId).not.toBeNull()
+      if (!ex || ex.sibling.answer.type !== 'geometry') throw new Error(templateId)
+      expect(figureJson(instance.answer)).not.toBe(figureJson(ex.sibling.answer))
+      const { container, unmount } = render(<WorkedExample instance={instance} />)
+      const figure = container.querySelector('[data-example-figure]')
+      expect(figure?.querySelector('svg'), templateId).toBeTruthy()
+      expect(figure?.querySelector('svg')?.getAttribute('aria-label')).toBe(ex.sibling.answer.figure.ariaLabel)
+      const shaded = (ex.sibling.answer.figure.regions ?? []).length > 0
+      expect(Boolean(figure?.querySelector('[data-geo="region"]')), templateId).toBe(shaded)
+      if (templateId === 'ra.shaded') expect(shaded, templateId).toBe(true)
+      expect(container.textContent).not.toMatch(/\[object|undefined|NaN/)
+      unmount()
+    }
+  })
 })

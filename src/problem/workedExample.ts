@@ -161,6 +161,10 @@ export const COVERED_PARTS_TEMPLATES = [
   'ca.circle',
   'ca.sector',
   'ca.segment',
+  'ra.shared',
+  'ra.similar',
+  'ra.shaded',
+  'ra.chance',
   // Precalc trig, Units 4–5.
   'am.convert',
   'am.coterminal',
